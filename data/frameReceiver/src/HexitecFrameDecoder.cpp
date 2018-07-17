@@ -33,7 +33,8 @@ const std::string HexitecFrameDecoder::CONFIG_BITDEPTH = "bitdepth";
 //!
 HexitecFrameDecoder::HexitecFrameDecoder() :
     FrameDecoderUDP(),
-    asic_counter_bit_depth_(Hexitec::bitDepth12),
+	asic_counter_bit_depth_(Hexitec::bitDepth1),
+//	asic_counter_bit_depth_(Hexitec::bitDepth12),
     num_subframes_(Hexitec::num_subframes[asic_counter_bit_depth_]),
     current_frame_seen_(Hexitec::default_frame_number),
     current_frame_buffer_id_(Hexitec::default_frame_number),
@@ -103,27 +104,27 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
       throw OdinData::OdinDataException("Failed to parse FEM to port map entries from configuration");
   }
 
-  // Extract the ASIC counter bit depth from the config message
-  if (config_msg.has_param(CONFIG_BITDEPTH))
-  {
-    std::string bit_depth_str = config_msg.get_param<std::string>(CONFIG_BITDEPTH);
-
-    Hexitec::AsicCounterBitDepth bit_depth =
-        parse_bit_depth(bit_depth_str);
-
-    if (bit_depth == Hexitec::bitDepthUnknown)
-    {
-      LOG4CXX_ERROR(logger_, "Unknown bit depth configuration parameter specified: "
-                    << bit_depth_str << ", defaulting to "
-                    << asic_bit_depth_str_[asic_counter_bit_depth_]);
-    }
-    else
-    {
-      asic_counter_bit_depth_ = bit_depth;
-    }
-  }
-  LOG4CXX_DEBUG_LEVEL(1, logger_, "Setting ASIC counter bit depth to "
-      << asic_bit_depth_str_[asic_counter_bit_depth_]);
+//  // Extract the ASIC counter bit depth from the config message
+//  if (config_msg.has_param(CONFIG_BITDEPTH))
+//  {
+//    std::string bit_depth_str = config_msg.get_param<std::string>(CONFIG_BITDEPTH);
+//
+//    Hexitec::AsicCounterBitDepth bit_depth =
+//        parse_bit_depth(bit_depth_str);
+//
+//    if (bit_depth == Hexitec::bitDepthUnknown)
+//    {
+//      LOG4CXX_ERROR(logger_, "Unknown bit depth configuration parameter specified: "
+//                    << bit_depth_str << ", defaulting to "
+//                    << asic_bit_depth_str_[asic_counter_bit_depth_]);
+//    }
+//    else
+//    {
+//      asic_counter_bit_depth_ = bit_depth;
+//    }
+//  }
+//  LOG4CXX_DEBUG_LEVEL(1, logger_, "Setting ASIC counter bit depth to "
+//      << asic_bit_depth_str_[asic_counter_bit_depth_]);
 
   // Set the number of subframes in this readout mode, as it is used frequently
   num_subframes_ = Hexitec::num_subframes[asic_counter_bit_depth_];
@@ -488,23 +489,24 @@ FrameDecoder::FrameReceiveState HexitecFrameDecoder::process_packet(size_t bytes
 
     if (get_end_of_frame_marker())
     {
-      if (has_subframe_trailer_)
-      {
-        uint32_t frame_number;
-        uint32_t subframe_idx = get_subframe_counter() % num_subframes_;
+       /// No subframe trailer in hexitec
+//      if (has_subframe_trailer_)
+//      {
+//        uint32_t frame_number;
+//        uint32_t subframe_idx = get_subframe_counter() % num_subframes_;
 
-        size_t payload_bytes_received = bytes_received - sizeof(Hexitec::PacketHeader);
+//        size_t payload_bytes_received = bytes_received - sizeof(Hexitec::PacketHeader);
 
-        Hexitec::SubframeTrailer* trailer =
-            reinterpret_cast<Hexitec::SubframeTrailer*>((uint8_t*) get_next_payload_buffer()
-                + payload_bytes_received - sizeof(Hexitec::SubframeTrailer));
+//        Hexitec::SubframeTrailer* trailer =
+//            reinterpret_cast<Hexitec::SubframeTrailer*>((uint8_t*) get_next_payload_buffer()
+//                + payload_bytes_received - sizeof(Hexitec::SubframeTrailer));
 
-        frame_number = static_cast<uint32_t>((trailer->frame_number & 0xFFFFFFFF) - 1);
-        LOG4CXX_DEBUG_LEVEL(3, logger_, "Subframe EOF trailer FEM: "
-            << current_packet_fem_map_.fem_idx_ << " subframe_idx: " << subframe_idx
-            << " frame: " << frame_number
-            << " current frame: " << current_frame_header_->frame_number);
-      }
+//        frame_number = static_cast<uint32_t>((trailer->frame_number & 0xFFFFFFFF) - 1);
+//        LOG4CXX_DEBUG_LEVEL(3, logger_, "Subframe EOF trailer FEM: "
+//            << current_packet_fem_map_.fem_idx_ << " subframe_idx: " << subframe_idx
+//            << " frame: " << frame_number
+//            << " current frame: " << current_frame_header_->frame_number);
+//      }
     }
 
     // Get a convenience pointer to the FEM receive state data in the frame header

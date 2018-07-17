@@ -139,3 +139,6 @@ tags
 
 # CMake out-of-source build directories for data component
 /data/build*
+
+# Ignore Qt project file (used to view source code in QtCreator)
+*.pro

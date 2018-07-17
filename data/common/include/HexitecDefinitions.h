@@ -20,15 +20,15 @@ namespace Hexitec {
     } AsicCounterBitDepth;
 
     static const size_t primary_packet_size    = 8000;
-    static const size_t num_primary_packets[num_bit_depths] = { 4, 32, 65, 65 };
-    static const size_t max_primary_packets = 65;
-    static const size_t tail_packet_size[num_bit_depths] = { 768, 6152, 4296, 4296 };
+    static const size_t num_primary_packets[num_bit_depths] = {1, 1, 1, 1};	//{ 4, 32, 65, 65 };
+    static const size_t max_primary_packets = 1;	//65;
+    static const size_t tail_packet_size[num_bit_depths] = {4808, 4808, 4808, 4808};	// { 768, 6152, 4296, 4296 };
     static const size_t num_tail_packets = 1;
 
-    static const size_t num_subframes[num_bit_depths] = {2, 2, 2, 4};
-    static const size_t max_num_subframes = 4;
+    static const size_t num_subframes[num_bit_depths] = {1, 1, 1, 1};	//{2, 2, 2, 4};
+    static const size_t max_num_subframes = 1;	//4;
 
-    static const size_t max_num_fems = 6;
+    static const size_t max_num_fems = 1;	//6;
 
     static const uint32_t start_of_frame_mask = 1 << 31;
     static const uint32_t end_of_frame_mask   = 1 << 30;
