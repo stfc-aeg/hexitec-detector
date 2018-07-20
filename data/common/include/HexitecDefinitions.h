@@ -20,12 +20,12 @@ namespace Hexitec {
     } AsicCounterBitDepth;
 
     static const size_t primary_packet_size    = 8000;
-    static const size_t num_primary_packets[num_bit_depths] = {1, 1, 1, 1};	//{ 4, 32, 65, 65 };
-    static const size_t max_primary_packets = 1;	//65;
-    static const size_t tail_packet_size[num_bit_depths] = {4808, 4808, 4808, 4808};	// { 768, 6152, 4296, 4296 };
+    static const size_t num_primary_packets = 1;
+    static const size_t max_primary_packets = 1;
+    static const size_t tail_packet_size = 4800;
     static const size_t num_tail_packets = 1;
 
-    static const size_t num_subframes[num_bit_depths] = {1, 1, 1, 1};	//{2, 2, 2, 4};
+    static const size_t num_subframes = 1;
     static const size_t max_num_subframes = 1;	//4;
 
     static const size_t max_num_fems = 1;	//6;
@@ -69,24 +69,24 @@ namespace Hexitec {
     } FrameHeader;
 
 
-    inline const std::size_t subframe_size(const AsicCounterBitDepth bit_depth)
+    inline const std::size_t subframe_size()
     {
-      std::size_t subframe_size = (primary_packet_size * num_primary_packets[bit_depth]) +
-          (tail_packet_size[bit_depth] * num_tail_packets);
+      std::size_t subframe_size = (primary_packet_size * num_primary_packets) +
+          (tail_packet_size * num_tail_packets);
       return subframe_size;
     }
 
     inline const std::size_t max_frame_size(void)
     {
       std::size_t max_frame_size = sizeof(FrameHeader) +
-          (subframe_size(bitDepth24) * num_subframes[bitDepth24] * max_num_fems);
+          (subframe_size() * num_subframes * max_num_fems);
       return max_frame_size;
     }
 
-    inline const std::size_t num_fem_frame_packets(const AsicCounterBitDepth bit_depth)
+    inline const std::size_t num_fem_frame_packets()
     {
-      std::size_t num_fem_frame_packets = num_subframes[bit_depth] *
-          (num_primary_packets[bit_depth] + num_tail_packets);
+      std::size_t num_fem_frame_packets = num_subframes *
+          (num_primary_packets + num_tail_packets);
       return num_fem_frame_packets;
     }
 }

@@ -17,7 +17,7 @@
 
 #define ILLEGAL_FEM_IDX -1
 
-const std::string default_fem_port_map = "61649:0";
+const std::string default_fem_port_map = "61651:0";
 
 namespace FrameReceiver
 {
@@ -75,7 +75,6 @@ namespace FrameReceiver
     void initialise_frame_header(Hexitec::FrameHeader* header_ptr);
     unsigned int elapsed_ms(struct timespec& start, struct timespec& end);
     std::size_t parse_fem_port_map(const std::string fem_port_map_str);
-    Hexitec::AsicCounterBitDepth parse_bit_depth(const std::string bit_depth_str);
 
     Hexitec::AsicCounterBitDepth asic_counter_bit_depth_;
     std::size_t num_subframes_;
@@ -97,12 +96,12 @@ namespace FrameReceiver
     uint32_t packets_lost_;
     uint32_t fem_packets_lost_[Hexitec::max_num_fems];
 
-    bool has_subframe_trailer_;
+//    bool has_subframe_trailer_;
 
-    static const std::string asic_bit_depth_str_[Hexitec::num_bit_depths];
+//    static const std::string asic_bit_depth_str_[Hexitec::num_bit_depths];
 
     static const std::string CONFIG_FEM_PORT_MAP;
-    static const std::string CONFIG_BITDEPTH;
+//    static const std::string CONFIG_BITDEPTH;
 
 
   };

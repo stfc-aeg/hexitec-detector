@@ -18,11 +18,11 @@
 
 using namespace FrameReceiver;
 
-const std::string HexitecFrameDecoder::asic_bit_depth_str_[Hexitec::num_bit_depths] =
-    {"1-bit", "6-bit", "12-bit", "24-bit"};
+//const std::string HexitecFrameDecoder::asic_bit_depth_str_[Hexitec::num_bit_depths] =
+//    {"1-bit", "6-bit", "12-bit", "24-bit"};
 
 const std::string HexitecFrameDecoder::CONFIG_FEM_PORT_MAP = "fem_port_map";
-const std::string HexitecFrameDecoder::CONFIG_BITDEPTH = "bitdepth";
+//const std::string HexitecFrameDecoder::CONFIG_BITDEPTH = "bitdepth";
 
 #define MAX_IGNORED_PACKET_REPORTS 10
 
@@ -33,9 +33,8 @@ const std::string HexitecFrameDecoder::CONFIG_BITDEPTH = "bitdepth";
 //!
 HexitecFrameDecoder::HexitecFrameDecoder() :
     FrameDecoderUDP(),
-	asic_counter_bit_depth_(Hexitec::bitDepth1),
-//	asic_counter_bit_depth_(Hexitec::bitDepth12),
-    num_subframes_(Hexitec::num_subframes[asic_counter_bit_depth_]),
+//	asic_counter_bit_depth_(Hexitec::bitDepth1),
+    num_subframes_(Hexitec::num_subframes),
     current_frame_seen_(Hexitec::default_frame_number),
     current_frame_buffer_id_(Hexitec::default_frame_number),
     current_frame_buffer_(0),
@@ -43,8 +42,8 @@ HexitecFrameDecoder::HexitecFrameDecoder() :
     num_active_fems_(0),
     dropping_frame_data_(false),
     packets_ignored_(0),
-    packets_lost_(0),
-    has_subframe_trailer_(true)
+    packets_lost_(0)
+//    has_subframe_trailer_(true)
 {
 
   // Allocate buffers for packet header, dropped frames and scratched packets
@@ -127,19 +126,19 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
 //      << asic_bit_depth_str_[asic_counter_bit_depth_]);
 
   // Set the number of subframes in this readout mode, as it is used frequently
-  num_subframes_ = Hexitec::num_subframes[asic_counter_bit_depth_];
+  num_subframes_ = Hexitec::num_subframes;
   LOG4CXX_DEBUG_LEVEL(1, logger_, "Setting number of subframes for this bit depth to "
       <<num_subframes_);
 
-  // Determine if this readout mode has a subframe trailer
-  if (asic_counter_bit_depth_ == Hexitec::bitDepth1)
-  {
-    has_subframe_trailer_ = false;
-  }
-  else
-  {
-    has_subframe_trailer_ = true;
-  }
+//  // Determine if this readout mode has a subframe trailer
+//  if (asic_counter_bit_depth_ == Hexitec::bitDepth1)
+//  {
+//    has_subframe_trailer_ = false;
+//  }
+//  else
+//  {
+//    has_subframe_trailer_ = true;
+//  }
 
   // Print a packet logger header to the appropriate logger if enabled
   if (enable_packet_logging_)
@@ -172,7 +171,7 @@ void HexitecFrameDecoder::request_configuration(const std::string param_prefix,
 
   // Add current configuration parameters to reply
   config_reply.set_param(param_prefix + CONFIG_FEM_PORT_MAP, fem_port_map_str_);
-  config_reply.set_param(param_prefix + CONFIG_BITDEPTH, asic_bit_depth_str_[asic_counter_bit_depth_]);
+//  config_reply.set_param(param_prefix + CONFIG_BITDEPTH, asic_bit_depth_str_[asic_counter_bit_depth_]);
 
 }
 
@@ -186,7 +185,7 @@ void HexitecFrameDecoder::request_configuration(const std::string param_prefix,
 const size_t HexitecFrameDecoder::get_frame_buffer_size(void) const
 {
   size_t frame_buffer_size = get_frame_header_size() +
-      (Hexitec::subframe_size(asic_counter_bit_depth_) * num_subframes_ * num_active_fems_);
+      (Hexitec::subframe_size() * num_subframes_ * num_active_fems_);
   return frame_buffer_size;
 }
 
@@ -421,8 +420,8 @@ void* HexitecFrameDecoder::get_next_payload_buffer(void) const
 
   if (current_packet_fem_map_.fem_idx_ != ILLEGAL_FEM_IDX)
   {
-    std::size_t subframe_size = Hexitec::subframe_size(asic_counter_bit_depth_);
-    std::size_t num_subframes = Hexitec::num_subframes[asic_counter_bit_depth_];
+    std::size_t subframe_size = Hexitec::subframe_size();
+    std::size_t num_subframes = Hexitec::num_subframes;
 
     next_receive_location = reinterpret_cast<uint8_t*>(current_frame_buffer_)
           + get_frame_header_size ()
@@ -451,13 +450,13 @@ size_t HexitecFrameDecoder::get_next_payload_size(void) const
 {
   size_t next_receive_size = 0;
 
-  if (get_packet_number() < Hexitec::num_primary_packets[asic_counter_bit_depth_])
+  if (get_packet_number() < Hexitec::num_primary_packets)
   {
     next_receive_size = Hexitec::primary_packet_size;
   }
   else
   {
-    next_receive_size = Hexitec::tail_packet_size[asic_counter_bit_depth_];
+    next_receive_size = Hexitec::tail_packet_size;
   }
 
   return next_receive_size;
@@ -520,7 +519,7 @@ FrameDecoder::FrameReceiveState HexitecFrameDecoder::process_packet(size_t bytes
     // If we have received the expected number of packets, perform end of frame processing
     // and hand off the frame for downstream processing.
     if (current_frame_header_->total_packets_received ==
-        (Hexitec::num_fem_frame_packets(asic_counter_bit_depth_) * num_active_fems_))
+        (Hexitec::num_fem_frame_packets() * num_active_fems_))
     {
 
       // Check that the appropriate number of SOF and EOF markers (one each per subframe) have
@@ -586,7 +585,7 @@ void HexitecFrameDecoder::monitor_buffers(void)
     {
 
       const std::size_t num_fem_frame_packets =
-          Hexitec::num_fem_frame_packets(asic_counter_bit_depth_);
+          Hexitec::num_fem_frame_packets();
 
       // Calculate packets lost on this frame and add to total
       uint32_t packets_lost = (num_fem_frame_packets * num_active_fems_) -
@@ -776,36 +775,3 @@ std::size_t HexitecFrameDecoder::parse_fem_port_map(const std::string fem_port_m
     return fem_port_map_.size();
 }
 
-//! Parse the ASIC counter bit depth configuration string.
-//!
-//! This method parses a configuration string specifying the HEXITEC ASIC counter bit
-//! depth currently in use, returning an enumerated constant for use in the decoder.
-//!
-//! \param[in] bit_depth_str - string of the bit depth
-//! \return enumerated constant defining bit depth, or unknown if the string is not recognised
-//!
-Hexitec::AsicCounterBitDepth HexitecFrameDecoder::parse_bit_depth(
-    const std::string bit_depth_str)
-{
-
-  //! Set the default bit depth to return to unknown
-  Hexitec::AsicCounterBitDepth bit_depth = Hexitec::bitDepthUnknown;
-
-  // Initialise a mapping of string to bit depth
-  static std::map<std::string, Hexitec::AsicCounterBitDepth>bit_depth_map;
-  if (bit_depth_map.empty())
-  {
-    bit_depth_map[asic_bit_depth_str_[Hexitec::bitDepth1]]  = Hexitec::bitDepth1;
-    bit_depth_map[asic_bit_depth_str_[Hexitec::bitDepth6]]  = Hexitec::bitDepth6;
-    bit_depth_map[asic_bit_depth_str_[Hexitec::bitDepth12]] = Hexitec::bitDepth12;
-    bit_depth_map[asic_bit_depth_str_[Hexitec::bitDepth24]] = Hexitec::bitDepth24;
-  }
-
-  // Set the bit depth value if present in the map
-  if (bit_depth_map.count(bit_depth_str))
-  {
-    bit_depth = bit_depth_map[bit_depth_str];
-  }
-
-  return bit_depth;
-}

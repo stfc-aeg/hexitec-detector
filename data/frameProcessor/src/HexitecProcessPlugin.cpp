@@ -11,7 +11,7 @@ namespace FrameProcessor
 {
 
   const std::string HexitecProcessPlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
-  const std::string HexitecProcessPlugin::CONFIG_ASIC_COUNTER_DEPTH = "bitdepth";
+//  const std::string HexitecProcessPlugin::CONFIG_ASIC_COUNTER_DEPTH = "bitdepth";
   const std::string HexitecProcessPlugin::CONFIG_IMAGE_WIDTH = "width";
   const std::string HexitecProcessPlugin::CONFIG_IMAGE_HEIGHT = "height";
   const std::string HexitecProcessPlugin::BIT_DEPTH[4] = {"1-bit", "6-bit", "12-bit", "24-bit"};
@@ -20,9 +20,8 @@ namespace FrameProcessor
    * The constructor sets up logging used within the class.
    */
   HexitecProcessPlugin::HexitecProcessPlugin() :
-      asic_counter_depth_(DEPTH_12_BIT),
-      image_width_(2048),
-      image_height_(256),
+      image_width_(/*2048*/ 80),
+      image_height_(/*256*/ 80),
       image_pixels_(image_width_ * image_height_),
       packets_lost_(0)
   {
@@ -56,35 +55,35 @@ namespace FrameProcessor
       packets_lost_ = config.get_param<int>(HexitecProcessPlugin::CONFIG_DROPPED_PACKETS);
     }
 
-    if (config.has_param(HexitecProcessPlugin::CONFIG_ASIC_COUNTER_DEPTH))
-    {
-      std::string bit_depth_str =
-          config.get_param<std::string>(HexitecProcessPlugin::CONFIG_ASIC_COUNTER_DEPTH);
+//    if (config.has_param(HexitecProcessPlugin::CONFIG_ASIC_COUNTER_DEPTH))
+//    {
+//      std::string bit_depth_str =
+//          config.get_param<std::string>(HexitecProcessPlugin::CONFIG_ASIC_COUNTER_DEPTH);
 
-      if (bit_depth_str == BIT_DEPTH[DEPTH_1_BIT])
-      {
-        asic_counter_depth_ = DEPTH_1_BIT;
-      }
-      else if (bit_depth_str == BIT_DEPTH[DEPTH_6_BIT])
-      {
-        asic_counter_depth_ = DEPTH_6_BIT;
-      }
-      else if (bit_depth_str == BIT_DEPTH[DEPTH_12_BIT])
-      {
-        asic_counter_depth_ = DEPTH_12_BIT;
-      }
-      else if (bit_depth_str == BIT_DEPTH[DEPTH_24_BIT])
-      {
-        asic_counter_depth_ = DEPTH_24_BIT;
-      }
-      else
-      {
-        std::stringstream ss;
-        ss << "Invalid bit depth requested: " << bit_depth_str;
-        LOG4CXX_ERROR(logger_, "Invalid bit depth requested: " << bit_depth_str);
-        throw std::runtime_error("Invalid bit depth requested");
-      }
-    }
+//      if (bit_depth_str == BIT_DEPTH[DEPTH_1_BIT])
+//      {
+//        asic_counter_depth_ = DEPTH_1_BIT;
+//      }
+//      else if (bit_depth_str == BIT_DEPTH[DEPTH_6_BIT])
+//      {
+//        asic_counter_depth_ = DEPTH_6_BIT;
+//      }
+//      else if (bit_depth_str == BIT_DEPTH[DEPTH_12_BIT])
+//      {
+//        asic_counter_depth_ = DEPTH_12_BIT;
+//      }
+//      else if (bit_depth_str == BIT_DEPTH[DEPTH_24_BIT])
+//      {
+//        asic_counter_depth_ = DEPTH_24_BIT;
+//      }
+//      else
+//      {
+//        std::stringstream ss;
+//        ss << "Invalid bit depth requested: " << bit_depth_str;
+//        LOG4CXX_ERROR(logger_, "Invalid bit depth requested: " << bit_depth_str);
+//        throw std::runtime_error("Invalid bit depth requested");
+//      }
+//    }
 
     if (config.has_param(HexitecProcessPlugin::CONFIG_IMAGE_WIDTH))
     {
@@ -109,7 +108,7 @@ namespace FrameProcessor
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for Hexitec plugin");
-    status.set_param(get_name() + "/bitdepth", BIT_DEPTH[asic_counter_depth_]);
+//    status.set_param(get_name() + "/bitdepth", BIT_DEPTH[asic_counter_depth_]);
     status.set_param(get_name() + "/packets_lost", packets_lost_);
   }
 
@@ -121,14 +120,13 @@ namespace FrameProcessor
   void HexitecProcessPlugin::process_lost_packets(boost::shared_ptr<Frame> frame)
   {
     const Hexitec::FrameHeader* hdr_ptr = static_cast<const Hexitec::FrameHeader*>(frame->get_data());
-    Hexitec::AsicCounterBitDepth depth = static_cast<Hexitec::AsicCounterBitDepth>(asic_counter_depth_);
     LOG4CXX_DEBUG(logger_, "Processing lost packets for frame " << hdr_ptr->frame_number);
     LOG4CXX_DEBUG(logger_, "Packets received: " << hdr_ptr->total_packets_received
                                                 << " out of a maximum "
-                                                << Hexitec::num_fem_frame_packets(depth) * hdr_ptr->num_active_fems);
-    if (hdr_ptr->total_packets_received < (Hexitec::num_fem_frame_packets(depth) * hdr_ptr->num_active_fems)){
-      int packets_lost = (Hexitec::num_fem_frame_packets(depth) * hdr_ptr->num_active_fems) - hdr_ptr->total_packets_received;
-      LOG4CXX_ERROR(logger_, "Frame number " << hdr_ptr->frame_number << " has dropped " << packets_lost << " packets");
+                                                << Hexitec::num_fem_frame_packets() * hdr_ptr->num_active_fems);
+    if (hdr_ptr->total_packets_received < (Hexitec::num_fem_frame_packets() * hdr_ptr->num_active_fems)){
+      int packets_lost = (Hexitec::num_fem_frame_packets() * hdr_ptr->num_active_fems) - hdr_ptr->total_packets_received;
+      LOG4CXX_ERROR(logger_, "Frame number " << hdr_ptr->frame_number << " has dropped " << packets_lost << " packet(s)");
       packets_lost_ += packets_lost;
       LOG4CXX_ERROR(logger_, "Total packets lost since startup " << packets_lost_);
     }
@@ -174,7 +172,7 @@ namespace FrameProcessor
     }
 
     // Determine the size of the output reordered image based on current bit depth
-    const std::size_t output_image_size = reordered_image_size(asic_counter_depth_);
+    const std::size_t output_image_size = reordered_image_size();
     LOG4CXX_TRACE(logger_, "Output image size: " << output_image_size);
 
     // Obtain a pointer to the start of the data in the frame
@@ -210,8 +208,7 @@ namespace FrameProcessor
       // Calculate the FEM frame size once so it can be used in the following loop
       // repeatedly
       std::size_t fem_frame_size = (
-          Hexitec::num_subframes[asic_counter_depth_] *
-          Hexitec::subframe_size(static_cast<Hexitec::AsicCounterBitDepth>(asic_counter_depth_))
+          Hexitec::num_subframes * Hexitec::subframe_size()
       );
 
       // Loop over active FEMs in the input frame image data, reordering pixels into the output
@@ -234,40 +231,9 @@ namespace FrameProcessor
         LOG4CXX_TRACE(logger_, "Active FEM idx=" << static_cast<int>(fem_idx)
             << ": stripe orientation is " << (stripe_is_even ? "even" : "odd"));
 
-        // Reorder strip according to counter depth
-        switch (asic_counter_depth_)
-        {
-          case DEPTH_1_BIT: // 1-bit counter depth
-            reorder_1bit_stripe(static_cast<unsigned int *>(input_ptr),
-                                static_cast<unsigned char *>(reordered_image) + output_offset,
-                                stripe_is_even);
-            break;
-
-          case DEPTH_6_BIT: // 6-bit counter depth
-            reorder_6bit_stripe(static_cast<unsigned char *>(input_ptr),
-                                static_cast<unsigned char *>(reordered_image) + output_offset,
-                                stripe_is_even);
-            break;
-
-          case DEPTH_12_BIT: // 12-bit counter depth
-            reorder_12bit_stripe(static_cast<unsigned short *>(input_ptr),
-                                 static_cast<unsigned short *>(reordered_image) + output_offset,
-                                 stripe_is_even);
-            break;
-
-          case DEPTH_24_BIT: // 24-bit counter depth needs special handling to merge two counters
-
-            void* c1_input_ptr = input_ptr;
-            void* c0_input_ptr =  static_cast<void *>(static_cast<char *>(input_ptr) + fem_frame_size / 2);
-
-            reorder_24bit_stripe(
-                static_cast<unsigned short *>(c0_input_ptr),
-                static_cast<unsigned short *>(c1_input_ptr),
-                static_cast<unsigned int *>(reordered_image) + output_offset,
-                stripe_is_even);
-
-            break;
-        }
+        reorder_12bit_stripe(static_cast<unsigned short *>(input_ptr),
+                             static_cast<unsigned short *>(reordered_image) + output_offset,
+                             stripe_is_even);
       }
 
       // Set the frame image to the reordered image buffer if appropriate
@@ -281,15 +247,8 @@ namespace FrameProcessor
         boost::shared_ptr<Frame> data_frame;
         data_frame = boost::shared_ptr<Frame>(new Frame("data"));
 
-        if (asic_counter_depth_ == DEPTH_24_BIT)
-        {
-          // Only every other incoming frame results in a new frame
-          data_frame->set_frame_number(hdr_ptr->frame_number/2);
-        }
-        else
-        {
-          data_frame->set_frame_number(hdr_ptr->frame_number);
-        }
+        data_frame->set_frame_number(hdr_ptr->frame_number);
+
         data_frame->set_dimensions(dims);
         data_frame->copy_data(reordered_image, output_image_size);
 
@@ -314,145 +273,10 @@ namespace FrameProcessor
    * \param[in] asic_counter_depth
    * \return size of the reordered image in bytes
    */
-  std::size_t HexitecProcessPlugin::reordered_image_size(int asic_counter_depth) {
+  std::size_t HexitecProcessPlugin::reordered_image_size() {
 
-    std::size_t slice_size = 0;
+    return image_width_ * image_height_ * sizeof(unsigned short);
 
-    switch (asic_counter_depth)
-    {
-      case DEPTH_1_BIT:
-      case DEPTH_6_BIT:
-        slice_size = image_width_ * image_height_ * sizeof(unsigned char);
-        break;
-
-      case DEPTH_12_BIT:
-        slice_size = image_width_ * image_height_ * sizeof(unsigned short);
-        break;
-
-      case DEPTH_24_BIT:
-        slice_size = image_width_ * image_height_ * sizeof(unsigned int);
-        break;
-
-      default:
-      {
-        std::stringstream msg;
-        msg << "Invalid bit depth specified for reordered slice size: " << asic_counter_depth;
-        throw std::runtime_error(msg.str());
-      }
-      break;
-    }
-
-    return slice_size;
-
-  }
-
-  /**
-   * Reorder an image stripe using 1 bit re-ordering.
-   * 1 bit images are captured in raw data mode, i.e. without reordering. In this mode, each
-   * 32-bit word contains the current pixel being output on each data line of the group of
-   * 4 ASICs, i.e. a supercolumn
-   *
-   * \param[in] in - Pointer to the incoming image data.
-   * \param[out] out - Pointer to the allocated memory where the reordered image is written.
-   * \param[in] stripe_is_even - boolean indicating if stripe has even orientation
-   */
-  void HexitecProcessPlugin::reorder_1bit_stripe(unsigned int* in, unsigned char* out,
-      bool stripe_is_even)
-  {
-    int block, y, x, x2, chip, pixel_x, pixel_y, pixel_addr, bit_posn;
-    int raw_addr = 0;
-
-    // Loop over two blocks of data
-    for (block = 0; block < FEM_BLOCKS_PER_STRIPE_X; block++)
-    {
-      // Loop over Y axis (rows)
-      for (y = 0; y < FEM_PIXELS_PER_CHIP_Y; y++)
-      {
-        pixel_y = stripe_is_even ? (255 - y) : y;
-
-        // Loop over pixels in a supercolumn
-        for (x = 0; x < FEM_PIXELS_PER_SUPERCOLUMN_X; x++)
-        {
-          // Loop over chips in x per block
-          for (chip = 0; chip < FEM_CHIPS_PER_BLOCK_X; chip++)
-          {
-            // Loop over supercolumns per chip
-            for (x2 = 0; x2 < FEM_SUPERCOLUMNS_PER_CHIP; x2++)
-            {
-              if (stripe_is_even)
-              {
-                pixel_x = (block*(FEM_PIXELS_PER_CHIP_X*FEM_CHIPS_PER_STRIPE_X/2)) +
-                     (chip * FEM_PIXELS_PER_CHIP_X) +
-                     (255 - ((x2 * FEM_PIXELS_PER_SUPERCOLUMN_X) + x));
-              }
-              else
-              {
-                pixel_x = (FEM_PIXELS_PER_CHIP_X*FEM_CHIPS_PER_STRIPE_X - 1) -
-                    ((block*(FEM_PIXELS_PER_CHIP_X*FEM_CHIPS_PER_STRIPE_X/2)) +
-                     (chip * FEM_PIXELS_PER_CHIP_X) +
-                     (255 - ((x2 * FEM_PIXELS_PER_SUPERCOLUMN_X) + x)));
-              }
-              pixel_addr = pixel_x + pixel_y*(FEM_PIXELS_PER_CHIP_X*FEM_CHIPS_PER_STRIPE_X);
-              bit_posn = (chip * 8) + x2;
-              out[pixel_addr] = (in[raw_addr] >> bit_posn) & 0x1;
-            }
-          }
-          raw_addr++;
-        }
-      }
-    }
-  }
-
-  /**
-   * Reorder an image stripe using 6 bit re-ordering.
-   *
-   * \param[in] in - Pointer to the incoming image data.
-   * \param[out] out - Pointer to the allocated memory where the reordered image is written.
-   * \param[in] stripe_is_even - boolean indicating if stripe has even orientation
-   */
-  void HexitecProcessPlugin::reorder_6bit_stripe(unsigned char* in, unsigned char* out,
-      bool stripe_is_even)
-  {
-    int block, y, x, chip, x2, pixel_x, pixel_y, pixel_addr;
-    int raw_addr = 0;
-
-    for (block=0; block<FEM_BLOCKS_PER_STRIPE_X; block++)
-    {
-      for (y=0; y<FEM_PIXELS_PER_CHIP_Y; y+=2)
-      {
-        for (x=0; x<FEM_PIXELS_PER_CHIP_X/FEM_PIXELS_IN_GROUP_6BIT; x++)
-        {
-          for (chip=0; chip<FEM_CHIPS_PER_BLOCK_X; chip++)
-          {
-            for (x2=0; x2<FEM_PIXELS_IN_GROUP_6BIT; x2++)
-            {
-              if (stripe_is_even)
-              {
-                pixel_x = (block*(FEM_PIXELS_PER_CHIP_X*FEM_CHIPS_PER_STRIPE_X/2) +
-                    chip*FEM_PIXELS_PER_CHIP_X + (255-(x2 + x*FEM_PIXELS_IN_GROUP_6BIT)));
-             }
-              else
-              {
-                pixel_x = (FEM_PIXELS_PER_CHIP_X*FEM_CHIPS_PER_STRIPE_X - 1) -
-                    ((block*(FEM_PIXELS_PER_CHIP_X*FEM_CHIPS_PER_STRIPE_X/2) +
-                     chip*FEM_PIXELS_PER_CHIP_X + (255-(x2 + x*FEM_PIXELS_IN_GROUP_6BIT))));
-              }
-              pixel_y = stripe_is_even ? (254 - y) : (y+1);
-              pixel_addr = pixel_x + pixel_y*(FEM_PIXELS_PER_CHIP_X*FEM_CHIPS_PER_STRIPE_X);
-              out[pixel_addr] = in[raw_addr];
-              raw_addr++;
-
-              pixel_y = stripe_is_even ? (255 - y) : y;
-              pixel_addr = pixel_x + pixel_y*(FEM_PIXELS_PER_CHIP_X*FEM_CHIPS_PER_STRIPE_X);
-              out[pixel_addr] = in[raw_addr];
-              raw_addr++;
-            }
-          }
-        }
-      }
-      // Skip over the subframe trailer in the last 8 bytes (4 words) at the end of each block
-      raw_addr += 8;
-    }
   }
 
   /**
@@ -503,59 +327,6 @@ namespace FrameProcessor
       raw_addr += 4;
     }
   }
-
-  /**
-     * Reorder an image stripe using 24 bit re-ordering.
-     *
-     * This method uses the same reordering algorithm as for 12-bit images, but reorders
-     * both counters in parallel and builds into the output image.
-     *
-     * \param[in] in_c0 - Pointer to the incoming counter 0 data.
-     * \param[in] in_c1 - Pointer to the incoming counter 1 data.
-     * \param[out] out - Pointer to the allocated memory where the reordered image is written.
-     * \param[in] stripe_is_even - boolean indicating if stripe has even orientation
-     */
-    void HexitecProcessPlugin::reorder_24bit_stripe(unsigned short* in_c0,
-        unsigned short* in_c1, unsigned int* out, bool stripe_is_even)
-    {
-      int block, y, x, chip, x2, pixel_x, pixel_y, pixel_addr;
-      int raw_addr = 0;
-
-      for (block=0; block<FEM_BLOCKS_PER_STRIPE_X; block++)
-      {
-        for (y=0; y<FEM_PIXELS_PER_CHIP_Y; y++)
-        {
-          pixel_y = stripe_is_even ? (255 - y) : y;
-
-          for (x=0; x<FEM_PIXELS_PER_CHIP_X/FEM_PIXELS_IN_GROUP_12BIT; x++)
-          {
-            for (chip=0; chip<FEM_CHIPS_PER_BLOCK_X; chip++)
-            {
-              for (x2=0; x2<FEM_PIXELS_IN_GROUP_12BIT; x2++)
-              {
-                if (stripe_is_even)
-                {
-                  pixel_x = (block*(FEM_PIXELS_PER_CHIP_X*FEM_CHIPS_PER_STRIPE_X/2) +
-                         chip*FEM_PIXELS_PER_CHIP_X + (255-(x2 + x*FEM_PIXELS_IN_GROUP_12BIT)));
-                }
-                else
-                {
-                  pixel_x = (FEM_PIXELS_PER_CHIP_X*FEM_CHIPS_PER_STRIPE_X - 1) -
-                      (block*(FEM_PIXELS_PER_CHIP_X*FEM_CHIPS_PER_STRIPE_X/2) +
-                       chip*FEM_PIXELS_PER_CHIP_X + (255-(x2 + x*FEM_PIXELS_IN_GROUP_12BIT)));
-                }
-                pixel_addr = pixel_x + pixel_y*(FEM_PIXELS_PER_CHIP_X*FEM_CHIPS_PER_STRIPE_X);
-                out[pixel_addr] =
-                    (((unsigned int)(in_c1[raw_addr] & 0xFFF)) << 12) | (in_c0[raw_addr] & 0xFFF);
-                raw_addr++;
-              }
-            }
-          }
-        }
-        // Skip over the subframe trailer in the last 8 bytes (4 words) at the end of each block
-        raw_addr += 4;
-      }
-    }
 
 } /* namespace FrameProcessor */
 

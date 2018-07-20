@@ -67,8 +67,8 @@ namespace FrameProcessor
     /** Configuration constant for clearing out dropped packet counters **/
     static const std::string CONFIG_DROPPED_PACKETS;
 
-    /** Configuration constant for asic counter depth **/
-    static const std::string CONFIG_ASIC_COUNTER_DEPTH;
+//    /** Configuration constant for asic counter depth **/
+//    static const std::string CONFIG_ASIC_COUNTER_DEPTH;
     /** Configuration constant for image width **/
     static const std::string CONFIG_IMAGE_WIDTH;
     /** Configuration constant for image height **/
@@ -89,17 +89,13 @@ namespace FrameProcessor
 
     void process_lost_packets(boost::shared_ptr<Frame> frame);
     void process_frame(boost::shared_ptr<Frame> frame);
-    void reorder_1bit_stripe(unsigned int* in, unsigned char* out, bool stripe_is_even);
-    void reorder_6bit_stripe(unsigned char* in, unsigned char* out, bool stripe_is_even);
     void reorder_12bit_stripe(unsigned short* in, unsigned short* out, bool stripe_is_even);
-    void reorder_24bit_stripe(unsigned short* in_c0, unsigned short* in_c1, unsigned int* out,
-        bool stripe_is_even);
-    std::size_t reordered_image_size(int asic_counter_depth_);
+    std::size_t reordered_image_size();
 
     /** Pointer to logger **/
     LoggerPtr logger_;
-    /** Bit depth of the incoming frames **/
-    int asic_counter_depth_;
+//    /** Bit depth of the incoming frames **/
+//    int asic_counter_depth_;
     /** Image width **/
     int image_width_;
     /** Image height **/
