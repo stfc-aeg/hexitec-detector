@@ -142,3 +142,4 @@ tags
 
 # Ignore Qt project file (used to view source code in QtCreator)
 *.pro
+*.pro.user

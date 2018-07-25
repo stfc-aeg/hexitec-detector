@@ -1,5 +1,5 @@
 /*
- * HexitecProcessPlugin.h
+ * HexitecTemplatePlugin.h
  *
  *  Created on: 11 Jul 2018
  *      Author: ckd27546
@@ -27,17 +27,15 @@ using namespace log4cxx::helpers;
 namespace FrameProcessor
 {
 
-  /** Processing of Hexitec Frame objects.
+  /** Template for future Hexitec Frame objects.
    *
-   * The HexitecProcessPlugin class is currently responsible for receiving a raw data
-   * Frame object and reordering the data into valid Hexitec frames according to the selected
-   * bit depth.
+   * This service of the template for all of the remaining hexitec plug-ins to be written.
    */
-  class HexitecProcessPlugin : public FrameProcessorPlugin
+  class HexitecTemplatePlugin : public FrameProcessorPlugin
   {
   public:
-    HexitecProcessPlugin();
-    virtual ~HexitecProcessPlugin();
+    HexitecTemplatePlugin();
+    virtual ~HexitecTemplatePlugin();
     void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
     void status(OdinData::IpcMessage& status);
 
@@ -51,12 +49,7 @@ namespace FrameProcessor
 
     void process_lost_packets(boost::shared_ptr<Frame> frame);
     void process_frame(boost::shared_ptr<Frame> frame);
-    void reorder_pixels(unsigned short* in, unsigned short* out);
     std::size_t reordered_image_size();
-
-    void initialisePixelMap();
-    uint16_t pixelMap[6400];
-    bool pixelMapInitialised;
 
     /** Pointer to logger **/
     LoggerPtr logger_;
@@ -74,7 +67,7 @@ namespace FrameProcessor
    * Registration of this plugin through the ClassLoader.  This macro
    * registers the class without needing to worry about name mangling
    */
-  REGISTER(FrameProcessorPlugin, HexitecProcessPlugin, "HexitecProcessPlugin");
+  REGISTER(FrameProcessorPlugin, HexitecTemplatePlugin, "HexitecTemplatePlugin");
 
 } /* namespace FrameProcessor */
 

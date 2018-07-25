@@ -65,7 +65,7 @@ namespace FrameReceiver
 
     void* get_packet_header_buffer(void);
 
-    uint32_t get_subframe_counter(void) const;
+    uint32_t get_frame_counter(void) const;
     uint32_t get_packet_number(void) const;
     bool get_start_of_frame_marker(void) const;
     bool get_end_of_frame_marker(void) const;
@@ -76,8 +76,6 @@ namespace FrameReceiver
     unsigned int elapsed_ms(struct timespec& start, struct timespec& end);
     std::size_t parse_fem_port_map(const std::string fem_port_map_str);
 
-    Hexitec::AsicCounterBitDepth asic_counter_bit_depth_;
-    std::size_t num_subframes_;
     std::string fem_port_map_str_;
     HexitecDecoderFemMap fem_port_map_;
     boost::shared_ptr<void> current_packet_header_;
@@ -89,20 +87,13 @@ namespace FrameReceiver
     void* current_frame_buffer_;
     Hexitec::FrameHeader* current_frame_header_;
     HexitecDecoderFemMapEntry current_packet_fem_map_;
-    std::size_t num_active_fems_;
 
     bool dropping_frame_data_;
     uint32_t packets_ignored_;
     uint32_t packets_lost_;
-    uint32_t fem_packets_lost_[Hexitec::max_num_fems];
-
-//    bool has_subframe_trailer_;
-
-//    static const std::string asic_bit_depth_str_[Hexitec::num_bit_depths];
+    uint32_t fem_packets_lost_;
 
     static const std::string CONFIG_FEM_PORT_MAP;
-//    static const std::string CONFIG_BITDEPTH;
-
 
   };
 

@@ -1,68 +1,41 @@
 /*
- * HexitecProcessPlugin.cpp
+ * HexitecTemplatePlugin.cpp
  *
- *  Created on: 11 Jul 2018
+ *  Created on: 24 Jul 2018
  *      Author: ckd27546
  */
 
-#include <HexitecProcessPlugin.h>
+#include <HexitecTemplatePlugin.h>
 
 namespace FrameProcessor
 {
 
-  const std::string HexitecProcessPlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
-  const std::string HexitecProcessPlugin::CONFIG_IMAGE_WIDTH = "width";
-  const std::string HexitecProcessPlugin::CONFIG_IMAGE_HEIGHT = "height";
+  const std::string HexitecTemplatePlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
+  const std::string HexitecTemplatePlugin::CONFIG_IMAGE_WIDTH = "width";
+  const std::string HexitecTemplatePlugin::CONFIG_IMAGE_HEIGHT = "height";
 
   /**
    * The constructor sets up logging used within the class.
    */
-  HexitecProcessPlugin::HexitecProcessPlugin() :
+  HexitecTemplatePlugin::HexitecTemplatePlugin() :
       image_width_(80),
       image_height_(80),
       image_pixels_(image_width_ * image_height_),
       packets_lost_(0)
   {
     // Setup logging for the class
-    logger_ = Logger::getLogger("FW.HexitecProcessPlugin");
+    logger_ = Logger::getLogger("FW.HexitecTemplatePlugin");
     logger_->setLevel(Level::getAll());
-    LOG4CXX_TRACE(logger_, "HexitecProcessPlugin constructor.");
+    LOG4CXX_TRACE(logger_, "HexitecTemplatePlugin constructor.");
 
-    // Setup Pixel order lookup table
-    if (!pixelMapInitialised)
-    {
-       initialisePixelMap();
-       pixelMapInitialised = true;
-    }
-
-  }
-
-  /**
-   * Setup pixel look up table
-   */
-  void HexitecProcessPlugin::initialisePixelMap()
-  {
-     int pmIndex = 0;
-
-     for (int row = 0; row < 80; row++)
-     {
-        for (int col = 0; col < 20; col++)
-        {
-           for (int pix = 0; pix < 80; pix+=20)
-           {
-              pixelMap[pmIndex] = pix + col +(row * 80);
-              pmIndex++;
-           }
-        }
-     }
   }
 
   /**
    * Destructor.
    */
-  HexitecProcessPlugin::~HexitecProcessPlugin()
+  HexitecTemplatePlugin::~HexitecTemplatePlugin()
   {
-    LOG4CXX_TRACE(logger_, "HexitecProcessPlugin destructor.");
+    LOG4CXX_TRACE(logger_, "HexitecTemplatePlugin destructor.");
   }
 
   /**
@@ -74,21 +47,21 @@ namespace FrameProcessor
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[out] reply - Reference to the reply IpcMessage object.
    */
-  void HexitecProcessPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
+  void HexitecTemplatePlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
-    if (config.has_param(HexitecProcessPlugin::CONFIG_DROPPED_PACKETS))
+    if (config.has_param(HexitecTemplatePlugin::CONFIG_DROPPED_PACKETS))
     {
-      packets_lost_ = config.get_param<int>(HexitecProcessPlugin::CONFIG_DROPPED_PACKETS);
+      packets_lost_ = config.get_param<int>(HexitecTemplatePlugin::CONFIG_DROPPED_PACKETS);
     }
 
-    if (config.has_param(HexitecProcessPlugin::CONFIG_IMAGE_WIDTH))
+    if (config.has_param(HexitecTemplatePlugin::CONFIG_IMAGE_WIDTH))
     {
-      image_width_ = config.get_param<int>(HexitecProcessPlugin::CONFIG_IMAGE_WIDTH);
+      image_width_ = config.get_param<int>(HexitecTemplatePlugin::CONFIG_IMAGE_WIDTH);
     }
 
-    if (config.has_param(HexitecProcessPlugin::CONFIG_IMAGE_HEIGHT))
+    if (config.has_param(HexitecTemplatePlugin::CONFIG_IMAGE_HEIGHT))
     {
-      image_height_ = config.get_param<int>(HexitecProcessPlugin::CONFIG_IMAGE_HEIGHT);
+      image_height_ = config.get_param<int>(HexitecTemplatePlugin::CONFIG_IMAGE_HEIGHT);
     }
 
     image_pixels_ = image_width_ * image_height_;
@@ -100,7 +73,7 @@ namespace FrameProcessor
    *
    * \param[out] status - Reference to an IpcMessage value to store the status.
    */
-  void HexitecProcessPlugin::status(OdinData::IpcMessage& status)
+  void HexitecTemplatePlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for Hexitec plugin");
@@ -112,7 +85,7 @@ namespace FrameProcessor
    *
    * \param[in] frame - Pointer to a Frame object.
    */
-  void HexitecProcessPlugin::process_lost_packets(boost::shared_ptr<Frame> frame)
+  void HexitecTemplatePlugin::process_lost_packets(boost::shared_ptr<Frame> frame)
   {
     const Hexitec::FrameHeader* hdr_ptr = static_cast<const Hexitec::FrameHeader*>(frame->get_data());
     LOG4CXX_DEBUG(logger_, "Processing lost packets for frame " << hdr_ptr->frame_number);
@@ -133,7 +106,7 @@ namespace FrameProcessor
    *
    * \param[in] frame - Pointer to a Frame object.
    */
-  void HexitecProcessPlugin::process_frame(boost::shared_ptr<Frame> frame)
+  void HexitecTemplatePlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
     LOG4CXX_TRACE(logger_, "Reordering frame.");
     LOG4CXX_TRACE(logger_, "Frame size: " << frame->get_data_size());
@@ -182,13 +155,20 @@ namespace FrameProcessor
         throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
       }
 
-      // Calculate pointer into the input image data based on loop index
-      void* input_ptr = static_cast<void *>(
-          static_cast<char *>(const_cast<void *>(data_ptr)));
+      // Calculate the FEM frame size once so it can be used in the following loop
+      // repeatedly
+      std::size_t fem_frame_size = Hexitec::frame_size();
 
       // Reorder pixels into the output image
-      reorder_pixels(static_cast<unsigned short *>(input_ptr),
-                     static_cast<unsigned short *>(reordered_image));
+
+      {
+        // Calculate pointer into the input image data based on loop index
+        void* input_ptr = static_cast<void *>(
+            static_cast<char *>(const_cast<void *>(data_ptr)));
+
+//        reorder_pixels(static_cast<unsigned short *>(input_ptr),
+//                             static_cast<unsigned short *>(reordered_image));
+      }
 
       // Set the frame image to the reordered image buffer if appropriate
       if (reordered_image)
@@ -226,38 +206,10 @@ namespace FrameProcessor
    *
    * \return size of the reordered image in bytes
    */
-  std::size_t HexitecProcessPlugin::reordered_image_size() {
+  std::size_t HexitecTemplatePlugin::reordered_image_size() {
 
     return image_width_ * image_height_ * sizeof(unsigned short);
 
-  }
-
-  /**
-   * Reorder an image's pixels into chronological order.
-   *
-   * \param[in] in - Pointer to the incoming image data.
-   * \param[out] out - Pointer to the allocated memory where the reordered image is written.
-   *
-   */
-  void HexitecProcessPlugin::reorder_pixels(unsigned short* in, unsigned short* out)
-  {
-    int raw_addr = 0, x = 0, index = 0;
-
-    for (int row=0; row<FEM_PIXELS_PER_ROW; row++)
-    {
-      for (int column=0; column<FEM_PIXELS_PER_COLUMN; column++)
-      {
-        // Re-order pixels:
-//    	  index = pixelMap[raw_addr];
-//        out[index] = in[raw_addr];
-        // Don't reorder:
-        out[raw_addr] = in[raw_addr];
-//        if (row <1)
-//          LOG4CXX_TRACE(logger_, "\t\t\t in[" << column << "] = " << in[column] << " " << &(in[column]) << "\t\t\t out[" << column << "] = " << out[column] << " " << &(out[column]));
-        raw_addr++;
-      }
-    }
-    LOG4CXX_TRACE(logger_, "\t\t\t NOT REORDERING PIXELS");
   }
 
 } /* namespace FrameProcessor */
