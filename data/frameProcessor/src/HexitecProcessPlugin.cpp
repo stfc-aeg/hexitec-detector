@@ -248,16 +248,18 @@ namespace FrameProcessor
       for (int column=0; column<FEM_PIXELS_PER_COLUMN; column++)
       {
         // Re-order pixels:
-//    	  index = pixelMap[raw_addr];
-//        out[index] = in[raw_addr];
+    	index = pixelMap[raw_addr];
+        out[index] = in[raw_addr];
         // Don't reorder:
-        out[raw_addr] = in[raw_addr];
+//        out[raw_addr] = in[raw_addr];
 //        if (row <1)
 //          LOG4CXX_TRACE(logger_, "\t\t\t in[" << column << "] = " << in[column] << " " << &(in[column]) << "\t\t\t out[" << column << "] = " << out[column] << " " << &(out[column]));
+//        if (row < 1)
+//          LOG4CXX_TRACE(logger_, " " << pixelMap[raw_addr] );
         raw_addr++;
       }
     }
-    LOG4CXX_TRACE(logger_, "\t\t\t NOT REORDERING PIXELS");
+//    LOG4CXX_TRACE(logger_, "\t\t\t NOT REORDERING PIXELS");
   }
 
 } /* namespace FrameProcessor */

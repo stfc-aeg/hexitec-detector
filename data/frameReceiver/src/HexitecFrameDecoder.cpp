@@ -244,9 +244,7 @@ void HexitecFrameDecoder::process_packet_header(size_t bytes_received, int port,
   {
     if (frame != current_frame_seen_)
     {
-      //current_frame_seen_ = frame;
-       LOG4CXX_ERROR(logger_, "\t\t\t Actual frame number read was: " << frame);
-      current_frame_seen_ += 1;
+      current_frame_seen_ = frame;
 
       if (frame_buffer_map_.count(current_frame_seen_) == 0)
       {
