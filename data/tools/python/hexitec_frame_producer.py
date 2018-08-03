@@ -1,7 +1,7 @@
 """
 HexitecFrameProducer - load Hexitec frames from packet capture file and send via UDP.
 
-Shamelessly nicked from hexitec_detector's Python tools
+Shamelessly nicked from excalibur_detector's Python tools
 """
 
 import struct
@@ -211,6 +211,12 @@ class HexitecFrameProducer(object):
             help='Set logging output level'
         )
 
+        parser.add_argument(
+            '--trailer', '-t', type=int, dest='trailer',
+            default=0,
+            help='Is Packet number, SoF, EoF etc before pixel data? 0='
+        )
+
         # Parse arguments
         self.args = parser.parse_args()
 
@@ -227,7 +233,6 @@ class HexitecFrameProducer(object):
         )
             
         # Initialise the packet capture file reader
-        print type(self.args.pcap_file)
         self.pcap = dpkt.pcap.Reader(self.args.pcap_file)
 
     def run(self):
@@ -263,8 +268,13 @@ class HexitecFrameProducer(object):
             ip_layer = eth_layer.data
             udp_layer = ip_layer.data
 
-            # Unpack the packet header
-            (frame_ctr, pkt_ctr) = struct.unpack('<II', udp_layer.data[-8:])
+            # Unpack the packet header; Is it before or after pixel data?
+            if self.args.trailer:
+                # Pixel data, trailer last
+                (frame_ctr, pkt_ctr) = struct.unpack('<II', udp_layer.data[-8:])
+            else:
+                # Header, then pixel data
+                (frame_ctr, pkt_ctr) = struct.unpack('<II', udp_layer.data[:8])
 
             # If there is a SOF marker in the packet header, 
             # handle content, starting a new frame as necessary
@@ -274,8 +284,9 @@ class HexitecFrameProducer(object):
                     frame_ctr, total_packets
                 )
 
-                # Check SOF and EOF count on previous frame before switching to new frame
+                # Prevent uncaught Exception if bad pcap file
                 if current_frame is not None:
+                    # Check SOF and EOF count on previous frame before switching to new frame
                     if current_frame.num_sofs_seen() != current_frame.num_eofs_seen():
                         logging.warning(
                             'Frame %d had mismatch of SOF markers %d versus EOF markers %d',
@@ -311,7 +322,12 @@ class HexitecFrameProducer(object):
                 current_frame.set_trailer_frame_num(trailer_frame_ctr)
 
             # Append packet data to current frame
-            current_frame.append_packet(udp_layer.data)
+            if self.args.trailer:
+                # Put Trailer (8 Bs) before pixel data
+                current_frame.append_packet(udp_layer.data[-8:] + udp_layer.data[:-8])
+            else:
+                # Header already before pixel data
+                current_frame.append_packet(udp_layer.data)    # Send UDP in same order as PCAP file
 
             # Increment total packet and byte count
             total_packets += 1

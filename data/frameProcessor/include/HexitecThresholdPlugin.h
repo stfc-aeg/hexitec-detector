@@ -1,5 +1,5 @@
 /*
- * HexitecProcessPlugin.h
+ * HexitecThresholdPlugin.h
  *
  *  Created on: 11 Jul 2018
  *      Author: ckd27546
@@ -20,6 +20,9 @@ using namespace log4cxx::helpers;
 #include "HexitecDefinitions.h"
 #include "ClassLoader.h"
 
+#include <iostream>
+#include <fstream>
+
 #define FEM_PIXELS_PER_ROW 80
 #define FEM_PIXELS_PER_COLUMN 80
 #define FEM_TOTAL_PIXELS (FEM_PIXELS_PER_ROW * FEM_PIXELS_PER_COLUMN)
@@ -29,15 +32,15 @@ namespace FrameProcessor
 
   /** Processing of Hexitec Frame objects.
    *
-   * The HexitecProcessPlugin class is currently responsible for receiving a raw data
+   * The HexitecThresholdPlugin class is currently responsible for receiving a raw data
    * Frame object and reordering the data into valid Hexitec frames according to the selected
    * bit depth.
    */
-  class HexitecProcessPlugin : public FrameProcessorPlugin
+  class HexitecThresholdPlugin : public FrameProcessorPlugin
   {
   public:
-    HexitecProcessPlugin();
-    virtual ~HexitecProcessPlugin();
+    HexitecThresholdPlugin();
+    virtual ~HexitecThresholdPlugin();
     void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
     void status(OdinData::IpcMessage& status);
 
@@ -49,14 +52,8 @@ namespace FrameProcessor
     /** Configuration constant for image height **/
     static const std::string CONFIG_IMAGE_HEIGHT;
 
-    void process_lost_packets(boost::shared_ptr<Frame> frame);
     void process_frame(boost::shared_ptr<Frame> frame);
-    void reorder_pixels(unsigned short* in, unsigned short* out);
-    std::size_t reordered_image_size();
-
-    void initialisePixelMap();
-    uint16_t pixelMap[6400];
-    bool pixelMapInitialised;
+    std::size_t thresholded_image_size();
 
     /** Pointer to logger **/
     LoggerPtr logger_;
@@ -69,7 +66,16 @@ namespace FrameProcessor
     /** Packet loss counter **/
     int packets_lost_;
 
-    /* DEVELOPMENT SPACE - for the other plug-ins' functionalities */
+    void processThresholdValue(unsigned short* in, unsigned short* out);
+    void processThresholdFile(unsigned short* in, unsigned short* out);
+    bool getData(const char *filename, uint16_t defaultValue);
+    bool setThresholdPerPixel(const char * thresholdFilename);
+
+    // Member variables:
+    bool bThresholdsFromFile;
+    unsigned int thresholdValue;
+    uint16_t *thresholdPerPixel;
+    bool thresholdsStatus;
 
 
   };
@@ -78,7 +84,7 @@ namespace FrameProcessor
    * Registration of this plugin through the ClassLoader.  This macro
    * registers the class without needing to worry about name mangling
    */
-  REGISTER(FrameProcessorPlugin, HexitecProcessPlugin, "HexitecProcessPlugin");
+  REGISTER(FrameProcessorPlugin, HexitecThresholdPlugin, "HexitecThresholdPlugin");
 
 } /* namespace FrameProcessor */
 

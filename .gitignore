@@ -141,4 +141,9 @@ tags
 /data/build*
 
 # Ignore Qt project file (used to view source code in QtCreator)
+<<<<<<< HEAD
 *.pro
+=======
+*.pro
+*.pro.user
+>>>>>>> july17_framereceiver
