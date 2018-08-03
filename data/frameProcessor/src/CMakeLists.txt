@@ -7,5 +7,9 @@ include_directories(${FRAMEPROCESSOR_DIR}/include ${ODINDATA_INCLUDE_DIRS}
 
 # Add library for hexitec plugin
 add_library(HexitecProcessPlugin SHARED HexitecProcessPlugin.cpp)
+add_library(HexitecTemplatePlugin SHARED HexitecTemplatePlugin.cpp)
+add_library(HexitecThresholdPlugin SHARED HexitecThresholdPlugin.cpp)
 
 install(TARGETS HexitecProcessPlugin LIBRARY DESTINATION lib)
+install(TARGETS HexitecTemplatePlugin LIBRARY DESTINATION Lib)
+install(TARGETS HexitecThresholdPlugin LIBRARY DESTINATION Lib)

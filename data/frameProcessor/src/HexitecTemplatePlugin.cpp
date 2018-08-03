@@ -76,28 +76,8 @@ namespace FrameProcessor
   void HexitecTemplatePlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for Hexitec plugin");
+    LOG4CXX_DEBUG(logger_, "Status requested for HexitecTemplatePlugin");
     status.set_param(get_name() + "/packets_lost", packets_lost_);
-  }
-
-  /**
-   * Process and report lost UDP packets for the frame
-   *
-   * \param[in] frame - Pointer to a Frame object.
-   */
-  void HexitecTemplatePlugin::process_lost_packets(boost::shared_ptr<Frame> frame)
-  {
-    const Hexitec::FrameHeader* hdr_ptr = static_cast<const Hexitec::FrameHeader*>(frame->get_data());
-    LOG4CXX_DEBUG(logger_, "Processing lost packets for frame " << hdr_ptr->frame_number);
-    LOG4CXX_DEBUG(logger_, "Packets received: " << hdr_ptr->total_packets_received
-                                                << " out of a maximum "
-                                                << Hexitec::num_fem_frame_packets());
-    if (hdr_ptr->total_packets_received < Hexitec::num_fem_frame_packets()){
-      int packets_lost = Hexitec::num_fem_frame_packets() - hdr_ptr->total_packets_received;
-      LOG4CXX_ERROR(logger_, "Frame number " << hdr_ptr->frame_number << " has dropped " << packets_lost << " packet(s)");
-      packets_lost_ += packets_lost;
-      LOG4CXX_ERROR(logger_, "Total packets lost since startup " << packets_lost_);
-    }
   }
 
   /**
@@ -110,8 +90,6 @@ namespace FrameProcessor
   {
     LOG4CXX_TRACE(logger_, "Reordering frame.");
     LOG4CXX_TRACE(logger_, "Frame size: " << frame->get_data_size());
-
-    this->process_lost_packets(frame);
 
     const Hexitec::FrameHeader* hdr_ptr =
         static_cast<const Hexitec::FrameHeader*>(frame->get_data());
@@ -137,7 +115,7 @@ namespace FrameProcessor
     try
     {
 
-      // Check that the pixels from all active FEMs are contained within the dimensions of the
+      // Check that the pixels are contained within the dimensions of the
       // specified output image, otherwise throw an error
       if (FEM_TOTAL_PIXELS > image_pixels_)
       {
@@ -155,20 +133,13 @@ namespace FrameProcessor
         throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
       }
 
-      // Calculate the FEM frame size once so it can be used in the following loop
-      // repeatedly
-      std::size_t fem_frame_size = Hexitec::frame_size();
-
-      // Reorder pixels into the output image
-
-      {
-        // Calculate pointer into the input image data based on loop index
-        void* input_ptr = static_cast<void *>(
-            static_cast<char *>(const_cast<void *>(data_ptr)));
+			// Calculate pointer into the input image data based on loop index
+			void* input_ptr = static_cast<void *>(
+					static_cast<char *>(const_cast<void *>(data_ptr)));
 
 //        reorder_pixels(static_cast<unsigned short *>(input_ptr),
 //                             static_cast<unsigned short *>(reordered_image));
-      }
+
 
       // Set the frame image to the reordered image buffer if appropriate
       if (reordered_image)
