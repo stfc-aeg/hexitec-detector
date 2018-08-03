@@ -68,6 +68,10 @@ namespace FrameProcessor
     int image_pixels_;
     /** Packet loss counter **/
     int packets_lost_;
+
+    /* DEVELOPMENT SPACE - for the other plug-ins' functionalities */
+
+
   };
 
   /**

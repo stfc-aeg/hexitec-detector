@@ -35,6 +35,9 @@ namespace FrameProcessor
        pixelMapInitialised = true;
     }
 
+    /* DEVELOPMENT SPACE - for the other plug-ins' functionalities */
+
+
   }
 
   /**
@@ -63,6 +66,9 @@ namespace FrameProcessor
   HexitecProcessPlugin::~HexitecProcessPlugin()
   {
     LOG4CXX_TRACE(logger_, "HexitecProcessPlugin destructor.");
+
+    /* DEVELOPMENT SPACE - for the other plug-ins' functionalities */
+
   }
 
   /**
@@ -103,7 +109,7 @@ namespace FrameProcessor
   void HexitecProcessPlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for Hexitec plugin");
+    LOG4CXX_DEBUG(logger_, "Status requested for HexitecProcessPlugin");
     status.set_param(get_name() + "/packets_lost", packets_lost_);
   }
 
@@ -164,7 +170,7 @@ namespace FrameProcessor
     try
     {
 
-      // Check that the pixels from all active FEMs are contained within the dimensions of the
+      // Check that the pixels are contained within the dimensions of the
       // specified output image, otherwise throw an error
       if (FEM_TOTAL_PIXELS > image_pixels_)
       {
@@ -190,7 +196,7 @@ namespace FrameProcessor
       reorder_pixels(static_cast<unsigned short *>(input_ptr),
                      static_cast<unsigned short *>(reordered_image));
 
-      // Set the frame image to the reordered image buffer if appropriate
+        // Set the frame image to the reordered image buffer if appropriate
       if (reordered_image)
       {
         // Setup the frame dimensions
@@ -248,19 +254,25 @@ namespace FrameProcessor
       for (int column=0; column<FEM_PIXELS_PER_COLUMN; column++)
       {
         // Re-order pixels:
-    	index = pixelMap[raw_addr];
+      	index = pixelMap[raw_addr];
         out[index] = in[raw_addr];
         // Don't reorder:
 //        out[raw_addr] = in[raw_addr];
 //        if (row <1)
-//          LOG4CXX_TRACE(logger_, "\t\t\t in[" << column << "] = " << in[column] << " " << &(in[column]) << "\t\t\t out[" << column << "] = " << out[column] << " " << &(out[column]));
+//        	LOG4CXX_TRACE(logger_, "REORDER, in[" << raw_addr << "] = " << in[raw_addr] << " out[" << index << "] = " << out[index] );
 //        if (row < 1)
 //          LOG4CXX_TRACE(logger_, " " << pixelMap[raw_addr] );
         raw_addr++;
       }
     }
-//    LOG4CXX_TRACE(logger_, "\t\t\t NOT REORDERING PIXELS");
   }
+
+
+  /* ----------------------------------------------------------- */
+  /* DEVELOPMENT SPACE - for the other plug-ins' functionalities */
+  /* ----------------------------------------------------------- */
+
+
 
 } /* namespace FrameProcessor */
 
