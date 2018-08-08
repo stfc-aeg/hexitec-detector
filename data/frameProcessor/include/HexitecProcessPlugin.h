@@ -5,8 +5,8 @@
  *      Author: ckd27546
  */
 
-#ifndef TOOLS_FILEWRITER_HEXITECREORDERPLUGIN_H_
-#define TOOLS_FILEWRITER_HEXITECREORDERPLUGIN_H_
+#ifndef INCLUDE_HEXITECPROCESSPLUGIN_H_
+#define INCLUDE_HEXITECPROCESSPLUGIN_H_
 
 #include <log4cxx/logger.h>
 #include <log4cxx/basicconfigurator.h>
@@ -82,4 +82,4 @@ namespace FrameProcessor
 
 } /* namespace FrameProcessor */
 
-#endif /* TOOLS_FILEWRITER_HEXITECREORDERPLUGIN_H_ */
+#endif /* INCLUDE_HEXITECPROCESSPLUGIN_H_ */

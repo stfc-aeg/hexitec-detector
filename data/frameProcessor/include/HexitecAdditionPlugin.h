@@ -1,12 +1,12 @@
 /*
- * HexitecTemplatePlugin.h
+ * HexitecAdditionPlugin.h
  *
- *  Created on: 11 Jul 2018
+ *  Created on: 08 Aug 2018
  *      Author: ckd27546
  */
 
-#ifndef INCLUDE_HEXITECTEMPLATEPLUGIN_H_
-#define INCLUDE_HEXITECTEMPLATEPLUGIN_H_
+#ifndef INCLUDE_HEXITECADDITIONPLUGIN_H_
+#define INCLUDE_HEXITECADDITIONPLUGIN_H_
 
 #include <log4cxx/logger.h>
 #include <log4cxx/basicconfigurator.h>
@@ -31,11 +31,11 @@ namespace FrameProcessor
    *
    * This service of the template for all of the remaining hexitec plug-ins to be written.
    */
-  class HexitecTemplatePlugin : public FrameProcessorPlugin
+  class HexitecAdditionPlugin : public FrameProcessorPlugin
   {
   public:
-    HexitecTemplatePlugin();
-    virtual ~HexitecTemplatePlugin();
+    HexitecAdditionPlugin();
+    virtual ~HexitecAdditionPlugin();
     void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
     void status(OdinData::IpcMessage& status);
 
@@ -66,8 +66,8 @@ namespace FrameProcessor
    * Registration of this plugin through the ClassLoader.  This macro
    * registers the class without needing to worry about name mangling
    */
-  REGISTER(FrameProcessorPlugin, HexitecTemplatePlugin, "HexitecTemplatePlugin");
+  REGISTER(FrameProcessorPlugin, HexitecAdditionPlugin, "HexitecAdditionPlugin");
 
 } /* namespace FrameProcessor */
 
-#endif /* INCLUDE_HEXITECTEMPLATEPLUGIN_H_ */
+#endif /* INCLUDE_HEXITECADDITIONPLUGIN_H_ */
