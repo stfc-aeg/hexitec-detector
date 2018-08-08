@@ -164,6 +164,12 @@ namespace FrameProcessor
         static_cast<const char*>(frame->get_data()) + sizeof(Hexitec::FrameHeader)
     );
 
+//    unsigned short *ptr = (unsigned short*) (frame->get_data()) + sizeof(Hexitec::FrameHeader);
+//    LOG4CXX_TRACE(logger_, "________________data 0: " << ptr[0]);
+//    LOG4CXX_TRACE(logger_, "________________data 1: " << ptr[1]);
+//    LOG4CXX_TRACE(logger_, "________________data 2: " << ptr[2]);
+//    LOG4CXX_TRACE(logger_, "________________data 3: " << ptr[3]);
+
     // Pointers to reordered image buffer - will be allocated on demand
     void* reordered_image = NULL;
 
@@ -193,8 +199,13 @@ namespace FrameProcessor
           static_cast<char *>(const_cast<void *>(data_ptr)));
 
       // Reorder pixels into the output image
+      // Using unsigned short array
       reorder_pixels(static_cast<unsigned short *>(input_ptr),
                      static_cast<unsigned short *>(reordered_image));
+
+      // Using double array
+//      reorder_pixels(static_cast<unsigned short *>(input_ptr),
+//                     static_cast<double *>(reordered_image));
 
         // Set the frame image to the reordered image buffer if appropriate
       if (reordered_image)
@@ -211,6 +222,13 @@ namespace FrameProcessor
 
         data_frame->set_dimensions(dims);
         data_frame->copy_data(reordered_image, output_image_size);
+//
+//        double *reord_ptr = (double*) (frame->get_data()) + sizeof(Hexitec::FrameHeader);
+//        LOG4CXX_TRACE(logger_, "reord___________data 0: " << reord_ptr[0]);
+//        LOG4CXX_TRACE(logger_, "reord___________data 1: " << reord_ptr[1]);
+//        LOG4CXX_TRACE(logger_, "reord___________data 2: " << reord_ptr[2]);
+//        LOG4CXX_TRACE(logger_, "reord___________data 3: " << reord_ptr[3]);
+//
 
         LOG4CXX_TRACE(logger_, "Pushing data frame.");
         this->push(data_frame);
@@ -234,12 +252,13 @@ namespace FrameProcessor
    */
   std::size_t HexitecProcessPlugin::reordered_image_size() {
 
-    return image_width_ * image_height_ * sizeof(unsigned short);
+  	return image_width_ * image_height_ * sizeof(unsigned short);
+//    return image_width_ * image_height_ * sizeof(double);
 
   }
 
   /**
-   * Reorder an image's pixels into chronological order.
+   * Reorder an image's pixels into chronological order.	-	CURRENTLY USED
    *
    * \param[in] in - Pointer to the incoming image data.
    * \param[out] out - Pointer to the allocated memory where the reordered image is written.
@@ -247,23 +266,41 @@ namespace FrameProcessor
    */
   void HexitecProcessPlugin::reorder_pixels(unsigned short* in, unsigned short* out)
   {
-    int raw_addr = 0, x = 0, index = 0;
+    int index = 0;
 
-    for (int row=0; row<FEM_PIXELS_PER_ROW; row++)
+    for (int i=0; i<FEM_TOTAL_PIXELS; i++)
     {
-      for (int column=0; column<FEM_PIXELS_PER_COLUMN; column++)
-      {
+			// Re-order pixels:
+			index = pixelMap[i];
+			out[index] = in[i];
+			// Don't reorder:
+//        out[i] = in[i];
+//        if (i < 80)
+//        	LOG4CXX_TRACE(logger_, "REORDER, in[" << i << "] = " << in[i] << " out[" << index << "] = " << out[index]);
+    }
+  }
+
+  /**
+   * Reorder an image's pixels into chronological order. - TO BE USED IN THE FUTURE
+   *
+   * \param[in] in - Pointer to the incoming image data.
+   * \param[out] out - Pointer to the allocated memory where the reordered image is written.
+   *
+   */
+  void HexitecProcessPlugin::reorder_pixels(unsigned short* in, double* out)
+  {
+    int index = 0;
+
+    for (int i=0; i<FEM_TOTAL_PIXELS; i++)
+    {
         // Re-order pixels:
-      	index = pixelMap[raw_addr];
-        out[index] = in[raw_addr];
+      	index = pixelMap[i];
+        out[index] = (double)in[i];
         // Don't reorder:
-//        out[raw_addr] = in[raw_addr];
-//        if (row <1)
-//        	LOG4CXX_TRACE(logger_, "REORDER, in[" << raw_addr << "] = " << in[raw_addr] << " out[" << index << "] = " << out[index] );
-//        if (row < 1)
-//          LOG4CXX_TRACE(logger_, " " << pixelMap[raw_addr] );
-        raw_addr++;
-      }
+//        out[i] = in[i];
+        if (i < 80)
+        	LOG4CXX_TRACE(logger_, "REORDER, in[" << i << "] = " << in[i] << " out[" << index
+        			<< "] = " << out[index]	<< "   (double)in[i] = " << (double)in[i]);
     }
   }
 

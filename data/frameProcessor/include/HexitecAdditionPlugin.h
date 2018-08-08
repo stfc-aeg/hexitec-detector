@@ -48,7 +48,16 @@ namespace FrameProcessor
     static const std::string CONFIG_IMAGE_HEIGHT;
 
     void process_frame(boost::shared_ptr<Frame> frame);
-    std::size_t reordered_image_size();
+    std::size_t processed_image_size();
+
+    void prepareChargedSharing(unsigned short *frame);
+    void processAddition(unsigned short *extendedFrame, int extendedFrameRows,
+    										 int startPosn, int endPosn);
+
+    int directionalDistance;
+    double maxValue;
+    int nRows;
+    int nCols;
 
     /** Pointer to logger **/
     LoggerPtr logger_;
@@ -60,6 +69,7 @@ namespace FrameProcessor
     int image_pixels_;
     /** Packet loss counter **/
     int packets_lost_;
+
   };
 
   /**

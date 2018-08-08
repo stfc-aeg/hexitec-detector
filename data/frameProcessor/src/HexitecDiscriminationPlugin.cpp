@@ -1,32 +1,32 @@
 /*
- * HexitecAdditionPlugin.cpp
+ * HexitecDiscriminationPlugin.cpp
  *
  *  Created on: 08 Aug 2018
  *      Author: ckd27546
  */
 
-#include <HexitecAdditionPlugin.h>
+#include <HexitecDiscriminationPlugin.h>
 
 namespace FrameProcessor
 {
 
-  const std::string HexitecAdditionPlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
-  const std::string HexitecAdditionPlugin::CONFIG_IMAGE_WIDTH = "width";
-  const std::string HexitecAdditionPlugin::CONFIG_IMAGE_HEIGHT = "height";
+  const std::string HexitecDiscriminationPlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
+  const std::string HexitecDiscriminationPlugin::CONFIG_IMAGE_WIDTH = "width";
+  const std::string HexitecDiscriminationPlugin::CONFIG_IMAGE_HEIGHT = "height";
 
   /**
    * The constructor sets up logging used within the class.
    */
-  HexitecAdditionPlugin::HexitecAdditionPlugin() :
+  HexitecDiscriminationPlugin::HexitecDiscriminationPlugin() :
       image_width_(80),
       image_height_(80),
       image_pixels_(image_width_ * image_height_),
       packets_lost_(0)
   {
     // Setup logging for the class
-    logger_ = Logger::getLogger("FW.HexitecAdditionPlugin");
+    logger_ = Logger::getLogger("FW.HexitecDiscriminationPlugin");
     logger_->setLevel(Level::getAll());
-    LOG4CXX_TRACE(logger_, "HexitecAdditionPlugin constructor.");
+    LOG4CXX_TRACE(logger_, "HexitecDiscriminationPlugin constructor.");
 
     directionalDistance = 1;  // Set to 1 for 3x3: 2 for 5x5 pixel grid
     nRows = image_height_;
@@ -38,9 +38,9 @@ namespace FrameProcessor
   /**
    * Destructor.
    */
-  HexitecAdditionPlugin::~HexitecAdditionPlugin()
+  HexitecDiscriminationPlugin::~HexitecDiscriminationPlugin()
   {
-    LOG4CXX_TRACE(logger_, "HexitecAdditionPlugin destructor.");
+    LOG4CXX_TRACE(logger_, "HexitecDiscriminationPlugin destructor.");
   }
 
   /**
@@ -52,21 +52,21 @@ namespace FrameProcessor
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[out] reply - Reference to the reply IpcMessage object.
    */
-  void HexitecAdditionPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
+  void HexitecDiscriminationPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
-    if (config.has_param(HexitecAdditionPlugin::CONFIG_DROPPED_PACKETS))
+    if (config.has_param(HexitecDiscriminationPlugin::CONFIG_DROPPED_PACKETS))
     {
-      packets_lost_ = config.get_param<int>(HexitecAdditionPlugin::CONFIG_DROPPED_PACKETS);
+      packets_lost_ = config.get_param<int>(HexitecDiscriminationPlugin::CONFIG_DROPPED_PACKETS);
     }
 
-    if (config.has_param(HexitecAdditionPlugin::CONFIG_IMAGE_WIDTH))
+    if (config.has_param(HexitecDiscriminationPlugin::CONFIG_IMAGE_WIDTH))
     {
-      image_width_ = config.get_param<int>(HexitecAdditionPlugin::CONFIG_IMAGE_WIDTH);
+      image_width_ = config.get_param<int>(HexitecDiscriminationPlugin::CONFIG_IMAGE_WIDTH);
     }
 
-    if (config.has_param(HexitecAdditionPlugin::CONFIG_IMAGE_HEIGHT))
+    if (config.has_param(HexitecDiscriminationPlugin::CONFIG_IMAGE_HEIGHT))
     {
-      image_height_ = config.get_param<int>(HexitecAdditionPlugin::CONFIG_IMAGE_HEIGHT);
+      image_height_ = config.get_param<int>(HexitecDiscriminationPlugin::CONFIG_IMAGE_HEIGHT);
     }
 
     image_pixels_ = image_width_ * image_height_;
@@ -78,10 +78,10 @@ namespace FrameProcessor
    *
    * \param[out] status - Reference to an IpcMessage value to store the status.
    */
-  void HexitecAdditionPlugin::status(OdinData::IpcMessage& status)
+  void HexitecDiscriminationPlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for HexitecAdditionPlugin");
+    LOG4CXX_DEBUG(logger_, "Status requested for HexitecDiscriminationPlugin");
     status.set_param(get_name() + "/packets_lost", packets_lost_);
   }
 
@@ -91,7 +91,7 @@ namespace FrameProcessor
    *
    * \param[in] frame - Pointer to a Frame object.
    */
-  void HexitecAdditionPlugin::process_frame(boost::shared_ptr<Frame> frame)
+  void HexitecDiscriminationPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
     LOG4CXX_TRACE(logger_, "Reordering frame.");
     LOG4CXX_TRACE(logger_, "Frame size: " << frame->get_data_size());
@@ -185,7 +185,7 @@ namespace FrameProcessor
    *
    * \return size of the processed image in bytes
    */
-  std::size_t HexitecAdditionPlugin::processed_image_size() {
+  std::size_t HexitecDiscriminationPlugin::processed_image_size() {
 
     return image_width_ * image_height_ * sizeof(unsigned short);
   }
@@ -197,7 +197,7 @@ namespace FrameProcessor
    * \param[frame] frame - Pointer to the image data to be processed.
    *
    */
-  void HexitecAdditionPlugin::prepareChargedSharing(unsigned short *frame)
+  void HexitecDiscriminationPlugin::prepareChargedSharing(unsigned short *frame)
   {
      /// extendedFrame contains empty (1-2) pixel(s) on all 4 sides to enable charge
   	/// 	sharing algorithm execution
@@ -238,7 +238,7 @@ namespace FrameProcessor
 		endPosn = extendedFrameSize - (extendedFrameColumns * directionalDistance)
 								- directionalDistance;
 
-		processAddition(extendedFrame, extendedFrameRows, startPosn, endPosn);
+		processDiscrimination(extendedFrame, extendedFrameRows, startPosn, endPosn);
 
 		/// Copy CSD frame (i.e. 402x402) back into originally sized frame (400x400)
 		rowPtr = frame;
@@ -263,22 +263,23 @@ namespace FrameProcessor
    * \param[endPosn] endPosn - Where the final pixel is in the frame
    *
    */
-	void HexitecAdditionPlugin::processAddition(unsigned short *extendedFrame,
-			int extendedFrameRows, int startPosn, int endPosn)
-	{
-	  unsigned short *neighbourPixel = NULL, *currentPixel = extendedFrame;
-	  int rowIndexBegin = (-1*directionalDistance);
+  void HexitecDiscriminationPlugin::processDiscrimination(unsigned short *extendedFrame,
+																									 int extendedFrameRows, int startPosn,
+																									 int endPosn)
+  {
+		unsigned short *neighbourPixel = NULL, *currentPixel = extendedFrame;
+		int rowIndexBegin = (-1*directionalDistance);
 		int rowIndexEnd   = (directionalDistance+1);
 		int colIndexBegin = rowIndexBegin;
 		int colIndexEnd   = rowIndexEnd;
-		int maxValue;
+		bool bWipePixel = false;
 
 		for (int i = startPosn; i < endPosn;  i++)
 		{
 			if (extendedFrame[i] != 0)
 			{
-				maxValue = extendedFrame[i];
-				currentPixel = (&(extendedFrame[i]));
+				currentPixel = (&(extendedFrame[i]));       // Point at current (non-Zero) pixel
+
 				for (int row = rowIndexBegin; row < rowIndexEnd; row++)
 				{
 					for (int column = colIndexBegin; column < colIndexEnd; column++)
@@ -287,26 +288,29 @@ namespace FrameProcessor
 							continue;
 
 						neighbourPixel = (currentPixel + (extendedFrameRows*row)  + column);
-						if (*neighbourPixel != 0)
+
+						// Wipe this pixel if another neighbour was non-Zero
+						if (bWipePixel)
 						{
-							if (*neighbourPixel > maxValue)
-							{
-								*neighbourPixel += extendedFrame[i];
-								maxValue = *neighbourPixel;
-								extendedFrame[i] = 0;
-							}
-							else
-							{
-								extendedFrame[i] += *neighbourPixel;
-								maxValue = extendedFrame[i];
 								*neighbourPixel = 0;
+						}
+						else
+						{
+							// Is this the first neighbouring, non-Zero pixel?
+							if (*neighbourPixel != 0)
+							{
+								// Yes; Wipe neighbour and current (non-zero) pixel
+								*neighbourPixel = 0;
+								*currentPixel = 0;
+								bWipePixel = true;
 							}
 						}
 					}
 				}
-			}
-		}
-	}
+				bWipePixel = false;
+		  }
+    }
+  }
 
 } /* namespace FrameProcessor */
 

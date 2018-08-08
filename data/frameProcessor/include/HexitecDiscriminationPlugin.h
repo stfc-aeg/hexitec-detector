@@ -1,12 +1,12 @@
 /*
- * HexitecProcessPlugin.h
+ * HexitecDiscriminationPlugin.h
  *
- *  Created on: 11 Jul 2018
+ *  Created on: 08 Aug 2018
  *      Author: ckd27546
  */
 
-#ifndef INCLUDE_HEXITECPROCESSPLUGIN_H_
-#define INCLUDE_HEXITECPROCESSPLUGIN_H_
+#ifndef INCLUDE_HEXITECDISCRIMINATIONPLUGIN_H_
+#define INCLUDE_HEXITECDISCRIMINATIONPLUGIN_H_
 
 #include <log4cxx/logger.h>
 #include <log4cxx/basicconfigurator.h>
@@ -27,16 +27,15 @@ using namespace log4cxx::helpers;
 namespace FrameProcessor
 {
 
-  /** Processing of Hexitec Frame objects.
+  /** Template for future Hexitec Frame objects.
    *
-   * The HexitecProcessPlugin class is currently responsible for receiving a raw data
-   * Frame object and reordering the data into valid Hexitec frames.
+   * This service of the template for all of the remaining hexitec plug-ins to be written.
    */
-  class HexitecProcessPlugin : public FrameProcessorPlugin
+  class HexitecDiscriminationPlugin : public FrameProcessorPlugin
   {
   public:
-    HexitecProcessPlugin();
-    virtual ~HexitecProcessPlugin();
+    HexitecDiscriminationPlugin();
+    virtual ~HexitecDiscriminationPlugin();
     void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
     void status(OdinData::IpcMessage& status);
 
@@ -48,17 +47,17 @@ namespace FrameProcessor
     /** Configuration constant for image height **/
     static const std::string CONFIG_IMAGE_HEIGHT;
 
-    void process_lost_packets(boost::shared_ptr<Frame> frame);
     void process_frame(boost::shared_ptr<Frame> frame);
-    // Unsigned array version currently used:
-    void reorder_pixels(unsigned short* in, unsigned short* out);
-    // double array version to be used in future:
-    void reorder_pixels(unsigned short* in, double* out);
-    std::size_t reordered_image_size();
+    std::size_t processed_image_size();
 
-    void initialisePixelMap();
-    uint16_t pixelMap[6400];
-    bool pixelMapInitialised;
+    void prepareChargedSharing(unsigned short *frame);
+    void processDiscrimination(unsigned short *extendedFrame, int extendedFrameRows,
+                               int startPosn, int endPosn);
+
+    int directionalDistance;
+    double maxValue;
+    int nRows;
+    int nCols;
 
     /** Pointer to logger **/
     LoggerPtr logger_;
@@ -71,17 +70,14 @@ namespace FrameProcessor
     /** Packet loss counter **/
     int packets_lost_;
 
-    /* DEVELOPMENT SPACE - for the other plug-ins' functionalities */
-
-
   };
 
   /**
    * Registration of this plugin through the ClassLoader.  This macro
    * registers the class without needing to worry about name mangling
    */
-  REGISTER(FrameProcessorPlugin, HexitecProcessPlugin, "HexitecProcessPlugin");
+  REGISTER(FrameProcessorPlugin, HexitecDiscriminationPlugin, "HexitecDiscriminationPlugin");
 
 } /* namespace FrameProcessor */
 
-#endif /* INCLUDE_HEXITECPROCESSPLUGIN_H_ */
+#endif /* INCLUDE_HEXITECDISCRIMINATIONPLUGIN_H_ */

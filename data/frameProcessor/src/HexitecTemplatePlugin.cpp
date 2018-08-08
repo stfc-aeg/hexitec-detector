@@ -180,7 +180,6 @@ namespace FrameProcessor
   std::size_t HexitecTemplatePlugin::reordered_image_size() {
 
     return image_width_ * image_height_ * sizeof(unsigned short);
-
   }
 
 } /* namespace FrameProcessor */
