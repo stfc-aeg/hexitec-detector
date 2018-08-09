@@ -157,6 +157,7 @@ namespace FrameProcessor
 
     // Determine the size of the output reordered image
     const std::size_t output_image_size = reordered_image_size();
+//    const std::size_t output_image_size = reordered_image_size_double();
     LOG4CXX_TRACE(logger_, "Output image size: " << output_image_size);
 
     // Obtain a pointer to the start of the data in the frame
@@ -223,8 +224,8 @@ namespace FrameProcessor
         data_frame->set_dimensions(dims);
         data_frame->copy_data(reordered_image, output_image_size);
 //
-//        double *reord_ptr = (double*) (frame->get_data()) + sizeof(Hexitec::FrameHeader);
-//        LOG4CXX_TRACE(logger_, "reord___________data 0: " << reord_ptr[0]);
+//        double *reord_ptr = (double*) (data_frame->get_data()) + sizeof(Hexitec::FrameHeader);
+//        LOG4CXX_TRACE(logger_, "reord______!____data 0: " << reord_ptr[0]);
 //        LOG4CXX_TRACE(logger_, "reord___________data 1: " << reord_ptr[1]);
 //        LOG4CXX_TRACE(logger_, "reord___________data 2: " << reord_ptr[2]);
 //        LOG4CXX_TRACE(logger_, "reord___________data 3: " << reord_ptr[3]);
@@ -253,7 +254,13 @@ namespace FrameProcessor
   std::size_t HexitecProcessPlugin::reordered_image_size() {
 
   	return image_width_ * image_height_ * sizeof(unsigned short);
-//    return image_width_ * image_height_ * sizeof(double);
+
+  }
+
+  // Testing converting unsigned short array to a double array..
+  std::size_t HexitecProcessPlugin::reordered_image_size_double() {
+
+    return image_width_ * image_height_ * sizeof(double);
 
   }
 
