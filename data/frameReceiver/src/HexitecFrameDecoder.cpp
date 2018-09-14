@@ -55,7 +55,7 @@ HexitecFrameDecoder::~HexitecFrameDecoder()
 //! Initialise the frame decoder.
 //!
 //! This method initialises the decoder based on a configuration message passed by the
-//! application controller. Parameters found in the decoder configuraiton are parsed and stored
+//! application controller. Parameters found in the decoder configuration are parsed and stored
 //! in the decoder as appropriate.
 //!
 //! \param[in] logger - pointer to the message logger
@@ -175,7 +175,7 @@ void* HexitecFrameDecoder::get_packet_header_buffer(void)
 //! and content of that header is used to determine where to route the payload of the packet to on
 //! the next receive. Header information is used to determine which frame buffer the current packet
 //! should be routed to, and to request a new frame buffer when the first packet of a given frame
-//! is received. Buffer exhaustion is also handler by directing all packets for the current frame
+//! is received. Buffer exhaustion is also handled by directing all packets for the current frame
 //! to a scratch buffer.
 //!
 //! \param[in] bytes_received - number of header bytes received

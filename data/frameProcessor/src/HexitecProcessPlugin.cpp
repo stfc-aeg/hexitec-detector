@@ -134,8 +134,7 @@ namespace FrameProcessor
   }
 
   /**
-   * Perform processing on the frame.  Depending on the selected bit depth
-   * the corresponding pixel re-ordering algorithm is executed.
+   * Perform processing on the frame.
    *
    * \param[in] frame - Pointer to a Frame object.
    */
@@ -156,8 +155,8 @@ namespace FrameProcessor
         << " EOF markers: "<< (int)hdr_ptr->total_eof_marker_count);
 
     // Determine the size of the output reordered image
-    const std::size_t output_image_size = reordered_image_size();
-//    const std::size_t output_image_size = reordered_image_size_double();
+//    const std::size_t output_image_size = reordered_image_size();
+    const std::size_t output_image_size = reordered_image_size_float();
     LOG4CXX_TRACE(logger_, "Output image size: " << output_image_size);
 
     // Obtain a pointer to the start of the data in the frame
@@ -166,12 +165,10 @@ namespace FrameProcessor
     );
 
 //    unsigned short *ptr = (unsigned short*) (frame->get_data()) + sizeof(Hexitec::FrameHeader);
-//    LOG4CXX_TRACE(logger_, "________________data 0: " << ptr[0]);
-//    LOG4CXX_TRACE(logger_, "________________data 1: " << ptr[1]);
-//    LOG4CXX_TRACE(logger_, "________________data 2: " << ptr[2]);
-//    LOG4CXX_TRACE(logger_, "________________data 3: " << ptr[3]);
+//    for (unsigned int idx = 0; idx < 20; idx++)
+//    	LOG4CXX_TRACE(logger_, "uint_____________data[" << idx << "]: " << ptr[idx]);
 
-    // Pointers to reordered image buffer - will be allocated on demand
+    // Pointer to reordered image buffer - will be allocated on demand
     void* reordered_image = NULL;
 
     try
@@ -195,18 +192,18 @@ namespace FrameProcessor
         throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
       }
 
-      // Calculate pointer into the input image data based on loop index
+      // Set pointer to the input image data
       void* input_ptr = static_cast<void *>(
           static_cast<char *>(const_cast<void *>(data_ptr)));
 
       // Reorder pixels into the output image
-      // Using unsigned short array
-      reorder_pixels(static_cast<unsigned short *>(input_ptr),
-                     static_cast<unsigned short *>(reordered_image));
+//      // Using unsigned short array
+//      reorder_pixels(static_cast<unsigned short *>(input_ptr),
+//                     static_cast<unsigned short *>(reordered_image));
 
       // Using double array
-//      reorder_pixels(static_cast<unsigned short *>(input_ptr),
-//                     static_cast<double *>(reordered_image));
+      reorder_pixels(static_cast<unsigned short *>(input_ptr),
+                     static_cast<float *>(reordered_image));
 
         // Set the frame image to the reordered image buffer if appropriate
       if (reordered_image)
@@ -223,13 +220,11 @@ namespace FrameProcessor
 
         data_frame->set_dimensions(dims);
         data_frame->copy_data(reordered_image, output_image_size);
-//
-//        double *reord_ptr = (double*) (data_frame->get_data()) + sizeof(Hexitec::FrameHeader);
-//        LOG4CXX_TRACE(logger_, "reord______!____data 0: " << reord_ptr[0]);
-//        LOG4CXX_TRACE(logger_, "reord___________data 1: " << reord_ptr[1]);
-//        LOG4CXX_TRACE(logger_, "reord___________data 2: " << reord_ptr[2]);
-//        LOG4CXX_TRACE(logger_, "reord___________data 3: " << reord_ptr[3]);
-//
+
+//        float *pointer = (float*) (data_frame->get_data()) + sizeof(Hexitec::FrameHeader);
+//        for (unsigned int idx = 0; idx < 20; idx++)
+//        	LOG4CXX_TRACE(logger_, "float____________data[" << idx << "]: " << pointer[idx]);
+
 
         LOG4CXX_TRACE(logger_, "Pushing data frame.");
         this->push(data_frame);
@@ -244,57 +239,58 @@ namespace FrameProcessor
       ss << "HEXITEC frame decode failed: " << e.what();
       LOG4CXX_ERROR(logger_, ss.str());
     }
+
   }
+
+//  /**
+//   * Determine the size of a reordered image size based on the counter depth.
+//   *
+//   * \return size of the reordered image in bytes
+//   */
+//  std::size_t HexitecProcessPlugin::reordered_image_size() {
+//
+//  	return image_width_ * image_height_ * sizeof(unsigned short);
+//
+//  }
+
+  // Testing converting unsigned short array to a float array..
+  std::size_t HexitecProcessPlugin::reordered_image_size_float() {
+
+    return image_width_ * image_height_ * sizeof(float);
+
+  }
+
+//  /**
+//   * Reorder an image's pixels into chronological order.
+//   *
+//   * \param[in] in - Pointer to the incoming image data.
+//   * \param[out] out - Pointer to the allocated memory where the reordered image is written.
+//   *
+//   */
+//  void HexitecProcessPlugin::reorder_pixels(unsigned short* in, unsigned short* out)
+//  {
+//    int index = 0;
+//
+//    for (int i=0; i<FEM_TOTAL_PIXELS; i++)
+//    {
+//			// Re-order pixels:
+//			index = pixelMap[i];
+//			out[index] = in[i];
+//			// Don't reorder:
+////        out[i] = in[i];
+////        if (i < 80)
+////        	LOG4CXX_TRACE(logger_, "REORDER, in[" << i << "] = " << in[i] << " out[" << index << "] = " << out[index]);
+//    }
+//  }
 
   /**
-   * Determine the size of a reordered image size based on the counter depth.
-   *
-   * \return size of the reordered image in bytes
-   */
-  std::size_t HexitecProcessPlugin::reordered_image_size() {
-
-  	return image_width_ * image_height_ * sizeof(unsigned short);
-
-  }
-
-  // Testing converting unsigned short array to a double array..
-  std::size_t HexitecProcessPlugin::reordered_image_size_double() {
-
-    return image_width_ * image_height_ * sizeof(double);
-
-  }
-
-  /**
-   * Reorder an image's pixels into chronological order.	-	CURRENTLY USED
+   * Reorder an image's pixels into chronological order.
    *
    * \param[in] in - Pointer to the incoming image data.
    * \param[out] out - Pointer to the allocated memory where the reordered image is written.
    *
    */
-  void HexitecProcessPlugin::reorder_pixels(unsigned short* in, unsigned short* out)
-  {
-    int index = 0;
-
-    for (int i=0; i<FEM_TOTAL_PIXELS; i++)
-    {
-			// Re-order pixels:
-			index = pixelMap[i];
-			out[index] = in[i];
-			// Don't reorder:
-//        out[i] = in[i];
-//        if (i < 80)
-//        	LOG4CXX_TRACE(logger_, "REORDER, in[" << i << "] = " << in[i] << " out[" << index << "] = " << out[index]);
-    }
-  }
-
-  /**
-   * Reorder an image's pixels into chronological order. - TO BE USED IN THE FUTURE
-   *
-   * \param[in] in - Pointer to the incoming image data.
-   * \param[out] out - Pointer to the allocated memory where the reordered image is written.
-   *
-   */
-  void HexitecProcessPlugin::reorder_pixels(unsigned short* in, double* out)
+  void HexitecProcessPlugin::reorder_pixels(unsigned short* in, float* out)
   {
     int index = 0;
 
@@ -302,12 +298,12 @@ namespace FrameProcessor
     {
         // Re-order pixels:
       	index = pixelMap[i];
-        out[index] = (double)in[i];
+        out[index] = (float)in[i];
         // Don't reorder:
 //        out[i] = in[i];
-        if (i < 80)
-        	LOG4CXX_TRACE(logger_, "REORDER, in[" << i << "] = " << in[i] << " out[" << index
-        			<< "] = " << out[index]	<< "   (double)in[i] = " << (double)in[i]);
+//        if (i < 20)
+//        	LOG4CXX_TRACE(logger_, "REORDER, in[" << i << "] = " << in[i] << " out[" << index
+//        			<< "] = " << out[index]	<< "   (float)in[i] = " << (float)in[i]);
     }
   }
 

@@ -27,9 +27,11 @@ using namespace log4cxx::helpers;
 namespace FrameProcessor
 {
 
-  /** Template for future Hexitec Frame objects.
+  /** Applies the Charged Sharing algorithm to a Hexitec frame.
    *
-   * This service of the template for all of the remaining hexitec plug-ins to be written.
+   * The HexitecAdditionPlugin examines surrounding neighbouring pixels
+   * moving any event shared across multiple pixels onto the pixel containing
+   * the biggest portion of that event.
    */
   class HexitecAdditionPlugin : public FrameProcessorPlugin
   {
@@ -53,9 +55,11 @@ namespace FrameProcessor
     void prepareChargedSharing(unsigned short *frame);
     void processAddition(unsigned short *extendedFrame, int extendedFrameRows,
     										 int startPosn, int endPosn);
+//    void prepareChargedSharing(float *frame);
+//    void processAddition(float *extendedFrame, int extendedFrameRows,
+//    										 int startPosn, int endPosn);
 
     int directionalDistance;
-    double maxValue;
     int nRows;
     int nCols;
 

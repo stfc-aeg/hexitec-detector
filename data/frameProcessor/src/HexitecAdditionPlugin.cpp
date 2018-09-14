@@ -31,7 +31,6 @@ namespace FrameProcessor
     directionalDistance = 1;  // Set to 1 for 3x3: 2 for 5x5 pixel grid
     nRows = image_height_;
     nCols = image_width_;
-    maxValue = 0;
 
   }
 

@@ -29,8 +29,8 @@ namespace FrameProcessor
 
   /** Processing of Hexitec Frame objects.
    *
-   * The HexitecProcessPlugin class is currently responsible for receiving a raw data
-   * Frame object and reordering the data into valid Hexitec frames.
+   * The HexitecProcessPlugin class receives a raw data Frame object,
+   * reorders the pixels and stores the data as an array of floats.
    */
   class HexitecProcessPlugin : public FrameProcessorPlugin
   {
@@ -50,12 +50,12 @@ namespace FrameProcessor
 
     void process_lost_packets(boost::shared_ptr<Frame> frame);
     void process_frame(boost::shared_ptr<Frame> frame);
-    // Unsigned array version currently used:
-    void reorder_pixels(unsigned short* in, unsigned short* out);
-    // double array version to be used in future:
-    void reorder_pixels(unsigned short* in, double* out);
-    std::size_t reordered_image_size();
-    std::size_t reordered_image_size_double();
+//    // Unsigned array version currently used:
+//    void reorder_pixels(unsigned short* in, unsigned short* out);
+    // float array version to be used in future:
+    void reorder_pixels(unsigned short* in, float* out);
+//    std::size_t reordered_image_size();
+    std::size_t reordered_image_size_float();
 
     void initialisePixelMap();
     uint16_t pixelMap[6400];
