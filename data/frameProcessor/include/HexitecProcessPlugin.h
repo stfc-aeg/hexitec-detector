@@ -54,6 +54,8 @@ namespace FrameProcessor
 //    void reorder_pixels(unsigned short* in, unsigned short* out);
     // float array version to be used in future:
     void reorder_pixels(unsigned short* in, float* out);
+    // Convert pixel data from unsigned short to float data type
+    void convert_pixels_to_float(unsigned short* in, float* out);
 //    std::size_t reordered_image_size();
     std::size_t reordered_image_size_float();
 

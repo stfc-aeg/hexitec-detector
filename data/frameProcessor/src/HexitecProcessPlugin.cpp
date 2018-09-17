@@ -75,7 +75,7 @@ namespace FrameProcessor
    * Configure the Hexitec plugin.  This receives an IpcMessage which should be processed
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
-   * - bitdepth
+   * - (bitdepth) - Removed
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[out] reply - Reference to the reply IpcMessage object.
@@ -171,6 +171,9 @@ namespace FrameProcessor
     // Pointer to reordered image buffer - will be allocated on demand
     void* reordered_image = NULL;
 
+    // Pointer to raw image buffer (of data type float)
+    void* raw_image = NULL;
+
     try
     {
 
@@ -205,7 +208,7 @@ namespace FrameProcessor
       reorder_pixels(static_cast<unsigned short *>(input_ptr),
                      static_cast<float *>(reordered_image));
 
-        // Set the frame image to the reordered image buffer if appropriate
+      // Set the frame image to the reordered image buffer if appropriate
       if (reordered_image)
       {
         // Setup the frame dimensions
@@ -231,6 +234,46 @@ namespace FrameProcessor
 
         free(reordered_image);
         reordered_image = NULL;
+      }
+
+
+      // Allocate buffer for raw data in float data type.
+      raw_image = (void*)malloc(output_image_size);
+      if (raw_image == NULL)
+      {
+        throw std::runtime_error("Failed to allocate temporary buffer for raw image");
+      }
+
+      // Turn unsigned short raw pixel data into float data type raw pixel data
+      convert_pixels_to_float(static_cast<unsigned short *>(input_ptr),
+      												static_cast<float *>(raw_image));
+
+
+      if (raw_image)
+      {
+      	// Setup of the frame dimensions
+      	dimensions_t dims(2);
+      	dims[0] = image_height_;
+      	dims[1] = image_width_;
+
+      	boost::shared_ptr<Frame> raw_frame;
+      	raw_frame = boost::shared_ptr<Frame>(new Frame("raw"));
+
+      	raw_frame->set_frame_number(hdr_ptr->frame_number);
+
+      	raw_frame->set_dimensions(dims);
+      	raw_frame->copy_data(raw_image, output_image_size);
+
+
+        LOG4CXX_TRACE(logger_, "Pushing raw frame.");
+        this->push(raw_frame);
+
+//  			float *ptr = (float*) (raw_frame->get_data()) + sizeof(Hexitec::FrameHeader);
+//  			for (unsigned int idx = 0; idx < 20; idx++)
+//  				LOG4CXX_TRACE(logger_, "float____________raw[" << idx << "]: " << ptr[idx]);
+
+  			free(raw_image);
+        raw_image = NULL;
       }
     }
     catch (const std::exception& e)
@@ -305,6 +348,30 @@ namespace FrameProcessor
 //        	LOG4CXX_TRACE(logger_, "REORDER, in[" << i << "] = " << in[i] << " out[" << index
 //        			<< "] = " << out[index]	<< "   (float)in[i] = " << (float)in[i]);
     }
+  }
+  /**
+   * Convert an image's pixels from unsigned short to float data type.
+   *
+   * \param[in] in - Pointer to the incoming image data.
+   * \param[out] out - Pointer to the allocated memory where the converted image is written.
+   *
+   */
+  void HexitecProcessPlugin::convert_pixels_to_float(unsigned short* in, float* out)
+  {
+//    int index = 0;
+
+    for (int i=0; i<FEM_TOTAL_PIXELS; i++)
+    {
+//        // Re-order pixels:
+//      	index = pixelMap[i];
+//        out[index] = (float)in[i];
+    	// Do not reorder pixels:
+      out[i] = (float)in[i];
+
+//      if (i < 20)
+//      	LOG4CXX_TRACE(logger_, " ** CONVERT **, in[" << i << "] = " << in[i] << " out[" << i
+//      			<< "] = " << out[i]	<< "   (float)in[i] = " << (float)in[i]);
+      }
   }
 
 
