@@ -155,18 +155,13 @@ namespace FrameProcessor
         << " EOF markers: "<< (int)hdr_ptr->total_eof_marker_count);
 
     // Determine the size of the output reordered image
-//    const std::size_t output_image_size = reordered_image_size();
-    const std::size_t output_image_size = reordered_image_size_float();
+    const std::size_t output_image_size = reordered_image_size();
     LOG4CXX_TRACE(logger_, "Output image size: " << output_image_size);
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
         static_cast<const char*>(frame->get_data()) + sizeof(Hexitec::FrameHeader)
     );
-
-//    unsigned short *ptr = (unsigned short*) (frame->get_data()) + sizeof(Hexitec::FrameHeader);
-//    for (unsigned int idx = 0; idx < 20; idx++)
-//    	LOG4CXX_TRACE(logger_, "uint_____________data[" << idx << "]: " << ptr[idx]);
 
     // Pointer to reordered image buffer - will be allocated on demand
     void* reordered_image = NULL;
@@ -200,11 +195,7 @@ namespace FrameProcessor
           static_cast<char *>(const_cast<void *>(data_ptr)));
 
       // Reorder pixels into the output image
-//      // Using unsigned short array
-//      reorder_pixels(static_cast<unsigned short *>(input_ptr),
-//                     static_cast<unsigned short *>(reordered_image));
-
-      // Using double array
+      // Using float array
       reorder_pixels(static_cast<unsigned short *>(input_ptr),
                      static_cast<float *>(reordered_image));
 
@@ -285,46 +276,16 @@ namespace FrameProcessor
 
   }
 
-//  /**
-//   * Determine the size of a reordered image size based on the counter depth.
-//   *
-//   * \return size of the reordered image in bytes
-//   */
-//  std::size_t HexitecProcessPlugin::reordered_image_size() {
-//
-//  	return image_width_ * image_height_ * sizeof(unsigned short);
-//
-//  }
-
-  // Testing converting unsigned short array to a float array..
-  std::size_t HexitecProcessPlugin::reordered_image_size_float() {
+  /**
+   * Determine the size of a reordered image size.
+   *
+   * \return size of the reordered image in bytes
+   */
+  std::size_t HexitecProcessPlugin::reordered_image_size() {
 
     return image_width_ * image_height_ * sizeof(float);
 
   }
-
-//  /**
-//   * Reorder an image's pixels into chronological order.
-//   *
-//   * \param[in] in - Pointer to the incoming image data.
-//   * \param[out] out - Pointer to the allocated memory where the reordered image is written.
-//   *
-//   */
-//  void HexitecProcessPlugin::reorder_pixels(unsigned short* in, unsigned short* out)
-//  {
-//    int index = 0;
-//
-//    for (int i=0; i<FEM_TOTAL_PIXELS; i++)
-//    {
-//			// Re-order pixels:
-//			index = pixelMap[i];
-//			out[index] = in[i];
-//			// Don't reorder:
-////        out[i] = in[i];
-////        if (i < 80)
-////        	LOG4CXX_TRACE(logger_, "REORDER, in[" << i << "] = " << in[i] << " out[" << index << "] = " << out[index]);
-//    }
-//  }
 
   /**
    * Reorder an image's pixels into chronological order.
@@ -341,13 +302,27 @@ namespace FrameProcessor
     {
         // Re-order pixels:
       	index = pixelMap[i];
-        out[index] = (float)in[i];
+
+      	if ( ((index % 2) == 0) )
+      	{
+      		out[index] = 0.0;
+      	}
+      	else
+      	{
+      		out[index] = (float)in[i];
+      	}
+      	if ((index > 79) && (index < 159))
+      		out[index] = 0.0;
         // Don't reorder:
 //        out[i] = in[i];
-//        if (i < 20)
-//        	LOG4CXX_TRACE(logger_, "REORDER, in[" << i << "] = " << in[i] << " out[" << index
-//        			<< "] = " << out[index]	<< "   (float)in[i] = " << (float)in[i]);
     }
+    for(index = 0; index < 162; index++)
+    {
+//      if (index < (2*80))
+        LOG4CXX_TRACE(logger_, "REORDER, out[" << index << "] = " << out[index]);
+
+    }
+    LOG4CXX_TRACE(logger_, " *** TAKE OUT THIS PIXEL HACK! ***");
   }
   /**
    * Convert an image's pixels from unsigned short to float data type.
@@ -368,10 +343,7 @@ namespace FrameProcessor
     	// Do not reorder pixels:
       out[i] = (float)in[i];
 
-//      if (i < 20)
-//      	LOG4CXX_TRACE(logger_, " ** CONVERT **, in[" << i << "] = " << in[i] << " out[" << i
-//      			<< "] = " << out[i]	<< "   (float)in[i] = " << (float)in[i]);
-      }
+    }
   }
 
 
@@ -382,3 +354,4 @@ namespace FrameProcessor
 
 
 } /* namespace FrameProcessor */
+

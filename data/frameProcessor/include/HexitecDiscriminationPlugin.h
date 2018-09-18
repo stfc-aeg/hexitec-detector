@@ -40,8 +40,6 @@ namespace FrameProcessor
     void status(OdinData::IpcMessage& status);
 
   private:
-    /** Configuration constant for clearing out dropped packet counters **/
-    static const std::string CONFIG_DROPPED_PACKETS;
     /** Configuration constant for image width **/
     static const std::string CONFIG_IMAGE_WIDTH;
     /** Configuration constant for image height **/
@@ -50,12 +48,11 @@ namespace FrameProcessor
     void process_frame(boost::shared_ptr<Frame> frame);
     std::size_t processed_image_size();
 
-    void prepareChargedSharing(unsigned short *frame);
-    void processDiscrimination(unsigned short *extendedFrame, int extendedFrameRows,
+    void prepareChargedSharing(float *inFrame, float *outFrame);
+    void processDiscrimination(float *extendedFrame, int extendedFrameRows,
                                int startPosn, int endPosn);
 
     int directionalDistance;
-    double maxValue;
     int nRows;
     int nCols;
 
@@ -67,8 +64,6 @@ namespace FrameProcessor
     int image_height_;
     /** Image pixel count **/
     int image_pixels_;
-    /** Packet loss counter **/
-    int packets_lost_;
 
   };
 

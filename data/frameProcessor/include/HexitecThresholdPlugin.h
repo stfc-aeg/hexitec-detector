@@ -45,8 +45,6 @@ namespace FrameProcessor
     void status(OdinData::IpcMessage& status);
 
   private:
-    /** Configuration constant for clearing out dropped packet counters **/
-    static const std::string CONFIG_DROPPED_PACKETS;
     /** Configuration constant for image width **/
     static const std::string CONFIG_IMAGE_WIDTH;
     /** Configuration constant for image height **/
@@ -63,11 +61,9 @@ namespace FrameProcessor
     int image_height_;
     /** Image pixel count **/
     int image_pixels_;
-    /** Packet loss counter **/
-    int packets_lost_;
 
-    void processThresholdValue(unsigned short* in, unsigned short* out);
-    void processThresholdFile(unsigned short* in, unsigned short* out);
+    void processThresholdValue(float* in, float* out);
+    void processThresholdFile(float* in, float* out);
     bool getData(const char *filename, uint16_t defaultValue);
     bool setThresholdPerPixel(const char * thresholdFilename);
 

@@ -19,8 +19,7 @@ namespace FrameProcessor
   HexitecHistogramPlugin::HexitecHistogramPlugin() :
       image_width_(80),
       image_height_(80),
-      image_pixels_(image_width_ * image_height_),
-      packets_lost_(0)
+      image_pixels_(image_width_ * image_height_)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FW.HexitecHistogramPlugin");
@@ -33,12 +32,12 @@ namespace FrameProcessor
     binWidth   = 1.0;
     nBins      = (int)(((binEnd - binStart) / binWidth) + 0.5);;
 
-//    hxtV3Buffer.allData = (double *) calloc((nBins * frameSize) + nBins, sizeof(double));
+//    hxtV3Buffer.allData = (float *) calloc((nBins * frameSize) + nBins, sizeof(float));
 //    hxtBin = hxtV3Buffer.allData;
 //    histogramPerPixel = hxtV3Buffer.allData + nBins;
 
-    hxtBin = (double *) malloc(((nBins * frameSize) + nBins) * sizeof(double));
-    memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(double) );
+    hxtBin = (float *) malloc(((nBins * frameSize) + nBins) * sizeof(float));
+    memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(float) );
     histogramPerPixel = hxtBin + nBins;
 
     summedHistogram = (long long *) malloc(nBins * sizeof(long long));
@@ -104,89 +103,92 @@ namespace FrameProcessor
    */
   void HexitecHistogramPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_TRACE(logger_, "Reordering frame.");
-    LOG4CXX_TRACE(logger_, "Frame size: " << frame->get_data_size());
-
-    const Hexitec::FrameHeader* hdr_ptr =
-        static_cast<const Hexitec::FrameHeader*>(frame->get_data());
-
-    LOG4CXX_TRACE(logger_, "Raw frame number: " << hdr_ptr->frame_number);
-    LOG4CXX_TRACE(logger_, "Frame state: " << hdr_ptr->frame_state);
-    LOG4CXX_TRACE(logger_, "Packets received: " << hdr_ptr->total_packets_received
-        << " SOF markers: "<< (int)hdr_ptr->total_sof_marker_count
-        << " EOF markers: "<< (int)hdr_ptr->total_eof_marker_count);
+    LOG4CXX_TRACE(logger_, "Calculating histograms..");
+    LOG4CXX_TRACE(logger_, "Frame number: " << frame->get_frame_number());
 
     // Determine the size of the output reordered image
     const std::size_t output_image_size = reordered_image_size();
-    LOG4CXX_TRACE(logger_, "Output image size: " << output_image_size);
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data()) + sizeof(Hexitec::FrameHeader)
-    );
+        static_cast<const char*>(frame->get_data()));
 
-    // Pointers to reordered image buffer - will be allocated on demand
-    void* reordered_image = NULL;
-
-    try
+    // Check dataset; Which set determines how to proceed..
+    const std::string& dataset = frame->get_dataset_name();
+    if (dataset.compare(std::string("raw")) == 0)
     {
-
-      // Check that the pixels are contained within the dimensions of the
-      // specified output image, otherwise throw an error
-      if (FEM_TOTAL_PIXELS > image_pixels_)
-      {
-        std::stringstream msg;
-        msg << "Pixel count inferred from FEM ("
-            << FEM_TOTAL_PIXELS
-            << ") will exceed dimensions of output image (" << image_pixels_ << ")";
-        throw std::runtime_error(msg.str());
-      }
-
-      // Allocate buffer to receive reordered image.
-      reordered_image = (void*)malloc(output_image_size);
-      if (reordered_image == NULL)
-      {
-        throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
-      }
-
-			// Calculate pointer into the input image data based on loop index
-			void* input_ptr = static_cast<void *>(
-					static_cast<char *>(const_cast<void *>(data_ptr)));
-
-//        reorder_pixels(static_cast<unsigned short *>(input_ptr),
-//                             static_cast<unsigned short *>(reordered_image));
-
-
-      // Set the frame image to the reordered image buffer if appropriate
-      if (reordered_image)
-      {
-        // Setup the frame dimensions
-        dimensions_t dims(2);
-        dims[0] = image_height_;
-        dims[1] = image_width_;
-
-        boost::shared_ptr<Frame> data_frame;
-        data_frame = boost::shared_ptr<Frame>(new Frame("data"));
-
-        data_frame->set_frame_number(hdr_ptr->frame_number);
-
-        data_frame->set_dimensions(dims);
-        data_frame->copy_data(reordered_image, output_image_size);
-
-        LOG4CXX_TRACE(logger_, "Pushing data frame.");
-        this->push(data_frame);
-
-        free(reordered_image);
-        reordered_image = NULL;
-      }
+			LOG4CXX_TRACE(logger_, "Pushing " << dataset << " frame.");
+			this->push(frame);
     }
-    catch (const std::exception& e)
+    else if (dataset.compare(std::string("data")) == 0)
     {
-      std::stringstream ss;
-      ss << "HEXITEC frame decode failed: " << e.what();
-      LOG4CXX_ERROR(logger_, ss.str());
+			// Pointers to reordered image buffer - will be allocated on demand
+			void* reordered_image = NULL;
+
+			try
+			{
+
+				// Check that the pixels are contained within the dimensions of the
+				// specified output image, otherwise throw an error
+				if (FEM_TOTAL_PIXELS > image_pixels_)
+				{
+					std::stringstream msg;
+					msg << "Pixel count inferred from FEM ("
+							<< FEM_TOTAL_PIXELS
+							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
+					throw std::runtime_error(msg.str());
+				}
+
+				// Allocate buffer to receive reordered image.
+				reordered_image = (void*)malloc(output_image_size);
+				if (reordered_image == NULL)
+				{
+					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
+				}
+
+				// Calculate pointer into the input image data based on loop index
+				void* input_ptr = static_cast<void *>(
+						static_cast<char *>(const_cast<void *>(data_ptr)));
+
+//				reorder_pixels(static_cast<float *>(input_ptr),
+//														 static_cast<float *>(reordered_image));
+
+
+				// Set the frame image to the reordered image buffer if appropriate
+				if (reordered_image)
+				{
+					// Setup the frame dimensions
+					dimensions_t dims(2);
+					dims[0] = image_height_;
+					dims[1] = image_width_;
+
+					boost::shared_ptr<Frame> data_frame;
+					data_frame = boost::shared_ptr<Frame>(new Frame(dataset));
+
+					data_frame->set_frame_number(frame->get_frame_number());
+
+					data_frame->set_dimensions(dims);
+					data_frame->copy_data(reordered_image, output_image_size);
+
+					LOG4CXX_TRACE(logger_, "Pushing data frame.");
+					this->push(data_frame);
+
+					free(reordered_image);
+					reordered_image = NULL;
+				}
+			}
+			catch (const std::exception& e)
+			{
+				std::stringstream ss;
+				ss << "HEXITEC frame decode failed: " << e.what();
+				LOG4CXX_ERROR(logger_, ss.str());
+			}
+		}
+    else
+    {
+    	LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
     }
-  }
+	}
 
   /**
    * Determine the size of a reordered image size based on the counter depth.
@@ -195,14 +197,14 @@ namespace FrameProcessor
    */
   std::size_t HexitecHistogramPlugin::reordered_image_size() {
 
-    return image_width_ * image_height_ * sizeof(unsigned short);
+    return image_width_ * image_height_ * sizeof(float);
   }
 
   // Called when the user NOT selected spectrum option
-  void HexitecHistogramPlugin::addFrameDataToHistogram(double *frame)
+  void HexitecHistogramPlugin::addFrameDataToHistogram(float *frame)
   {
-      double *currentHistogram = &histogramPerPixel[0];
-      double thisEnergy;
+      float *currentHistogram = &histogramPerPixel[0];
+      float thisEnergy;
       int bin;
       int pixel;
 
@@ -228,11 +230,11 @@ namespace FrameProcessor
   }
 
   // Called when the user HAS selected spectrum option
-  void HexitecHistogramPlugin::addFrameDataToHistogramWithSum(double *frame)
+  void HexitecHistogramPlugin::addFrameDataToHistogramWithSum(float *frame)
   {
-     double *currentHistogram = &histogramPerPixel[0];
+     float *currentHistogram = &histogramPerPixel[0];
      long long *summed = &summedHistogram[0];
-     double thisEnergy;
+     float thisEnergy;
      int bin;
      int pixel;
 

@@ -10,7 +10,6 @@
 namespace FrameProcessor
 {
 
-  const std::string HexitecAdditionPlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
   const std::string HexitecAdditionPlugin::CONFIG_IMAGE_WIDTH = "width";
   const std::string HexitecAdditionPlugin::CONFIG_IMAGE_HEIGHT = "height";
 
@@ -20,8 +19,7 @@ namespace FrameProcessor
   HexitecAdditionPlugin::HexitecAdditionPlugin() :
       image_width_(80),
       image_height_(80),
-      image_pixels_(image_width_ * image_height_),
-      packets_lost_(0)
+      image_pixels_(image_width_ * image_height_)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FW.HexitecAdditionPlugin");
@@ -53,11 +51,6 @@ namespace FrameProcessor
    */
   void HexitecAdditionPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
-    if (config.has_param(HexitecAdditionPlugin::CONFIG_DROPPED_PACKETS))
-    {
-      packets_lost_ = config.get_param<int>(HexitecAdditionPlugin::CONFIG_DROPPED_PACKETS);
-    }
-
     if (config.has_param(HexitecAdditionPlugin::CONFIG_IMAGE_WIDTH))
     {
       image_width_ = config.get_param<int>(HexitecAdditionPlugin::CONFIG_IMAGE_WIDTH);
@@ -81,7 +74,6 @@ namespace FrameProcessor
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecAdditionPlugin");
-    status.set_param(get_name() + "/packets_lost", packets_lost_);
   }
 
   /**
@@ -92,90 +84,91 @@ namespace FrameProcessor
    */
   void HexitecAdditionPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_TRACE(logger_, "Reordering frame.");
-    LOG4CXX_TRACE(logger_, "Frame size: " << frame->get_data_size());
-
-    const Hexitec::FrameHeader* hdr_ptr =
-        static_cast<const Hexitec::FrameHeader*>(frame->get_data());
-
-    LOG4CXX_TRACE(logger_, "Raw frame number: " << hdr_ptr->frame_number);
-    LOG4CXX_TRACE(logger_, "Frame state: " << hdr_ptr->frame_state);
-    LOG4CXX_TRACE(logger_, "Packets received: " << hdr_ptr->total_packets_received
-        << " SOF markers: "<< (int)hdr_ptr->total_sof_marker_count
-        << " EOF markers: "<< (int)hdr_ptr->total_eof_marker_count);
+    LOG4CXX_TRACE(logger_, "Applying CS Addition on frame.");
+    LOG4CXX_TRACE(logger_, "Frame number: " << frame->get_frame_number());
 
     // Determine the size of the output processed image
     const std::size_t output_image_size = processed_image_size();
-    LOG4CXX_TRACE(logger_, "Output image size: " << output_image_size);
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data()) + sizeof(Hexitec::FrameHeader)
-    );
+        static_cast<const char*>(frame->get_data()));
 
-    // Pointers to processed image buffer - will be allocated on demand
-    void* processed_image = NULL;
-
-    try
+    // Check dataset; Which set determines how to proceed..
+    const std::string& dataset = frame->get_dataset_name();
+    if (dataset.compare(std::string("raw")) == 0)
     {
-
-      // Check that the pixels are contained within the dimensions of the
-      // specified output image, otherwise throw an error
-      if (FEM_TOTAL_PIXELS > image_pixels_)
-      {
-        std::stringstream msg;
-        msg << "Pixel count inferred from FEM ("
-            << FEM_TOTAL_PIXELS
-            << ") will exceed dimensions of output image (" << image_pixels_ << ")";
-        throw std::runtime_error(msg.str());
-      }
-
-      // Allocate buffer to receive processed image.
-      processed_image = (void*)malloc(output_image_size);
-      if (processed_image == NULL)
-      {
-        throw std::runtime_error("Failed to allocate temporary buffer for processed image");
-      }
-
-			// Calculate pointer into the input image data based on loop index
-			void* input_ptr = static_cast<void *>(
-					static_cast<char *>(const_cast<void *>(data_ptr)));
-
-			// WARNING: This will fail as long as ODIN won't let a Frame's data be changed !
-      prepareChargedSharing(static_cast<unsigned short *>(input_ptr));
-
-//        reorder_pixels(static_cast<unsigned short *>(input_ptr),
-//                             static_cast<unsigned short *>(processed_image));
-
-
-      // Set the frame image to the processed image buffer if appropriate
-      if (processed_image)
-      {
-        // Setup the frame dimensions
-        dimensions_t dims(2);
-        dims[0] = image_height_;
-        dims[1] = image_width_;
-
-        boost::shared_ptr<Frame> data_frame;
-        data_frame = boost::shared_ptr<Frame>(new Frame("data"));
-
-        data_frame->set_frame_number(hdr_ptr->frame_number);
-
-        data_frame->set_dimensions(dims);
-        data_frame->copy_data(processed_image, output_image_size);
-
-        LOG4CXX_TRACE(logger_, "Pushing data frame.");
-        this->push(data_frame);
-
-        free(processed_image);
-        processed_image = NULL;
-      }
+			LOG4CXX_TRACE(logger_, "Pushing " << dataset << " frame.");
+			this->push(frame);
     }
-    catch (const std::exception& e)
+    else if (dataset.compare(std::string("data")) == 0)
     {
-      std::stringstream ss;
-      ss << "HEXITEC frame decode failed: " << e.what();
-      LOG4CXX_ERROR(logger_, ss.str());
+			// Pointers to processed image buffer - will be allocated on demand
+			void* processed_image = NULL;
+
+			try
+			{
+
+				// Check that the pixels are contained within the dimensions of the
+				// specified output image, otherwise throw an error
+				if (FEM_TOTAL_PIXELS > image_pixels_)
+				{
+					std::stringstream msg;
+					msg << "Pixel count inferred from FEM ("
+							<< FEM_TOTAL_PIXELS
+							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
+					throw std::runtime_error(msg.str());
+				}
+
+				// Allocate buffer to receive processed image.
+				processed_image = (void*)malloc(output_image_size);
+				if (processed_image == NULL)
+				{
+					throw std::runtime_error("Failed to allocate temporary buffer for processed image");
+				}
+
+				// Calculate pointer into the input image data based on loop index
+				void* input_ptr = static_cast<void *>(
+						static_cast<char *>(const_cast<void *>(data_ptr)));
+
+				// Take Frame object at input_ptr, apply CS Addition algorithm and save results to
+				//	at processed_image('s address)
+				prepareChargedSharing(static_cast<float *>(input_ptr),
+															static_cast<float *>(processed_image) );
+
+				// Set the frame image to the processed image buffer if appropriate
+				if (processed_image)
+				{
+					// Setup the frame dimensions
+					dimensions_t dims(2);
+					dims[0] = image_height_;
+					dims[1] = image_width_;
+
+					boost::shared_ptr<Frame> data_frame;
+					data_frame = boost::shared_ptr<Frame>(new Frame(dataset) );
+
+					data_frame->set_frame_number(frame->get_frame_number());
+
+					data_frame->set_dimensions(dims);
+					data_frame->copy_data(processed_image, output_image_size);
+
+					LOG4CXX_TRACE(logger_, "Pushing " << dataset << " frame.");
+					this->push(data_frame);
+
+					free(processed_image);
+					processed_image = NULL;
+				}
+			}
+			catch (const std::exception& e)
+			{
+				std::stringstream ss;
+				ss << "HEXITEC frame decode failed: " << e.what();
+				LOG4CXX_ERROR(logger_, ss.str());
+			}
+    }
+    else
+    {
+    	LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
     }
   }
 
@@ -186,9 +179,8 @@ namespace FrameProcessor
    */
   std::size_t HexitecAdditionPlugin::processed_image_size() {
 
-    return image_width_ * image_height_ * sizeof(unsigned short);
+    return image_width_ * image_height_ * sizeof(float);
   }
-
 
   /**
    * Prepare frame for charged sharing processing
@@ -196,29 +188,29 @@ namespace FrameProcessor
    * \param[frame] frame - Pointer to the image data to be processed.
    *
    */
-  void HexitecAdditionPlugin::prepareChargedSharing(unsigned short *frame)
+  void HexitecAdditionPlugin::prepareChargedSharing(float *inFrame, float *outFrame)
   {
-     /// extendedFrame contains empty (1-2) pixel(s) on all 4 sides to enable charge
+     /// extendedFrame contains empty (1-2) pixel(s) on all 4 sides to enable charged
   	/// 	sharing algorithm execution
 		int sidePadding          = 2 *  directionalDistance;
 		int extendedFrameRows    = (nRows + sidePadding);
 		int extendedFrameColumns = (nCols + sidePadding);
 		int extendedFrameSize    = extendedFrameRows * extendedFrameColumns;
 
-		unsigned short  *extendedFrame;
-		extendedFrame = (unsigned short*) malloc(extendedFrameSize * sizeof(unsigned short));
-		memset(extendedFrame, 0, extendedFrameSize * sizeof(unsigned short));
+		float *extendedFrame;
+		extendedFrame = (float*) malloc(extendedFrameSize * sizeof(float));
+		memset(extendedFrame, 0, extendedFrameSize * sizeof(float));
 
 		// Copy frame's each row into extendedFrame leaving (directionalDistance pixel(s))
 		// 	padding on each side
 		int startPosn = extendedFrameColumns * directionalDistance + directionalDistance;
 		int endPosn   = extendedFrameSize;
 		int increment = extendedFrameColumns;
-		unsigned short *rowPtr = frame;
+		float *rowPtr = inFrame;
 
 		for (int i = startPosn; i < endPosn; )
 		{
-			 memcpy(&(extendedFrame[i]), rowPtr, nCols * sizeof(unsigned short));
+			 memcpy(&(extendedFrame[i]), rowPtr, nCols * sizeof(float));
 			 rowPtr = rowPtr + nCols;
 			 i = i + increment;
 		}
@@ -240,10 +232,10 @@ namespace FrameProcessor
 		processAddition(extendedFrame, extendedFrameRows, startPosn, endPosn);
 
 		/// Copy CSD frame (i.e. 402x402) back into originally sized frame (400x400)
-		rowPtr = frame;
+		rowPtr = outFrame;
 		for (int i = startPosn; i < endPosn; )
 		{
-			 memcpy(rowPtr, &(extendedFrame[i]), nCols * sizeof(unsigned short));
+			 memcpy(rowPtr, &(extendedFrame[i]), nCols * sizeof(float));
 			 rowPtr = rowPtr + nCols;
 			 i = i + increment;
 		}
@@ -262,10 +254,10 @@ namespace FrameProcessor
    * \param[endPosn] endPosn - Where the final pixel is in the frame
    *
    */
-	void HexitecAdditionPlugin::processAddition(unsigned short *extendedFrame,
+	void HexitecAdditionPlugin::processAddition(float *extendedFrame,
 			int extendedFrameRows, int startPosn, int endPosn)
 	{
-	  unsigned short *neighbourPixel = NULL, *currentPixel = extendedFrame;
+	  float *neighbourPixel = NULL, *currentPixel = extendedFrame;
 	  int rowIndexBegin = (-1*directionalDistance);
 		int rowIndexEnd   = (directionalDistance+1);
 		int colIndexBegin = rowIndexBegin;

@@ -10,7 +10,6 @@
 namespace FrameProcessor
 {
 
-  const std::string HexitecTemplatePlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
   const std::string HexitecTemplatePlugin::CONFIG_IMAGE_WIDTH = "width";
   const std::string HexitecTemplatePlugin::CONFIG_IMAGE_HEIGHT = "height";
 
@@ -20,8 +19,7 @@ namespace FrameProcessor
   HexitecTemplatePlugin::HexitecTemplatePlugin() :
       image_width_(80),
       image_height_(80),
-      image_pixels_(image_width_ * image_height_),
-      packets_lost_(0)
+      image_pixels_(image_width_ * image_height_)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FW.HexitecTemplatePlugin");
@@ -49,11 +47,6 @@ namespace FrameProcessor
    */
   void HexitecTemplatePlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
-    if (config.has_param(HexitecTemplatePlugin::CONFIG_DROPPED_PACKETS))
-    {
-      packets_lost_ = config.get_param<int>(HexitecTemplatePlugin::CONFIG_DROPPED_PACKETS);
-    }
-
     if (config.has_param(HexitecTemplatePlugin::CONFIG_IMAGE_WIDTH))
     {
       image_width_ = config.get_param<int>(HexitecTemplatePlugin::CONFIG_IMAGE_WIDTH);
@@ -77,7 +70,6 @@ namespace FrameProcessor
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecTemplatePlugin");
-    status.set_param(get_name() + "/packets_lost", packets_lost_);
   }
 
   /**
@@ -88,17 +80,8 @@ namespace FrameProcessor
    */
   void HexitecTemplatePlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_TRACE(logger_, "Reordering frame.");
-    LOG4CXX_TRACE(logger_, "Frame size: " << frame->get_data_size());
-
-    const Hexitec::FrameHeader* hdr_ptr =
-        static_cast<const Hexitec::FrameHeader*>(frame->get_data());
-
-    LOG4CXX_TRACE(logger_, "Raw frame number: " << hdr_ptr->frame_number);
-    LOG4CXX_TRACE(logger_, "Frame state: " << hdr_ptr->frame_state);
-    LOG4CXX_TRACE(logger_, "Packets received: " << hdr_ptr->total_packets_received
-        << " SOF markers: "<< (int)hdr_ptr->total_sof_marker_count
-        << " EOF markers: "<< (int)hdr_ptr->total_eof_marker_count);
+    LOG4CXX_TRACE(logger_, "Applying ... template algorithm???");
+    LOG4CXX_TRACE(logger_, "Frame number: " << frame->get_frame_number());
 
     // Determine the size of the output reordered image
     const std::size_t output_image_size = reordered_image_size();
@@ -106,69 +89,82 @@ namespace FrameProcessor
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data()) + sizeof(Hexitec::FrameHeader)
-    );
+        static_cast<const char*>(frame->get_data()));
 
-    // Pointers to reordered image buffer - will be allocated on demand
-    void* reordered_image = NULL;
-
-    try
+    // Check dataset; Which set determines how to proceed..
+    const std::string& dataset = frame->get_dataset_name();
+    if (dataset.compare(std::string("raw")) == 0)
     {
-
-      // Check that the pixels are contained within the dimensions of the
-      // specified output image, otherwise throw an error
-      if (FEM_TOTAL_PIXELS > image_pixels_)
-      {
-        std::stringstream msg;
-        msg << "Pixel count inferred from FEM ("
-            << FEM_TOTAL_PIXELS
-            << ") will exceed dimensions of output image (" << image_pixels_ << ")";
-        throw std::runtime_error(msg.str());
-      }
-
-      // Allocate buffer to receive reordered image.
-      reordered_image = (void*)malloc(output_image_size);
-      if (reordered_image == NULL)
-      {
-        throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
-      }
-
-			// Calculate pointer into the input image data based on loop index
-			void* input_ptr = static_cast<void *>(
-					static_cast<char *>(const_cast<void *>(data_ptr)));
-
-//        reorder_pixels(static_cast<unsigned short *>(input_ptr),
-//                             static_cast<unsigned short *>(reordered_image));
-
-
-      // Set the frame image to the reordered image buffer if appropriate
-      if (reordered_image)
-      {
-        // Setup the frame dimensions
-        dimensions_t dims(2);
-        dims[0] = image_height_;
-        dims[1] = image_width_;
-
-        boost::shared_ptr<Frame> data_frame;
-        data_frame = boost::shared_ptr<Frame>(new Frame("data"));
-
-        data_frame->set_frame_number(hdr_ptr->frame_number);
-
-        data_frame->set_dimensions(dims);
-        data_frame->copy_data(reordered_image, output_image_size);
-
-        LOG4CXX_TRACE(logger_, "Pushing data frame.");
-        this->push(data_frame);
-
-        free(reordered_image);
-        reordered_image = NULL;
-      }
+			LOG4CXX_TRACE(logger_, "Pushing " << dataset << " frame.");
+			this->push(frame);
     }
-    catch (const std::exception& e)
+    else if (dataset.compare(std::string("data")) == 0)
     {
-      std::stringstream ss;
-      ss << "HEXITEC frame decode failed: " << e.what();
-      LOG4CXX_ERROR(logger_, ss.str());
+			// Pointers to reordered image buffer - will be allocated on demand
+			void* reordered_image = NULL;
+
+			try
+			{
+
+				// Check that the pixels are contained within the dimensions of the
+				// specified output image, otherwise throw an error
+				if (FEM_TOTAL_PIXELS > image_pixels_)
+				{
+					std::stringstream msg;
+					msg << "Pixel count inferred from FEM ("
+							<< FEM_TOTAL_PIXELS
+							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
+					throw std::runtime_error(msg.str());
+				}
+
+				// Allocate buffer to receive reordered image.
+				reordered_image = (void*)malloc(output_image_size);
+				if (reordered_image == NULL)
+				{
+					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
+				}
+
+				// Calculate pointer into the input image data based on loop index
+				void* input_ptr = static_cast<void *>(
+						static_cast<char *>(const_cast<void *>(data_ptr)));
+
+	//        reorder_pixels(static_cast<float *>(input_ptr),
+	//                             static_cast<float *>(reordered_image));
+
+
+				// Set the frame image to the reordered image buffer if appropriate
+				if (reordered_image)
+				{
+					// Setup the frame dimensions
+					dimensions_t dims(2);
+					dims[0] = image_height_;
+					dims[1] = image_width_;
+
+					boost::shared_ptr<Frame> data_frame;
+					data_frame = boost::shared_ptr<Frame>(new Frame(dataset));
+
+					data_frame->set_frame_number(frame->get_frame_number());
+
+					data_frame->set_dimensions(dims);
+					data_frame->copy_data(reordered_image, output_image_size);
+
+					LOG4CXX_TRACE(logger_, "Pushing " << dataset << " frame.");
+					this->push(data_frame);
+
+					free(reordered_image);
+					reordered_image = NULL;
+				}
+			}
+			catch (const std::exception& e)
+			{
+				std::stringstream ss;
+				ss << "HEXITEC frame decode failed: " << e.what();
+				LOG4CXX_ERROR(logger_, ss.str());
+			}
+		}
+    else
+    {
+    	LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
     }
   }
 
@@ -179,7 +175,7 @@ namespace FrameProcessor
    */
   std::size_t HexitecTemplatePlugin::reordered_image_size() {
 
-    return image_width_ * image_height_ * sizeof(unsigned short);
+    return image_width_ * image_height_ * sizeof(float);
   }
 
 } /* namespace FrameProcessor */

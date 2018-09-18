@@ -50,14 +50,12 @@ namespace FrameProcessor
 
     void process_lost_packets(boost::shared_ptr<Frame> frame);
     void process_frame(boost::shared_ptr<Frame> frame);
-//    // Unsigned array version currently used:
-//    void reorder_pixels(unsigned short* in, unsigned short* out);
-    // float array version to be used in future:
+    // Float type array version currently used:
     void reorder_pixels(unsigned short* in, float* out);
     // Convert pixel data from unsigned short to float data type
     void convert_pixels_to_float(unsigned short* in, float* out);
-//    std::size_t reordered_image_size();
-    std::size_t reordered_image_size_float();
+
+    std::size_t reordered_image_size();
 
     void initialisePixelMap();
     uint16_t pixelMap[6400];
