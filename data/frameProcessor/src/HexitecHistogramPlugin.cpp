@@ -104,7 +104,6 @@ namespace FrameProcessor
   void HexitecHistogramPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
     LOG4CXX_TRACE(logger_, "Calculating histograms..");
-    LOG4CXX_TRACE(logger_, "Frame number: " << frame->get_frame_number());
 
     // Determine the size of the output reordered image
     const std::size_t output_image_size = reordered_image_size();
@@ -117,7 +116,8 @@ namespace FrameProcessor
     const std::string& dataset = frame->get_dataset_name();
     if (dataset.compare(std::string("raw")) == 0)
     {
-			LOG4CXX_TRACE(logger_, "Pushing " << dataset << " frame.");
+			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
+ 														 " dataset, frame number: " << frame->get_frame_number());
 			this->push(frame);
     }
     else if (dataset.compare(std::string("data")) == 0)
@@ -170,7 +170,8 @@ namespace FrameProcessor
 					data_frame->set_dimensions(dims);
 					data_frame->copy_data(reordered_image, output_image_size);
 
-					LOG4CXX_TRACE(logger_, "Pushing data frame.");
+					LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
+		 														 " dataset, frame number: " << frame->get_frame_number());
 					this->push(data_frame);
 
 					free(reordered_image);

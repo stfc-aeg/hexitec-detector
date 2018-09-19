@@ -163,6 +163,10 @@ namespace FrameProcessor
         static_cast<const char*>(frame->get_data()) + sizeof(Hexitec::FrameHeader)
     );
 
+    // Set pointer to the input image data
+    void* input_ptr = static_cast<void *>(
+        static_cast<char *>(const_cast<void *>(data_ptr)));
+
     // Pointer to reordered image buffer - will be allocated on demand
     void* reordered_image = NULL;
 
@@ -190,44 +194,6 @@ namespace FrameProcessor
         throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
       }
 
-      // Set pointer to the input image data
-      void* input_ptr = static_cast<void *>(
-          static_cast<char *>(const_cast<void *>(data_ptr)));
-
-      // Reorder pixels into the output image
-      // Using float array
-      reorder_pixels(static_cast<unsigned short *>(input_ptr),
-                     static_cast<float *>(reordered_image));
-
-      // Set the frame image to the reordered image buffer if appropriate
-      if (reordered_image)
-      {
-        // Setup the frame dimensions
-        dimensions_t dims(2);
-        dims[0] = image_height_;
-        dims[1] = image_width_;
-
-        boost::shared_ptr<Frame> data_frame;
-        data_frame = boost::shared_ptr<Frame>(new Frame("data"));
-
-        data_frame->set_frame_number(hdr_ptr->frame_number);
-
-        data_frame->set_dimensions(dims);
-        data_frame->copy_data(reordered_image, output_image_size);
-
-//        float *pointer = (float*) (data_frame->get_data()) + sizeof(Hexitec::FrameHeader);
-//        for (unsigned int idx = 0; idx < 20; idx++)
-//        	LOG4CXX_TRACE(logger_, "float____________data[" << idx << "]: " << pointer[idx]);
-
-
-        LOG4CXX_TRACE(logger_, "Pushing data frame.");
-        this->push(data_frame);
-
-        free(reordered_image);
-        reordered_image = NULL;
-      }
-
-
       // Allocate buffer for raw data in float data type.
       raw_image = (void*)malloc(output_image_size);
       if (raw_image == NULL)
@@ -238,7 +204,6 @@ namespace FrameProcessor
       // Turn unsigned short raw pixel data into float data type raw pixel data
       convert_pixels_to_float(static_cast<unsigned short *>(input_ptr),
       												static_cast<float *>(raw_image));
-
 
       if (raw_image)
       {
@@ -256,7 +221,8 @@ namespace FrameProcessor
       	raw_frame->copy_data(raw_image, output_image_size);
 
 
-        LOG4CXX_TRACE(logger_, "Pushing raw frame.");
+  			LOG4CXX_TRACE(logger_, "Pushing raw dataset, frame number: "
+  														 << frame->get_frame_number());
         this->push(raw_frame);
 
 //  			float *ptr = (float*) (raw_frame->get_data()) + sizeof(Hexitec::FrameHeader);
@@ -266,6 +232,36 @@ namespace FrameProcessor
   			free(raw_image);
         raw_image = NULL;
       }
+
+
+			// Reorder pixels into the output image
+			// Using float array
+			reorder_pixels(static_cast<unsigned short *>(input_ptr),
+										 static_cast<float *>(reordered_image));
+
+			// Set the frame image to the reordered image buffer if appropriate
+			if (reordered_image)
+			{
+				// Setup the frame dimensions
+				dimensions_t dims(2);
+				dims[0] = image_height_;
+				dims[1] = image_width_;
+
+				boost::shared_ptr<Frame> data_frame;
+				data_frame = boost::shared_ptr<Frame>(new Frame("data"));
+
+				data_frame->set_frame_number(hdr_ptr->frame_number);
+
+				data_frame->set_dimensions(dims);
+				data_frame->copy_data(reordered_image, output_image_size);
+
+				LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: "
+															 << frame->get_frame_number());
+				this->push(data_frame);
+
+				free(reordered_image);
+				reordered_image = NULL;
+			}
     }
     catch (const std::exception& e)
     {
@@ -303,27 +299,27 @@ namespace FrameProcessor
         // Re-order pixels:
       	index = pixelMap[i];
 
-      	if ( ((index % 2) == 0) )
-      	{
-      		out[index] = 0.0;
-      	}
-      	else
+//      	if ( ((index % 2) == 0) )
+//      	{
+//      		out[index] = 0.0;
+//      	}
+//      	else
       	{
       		out[index] = (float)in[i];
       	}
-      	if ((index > 79) && (index < 159))
-      		out[index] = 0.0;
+//      	if ((index > 79) && (index < 159))
+//      		out[index] = 0.0;
         // Don't reorder:
 //        out[i] = in[i];
     }
-    for(index = 0; index < 162; index++)
-    {
-//      if (index < (2*80))
-        LOG4CXX_TRACE(logger_, "REORDER, out[" << index << "] = " << out[index]);
-
-    }
-    LOG4CXX_TRACE(logger_, " *** TAKE OUT THIS PIXEL HACK! ***");
+//    for(index = 0; index < 162; index++)
+//    {
+//      if (index < 15)
+//        LOG4CXX_TRACE(logger_, "REORDER, out[" << index << "] = " << out[index]);
+//    }
+//    LOG4CXX_TRACE(logger_, " *** reorder_pixels(), TAKE OUT THIS PIXEL HACK! ***");
   }
+
   /**
    * Convert an image's pixels from unsigned short to float data type.
    *
@@ -333,25 +329,18 @@ namespace FrameProcessor
    */
   void HexitecProcessPlugin::convert_pixels_to_float(unsigned short* in, float* out)
   {
-//    int index = 0;
+    int index = 0;
 
     for (int i=0; i<FEM_TOTAL_PIXELS; i++)
     {
-//        // Re-order pixels:
-//      	index = pixelMap[i];
-//        out[index] = (float)in[i];
+        // Re-order pixels:
+      	index = pixelMap[i];
+        out[index] = (float)in[i];
     	// Do not reorder pixels:
-      out[i] = (float)in[i];
-
+//      out[i] = (float)in[i];
     }
+//    LOG4CXX_TRACE(logger_, " *** convert_pixels_to_float(), TAKE OUT THIS PIXEL HACK! ***");
   }
-
-
-  /* ----------------------------------------------------------- */
-  /* DEVELOPMENT SPACE - for the other plug-ins' functionalities */
-  /* ----------------------------------------------------------- */
-
-
 
 } /* namespace FrameProcessor */
 
