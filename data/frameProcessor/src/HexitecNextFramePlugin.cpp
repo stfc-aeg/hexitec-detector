@@ -19,7 +19,8 @@ namespace FrameProcessor
   HexitecNextFramePlugin::HexitecNextFramePlugin() :
       image_width_(80),
       image_height_(80),
-      image_pixels_(image_width_ * image_height_)
+      image_pixels_(image_width_ * image_height_),
+			last_frame_number_(-1)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FW.HexitecNextFramePlugin");
@@ -81,6 +82,8 @@ namespace FrameProcessor
    */
   void HexitecNextFramePlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
+    long long current_frame_number = frame->get_frame_number();
+
     LOG4CXX_TRACE(logger_, "Applying Next Frame algorithm.");
 
     // Determine the size of the output image
@@ -89,8 +92,6 @@ namespace FrameProcessor
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
         static_cast<const char*>(frame->get_data()));
-
-    long long current_frame_number = frame->get_frame_number();
 
     // Check dataset; Which set determines how to proceed..
     const std::string& dataset = frame->get_dataset_name();
@@ -129,9 +130,19 @@ namespace FrameProcessor
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
-				// Compare current frame versus last frame, if same pixel hit in both then clear both pixels
-	      apply_algorithm(static_cast<float *>(input_ptr),
-	                             static_cast<float *>(corrected_image));
+				// Don't compare current against last frame if not adjacent
+				if ((last_frame_number_+1) != current_frame_number)
+				{
+					LOG4CXX_TRACE(logger_, "Not correcting current frame, because last frame number: " <<
+																	last_frame_number_ << " versus current_frame_number: "
+																	<< current_frame_number);
+				}
+				else
+				{
+					// Compare current frame versus last frame, if same pixel hit in both then clear both pixels
+					apply_algorithm(static_cast<float *>(input_ptr),
+																 static_cast<float *>(corrected_image));
+				}
 
 				// Set the frame image to the corrected image buffer if appropriate
 				if (corrected_image)
@@ -152,6 +163,8 @@ namespace FrameProcessor
 					LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
 																 " dataset, frame number: " << current_frame_number);
 					this->push(data_frame);
+
+					last_frame_number_ = current_frame_number;
 
 					// Copy current (corrected) frame into last frame's place
 					memcpy(last_frame_, corrected_image, FEM_TOTAL_PIXELS * sizeof(float));

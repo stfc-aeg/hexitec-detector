@@ -64,6 +64,7 @@ namespace FrameProcessor
     /** Keep a copy of previous data frame **/
     float *last_frame_;
 
+    long long last_frame_number_;
   };
 
   /**

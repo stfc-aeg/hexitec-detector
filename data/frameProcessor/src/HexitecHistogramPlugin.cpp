@@ -10,8 +10,12 @@
 namespace FrameProcessor
 {
 
-  const std::string HexitecHistogramPlugin::CONFIG_IMAGE_WIDTH = "width";
+  const std::string HexitecHistogramPlugin::CONFIG_IMAGE_WIDTH  = "width";
   const std::string HexitecHistogramPlugin::CONFIG_IMAGE_HEIGHT = "height";
+  const std::string HexitecHistogramPlugin::CONFIG_MAX_FRAMES   = "max_frames_received";
+  const std::string HexitecHistogramPlugin::CONFIG_BIN_START    = "bin_start";
+  const std::string HexitecHistogramPlugin::CONFIG_BIN_END 		  = "bin_end";
+  const std::string HexitecHistogramPlugin::CONFIG_BIN_WIDTH 		= "bin_width";
 
   /**
    * The constructor sets up logging used within the class.
@@ -19,7 +23,9 @@ namespace FrameProcessor
   HexitecHistogramPlugin::HexitecHistogramPlugin() :
       image_width_(80),
       image_height_(80),
-      image_pixels_(image_width_ * image_height_)
+      image_pixels_(image_width_ * image_height_),
+			max_frames_received_(0),
+			frames_counter_(0)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FW.HexitecHistogramPlugin");
@@ -28,20 +34,21 @@ namespace FrameProcessor
 
     frameSize = image_width_ * image_height_;
     binStart   = 0;
-    binEnd     = 12;
-    binWidth   = 1.0;
-    nBins      = (int)(((binEnd - binStart) / binWidth) + 0.5);;
+    binEnd     = 8000;
+    binWidth   = 10;
+    nBins      = 800;
+
+    nBins      = (int)(((binEnd - binStart) / binWidth) + 0.5);
 
 //    hxtV3Buffer.allData = (float *) calloc((nBins * frameSize) + nBins, sizeof(float));
 //    hxtBin = hxtV3Buffer.allData;
 //    histogramPerPixel = hxtV3Buffer.allData + nBins;
 
-    hxtBin = (float *) malloc(((nBins * frameSize) + nBins) * sizeof(float));
-    memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(float) );
-    histogramPerPixel = hxtBin + nBins;
+    hxtBin = NULL;
+    histogramPerPixel = NULL;
 
-    summedHistogram = (long long *) malloc(nBins * sizeof(long long));
-    memset(summedHistogram, 0, nBins * sizeof(long long));
+    summedHistogram = NULL;
+
     hxtsProcessed = 0;
 
   }
@@ -81,6 +88,55 @@ namespace FrameProcessor
     }
 
     image_pixels_ = image_width_ * image_height_;
+
+    if (config.has_param(HexitecHistogramPlugin::CONFIG_MAX_FRAMES))
+    {
+    	max_frames_received_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_MAX_FRAMES);
+    }
+
+    if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_START))
+    {
+    	binStart = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_START);
+		}
+
+    if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_END))
+    {
+    	binEnd = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_END);
+    }
+
+    if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_WIDTH))
+		{
+    	binWidth = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_WIDTH);
+		}
+
+    nBins      = (int)(((binEnd - binStart) / binWidth) + 0.5);
+
+//    hxtV3Buffer.allData = (float *) calloc((nBins * frameSize) + nBins, sizeof(float));
+//    hxtBin = hxtV3Buffer.allData;
+//    histogramPerPixel = hxtV3Buffer.allData + nBins;
+
+//    LOG4CXX_TRACE(logger_, "setting up hxtBin.. binEnd: " << binEnd << " binStart: " <<
+//    							binStart << " binWidth: " << binWidth << " nBins: " << nBins);
+
+    hxtBin = (float *) malloc(((nBins * frameSize) + nBins) * sizeof(float));
+    memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(float) );
+    histogramPerPixel = hxtBin + nBins;
+
+    LOG4CXX_TRACE(logger_, "\t\t\te sizeof summedHistogram: " << sizeof(summedHistogram));
+    summedHistogram = (long long *) malloc(nBins * sizeof(long long));
+    memset(summedHistogram, 0, nBins * sizeof(long long));
+
+    // Initialise bins
+    float currentBin = binStart;
+    float *pHxtBin = hxtBin;
+    for (long long i = binStart; i < nBins; i++, currentBin += binWidth)
+    {
+       *pHxtBin = currentBin;
+//       if ( i < 12)
+//         LOG4CXX_TRACE(logger_, "\t\t\t\tcurrentBin: " << currentBin << " pHxtBin: " << *pHxtBin);
+       pHxtBin++;
+    }
+
   }
 
   /**
@@ -103,10 +159,7 @@ namespace FrameProcessor
    */
   void HexitecHistogramPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_TRACE(logger_, "Calculating histograms..");
-
-    // Determine the size of the output reordered image
-    const std::size_t output_image_size = reordered_image_size();
+    LOG4CXX_TRACE(logger_, "Calculating histograms.");
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
@@ -122,60 +175,95 @@ namespace FrameProcessor
     }
     else if (dataset.compare(std::string("data")) == 0)
     {
-			// Pointers to reordered image buffer - will be allocated on demand
-			void* reordered_image = NULL;
-
 			try
 			{
+				/// Histogram will access data dataset but not change it in any way
+				/// 	Therefore do not need to check frame dimensions, malloc memory,
+				/// 	etc
 
-				// Check that the pixels are contained within the dimensions of the
-				// specified output image, otherwise throw an error
-				if (FEM_TOTAL_PIXELS > image_pixels_)
-				{
-					std::stringstream msg;
-					msg << "Pixel count inferred from FEM ("
-							<< FEM_TOTAL_PIXELS
-							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
-					throw std::runtime_error(msg.str());
-				}
+				frames_counter_++;
+				// Pass on data dataset unmodified:
+				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
+	 														 " dataset, frame number: " << frame->get_frame_number());
+				this->push(frame);
 
-				// Allocate buffer to receive reordered image.
-				reordered_image = (void*)malloc(output_image_size);
-				if (reordered_image == NULL)
-				{
-					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
-				}
+//				// Check that the pixels are contained within the dimensions of the
+//				// specified output image, otherwise throw an error
+//				if (FEM_TOTAL_PIXELS > image_pixels_)
+//				{
+//					std::stringstream msg;
+//					msg << "Pixel count inferred from FEM ("
+//							<< FEM_TOTAL_PIXELS
+//							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
+//					throw std::runtime_error(msg.str());
+//				}
 
 				// Calculate pointer into the input image data based on loop index
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
 //				reorder_pixels(static_cast<float *>(input_ptr),
-//														 static_cast<float *>(reordered_image));
+//														 static_cast<float *>(histogram_data));
 
+				// Add frame's contribution onto histograms
+				addFrameDataToHistogramWithSum(static_cast<float *>(input_ptr));
 
-				// Set the frame image to the reordered image buffer if appropriate
-				if (reordered_image)
+				// Only bright histograms to disc if this is the final frame of the acquisition
+				if (frames_counter_ == max_frames_received_)
 				{
+					/// Time to push current histogram data
+
+					// Determine the size of the histograms
+					const std::size_t float_size = nBins * sizeof(float);
+					const std::size_t long_long_size = nBins * sizeof(long long);
+
+//					// Pointers to reordered image buffer - will be allocated on demand
+//					void* histogram_data = NULL;
+
+//					// Allocate buffer to receive reordered image.
+//					histogram_data = (void*)malloc(histogram_size);
+//					if (histogram_data == NULL)
+//					{
+//						throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
+//					}
+
+
 					// Setup the frame dimensions
 					dimensions_t dims(2);
-					dims[0] = image_height_;
-					dims[1] = image_width_;
+					dims[0] = nBins;
+//					dims[1] = nBins;
 
-					boost::shared_ptr<Frame> data_frame;
-					data_frame = boost::shared_ptr<Frame>(new Frame(dataset));
+					boost::shared_ptr<Frame> energy_bins;
+					energy_bins = boost::shared_ptr<Frame>(new Frame("energy_bins"));
 
-					data_frame->set_frame_number(frame->get_frame_number());
+					energy_bins->set_frame_number(frame->get_frame_number());
 
-					data_frame->set_dimensions(dims);
-					data_frame->copy_data(reordered_image, output_image_size);
+					energy_bins->set_dimensions(dims);
+					energy_bins->copy_data(hxtBin, float_size);
 
-					LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-		 														 " dataset, frame number: " << frame->get_frame_number());
-					this->push(data_frame);
+					LOG4CXX_TRACE(logger_, "Pushing " << "energy_bins" <<
+																 " dataset, frame number: " << frame->get_frame_number());
+					this->push(energy_bins);
 
-					free(reordered_image);
-					reordered_image = NULL;
+					// Setup the summed histograms
+
+					boost::shared_ptr<Frame> summed_histograms;
+					summed_histograms = boost::shared_ptr<Frame>(new Frame("summed_histograms"));
+
+					summed_histograms->set_frame_number(frame->get_frame_number());
+
+					summed_histograms->set_dimensions(dims);
+					summed_histograms->copy_data(summedHistogram, long_long_size);
+
+					LOG4CXX_TRACE(logger_, "Pushing " << "summedHistograms" <<
+																 " dataset, frame number: " << frame->get_frame_number());
+					this->push(summed_histograms);
+
+					/// Clear (but do not free) the memory used
+			    memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(float) );
+			    memset(summedHistogram, 0, nBins * sizeof(long long));
+
+					frames_counter_ = 0;
 				}
 			}
 			catch (const std::exception& e)
@@ -190,16 +278,6 @@ namespace FrameProcessor
     	LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
     }
 	}
-
-  /**
-   * Determine the size of a reordered image size based on the counter depth.
-   *
-   * \return size of the reordered image in bytes
-   */
-  std::size_t HexitecHistogramPlugin::reordered_image_size() {
-
-    return image_width_ * image_height_ * sizeof(float);
-  }
 
   // Called when the user NOT selected spectrum option
   void HexitecHistogramPlugin::addFrameDataToHistogram(float *frame)

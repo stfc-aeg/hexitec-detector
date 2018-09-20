@@ -44,9 +44,16 @@ namespace FrameProcessor
     static const std::string CONFIG_IMAGE_WIDTH;
     /** Configuration constant for image height **/
     static const std::string CONFIG_IMAGE_HEIGHT;
+    /** Configuration constant for number of frame per acquisition **/
+    static const std::string CONFIG_MAX_FRAMES;
+    /** Configuration constant for bin start **/
+    static const std::string CONFIG_BIN_START;
+    /** Configuration constant for bin end **/
+    static const std::string CONFIG_BIN_END;
+    /** Configuration constant for bin width **/
+    static const std::string CONFIG_BIN_WIDTH;
 
     void process_frame(boost::shared_ptr<Frame> frame);
-    std::size_t reordered_image_size();
 
     void addFrameDataToHistogram(float *frame);
     void addFrameDataToHistogramWithSum(float *frame);
@@ -59,6 +66,10 @@ namespace FrameProcessor
     int image_height_;
     /** Image pixel count **/
     int image_pixels_;
+    /** number of frames expected per acquisition **/
+    int max_frames_received_;
+    /** Count number of frames **/
+    int frames_counter_;
 
     int frameSize;
     long long binStart;
