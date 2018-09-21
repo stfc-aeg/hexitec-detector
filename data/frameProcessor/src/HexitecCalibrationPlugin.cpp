@@ -1,39 +1,45 @@
 /*
- * HexitecTemplatePlugin.cpp
+ * HexitecCalibrationPlugin.cpp
  *
  *  Created on: 24 Jul 2018
  *      Author: ckd27546
  */
 
-#include <HexitecTemplatePlugin.h>
+#include <HexitecCalibrationPlugin.h>
 
 namespace FrameProcessor
 {
 
-  const std::string HexitecTemplatePlugin::CONFIG_IMAGE_WIDTH = "width";
-  const std::string HexitecTemplatePlugin::CONFIG_IMAGE_HEIGHT = "height";
+  const std::string HexitecCalibrationPlugin::CONFIG_IMAGE_WIDTH = "width";
+  const std::string HexitecCalibrationPlugin::CONFIG_IMAGE_HEIGHT = "height";
 
   /**
    * The constructor sets up logging used within the class.
    */
-  HexitecTemplatePlugin::HexitecTemplatePlugin() :
+  HexitecCalibrationPlugin::HexitecCalibrationPlugin() :
       image_width_(80),
       image_height_(80),
-      image_pixels_(image_width_ * image_height_)
+      image_pixels_(image_width_ * image_height_),
+			gradientsStatus(false),
+			interceptsStatus(false),
+			gradientFilename(NULL),
+			interceptFilename(NULL),
+			gradientValue(1),
+			interceptValue(0)
   {
     // Setup logging for the class
-    logger_ = Logger::getLogger("FW.HexitecTemplatePlugin");
+    logger_ = Logger::getLogger("FW.HexitecCalibrationPlugin");
     logger_->setLevel(Level::getAll());
-    LOG4CXX_TRACE(logger_, "HexitecTemplatePlugin constructor.");
+    LOG4CXX_TRACE(logger_, "HexitecCalibrationPlugin constructor.");
 
   }
 
   /**
    * Destructor.
    */
-  HexitecTemplatePlugin::~HexitecTemplatePlugin()
+  HexitecCalibrationPlugin::~HexitecCalibrationPlugin()
   {
-    LOG4CXX_TRACE(logger_, "HexitecTemplatePlugin destructor.");
+    LOG4CXX_TRACE(logger_, "HexitecCalibrationPlugin destructor.");
   }
 
   /**
@@ -45,16 +51,16 @@ namespace FrameProcessor
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[out] reply - Reference to the reply IpcMessage object.
    */
-  void HexitecTemplatePlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
+  void HexitecCalibrationPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
-    if (config.has_param(HexitecTemplatePlugin::CONFIG_IMAGE_WIDTH))
+    if (config.has_param(HexitecCalibrationPlugin::CONFIG_IMAGE_WIDTH))
     {
-      image_width_ = config.get_param<int>(HexitecTemplatePlugin::CONFIG_IMAGE_WIDTH);
+      image_width_ = config.get_param<int>(HexitecCalibrationPlugin::CONFIG_IMAGE_WIDTH);
     }
 
-    if (config.has_param(HexitecTemplatePlugin::CONFIG_IMAGE_HEIGHT))
+    if (config.has_param(HexitecCalibrationPlugin::CONFIG_IMAGE_HEIGHT))
     {
-      image_height_ = config.get_param<int>(HexitecTemplatePlugin::CONFIG_IMAGE_HEIGHT);
+      image_height_ = config.get_param<int>(HexitecCalibrationPlugin::CONFIG_IMAGE_HEIGHT);
     }
 
     image_pixels_ = image_width_ * image_height_;
@@ -66,10 +72,10 @@ namespace FrameProcessor
    *
    * \param[out] status - Reference to an IpcMessage value to store the status.
    */
-  void HexitecTemplatePlugin::status(OdinData::IpcMessage& status)
+  void HexitecCalibrationPlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for HexitecTemplatePlugin");
+    LOG4CXX_DEBUG(logger_, "Status requested for HexitecCalibrationPlugin");
   }
 
   /**
@@ -78,12 +84,12 @@ namespace FrameProcessor
    *
    * \param[in] frame - Pointer to a Frame object.
    */
-  void HexitecTemplatePlugin::process_frame(boost::shared_ptr<Frame> frame)
+  void HexitecCalibrationPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_TRACE(logger_, "Applying ... template algorithm???");
+    LOG4CXX_TRACE(logger_, "Applying Calibration.");
 
     // Determine the size of the output reordered image
-    const std::size_t output_image_size = reordered_image_size();
+    const std::size_t calibrated_image_size = reordered_image_size();
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
@@ -117,7 +123,7 @@ namespace FrameProcessor
 				}
 
 				// Allocate buffer to receive reordered image.
-				reordered_image = (void*)malloc(output_image_size);
+				reordered_image = (void*)malloc(calibrated_image_size);
 				if (reordered_image == NULL)
 				{
 					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
@@ -145,7 +151,7 @@ namespace FrameProcessor
 					data_frame->set_frame_number(frame->get_frame_number());
 
 					data_frame->set_dimensions(dims);
-					data_frame->copy_data(reordered_image, output_image_size);
+					data_frame->copy_data(reordered_image, calibrated_image_size);
 
 					LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
 		 														 " dataset, frame number: " << frame->get_frame_number());
@@ -173,10 +179,83 @@ namespace FrameProcessor
    *
    * \return size of the reordered image in bytes
    */
-  std::size_t HexitecTemplatePlugin::reordered_image_size() {
+  std::size_t HexitecCalibrationPlugin::calibrated_image_size() {
 
     return image_width_ * image_height_ * sizeof(float);
   }
+
+  /**
+   * Calibrate an image's pixels.
+   *
+   * \param[in] in - Pointer to the incoming image data.
+   * \param[out] out - Pointer to the allocated memory where
+   * 										the calibrated pixels will be stored.
+   */
+  void HexitecCalibrationPlugin::calibrate_pixels(float* in, float* out)
+  {
+
+    for (int i=0; i<FEM_TOTAL_PIXELS; i++)
+    {
+     		out[i] = in[i];
+
+    }
+//    for(index = 0; index < 162; index++)
+//    {
+//      if (index < 15)
+//        LOG4CXX_TRACE(logger_, "REORDER, out[" << index << "] = " << out[index]);
+//    }
+//    LOG4CXX_TRACE(logger_, " *** reorder_pixels(), TAKE OUT THIS PIXEL HACK! ***");
+  }
+
+  void HexitecCalibrationPlugin::setGradients()
+  {
+     double defaultValue = 1;
+     gradientsStatus = getData(gradientFilename, gradientValue, defaultValue);
+  }
+
+  void HexitecCalibrationPlugin::setIntercepts()
+  {
+     double defaultValue = 0;
+     interceptsStatus = getData(interceptFilename, interceptValue, defaultValue);
+  }
+
+  bool HexitecCalibrationPlugin::getData(char *filename, double *dataValue, double defaultValue)
+  {
+     int i = 0;
+     std::ifstream inFile;
+     bool success = false;
+
+     inFile.open(filename);
+
+     if (!inFile)
+     {
+       for (int val = 0; val < frameSize; val ++)
+       {
+          dataValue[val] = defaultValue;
+       }
+     }
+
+     while (inFile >> dataValue[i])
+     {
+        i++;
+     }
+
+     if (i < frameSize)
+     {
+        for (int val = i; val < frameSize; val ++)
+        {
+           dataValue[val] = defaultValue;
+        }
+     }
+     else
+     {
+       success = true;
+     }
+     inFile.close();
+
+     return success;
+  }
+
 
 } /* namespace FrameProcessor */
 

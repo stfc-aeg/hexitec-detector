@@ -1,12 +1,12 @@
 /*
- * HexitecNextFramePlugin.h
+ * HexitecCalibrationPlugin.h
  *
- *  Created on: 18 Sept 2018
+ *  Created on: 20 Sept 2018
  *      Author: ckd27546
  */
 
-#ifndef INCLUDE_HEXITECNEXTFRAMEPLUGIN_H_
-#define INCLUDE_HEXITECNEXTFRAMEPLUGIN_H_
+#ifndef INCLUDE_HEXITECCALIBRATIONPLUGIN_H_
+#define INCLUDE_HEXITECCALIBRATIONPLUGIN_H_
 
 #include <log4cxx/logger.h>
 #include <log4cxx/basicconfigurator.h>
@@ -15,7 +15,6 @@
 using namespace log4cxx;
 using namespace log4cxx::helpers;
 
-#include <string>
 
 #include "FrameProcessorPlugin.h"
 #include "HexitecDefinitions.h"
@@ -28,15 +27,15 @@ using namespace log4cxx::helpers;
 namespace FrameProcessor
 {
 
-  /** NextFrame for future Hexitec Frame objects.
+  /** Calibration of Hexitec Frame objects.
    *
    * This service of the template for all of the remaining hexitec plug-ins to be written.
    */
-  class HexitecNextFramePlugin : public FrameProcessorPlugin
+  class HexitecCalibrationPlugin : public FrameProcessorPlugin
   {
   public:
-    HexitecNextFramePlugin();
-    virtual ~HexitecNextFramePlugin();
+    HexitecCalibrationPlugin();
+    virtual ~HexitecCalibrationPlugin();
     void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
     void status(OdinData::IpcMessage& status);
 
@@ -45,13 +44,11 @@ namespace FrameProcessor
     static const std::string CONFIG_IMAGE_WIDTH;
     /** Configuration constant for image height **/
     static const std::string CONFIG_IMAGE_HEIGHT;
-    /** Configuration constant for max frames **/
-    static const std::string CONFIG_MAX_FRAMES;
 
     void process_frame(boost::shared_ptr<Frame> frame);
-    std::size_t reordered_image_size();
+    void calibrate_pixels(float* in, float* out);
 
-    void apply_algorithm(float *in, float *out);
+    std::size_t calibrated_image_size();
 
     /** Pointer to logger **/
     LoggerPtr logger_;
@@ -61,18 +58,25 @@ namespace FrameProcessor
     int image_height_;
     /** Image pixel count **/
     int image_pixels_;
-    /** Keep a copy of previous data frame **/
-    float *last_frame_;
 
-    long long last_frame_number_;
+    bool gradientsStatus;
+    bool interceptsStatus;
+    char *gradientFilename;
+    char *interceptFilename;
+    float *gradientValue;
+    float *interceptValue
+    void setGradients();
+    void setIntercepts();
+    bool getData(char *filename, double *dataValue, double defaultValue);
+    long Long frameSize;
   };
 
   /**
    * Registration of this plugin through the ClassLoader.  This macro
    * registers the class without needing to worry about name mangling
    */
-  REGISTER(FrameProcessorPlugin, HexitecNextFramePlugin, "HexitecNextFramePlugin");
+  REGISTER(FrameProcessorPlugin, HexitecCalibrationPlugin, "HexitecCalibrationPlugin");
 
 } /* namespace FrameProcessor */
 
-#endif /* INCLUDE_HEXITECNEXTFRAMEPLUGIN_H_ */
+#endif /* INCLUDE_HEXITECCALIBRATIONPLUGIN_H_ */

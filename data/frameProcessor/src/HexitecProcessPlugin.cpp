@@ -213,7 +213,7 @@ namespace FrameProcessor
       	dims[1] = image_width_;
 
       	boost::shared_ptr<Frame> raw_frame;
-      	raw_frame = boost::shared_ptr<Frame>(new Frame("raw"));
+      	raw_frame = boost::shared_ptr<Frame>(new Frame("raw_frames"));
 
       	raw_frame->set_frame_number(hdr_ptr->frame_number);
 
@@ -221,7 +221,7 @@ namespace FrameProcessor
       	raw_frame->copy_data(raw_image, output_image_size);
 
 
-  			LOG4CXX_TRACE(logger_, "Pushing raw dataset, frame number: "
+  			LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: "
   														 << frame->get_frame_number());
         this->push(raw_frame);
 

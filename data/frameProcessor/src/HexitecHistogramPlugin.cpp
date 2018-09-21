@@ -49,8 +49,6 @@ namespace FrameProcessor
 
     summedHistogram = NULL;
 
-    hxtsProcessed = 0;
-
   }
 
   /**
@@ -106,7 +104,7 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_WIDTH))
 		{
-    	binWidth = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_WIDTH);
+    	binWidth = config.get_param<double>(HexitecHistogramPlugin::CONFIG_BIN_WIDTH);
 		}
 
     nBins      = (int)(((binEnd - binStart) / binWidth) + 0.5);
@@ -115,14 +113,14 @@ namespace FrameProcessor
 //    hxtBin = hxtV3Buffer.allData;
 //    histogramPerPixel = hxtV3Buffer.allData + nBins;
 
-//    LOG4CXX_TRACE(logger_, "setting up hxtBin.. binEnd: " << binEnd << " binStart: " <<
-//    							binStart << " binWidth: " << binWidth << " nBins: " << nBins);
+    LOG4CXX_TRACE(logger_, "setting up hxtBin.. binEnd: " << binEnd << " binStart: " <<
+    							binStart << " binWidth: " << binWidth << " nBins: " << nBins);
 
     hxtBin = (float *) malloc(((nBins * frameSize) + nBins) * sizeof(float));
     memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(float) );
     histogramPerPixel = hxtBin + nBins;
 
-    LOG4CXX_TRACE(logger_, "\t\t\te sizeof summedHistogram: " << sizeof(summedHistogram));
+//    LOG4CXX_TRACE(logger_, "\t\t\te sizeof summedHistogram: " << sizeof(summedHistogram));
     summedHistogram = (long long *) malloc(nBins * sizeof(long long));
     memset(summedHistogram, 0, nBins * sizeof(long long));
 
@@ -167,7 +165,7 @@ namespace FrameProcessor
 
     // Check dataset; Which set determines how to proceed..
     const std::string& dataset = frame->get_dataset_name();
-    if (dataset.compare(std::string("raw")) == 0)
+    if (dataset.compare(std::string("raw_frames")) == 0)
     {
 			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
  														 " dataset, frame number: " << frame->get_frame_number());
@@ -216,52 +214,71 @@ namespace FrameProcessor
 					// Determine the size of the histograms
 					const std::size_t float_size = nBins * sizeof(float);
 					const std::size_t long_long_size = nBins * sizeof(long long);
+		      /// Total amount of memory covered by the pixel histograms
+		      const std::size_t total_pixels_histograms_size = frameSize * nBins * sizeof(float);
 
-//					// Pointers to reordered image buffer - will be allocated on demand
-//					void* histogram_data = NULL;
+		      LOG4CXX_TRACE(logger_, "\t\t\t nBins: " << nBins << " frameSize: " <<
+		      							frameSize << " sizeof(float): " << sizeof(float) << " total: " <<
+		      							total_pixels_histograms_size);
 
-//					// Allocate buffer to receive reordered image.
-//					histogram_data = (void*)malloc(histogram_size);
-//					if (histogram_data == NULL)
-//					{
-//						throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
-//					}
+		      LOG4CXX_TRACE(logger_, "\t\t\t hxtBin, float_size: " << float_size <<
+		      							" nBins: " << nBins << " sizeof(float): "	<< sizeof(float));
 
 
 					// Setup the frame dimensions
-					dimensions_t dims(2);
+					dimensions_t dims(1);
 					dims[0] = nBins;
-//					dims[1] = nBins;
 
+					// Setup the energy bins
+
+					std::string dataset_name = "energy_bins";
 					boost::shared_ptr<Frame> energy_bins;
-					energy_bins = boost::shared_ptr<Frame>(new Frame("energy_bins"));
+					energy_bins = boost::shared_ptr<Frame>(new Frame(dataset_name));
 
-					energy_bins->set_frame_number(frame->get_frame_number());
+					energy_bins->set_frame_number(0);
 
 					energy_bins->set_dimensions(dims);
 					energy_bins->copy_data(hxtBin, float_size);
 
-					LOG4CXX_TRACE(logger_, "Pushing " << "energy_bins" <<
-																 " dataset, frame number: " << frame->get_frame_number());
+					LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
+																 " dataset, frame number: " << 0 << " \t\t\t\t\tTHIS IS HARDCODED AT 0 FOR NOW!!");
 					this->push(energy_bins);
 
 					// Setup the summed histograms
 
+					dataset_name = "summed_histograms";
 					boost::shared_ptr<Frame> summed_histograms;
-					summed_histograms = boost::shared_ptr<Frame>(new Frame("summed_histograms"));
+					summed_histograms = boost::shared_ptr<Frame>(new Frame(dataset_name));
 
-					summed_histograms->set_frame_number(frame->get_frame_number());
+					summed_histograms->set_frame_number(0);
 
 					summed_histograms->set_dimensions(dims);
 					summed_histograms->copy_data(summedHistogram, long_long_size);
 
-					LOG4CXX_TRACE(logger_, "Pushing " << "summedHistograms" <<
-																 " dataset, frame number: " << frame->get_frame_number());
+					LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
+																 " dataset, frame number: " << 0 << " \t\t\t\t\tTHIS IS HARDCODED AT 0 FOR NOW!!");
 					this->push(summed_histograms);
 
+					// Setup the pixels' histograms
+
+					dataset_name = "pixels_histograms";
+
+					boost::shared_ptr<Frame> pixels_histograms;
+					pixels_histograms = boost::shared_ptr<Frame>(new Frame(dataset_name));
+
+					pixels_histograms->set_frame_number(0);
+
+					pixels_histograms->set_dimensions(dims);
+					pixels_histograms->copy_data(histogramPerPixel, total_pixels_histograms_size);
+
+					LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
+																 " dataset, frame number: " << 0 << " \t\t\t\t\tTHIS IS HARDCODED AT 0 FOR NOW!!");
+					this->push(pixels_histograms);
+
+
 					/// Clear (but do not free) the memory used
-			    memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(float) );
-			    memset(summedHistogram, 0, nBins * sizeof(long long));
+//			    memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(float) );
+//			    memset(summedHistogram, 0, nBins * sizeof(long long));
 
 					frames_counter_ = 0;
 				}
@@ -304,8 +321,6 @@ namespace FrameProcessor
                      << (int)(pixel/400) << "," << (pixel % 400) <<")"*/;
          }
       }
-
-      hxtsProcessed++;
   }
 
   // Called when the user HAS selected spectrum option
@@ -316,7 +331,6 @@ namespace FrameProcessor
      float thisEnergy;
      int bin;
      int pixel;
-
      for (int i = 0; i < frameSize; i++)
      {
         pixel = i;
@@ -336,8 +350,6 @@ namespace FrameProcessor
                     << (int)(pixel/400) << "," << (pixel % 400) <<")"*/;
         }
      }
-
-     hxtsProcessed++;
   }
 
 } /* namespace FrameProcessor */

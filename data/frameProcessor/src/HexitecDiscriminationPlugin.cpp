@@ -98,7 +98,7 @@ namespace FrameProcessor
 
     // Check dataset; Which set determines how to proceed..
     const std::string& dataset = frame->get_dataset_name();
-    if (dataset.compare(std::string("raw")) == 0)
+    if (dataset.compare(std::string("raw_frames")) == 0)
     {
 			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
  														 " dataset, frame number: " << frame->get_frame_number());
