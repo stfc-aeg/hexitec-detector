@@ -175,33 +175,11 @@ namespace FrameProcessor
     {
 			try
 			{
-				/// Histogram will access data dataset but not change it in any way
-				/// 	Therefore do not need to check frame dimensions, malloc memory,
-				/// 	etc
-
 				frames_counter_++;
-				// Pass on data dataset unmodified:
-				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-	 														 " dataset, frame number: " << frame->get_frame_number());
-				this->push(frame);
-
-//				// Check that the pixels are contained within the dimensions of the
-//				// specified output image, otherwise throw an error
-//				if (FEM_TOTAL_PIXELS > image_pixels_)
-//				{
-//					std::stringstream msg;
-//					msg << "Pixel count inferred from FEM ("
-//							<< FEM_TOTAL_PIXELS
-//							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
-//					throw std::runtime_error(msg.str());
-//				}
 
 				// Calculate pointer into the input image data based on loop index
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
-
-//				reorder_pixels(static_cast<float *>(input_ptr),
-//														 static_cast<float *>(histogram_data));
 
 				// Add frame's contribution onto histograms
 				addFrameDataToHistogramWithSum(static_cast<float *>(input_ptr));
@@ -225,7 +203,7 @@ namespace FrameProcessor
 		      							" nBins: " << nBins << " sizeof(float): "	<< sizeof(float));
 
 
-					// Setup the frame dimensions
+					// Setup the dimension(s) for energy_bins, summed_histograms
 					dimensions_t dims(1);
 					dims[0] = nBins;
 
@@ -241,7 +219,7 @@ namespace FrameProcessor
 					energy_bins->copy_data(hxtBin, float_size);
 
 					LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
-																 " dataset, frame number: " << 0 << " \t\t\t\t\tTHIS IS HARDCODED AT 0 FOR NOW!!");
+																 " dataset, frame number: " << 0);
 					this->push(energy_bins);
 
 					// Setup the summed histograms
@@ -256,23 +234,28 @@ namespace FrameProcessor
 					summed_histograms->copy_data(summedHistogram, long_long_size);
 
 					LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
-																 " dataset, frame number: " << 0 << " \t\t\t\t\tTHIS IS HARDCODED AT 0 FOR NOW!!");
+																 " dataset, frame number: " << 0);
 					this->push(summed_histograms);
 
 					// Setup the pixels' histograms
 
-					dataset_name = "pixels_histograms";
+					// Setup the dimensions pixels_histograms
+					dimensions_t pxls_dims(2);
+					pxls_dims[0] = nBins;
+					pxls_dims[1] = frameSize;
+
+					dataset_name = "pixel_histograms";
 
 					boost::shared_ptr<Frame> pixels_histograms;
 					pixels_histograms = boost::shared_ptr<Frame>(new Frame(dataset_name));
 
 					pixels_histograms->set_frame_number(0);
 
-					pixels_histograms->set_dimensions(dims);
+					pixels_histograms->set_dimensions(pxls_dims);
 					pixels_histograms->copy_data(histogramPerPixel, total_pixels_histograms_size);
 
 					LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
-																 " dataset, frame number: " << 0 << " \t\t\t\t\tTHIS IS HARDCODED AT 0 FOR NOW!!");
+																 " dataset, frame number: " << 0);
 					this->push(pixels_histograms);
 
 
@@ -282,6 +265,16 @@ namespace FrameProcessor
 
 					frames_counter_ = 0;
 				}
+
+				/// Histogram will access data dataset but not change it in any way
+				/// 	Therefore do not need to check frame dimensions, malloc memory,
+				/// 	etc
+
+				// Pass on data dataset unmodified:
+				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
+	 														 " dataset, frame number: " << frame->get_frame_number());
+				this->push(frame);
+
 			}
 			catch (const std::exception& e)
 			{
