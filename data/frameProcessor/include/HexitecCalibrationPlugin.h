@@ -1,7 +1,7 @@
 /*
  * HexitecCalibrationPlugin.h
  *
- *  Created on: 20 Sept 2018
+ *  Created on: 24 Sept 2018
  *      Author: ckd27546
  */
 
@@ -19,6 +19,9 @@ using namespace log4cxx::helpers;
 #include "FrameProcessorPlugin.h"
 #include "HexitecDefinitions.h"
 #include "ClassLoader.h"
+
+#include <iostream>
+#include <fstream>
 
 #define FEM_PIXELS_PER_ROW 80
 #define FEM_PIXELS_PER_COLUMN 80
@@ -44,6 +47,10 @@ namespace FrameProcessor
     static const std::string CONFIG_IMAGE_WIDTH;
     /** Configuration constant for image height **/
     static const std::string CONFIG_IMAGE_HEIGHT;
+    /** Configuration constant for Gradients **/
+    static const std::string CONFIG_GRADIENTS_FILE;
+    /** Configuration constant for Intercepts **/
+    static const std::string CONFIG_INTERCEPTS_FILE;
 
     void process_frame(boost::shared_ptr<Frame> frame);
     void calibrate_pixels(float* in, float* out);
@@ -59,16 +66,15 @@ namespace FrameProcessor
     /** Image pixel count **/
     int image_pixels_;
 
+    int frameSize;
     bool gradientsStatus;
     bool interceptsStatus;
-    char *gradientFilename;
-    char *interceptFilename;
     float *gradientValue;
-    float *interceptValue
-    void setGradients();
-    void setIntercepts();
-    bool getData(char *filename, double *dataValue, double defaultValue);
-    long Long frameSize;
+    float *interceptValue;
+    void setGradients(const char *gradientFilename);
+    void setIntercepts(const char *interceptFilename);
+    bool getData(const char *filename, float *dataValue, float defaultValue);
+
   };
 
   /**

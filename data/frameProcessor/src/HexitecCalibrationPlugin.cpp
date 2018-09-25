@@ -1,7 +1,7 @@
 /*
  * HexitecCalibrationPlugin.cpp
  *
- *  Created on: 24 Jul 2018
+ *  Created on: 24 Sept 2018
  *      Author: ckd27546
  */
 
@@ -12,6 +12,8 @@ namespace FrameProcessor
 
   const std::string HexitecCalibrationPlugin::CONFIG_IMAGE_WIDTH = "width";
   const std::string HexitecCalibrationPlugin::CONFIG_IMAGE_HEIGHT = "height";
+  const std::string HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE = "gradients_file";
+  const std::string HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE = "intercepts_file";
 
   /**
    * The constructor sets up logging used within the class.
@@ -22,15 +24,34 @@ namespace FrameProcessor
       image_pixels_(image_width_ * image_height_),
 			gradientsStatus(false),
 			interceptsStatus(false),
-			gradientFilename(NULL),
-			interceptFilename(NULL),
-			gradientValue(1),
-			interceptValue(0)
+			gradientValue(NULL),
+			interceptValue(NULL),
+			frameSize(6400)	// Redundant, Replace all cases of frameSize with image_pixels_
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FW.HexitecCalibrationPlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecCalibrationPlugin constructor.");
+
+
+//	 gradientFilename =  new char[1024];
+//	 interceptFilename =  new char[1024];
+		gradientValue = (float *) malloc(frameSize * sizeof(float));
+		memset(gradientValue, 0, frameSize * sizeof(float));
+		interceptValue = (float *) malloc(frameSize * sizeof(float));
+		memset(interceptValue, 0, frameSize * sizeof(float));
+
+		*gradientValue = 1;
+		*interceptValue = 0;
+
+    /// Test first by hard coding path to the two calibration files:
+    std::string gradients_file = "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/CMakeLists.txt";
+		LOG4CXX_TRACE(logger_, "Setting gradients from file: " << gradients_file);
+		setGradients(gradients_file.c_str());
+
+    std::string intercept_file = "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/CMakeLists.txt";
+		LOG4CXX_TRACE(logger_, "Setting intercepts from file: " << intercept_file);
+		setIntercepts(intercept_file.c_str());
 
   }
 
@@ -40,6 +61,11 @@ namespace FrameProcessor
   HexitecCalibrationPlugin::~HexitecCalibrationPlugin()
   {
     LOG4CXX_TRACE(logger_, "HexitecCalibrationPlugin destructor.");
+
+//	 delete gradientFilename;
+//	 delete interceptFilename;
+	 free(gradientValue);
+	 free(interceptValue);
   }
 
   /**
@@ -65,6 +91,21 @@ namespace FrameProcessor
 
     image_pixels_ = image_width_ * image_height_;
 
+    if (config.has_param(HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE))
+		{
+			std::string gradients_file = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE);
+			LOG4CXX_TRACE(logger_, "Setting gradients from file: " << gradients_file);
+			setGradients(gradients_file.c_str());
+		}
+
+    if (config.has_param(HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE))
+		{
+	    std::string intercept_file = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE);
+			LOG4CXX_TRACE(logger_, "Setting intercepts from file: " << intercept_file);
+			setIntercepts(intercept_file.c_str());
+		}
+
+
   }
 
   /**
@@ -89,7 +130,7 @@ namespace FrameProcessor
     LOG4CXX_TRACE(logger_, "Applying Calibration.");
 
     // Determine the size of the output reordered image
-    const std::size_t calibrated_image_size = reordered_image_size();
+    const std::size_t ooutput_image_size = calibrated_image_size();
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
@@ -106,7 +147,7 @@ namespace FrameProcessor
     else if (dataset.compare(std::string("data")) == 0)
     {
 			// Pointers to reordered image buffer - will be allocated on demand
-			void* reordered_image = NULL;
+			void* calibrated_image = NULL;
 
 			try
 			{
@@ -123,8 +164,8 @@ namespace FrameProcessor
 				}
 
 				// Allocate buffer to receive reordered image.
-				reordered_image = (void*)malloc(calibrated_image_size);
-				if (reordered_image == NULL)
+				calibrated_image = (void*)malloc(ooutput_image_size);
+				if (calibrated_image == NULL)
 				{
 					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
 				}
@@ -133,12 +174,12 @@ namespace FrameProcessor
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
-	//        reorder_pixels(static_cast<float *>(input_ptr),
-	//                             static_cast<float *>(reordered_image));
+				calibrate_pixels(static_cast<float *>(input_ptr),
+														 static_cast<float *>(calibrated_image));
 
 
 				// Set the frame image to the reordered image buffer if appropriate
-				if (reordered_image)
+				if (calibrated_image)
 				{
 					// Setup the frame dimensions
 					dimensions_t dims(2);
@@ -151,14 +192,14 @@ namespace FrameProcessor
 					data_frame->set_frame_number(frame->get_frame_number());
 
 					data_frame->set_dimensions(dims);
-					data_frame->copy_data(reordered_image, calibrated_image_size);
+					data_frame->copy_data(calibrated_image, ooutput_image_size);
 
 					LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
 		 														 " dataset, frame number: " << frame->get_frame_number());
 					this->push(data_frame);
 
-					free(reordered_image);
-					reordered_image = NULL;
+					free(calibrated_image);
+					calibrated_image = NULL;
 				}
 			}
 			catch (const std::exception& e)
@@ -196,64 +237,72 @@ namespace FrameProcessor
 
     for (int i=0; i<FEM_TOTAL_PIXELS; i++)
     {
-     		out[i] = in[i];
+     	out[i] = (in[i] * gradientValue[i])  + interceptValue[i];
 
+     	if (i < 15)
+     		LOG4CXX_TRACE(logger_, "REORDER, in[" << i << "] (" << in[i] << ") * gradientValue ("
+     				<< gradientValue[i] << ") + interceptValue (" << interceptValue[i] << ") "  <<  " = "
+						<< out[i]);
     }
-//    for(index = 0; index < 162; index++)
-//    {
-//      if (index < 15)
-//        LOG4CXX_TRACE(logger_, "REORDER, out[" << index << "] = " << out[index]);
-//    }
-//    LOG4CXX_TRACE(logger_, " *** reorder_pixels(), TAKE OUT THIS PIXEL HACK! ***");
   }
 
-  void HexitecCalibrationPlugin::setGradients()
+  void HexitecCalibrationPlugin::setGradients(const char *gradientFilename)
   {
-     double defaultValue = 1;
-     gradientsStatus = getData(gradientFilename, gradientValue, defaultValue);
+    float defaultValue = 1;
+    gradientsStatus = getData(gradientFilename, gradientValue, defaultValue);
   }
 
-  void HexitecCalibrationPlugin::setIntercepts()
+  void HexitecCalibrationPlugin::setIntercepts(const char *interceptFilename)
   {
-     double defaultValue = 0;
-     interceptsStatus = getData(interceptFilename, interceptValue, defaultValue);
+    float defaultValue = 0;
+    interceptsStatus = getData(interceptFilename, interceptValue, defaultValue);
   }
 
-  bool HexitecCalibrationPlugin::getData(char *filename, double *dataValue, double defaultValue)
+  bool HexitecCalibrationPlugin::getData(const char *filename, float *dataValue, float defaultValue)
   {
-     int i = 0;
-     std::ifstream inFile;
-     bool success = false;
+  	int i = 0;
+		std::ifstream inFile;
+		bool success = false;
+		LOG4CXX_TRACE(logger_, "::getData() reading file: " << filename);
 
-     inFile.open(filename);
+		inFile.open(filename);
 
-     if (!inFile)
-     {
-       for (int val = 0; val < frameSize; val ++)
-       {
-          dataValue[val] = defaultValue;
-       }
-     }
+		if (!inFile)
+		{
+			if (i < 15)
+				LOG4CXX_TRACE(logger_, "  ::Data() Couldn't open file, using default values");
 
-     while (inFile >> dataValue[i])
-     {
-        i++;
-     }
+			for (int val = 0; val < frameSize; val ++)
+			{
+				dataValue[val] = defaultValue;
+			}
+		}
 
-     if (i < frameSize)
-     {
-        for (int val = i; val < frameSize; val ++)
-        {
-           dataValue[val] = defaultValue;
-        }
-     }
-     else
-     {
-       success = true;
-     }
-     inFile.close();
+		while (inFile >> dataValue[i])
+		{
+			if (i < 15)
+				LOG4CXX_TRACE(logger_, "  ::getData()  Reading values, dataValue["  << i << "] = "
+					<< dataValue[i]);
+			i++;
+		}
 
-     return success;
+		if (i < frameSize)
+		{
+			for (int val = i; val < frameSize; val ++)
+			{
+				dataValue[val] = defaultValue;
+				if (i == val)
+					LOG4CXX_TRACE(logger_, "Only found " << i << " values in " << filename
+						 << "; Padding remaining with default value: " << defaultValue);
+			}
+		}
+		else
+		{
+			success = true;
+		}
+		inFile.close();
+
+		return success;
   }
 
 
