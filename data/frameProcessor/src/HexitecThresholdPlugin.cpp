@@ -10,8 +10,11 @@
 namespace FrameProcessor
 {
 
-  const std::string HexitecThresholdPlugin::CONFIG_IMAGE_WIDTH = "width";
-  const std::string HexitecThresholdPlugin::CONFIG_IMAGE_HEIGHT = "height";
+  const std::string HexitecThresholdPlugin::CONFIG_IMAGE_WIDTH 		 = "width";
+  const std::string HexitecThresholdPlugin::CONFIG_IMAGE_HEIGHT 	 = "height";
+  const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE  = "threshold_mode";
+  const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE = "threshold_value";
+  const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE  = "threshold_file";
 
   /**
    * The constructor sets up logging used within the class.
@@ -26,25 +29,12 @@ namespace FrameProcessor
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecThresholdPlugin constructor.");
 
-    thresholdValue = 5;
+    thresholdsStatus = true;
+    thresholdValue = 3;
     thresholdPerPixel = (uint16_t *) malloc(FEM_TOTAL_PIXELS * sizeof(uint16_t));
     memset(thresholdPerPixel, 0, FEM_TOTAL_PIXELS * sizeof(uint16_t));
-
-    bThresholdsFromFile = true;
-
-    if (bThresholdsFromFile)
-    {
-			std::string fname = "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/t_threshold_file.txt";
-			LOG4CXX_TRACE(logger_, "Setting thresholds from file: " << fname);
-			const char* filename = fname.c_str();
-			bool bOK = setThresholdPerPixel(fname.c_str());
-
-			LOG4CXX_TRACE(logger_, "CTOR, setThresholdPerPixel() returned: " << bOK);
-    }
-    else
-    {
-			LOG4CXX_TRACE(logger_, "Configured to use threshold value: " << thresholdValue);
-    }
+    /// Set threshold mode to none (initially; 0=none, 1=value ,2=file)
+    thresholdMode = (ThresholdMode)0;
 
   }
 
@@ -80,6 +70,67 @@ namespace FrameProcessor
     }
 
     image_pixels_ = image_width_ * image_height_;
+
+    if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE))
+		{
+	    std::string threshold_mode = config.get_param<std::string>(HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE);
+	    /// Which threshold mode selected?
+	    if (threshold_mode.compare(std::string("none")) == 0)
+	    {
+	    	thresholdMode = (ThresholdMode)0;
+	    	LOG4CXX_TRACE(logger_, "User selected threshold mode: none");
+	    }
+	    else if (threshold_mode.compare(std::string("value")) == 0)
+	    {
+	    	thresholdMode = (ThresholdMode)1;
+	    	LOG4CXX_TRACE(logger_, "User selected threshold mode: value");
+	    }
+	    else if (threshold_mode.compare(std::string("file")) == 0)
+	    {
+	    	thresholdMode = (ThresholdMode)2;
+	    	LOG4CXX_TRACE(logger_, "User selected threshold mode: file");
+	    }
+	    /// Setup threshold value(s) accordingly
+	    switch (thresholdMode)
+	    {
+	    	case 0:
+	    	{
+	    		// Threshold mode None means no need to read in threshold value/file this time
+	    		break;
+	    	}
+	    	case 1:
+	    	{
+	    		// Setup threshold using provided value
+	        if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE))
+	    		{
+	    	    thresholdValue = config.get_param<int>(HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE);
+	    			LOG4CXX_TRACE(logger_, "Setting threshold value to: " << thresholdValue);
+	    		}
+	    		break;
+	    	}
+	    	case 2:
+	    	{
+	    		// Setup thresholds from file provided
+	        if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE))
+	    		{
+	    	    std::string threshold_file = config.get_param<std::string>(HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE);
+
+						LOG4CXX_TRACE(logger_, "Setting thresholds from file: " << threshold_file);
+						if (setThresholdPerPixel(threshold_file.c_str()))
+						{
+							LOG4CXX_TRACE(logger_, "Read thresholds from file successfully");
+						}
+						else
+						{
+							LOG4CXX_ERROR(logger_, "Failed to read thresholds from file")
+						}
+	    		}
+	    		break;
+	    	}
+	    	default:
+	    		break;
+	    }
+		}
 
   }
 
@@ -138,58 +189,62 @@ namespace FrameProcessor
 					throw std::runtime_error(msg.str());
 				}
 
-	//      // Allocate buffer to receive reordered image.
-	//      reordered_image = (void*)malloc(output_image_size);
-	//      if (reordered_image == NULL)
-	//      {
-	//        throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
-	//      }
-				// Allocate buffer to receive reordered image.
+				// Allocate buffer to receive thresholded image
 				thresholded_image = (void*)malloc(output_image_size);
 				if (thresholded_image == NULL)
 				{
 					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
 				}
 
-				// Calculate pointer into the input image data based on loop index
+				// Set pointer to the input image data
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
-	//      // Reorder pixels into the output image
-	//      reorder_pixels(static_cast<float *>(input_ptr),
-	//                     static_cast<float *>(reordered_image));
-
-				// Compare pixels against the threshold, copying pixels that pass to the output image
-				if (bThresholdsFromFile)
+				// Execute selected method of applying threshold(s) (none, value, or file)
+				switch (thresholdMode)
 				{
-					processThresholdFile(static_cast<float *>(input_ptr),
-												 static_cast<float *>(thresholded_image));
-				}
-				else
-				{
-					processThresholdValue(static_cast<float *>(input_ptr),
-																 static_cast<float *>(thresholded_image));
+					case 0:
+					{
+						// Free thresholded_image and push frame as is
+						free(thresholded_image);
+						thresholded_image = NULL;
+
+						this->push(frame);
+						break;
+					}
+					case 1:
+					{
+						processThresholdValue(static_cast<float *>(input_ptr),
+																	static_cast<float *>(thresholded_image));
+						break;
+					}
+					case 2:
+					{
+						processThresholdFile(static_cast<float *>(input_ptr),
+													 	 	 	 static_cast<float *>(thresholded_image));
+						break;
+					}
 				}
 
-				/* Code for determining which directory src code is run from
-				 * Hint, it is from /install */
-	//#include <stdio.h>  /* defines FILENAME_MAX */
-	//#ifdef WINDOWS
-	//    #include <direct.h>
-	//    #define GetCurrentDir _getcwd
-	//#else
-	//    #include <unistd.h>
-	//    #define GetCurrentDir getcwd
-	//#endif
-
-	//      char cCurrentPath[FILENAME_MAX];
-	//      if (!GetCurrentDir(cCurrentPath, sizeof(cCurrentPath)))
-	//      {
-	//        LOG4CXX_TRACE(logger_, "Couldn't get current dir !!");
-	//      }
-	//      else
-	//        cCurrentPath[sizeof(cCurrentPath) - 1] = '\0'; /* not really required */
-	//      LOG4CXX_TRACE(logger_, "The current working directory is: " << cCurrentPath);
+//				/* Code for determining which directory src code is run from
+//				 * Hint, it is from /install */
+//#include <stdio.h>  /* defines FILENAME_MAX */
+//#ifdef WINDOWS
+//		#include <direct.h>
+//		#define GetCurrentDir _getcwd
+//#else
+//		#include <unistd.h>
+//		#define GetCurrentDir getcwd
+//#endif
+//
+//				char cCurrentPath[FILENAME_MAX];
+//				if (!GetCurrentDir(cCurrentPath, sizeof(cCurrentPath)))
+//				{
+//					LOG4CXX_TRACE(logger_, "Couldn't get current dir !!");
+//				}
+//				else
+//					cCurrentPath[sizeof(cCurrentPath) - 1] = '\0'; /* not really required */
+//				LOG4CXX_TRACE(logger_, "The current working directory is: " << cCurrentPath);
 
 				// Set the frame image to the thresholded image buffer if appropriate
 				if (thresholded_image)
@@ -214,6 +269,7 @@ namespace FrameProcessor
 					free(thresholded_image);
 					thresholded_image = NULL;
 				}
+
 			}
 			catch (const std::exception& e)
 			{
@@ -240,10 +296,10 @@ namespace FrameProcessor
   }
 
   /**
-   * (HexitecThresholdPlugin) Zero all pixels below thresholdValue's value
+   * Zero all pixels below thresholdValue's value
    *
    * \param[in] in - Pointer to the incoming image data.
-   * \param[out] out - Pointer to the allocated memory where the thresholded image is written.
+   * \param[out] out - Pointer to memory where the thresholded image is written
    *
    */
   void HexitecThresholdPlugin::processThresholdValue(float* in, float* out)
@@ -253,22 +309,23 @@ namespace FrameProcessor
       // Clear pixel if it doesn't meet in the threshold:
 	  if (in[i] < thresholdValue)
 	  {
-		out[i] = 0;
+	  	out[i] = 0;
 	  }
 	  else
 	  {
     	out[i] = in[i];
 	  }
-//	  if (i < 40)
-//  	    LOG4CXX_TRACE(logger_, "DEBUG, in[" << i << "] = " << in[i] << " out[" << i << "] = " << out[i] );
+//	  if (i < 15)
+//  	    LOG4CXX_TRACE(logger_, "DEBUG, in[" << i << "] = " << in[i] << " out[" << i << "] = " << out[i]
+//															 << " (thresholdValue = " << thresholdValue << ")");
     }
   }
 
   /**
-   * (HexitecThresholdPlugin) Zero all pixels below not meeting corresponding pixel threshold
+   * Zero all pixels below not meeting corresponding pixel threshold
    *
    * \param[in] in - Pointer to the incoming image data.
-   * \param[out] out - Pointer to the allocated memory where the thresholded image is written.
+   * \param[out] out - Pointer to memory where the thresholded image is written
    *
    */
   void HexitecThresholdPlugin::processThresholdFile(float* in, float* out)
@@ -276,16 +333,17 @@ namespace FrameProcessor
     for (int i=0; i < FEM_TOTAL_PIXELS; i++)
     {
       // Clear pixel if it doesn't meet in the threshold:
-			if (in[i] < thresholdValue)
+			if (in[i] < thresholdPerPixel[i])
 			{
-			out[i] = 0;
+				out[i] = 0;
 			}
 			else
 			{
 				out[i] = in[i];
 			}
-//		  if (i < 40)
-//	  	  LOG4CXX_TRACE(logger_, "DEBUG, in[" << i << "] = " << in[i] << " out[" << i << "] = " << out[i] );
+//		  if (i < 15)
+//	  	  LOG4CXX_TRACE(logger_, "DEBUG, in[" << i << "] = " << in[i] << " out[" << i << "] = " << out[i]
+//															 << " (thresholdPerPixel[" << i << "] = " << thresholdPerPixel[i]  << ")");
     }
   }
 
@@ -324,24 +382,20 @@ namespace FrameProcessor
 				while( ss >> thresholdFromFile )
 				{
 					thresholdPerPixel[index] = thresholdFromFile;
-					if (index < 15)
-						 LOG4CXX_TRACE(logger_, "thresholdFromFile = " << thresholdFromFile
-								 << " thresholdPerPixel[" << index << " ] = " << thresholdPerPixel[index]);
+//					if (index < 15)
+//						 LOG4CXX_TRACE(logger_, "thresholdFromFile = " << thresholdFromFile
+//								 << " thresholdPerPixel[" << index << " ] = " << thresholdPerPixel[index]);
 					index++;
 				}
 			}
   	}
 
-    LOG4CXX_TRACE(logger_, "And again: thresholdPerPixel: " << thresholdPerPixel[0] << " " << thresholdPerPixel[1] << " " << thresholdPerPixel[2]);
-    LOG4CXX_TRACE(logger_, "index finished at: " << index);
-
-    // If file do not contain enough threshold values for all pixels, assign default threshold to remaining pixels
+    // If file do not contain enough threshold values for all pixels,
+    // 	assign default threshold to remaining pixels
     if (index < FEM_TOTAL_PIXELS)
     {
       for (int val = index; val < FEM_TOTAL_PIXELS; val ++)
       {
-				if ( index < (val + 5))
-					LOG4CXX_ERROR(logger_, "! filling in at val : " << val << " index: " << index);
 				thresholdPerPixel[val] = defaultValue;
       }
     }

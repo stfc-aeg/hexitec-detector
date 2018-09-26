@@ -105,7 +105,6 @@ namespace FrameProcessor
 			setIntercepts(intercept_file.c_str());
 		}
 
-
   }
 
   /**

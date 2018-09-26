@@ -30,6 +30,8 @@ using namespace log4cxx::helpers;
 namespace FrameProcessor
 {
 
+	enum ThresholdMode {NONE, SINGLE_VALUE, THRESHOLD_FILE};
+
   /** Processing of Hexitec Frame objects.
    *
    * The HexitecThresholdPlugin class is currently responsible for receiving a raw data
@@ -49,6 +51,12 @@ namespace FrameProcessor
     static const std::string CONFIG_IMAGE_WIDTH;
     /** Configuration constant for image height **/
     static const std::string CONFIG_IMAGE_HEIGHT;
+    /** Configuration constant for threshold mode **/
+    static const std::string CONFIG_THRESHOLD_MODE;
+    /** Configuration constant for threshold value **/
+    static const std::string CONFIG_THRESHOLD_VALUE;
+    /** Configuration constant for threshold file **/
+    static const std::string CONFIG_THRESHOLD_FILE;
 
     void process_frame(boost::shared_ptr<Frame> frame);
     std::size_t thresholded_image_size();
@@ -68,11 +76,10 @@ namespace FrameProcessor
     bool setThresholdPerPixel(const char * thresholdFilename);
 
     // Member variables:
-    bool bThresholdsFromFile;
     unsigned int thresholdValue;
     uint16_t *thresholdPerPixel;
     bool thresholdsStatus;
-
+    ThresholdMode thresholdMode;
 
   };
 
