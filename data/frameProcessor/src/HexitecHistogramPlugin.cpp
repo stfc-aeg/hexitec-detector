@@ -36,19 +36,9 @@ namespace FrameProcessor
     binStart   = 0;
     binEnd     = 8000;
     binWidth   = 10;
-    nBins      = 800;
-
     nBins      = (int)(((binEnd - binStart) / binWidth) + 0.5);
 
-//    hxtV3Buffer.allData = (float *) calloc((nBins * frameSize) + nBins, sizeof(float));
-//    hxtBin = hxtV3Buffer.allData;
-//    histogramPerPixel = hxtV3Buffer.allData + nBins;
-
-    hxtBin = NULL;
-    histogramPerPixel = NULL;
-
-    summedHistogram = NULL;
-
+    initialiseHistograms();
   }
 
   /**
@@ -62,13 +52,41 @@ namespace FrameProcessor
     summedHistogram = NULL;
     free(hxtBin);
     hxtBin = NULL;
+    // histogramPerPixel points at memory within hxtBin
+    histogramPerPixel = NULL;
   }
 
+  /**
+   * Allocate and initialise histograms
+   *
+   */
+  void HexitecHistogramPlugin::initialiseHistograms()
+  {
+    hxtBin = (float *) malloc(((nBins * frameSize) + nBins) * sizeof(float));
+    memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(float) );
+    histogramPerPixel = hxtBin + nBins;
+
+    summedHistogram = (long long *) malloc(nBins * sizeof(long long));
+    memset(summedHistogram, 0, nBins * sizeof(long long));
+
+    // Initialise bins
+    float currentBin = binStart;
+    float *pHxtBin = hxtBin;
+    for (long long i = binStart; i < nBins; i++, currentBin += binWidth)
+    {
+       *pHxtBin = currentBin;
+       pHxtBin++;
+    }
+
+  }
   /**
    * Configure the Hexitec plugin.  This receives an IpcMessage which should be processed
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
-   * - bitdepth
+   * - max_frames_received
+   * - binStart
+   * - binEnd
+   * - binWidth
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[out] reply - Reference to the reply IpcMessage object.
@@ -109,32 +127,15 @@ namespace FrameProcessor
 
     nBins      = (int)(((binEnd - binStart) / binWidth) + 0.5);
 
-//    hxtV3Buffer.allData = (float *) calloc((nBins * frameSize) + nBins, sizeof(float));
-//    hxtBin = hxtV3Buffer.allData;
-//    histogramPerPixel = hxtV3Buffer.allData + nBins;
+//    histogramPerPixel = hxtBin + nBins;
 
-    LOG4CXX_TRACE(logger_, "setting up hxtBin.. binEnd: " << binEnd << " binStart: " <<
-    							binStart << " binWidth: " << binWidth << " nBins: " << nBins);
-
-    hxtBin = (float *) malloc(((nBins * frameSize) + nBins) * sizeof(float));
-    memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(float) );
-    histogramPerPixel = hxtBin + nBins;
-
-//    LOG4CXX_TRACE(logger_, "\t\t\te sizeof summedHistogram: " << sizeof(summedHistogram));
-    summedHistogram = (long long *) malloc(nBins * sizeof(long long));
-    memset(summedHistogram, 0, nBins * sizeof(long long));
-
-    // Initialise bins
-    float currentBin = binStart;
-    float *pHxtBin = hxtBin;
-    for (long long i = binStart; i < nBins; i++, currentBin += binWidth)
-    {
-       *pHxtBin = currentBin;
-//       if ( i < 12)
-//         LOG4CXX_TRACE(logger_, "\t\t\t\tcurrentBin: " << currentBin << " pHxtBin: " << *pHxtBin);
-       pHxtBin++;
-    }
-
+    // Free the existing allocated histogram memory
+    free(summedHistogram);
+    summedHistogram = NULL;
+    free(hxtBin);
+    hxtBin = NULL;
+    // (Re-)Initialise memory
+    initialiseHistograms();
   }
 
   /**
@@ -146,19 +147,17 @@ namespace FrameProcessor
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecHistogramPlugin");
-//    status.set_param(get_name() + "/packets_lost", packets_lost_);
   }
 
   /**
-   * Perform processing on the frame.  Depending on the selected bit depth
-   * the corresponding pixel re-ordering algorithm is executed.
+   * Perform processing on the frame.  Calculate histograms based upon
+   * each frame, writing resulting datasets to file when configured
+	 * maximum number of frames received.
    *
    * \param[in] frame - Pointer to a Frame object.
    */
   void HexitecHistogramPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_TRACE(logger_, "Calculating histograms.");
-
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
         static_cast<const char*>(frame->get_data()));
@@ -177,14 +176,14 @@ namespace FrameProcessor
 			{
 				frames_counter_++;
 
-				// Calculate pointer into the input image data based on loop index
+				// Pointer to the input image data
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
-				// Add frame's contribution onto histograms
+				// Add this frame's contribution onto histograms
 				addFrameDataToHistogramWithSum(static_cast<float *>(input_ptr));
 
-				// Only bright histograms to disc if this is the final frame of the acquisition
+				// Write histograms to disc when the maximum number of frames received
 				if (frames_counter_ == max_frames_received_)
 				{
 					/// Time to push current histogram data
@@ -193,15 +192,7 @@ namespace FrameProcessor
 					const std::size_t float_size = nBins * sizeof(float);
 					const std::size_t long_long_size = nBins * sizeof(long long);
 		      /// Total amount of memory covered by the pixel histograms
-		      const std::size_t total_pixels_histograms_size = frameSize * nBins * sizeof(float);
-
-		      LOG4CXX_TRACE(logger_, "\t\t\t nBins: " << nBins << " frameSize: " <<
-		      							frameSize << " sizeof(float): " << sizeof(float) << " total: " <<
-		      							total_pixels_histograms_size);
-
-		      LOG4CXX_TRACE(logger_, "\t\t\t hxtBin, float_size: " << float_size <<
-		      							" nBins: " << nBins << " sizeof(float): "	<< sizeof(float));
-
+		      const std::size_t pixel_histograms_size = frameSize * nBins * sizeof(float);
 
 					// Setup the dimension(s) for energy_bins, summed_histograms
 					dimensions_t dims(1);
@@ -252,14 +243,13 @@ namespace FrameProcessor
 					pixels_histograms->set_frame_number(0);
 
 					pixels_histograms->set_dimensions(pxls_dims);
-					pixels_histograms->copy_data(histogramPerPixel, total_pixels_histograms_size);
+					pixels_histograms->copy_data(histogramPerPixel, pixel_histograms_size);
 
 					LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
 																 " dataset, frame number: " << 0);
 					this->push(pixels_histograms);
 
-
-					/// Clear (but do not free) the memory used
+					/// Clear (but do not delete!) the memory used
 //			    memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(float) );
 //			    memset(summedHistogram, 0, nBins * sizeof(long long));
 
@@ -271,6 +261,7 @@ namespace FrameProcessor
 				/// 	etc
 
 				// Pass on data dataset unmodified:
+
 				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
 	 														 " dataset, frame number: " << frame->get_frame_number());
 				this->push(frame);
@@ -311,7 +302,7 @@ namespace FrameProcessor
          else
          {
    /*         qDebug() << "BAD BIN = " << bin << " in pixel " << pixel << " ("
-                     << (int)(pixel/400) << "," << (pixel % 400) <<")"*/;
+                     << (int)(pixel/80) << "," << (pixel % 80) <<")"*/;
          }
       }
   }
@@ -319,30 +310,30 @@ namespace FrameProcessor
   // Called when the user HAS selected spectrum option
   void HexitecHistogramPlugin::addFrameDataToHistogramWithSum(float *frame)
   {
-     float *currentHistogram = &histogramPerPixel[0];
-     long long *summed = &summedHistogram[0];
-     float thisEnergy;
-     int bin;
-     int pixel;
-     for (int i = 0; i < frameSize; i++)
-     {
-        pixel = i;
-        thisEnergy = frame[i];
+		float *currentHistogram = &histogramPerPixel[0];
+		long long *summed = &summedHistogram[0];
+		float thisEnergy;
+		int bin;
+		int pixel;
+		for (int i = 0; i < frameSize; i++)
+		{
+			pixel = i;
+			thisEnergy = frame[i];
 
-        if (thisEnergy == 0)
-            continue;
-        bin = (int)((thisEnergy / binWidth));
-        if (bin <= nBins)
-        {
-           (*(currentHistogram + (pixel * nBins) + bin))++;
-           (*(summed + bin)) ++;
-        }
-        else
-        {
-           /*qDebug() << "BAD BIN = " << bin << " in pixel " << pixel << " ("
-                    << (int)(pixel/400) << "," << (pixel % 400) <<")"*/;
-        }
-     }
+			if ( (thisEnergy == 0)  || (thisEnergy < 0))
+				continue;
+			bin = (int)((thisEnergy / binWidth));
+			if (bin <= nBins)
+			{
+				(*(currentHistogram + (pixel * nBins) + bin))++;
+				(*(summed + bin)) ++;
+			}
+			else
+			{
+				/*qDebug() << "BAD BIN = " << bin << " in pixel " << pixel << " ("
+									<< (int)(pixel/80) << "," << (pixel % 80) <<")"*/;
+			}
+		}
   }
 
 } /* namespace FrameProcessor */

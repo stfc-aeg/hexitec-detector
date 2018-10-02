@@ -35,9 +35,6 @@ namespace FrameProcessor
        pixelMapInitialised = true;
     }
 
-    /* DEVELOPMENT SPACE - for the other plug-ins' functionalities */
-
-
   }
 
   /**
@@ -66,9 +63,6 @@ namespace FrameProcessor
   HexitecProcessPlugin::~HexitecProcessPlugin()
   {
     LOG4CXX_TRACE(logger_, "HexitecProcessPlugin destructor.");
-
-    /* DEVELOPMENT SPACE - for the other plug-ins' functionalities */
-
   }
 
   /**
@@ -225,14 +219,9 @@ namespace FrameProcessor
   														 << frame->get_frame_number());
         this->push(raw_frame);
 
-//  			float *ptr = (float*) (raw_frame->get_data()) + sizeof(Hexitec::FrameHeader);
-//  			for (unsigned int idx = 0; idx < 20; idx++)
-//  				LOG4CXX_TRACE(logger_, "float____________raw[" << idx << "]: " << ptr[idx]);
-
   			free(raw_image);
         raw_image = NULL;
       }
-
 
 			// Reorder pixels into the output image
 			// Using float array
@@ -298,26 +287,10 @@ namespace FrameProcessor
     {
         // Re-order pixels:
       	index = pixelMap[i];
-
-//      	if ( ((index % 2) == 0) )
-//      	{
-//      		out[index] = 0.0;
-//      	}
-//      	else
-      	{
-      		out[index] = (float)in[i];
-      	}
-//      	if ((index > 79) && (index < 159))
-//      		out[index] = 0.0;
-        // Don't reorder:
+				out[index] = (float)in[i];
+//        // Don't reorder:
 //        out[i] = in[i];
     }
-//    for(index = 0; index < 162; index++)
-//    {
-//      if (index < 15)
-//        LOG4CXX_TRACE(logger_, "REORDER, out[" << index << "] = " << out[index]);
-//    }
-//    LOG4CXX_TRACE(logger_, " *** reorder_pixels(), TAKE OUT THIS PIXEL HACK! ***");
   }
 
   /**
@@ -336,10 +309,9 @@ namespace FrameProcessor
         // Re-order pixels:
       	index = pixelMap[i];
         out[index] = (float)in[i];
-    	// Do not reorder pixels:
-//      out[i] = (float)in[i];
+//				// Do not reorder pixels:
+//				out[i] = (float)in[i];
     }
-//    LOG4CXX_TRACE(logger_, " *** convert_pixels_to_float(), TAKE OUT THIS PIXEL HACK! ***");
   }
 
 } /* namespace FrameProcessor */

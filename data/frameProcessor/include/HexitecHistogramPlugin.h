@@ -79,6 +79,7 @@ namespace FrameProcessor
     float *hxtBin;
     float *histogramPerPixel;
     long long *summedHistogram;
+    void initialiseHistograms();
 
   };
 
