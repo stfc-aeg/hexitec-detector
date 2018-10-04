@@ -286,10 +286,14 @@ namespace FrameProcessor
     for (int i=0; i<FEM_TOTAL_PIXELS; i++)
     {
         // Re-order pixels:
-      	index = pixelMap[i];
-				out[index] = (float)in[i];
-//        // Don't reorder:
-//        out[i] = in[i];
+//      	index = pixelMap[i];
+//				out[index] = (float)in[i];
+        // Don't reorder:
+        out[i] = in[i];
+//				if (out[i] < 0)
+//					LOG4CXX_ERROR(logger_, "\t\t\t in[ " << i << "] = " << in[i]
+//							<< " out[ " << i << "] = " <<  out[i]);
+
     }
   }
 
@@ -307,10 +311,10 @@ namespace FrameProcessor
     for (int i=0; i<FEM_TOTAL_PIXELS; i++)
     {
         // Re-order pixels:
-      	index = pixelMap[i];
-        out[index] = (float)in[i];
-//				// Do not reorder pixels:
-//				out[i] = (float)in[i];
+//      	index = pixelMap[i];
+//        out[index] = (float)in[i];
+				// Do not reorder pixels:
+				out[i] = (float)in[i];
     }
   }
 

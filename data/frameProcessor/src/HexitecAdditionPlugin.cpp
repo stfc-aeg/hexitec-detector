@@ -198,23 +198,53 @@ namespace FrameProcessor
 		int extendedFrameColumns = (nCols + sidePadding);
 		int extendedFrameSize    = extendedFrameRows * extendedFrameColumns;
 
-		float *extendedFrame;
-		extendedFrame = (float*) malloc(extendedFrameSize * sizeof(float));
-		memset(extendedFrame, 0, extendedFrameSize * sizeof(float));
+//		// DEBUGGING
+//		LOG4CXX_ERROR(logger_, " -1----------------------------------------------------------------------------- ");
+//		for (int idx=0; idx < FEM_TOTAL_PIXELS; idx++)
+//		{
+//			if (inFrame[idx] < 0)
+//				LOG4CXX_ERROR(logger_, "\t\t\t *** (empty inFrame, nowt proc'g yet..) inFrame[ " << idx << "] " << " = " << inFrame[idx]);
+//		}
+//		//
+
+		float *extendedFrame = NULL;
+//		extendedFrame = (float*) malloc(extendedFrameSize * sizeof(float));
+//		memset(extendedFrame, 0, extendedFrameSize * sizeof(float));
+		extendedFrame = (float *) calloc(extendedFrameSize, sizeof(float));
 
 		// Copy frame's each row into extendedFrame leaving (directionalDistance pixel(s))
 		// 	padding on each side
 		int startPosn = extendedFrameColumns * directionalDistance + directionalDistance;
-		int endPosn   = extendedFrameSize;
+		int endPosn   = extendedFrameSize - extendedFrameColumns;
 		int increment = extendedFrameColumns;
 		float *rowPtr = inFrame;
 
+//		// DEBUGGING
+//		for (int idx = 0; idx < extendedFrameSize; idx++)
+//		{
+//			if (extendedFrame[idx] < 0)
+//				LOG4CXX_ERROR(logger_, "\t\t\t *** (empty extFrm, nowt proc'g yet) extendedFrame[ " << idx << "] " << " = " << extendedFrame[idx]);
+//		}
+//		//
+//		int counter = 0;
+		// Copy inFrame to extendedFrame (with frame of 0's surrounding all four sides)
 		for (int i = startPosn; i < endPosn; )
 		{
 			 memcpy(&(extendedFrame[i]), rowPtr, nCols * sizeof(float));
 			 rowPtr = rowPtr + nCols;
 			 i = i + increment;
+			 //
+//			 counter = i;
 		}
+//		LOG4CXX_TRACE(logger_, "loop copying to extendFrame[] completed, i finished at: " << counter);
+
+		// DEBUGGING
+//		for (int idx = 0; idx < extendedFrameSize; idx++)
+//		{
+//			if (extendedFrame[idx] < 0)
+//				LOG4CXX_ERROR(logger_, "\t\t\t *** (after inFrm -> extFrm cp'g) extendedFrame[ " << idx << "] " << " = " << extendedFrame[idx]);
+//		}
+		//
 
 		//// CSD example frame, with directionalDistance = 1
 		///
@@ -239,7 +269,10 @@ namespace FrameProcessor
 			 memcpy(rowPtr, &(extendedFrame[i]), nCols * sizeof(float));
 			 rowPtr = rowPtr + nCols;
 			 i = i + increment;
+			 //
+//			 counter = i;
 		}
+//		LOG4CXX_TRACE(logger_, "				****** procAdd()'s cond checking pixel > 0 (not != 0).. ");
 
 		free(extendedFrame);
 		extendedFrame = NULL;
@@ -267,8 +300,13 @@ namespace FrameProcessor
 
 		for (int i = startPosn; i < endPosn;  i++)
 		{
-			if (extendedFrame[i] != 0)
+//			LOG4CXX_TRACE(logger_, "procAdd() i = " << i);
+//			if (extendedFrame[i] != 0)
+			if (extendedFrame[i] > 0)
 			{
+				///
+//				LOG4CXX_TRACE(logger_, "procAdd() extendedFrame[" << i << "] ");
+				///
 				maxValue = extendedFrame[i];
 				currentPixel = (&(extendedFrame[i]));
 				for (int row = rowIndexBegin; row < rowIndexEnd; row++)
@@ -279,7 +317,8 @@ namespace FrameProcessor
 							continue;
 
 						neighbourPixel = (currentPixel + (extendedFrameRows*row)  + column);
-						if (*neighbourPixel != 0)
+//						if (*neighbourPixel != 0)
+						if (*neighbourPixel > 0)
 						{
 							if (*neighbourPixel > maxValue)
 							{

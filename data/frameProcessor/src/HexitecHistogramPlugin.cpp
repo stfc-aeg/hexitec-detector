@@ -251,7 +251,7 @@ namespace FrameProcessor
 
 					/// Clear (but do not delete!) the memory used
 //			    memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(float) );
-//			    memset(summedHistogram, 0, nBins * sizeof(long long));
+			    memset(summedHistogram, 0, nBins * sizeof(long long));
 
 					frames_counter_ = 0;
 				}
@@ -320,11 +320,19 @@ namespace FrameProcessor
 			pixel = i;
 			thisEnergy = frame[i];
 
-			if ( (thisEnergy == 0)  || (thisEnergy < 0))
+			if (thisEnergy <= 0.0)
 				continue;
 			bin = (int)((thisEnergy / binWidth));
 			if (bin <= nBins)
 			{
+				//
+				if (bin < 0)
+					LOG4CXX_ERROR(logger_, "\t\t\t pixel: " << i << " nBins " << nBins
+							<< " bin: " << bin << " thisEnergy: " << thisEnergy <<
+							" frame[" << i << "]: " << frame[i] <<
+							" binWidth: " <<  binWidth << " thisEnergy <= 0.0 == " <<
+							(thisEnergy <= 0.0));
+				//
 				(*(currentHistogram + (pixel * nBins) + bin))++;
 				(*(summed + bin)) ++;
 			}
