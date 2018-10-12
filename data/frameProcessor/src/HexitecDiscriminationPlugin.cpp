@@ -12,6 +12,7 @@ namespace FrameProcessor
 
   const std::string HexitecDiscriminationPlugin::CONFIG_IMAGE_WIDTH = "width";
   const std::string HexitecDiscriminationPlugin::CONFIG_IMAGE_HEIGHT = "height";
+  const std::string HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE = "pixel_grid_size";
 
   /**
    * The constructor sets up logging used within the class.
@@ -19,14 +20,15 @@ namespace FrameProcessor
   HexitecDiscriminationPlugin::HexitecDiscriminationPlugin() :
       image_width_(80),
       image_height_(80),
-      image_pixels_(image_width_ * image_height_)
+      image_pixels_(image_width_ * image_height_),
+			pixelGridSize(3)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FW.HexitecDiscriminationPlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecDiscriminationPlugin constructor.");
 
-    directionalDistance = 1;  // Set to 1 for 3x3: 2 for 5x5 pixel grid
+    directionalDistance = (int)pixelGridSize/2;  // Set to 1 for 3x3: 2 for 5x5 pixel grid
     nRows = image_height_;
     nCols = image_width_;
 
@@ -62,6 +64,13 @@ namespace FrameProcessor
     }
 
     image_pixels_ = image_width_ * image_height_;
+
+    if (config.has_param(HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE))
+    {
+      pixelGridSize = config.get_param<int>(HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE);
+    }
+
+    directionalDistance = (int)pixelGridSize/2;  // Set to 1 for 3x3: 2 for 5x5 pixel grid
 
   }
 
@@ -200,13 +209,12 @@ namespace FrameProcessor
 		int extendedFrameSize    = extendedFrameRows * extendedFrameColumns;
 
 		float  *extendedFrame;
-		extendedFrame = (float*) malloc(extendedFrameSize * sizeof(float));
-		memset(extendedFrame, 0, extendedFrameSize * sizeof(float));
+		extendedFrame = (float *) calloc(extendedFrameSize, sizeof(float));
 
 		// Copy frame's each row into extendedFrame leaving (directionalDistance pixel(s))
 		// 	padding on each side
 		int startPosn = extendedFrameColumns * directionalDistance + directionalDistance;
-		int endPosn   = extendedFrameSize;
+		int endPosn   = extendedFrameSize - (extendedFrameColumns*directionalDistance);
 		int increment = extendedFrameColumns;
 		float *rowPtr = inFrame;
 
@@ -269,7 +277,7 @@ namespace FrameProcessor
 
 		for (int i = startPosn; i < endPosn;  i++)
 		{
-			if (extendedFrame[i] != 0)
+			if (extendedFrame[i] > 0)
 			{
 				currentPixel = (&(extendedFrame[i]));       // Point at current (non-Zero) pixel
 
@@ -290,7 +298,7 @@ namespace FrameProcessor
 						else
 						{
 							// Is this the first neighbouring, non-Zero pixel?
-							if (*neighbourPixel != 0)
+							if (*neighbourPixel > 0)
 							{
 								// Yes; Wipe neighbour and current (non-zero) pixel
 								*neighbourPixel = 0;

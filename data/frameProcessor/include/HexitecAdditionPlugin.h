@@ -46,6 +46,8 @@ namespace FrameProcessor
     static const std::string CONFIG_IMAGE_WIDTH;
     /** Configuration constant for image height **/
     static const std::string CONFIG_IMAGE_HEIGHT;
+    /** Configuration constant for pixel_grid_size **/
+    static const std::string CONFIG_PIXEL_GRID_SIZE;
 
     void process_frame(boost::shared_ptr<Frame> frame);
     std::size_t processed_image_size();
@@ -53,9 +55,6 @@ namespace FrameProcessor
     void prepareChargedSharing(float *inFrame, float *outFrame);
     void processAddition(float *extendedFrame, int extendedFrameRows,
     										 int startPosn, int endPosn);
-//    void prepareChargedSharing(float *frame);
-//    void processAddition(float *extendedFrame, int extendedFrameRows,
-//    										 int startPosn, int endPosn);
 
     int directionalDistance;
     int nRows;
@@ -69,6 +68,14 @@ namespace FrameProcessor
     int image_height_;
     /** Image pixel count **/
     int image_pixels_;
+
+    /** Pixel grid size */
+    int pixelGridSize;
+
+    // DEBUGGING functions:
+    void print_nonzero_pixels(float *in, int numberRows, int numberColumns);
+    void check_memory(float *float_pointer, int offset);
+    void print_last_row(float *in, int numberRows, int numberCols);
 
   };
 

@@ -13,6 +13,7 @@ namespace FrameProcessor
   const std::string HexitecProcessPlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
   const std::string HexitecProcessPlugin::CONFIG_IMAGE_WIDTH = "width";
   const std::string HexitecProcessPlugin::CONFIG_IMAGE_HEIGHT = "height";
+  const std::string HexitecProcessPlugin::CONFIG_ENABLE_REORDER = "reorder";
 
   /**
    * The constructor sets up logging used within the class.
@@ -21,7 +22,8 @@ namespace FrameProcessor
       image_width_(80),
       image_height_(80),
       image_pixels_(image_width_ * image_height_),
-      packets_lost_(0)
+      packets_lost_(0),
+			reorder_pixels_(true)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FW.HexitecProcessPlugin");
@@ -93,6 +95,11 @@ namespace FrameProcessor
 
     image_pixels_ = image_width_ * image_height_;
 
+    if (config.has_param(HexitecProcessPlugin::CONFIG_ENABLE_REORDER))
+    {
+      reorder_pixels_ = config.get_param<bool>(HexitecProcessPlugin::CONFIG_ENABLE_REORDER);
+    }
+
   }
 
   /**
@@ -161,8 +168,8 @@ namespace FrameProcessor
     void* input_ptr = static_cast<void *>(
         static_cast<char *>(const_cast<void *>(data_ptr)));
 
-    // Pointer to reordered image buffer - will be allocated on demand
-    void* reordered_image = NULL;
+//    // Pointer to reordered image buffer - will be allocated on demand
+//    void* reordered_image = NULL;
 
     // Pointer to raw image buffer (of data type float)
     void* raw_image = NULL;
@@ -180,13 +187,13 @@ namespace FrameProcessor
             << ") will exceed dimensions of output image (" << image_pixels_ << ")";
         throw std::runtime_error(msg.str());
       }
-
-      // Allocate buffer to receive reordered image.
-      reordered_image = (void*)malloc(output_image_size);
-      if (reordered_image == NULL)
-      {
-        throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
-      }
+//
+//      // Allocate buffer to receive reordered image.
+//      reordered_image = (void*)malloc(output_image_size);
+//      if (reordered_image == NULL)
+//      {
+//        throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
+//      }
 
       // Allocate buffer for raw data in float data type.
       raw_image = (void*)malloc(output_image_size);
@@ -195,9 +202,17 @@ namespace FrameProcessor
         throw std::runtime_error("Failed to allocate temporary buffer for raw image");
       }
 
-      // Turn unsigned short raw pixel data into float data type raw pixel data
-      convert_pixels_to_float(static_cast<unsigned short *>(input_ptr),
-      												static_cast<float *>(raw_image));
+      if (reorder_pixels_)
+      {
+      	reorder_pixels(static_cast<unsigned short *>(input_ptr),
+						static_cast<float *>(raw_image));
+      }
+      else
+      {
+				// Turn unsigned short raw pixel data into float data type raw pixel data
+				convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
+																					static_cast<float *>(raw_image));
+      }
 
       if (raw_image)
       {
@@ -219,22 +234,22 @@ namespace FrameProcessor
   														 << frame->get_frame_number());
         this->push(raw_frame);
 
-  			free(raw_image);
-        raw_image = NULL;
-      }
-
-			// Reorder pixels into the output image
-			// Using float array
-			reorder_pixels(static_cast<unsigned short *>(input_ptr),
-										 static_cast<float *>(reordered_image));
-
-			// Set the frame image to the reordered image buffer if appropriate
-			if (reordered_image)
-			{
-				// Setup the frame dimensions
-				dimensions_t dims(2);
-				dims[0] = image_height_;
-				dims[1] = image_width_;
+//  			free(raw_image);
+//        raw_image = NULL;
+//      }
+//
+//      	// Reorder pixels into the output image
+//				reorder_pixels(static_cast<unsigned short *>(input_ptr),
+//											 static_cast<float *>(reordered_image));
+//
+//
+//			// Set the frame image to the reordered image buffer if appropriate
+//			if (reordered_image)
+//			{
+//				// Setup the frame dimensions
+//				dimensions_t dims(2);
+//				dims[0] = image_height_;
+//				dims[1] = image_width_;
 
 				boost::shared_ptr<Frame> data_frame;
 				data_frame = boost::shared_ptr<Frame>(new Frame("data"));
@@ -242,14 +257,16 @@ namespace FrameProcessor
 				data_frame->set_frame_number(hdr_ptr->frame_number);
 
 				data_frame->set_dimensions(dims);
-				data_frame->copy_data(reordered_image, output_image_size);
+				data_frame->copy_data(raw_image, output_image_size);
 
 				LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: "
 															 << frame->get_frame_number());
 				this->push(data_frame);
 
-				free(reordered_image);
-				reordered_image = NULL;
+//				free(reordered_image);
+//				reordered_image = NULL;
+  			free(raw_image);
+        raw_image = NULL;
 			}
     }
     catch (const std::exception& e)
@@ -273,7 +290,7 @@ namespace FrameProcessor
   }
 
   /**
-   * Reorder an image's pixels into chronological order.
+   * Reorder an image's pixels into geographical order.
    *
    * \param[in] in - Pointer to the incoming image data.
    * \param[out] out - Pointer to the allocated memory where the reordered image is written.
@@ -286,10 +303,10 @@ namespace FrameProcessor
     for (int i=0; i<FEM_TOTAL_PIXELS; i++)
     {
         // Re-order pixels:
-//      	index = pixelMap[i];
-//				out[index] = (float)in[i];
+      	index = pixelMap[i];
+				out[index] = (float)in[i];
         // Don't reorder:
-        out[i] = in[i];
+//        out[i] = in[i];
 //				if (out[i] < 0)
 //					LOG4CXX_ERROR(logger_, "\t\t\t in[ " << i << "] = " << in[i]
 //							<< " out[ " << i << "] = " <<  out[i]);
@@ -298,21 +315,18 @@ namespace FrameProcessor
   }
 
   /**
-   * Convert an image's pixels from unsigned short to float data type.
+   * Convert an image's pixels from unsigned short to float data type, and reorder.
    *
    * \param[in] in - Pointer to the incoming image data.
    * \param[out] out - Pointer to the allocated memory where the converted image is written.
    *
    */
-  void HexitecProcessPlugin::convert_pixels_to_float(unsigned short* in, float* out)
+  void HexitecProcessPlugin::convert_pixels_without_reordering(unsigned short* in, float* out)
   {
     int index = 0;
 
     for (int i=0; i<FEM_TOTAL_PIXELS; i++)
     {
-        // Re-order pixels:
-//      	index = pixelMap[i];
-//        out[index] = (float)in[i];
 				// Do not reorder pixels:
 				out[i] = (float)in[i];
     }

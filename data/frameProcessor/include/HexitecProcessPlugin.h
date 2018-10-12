@@ -47,19 +47,26 @@ namespace FrameProcessor
     static const std::string CONFIG_IMAGE_WIDTH;
     /** Configuration constant for image height **/
     static const std::string CONFIG_IMAGE_HEIGHT;
+    /** Configuration constant for enable reorder(ing) **/
+		static const std::string CONFIG_ENABLE_REORDER;
+
 
     void process_lost_packets(boost::shared_ptr<Frame> frame);
     void process_frame(boost::shared_ptr<Frame> frame);
     // Float type array version currently used:
     void reorder_pixels(unsigned short* in, float* out);
-    // Convert pixel data from unsigned short to float data type
-    void convert_pixels_to_float(unsigned short* in, float* out);
+//    // Convert pixel data from unsigned short to float data type
+//    void convert_pixels(unsigned short* in, float* out);
+    // Convert pixels from unsigned short to float type without reordering
+    void convert_pixels_without_reordering(unsigned short* in,
+														 							 float* out);
 
     std::size_t reordered_image_size();
 
     void initialisePixelMap();
     uint16_t pixelMap[6400];
     bool pixelMapInitialised;
+    bool reorder_pixels_;
 
     /** Pointer to logger **/
     LoggerPtr logger_;

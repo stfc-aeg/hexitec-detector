@@ -120,7 +120,7 @@ namespace FrameProcessor
 				}
 
 				// Allocate buffer to receive reordered image.
-				corrected_image = (void*)malloc(output_image_size);
+				corrected_image = (void *)calloc(image_width_ * image_height_, sizeof(float));
 				if (corrected_image == NULL)
 				{
 					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
@@ -196,7 +196,8 @@ namespace FrameProcessor
   }
 
   /**
-   * Compare current against last frame, zeroing any pixel hit in both frames.
+   * Compare current against last frame, zero Pixel in current frame if hit
+   * 		in the last frame.
    *
    * \param[in] in - Pointer to the incoming image data.
    * \param[out] out - Pointer to the allocated memory for the corrected image.
@@ -204,33 +205,34 @@ namespace FrameProcessor
    */
   void HexitecNextFramePlugin::apply_algorithm(float* in, float* out)
   {
-
+//  	LOG4CXX_TRACE(logger_, " -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
     for (int i=0; i<FEM_TOTAL_PIXELS; i++)
     {
-//    	/// DEBUGGING:
-//    	if (i < 15)
-//    	{
-//				LOG4CXX_TRACE(logger_, "NEXT last_frame_[" << i << "] = " << last_frame_[i]);
-//    	}
-
-    	// If pixel in last frame is nonzero, clear it in both frames
-    	// 	(whether hit or not), otherwise don't clear pixel in current frame
-    	if (last_frame_[i] != 0.0)
+	/// DEBUGGING:
+////    	if (i > 0)
+//			{
+//				if ( i < 80)
+//				{
+//					LOG4CXX_TRACE(logger_, "NEXT, i= " << i << " in: " << in[i] << " "
+//							<< " \tlast_frame_[" << i << "] = " << last_frame_[i]
+//							<< " \tcond eval: " << (last_frame_[i] > 0.0)
+//							);
+//				}
+//			}
+    	// If pixel in last frame is nonzero, clear it from current frame
+    	// 	(whether hit or not), otherwise don't clear pixel frame current frame
+//    	if (last_frame_[i] != 0.0)
+    	if (last_frame_[i] > 0.0)
     	{
-    		out[i] = 0.0;
-    		last_frame_[i] = 0.0;
+    		;//out[i] = 0.0;		// Redundant (*out calloc'd..)
     	}
     	else
     	{
     		out[i] = in[i];
     	}
-//    	/// DEBUGGING:
-//    	if (i < 15)
-//    	{
-//				LOG4CXX_TRACE(logger_, "NEXT, post correction: last_frame_[" << i << "] = " << last_frame_[i] <<
-//						" (in: " << in[i] << ") out: " << out[i]);
-//    	}
     }
+    // Copy current frame so it can be compared against the following frame
+    memcpy(last_frame_, in, FEM_TOTAL_PIXELS * sizeof(float));
   }
 
 } /* namespace FrameProcessor */

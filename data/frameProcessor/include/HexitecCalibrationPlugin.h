@@ -32,7 +32,7 @@ namespace FrameProcessor
 
   /** Calibration of Hexitec Frame objects.
    *
-   * This service of the template for all of the remaining hexitec plug-ins to be written.
+   * This plugin takes a gradients and an intercepts file and calibrates each pixel.
    */
   class HexitecCalibrationPlugin : public FrameProcessorPlugin
   {

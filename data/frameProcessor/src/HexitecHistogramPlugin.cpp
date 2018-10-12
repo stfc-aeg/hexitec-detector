@@ -230,27 +230,27 @@ namespace FrameProcessor
 
 					// Setup the pixels' histograms
 
-					// Setup the dimensions pixels_histograms
+					// Setup the dimensions pixel_histograms
 					dimensions_t pxls_dims(2);
-					pxls_dims[0] = nBins;
-					pxls_dims[1] = frameSize;
+					pxls_dims[0] = frameSize;
+					pxls_dims[1] = nBins;
 
 					dataset_name = "pixel_histograms";
 
-					boost::shared_ptr<Frame> pixels_histograms;
-					pixels_histograms = boost::shared_ptr<Frame>(new Frame(dataset_name));
+					boost::shared_ptr<Frame> pixel_histograms;
+					pixel_histograms = boost::shared_ptr<Frame>(new Frame(dataset_name));
 
-					pixels_histograms->set_frame_number(0);
+					pixel_histograms->set_frame_number(0);
 
-					pixels_histograms->set_dimensions(pxls_dims);
-					pixels_histograms->copy_data(histogramPerPixel, pixel_histograms_size);
+					pixel_histograms->set_dimensions(pxls_dims);
+					pixel_histograms->copy_data(histogramPerPixel, pixel_histograms_size);
 
 					LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
 																 " dataset, frame number: " << 0);
-					this->push(pixels_histograms);
+					this->push(pixel_histograms);
 
-					/// Clear (but do not delete!) the memory used
-//			    memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(float) );
+					// Clear histogram values
+			    memset(histogramPerPixel, 0, (nBins * frameSize) * sizeof(float));
 			    memset(summedHistogram, 0, nBins * sizeof(long long));
 
 					frames_counter_ = 0;
@@ -325,14 +325,6 @@ namespace FrameProcessor
 			bin = (int)((thisEnergy / binWidth));
 			if (bin <= nBins)
 			{
-				//
-				if (bin < 0)
-					LOG4CXX_ERROR(logger_, "\t\t\t pixel: " << i << " nBins " << nBins
-							<< " bin: " << bin << " thisEnergy: " << thisEnergy <<
-							" frame[" << i << "]: " << frame[i] <<
-							" binWidth: " <<  binWidth << " thisEnergy <= 0.0 == " <<
-							(thisEnergy <= 0.0));
-				//
 				(*(currentHistogram + (pixel * nBins) + bin))++;
 				(*(summed + bin)) ++;
 			}
