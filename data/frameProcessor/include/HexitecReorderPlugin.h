@@ -1,12 +1,12 @@
 /*
- * HexitecProcessPlugin.h
+ * HexitecReorderPlugin.h
  *
  *  Created on: 11 Jul 2018
  *      Author: ckd27546
  */
 
-#ifndef INCLUDE_HEXITECPROCESSPLUGIN_H_
-#define INCLUDE_HEXITECPROCESSPLUGIN_H_
+#ifndef INCLUDE_HEXITECREORDERPLUGIN_H_
+#define INCLUDE_HEXITECREORDERPLUGIN_H_
 
 #include <log4cxx/logger.h>
 #include <log4cxx/basicconfigurator.h>
@@ -27,16 +27,16 @@ using namespace log4cxx::helpers;
 namespace FrameProcessor
 {
 
-  /** Processing of Hexitec Frame objects.
+  /** Reorder pixels within Hexitec Frame objects.
    *
-   * The HexitecProcessPlugin class receives a raw data Frame object,
+   * The HexitecReorderPlugin class receives a raw data Frame object,
    * reorders the pixels and stores the data as an array of floats.
    */
-  class HexitecProcessPlugin : public FrameProcessorPlugin
+  class HexitecReorderPlugin : public FrameProcessorPlugin
   {
   public:
-    HexitecProcessPlugin();
-    virtual ~HexitecProcessPlugin();
+    HexitecReorderPlugin();
+    virtual ~HexitecReorderPlugin();
     void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
     void status(OdinData::IpcMessage& status);
 
@@ -88,8 +88,8 @@ namespace FrameProcessor
    * Registration of this plugin through the ClassLoader.  This macro
    * registers the class without needing to worry about name mangling
    */
-  REGISTER(FrameProcessorPlugin, HexitecProcessPlugin, "HexitecProcessPlugin");
+  REGISTER(FrameProcessorPlugin, HexitecReorderPlugin, "HexitecReorderPlugin");
 
 } /* namespace FrameProcessor */
 
-#endif /* INCLUDE_HEXITECPROCESSPLUGIN_H_ */
+#endif /* INCLUDE_HEXITECREORDERPLUGIN_H_ */

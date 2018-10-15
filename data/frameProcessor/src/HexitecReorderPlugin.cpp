@@ -1,24 +1,24 @@
 /*
- * HexitecProcessPlugin.cpp
+ * HexitecReorderPlugin.cpp
  *
  *  Created on: 11 Jul 2018
  *      Author: ckd27546
  */
 
-#include <HexitecProcessPlugin.h>
+#include <HexitecReorderPlugin.h>
 
 namespace FrameProcessor
 {
 
-  const std::string HexitecProcessPlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
-  const std::string HexitecProcessPlugin::CONFIG_IMAGE_WIDTH = "width";
-  const std::string HexitecProcessPlugin::CONFIG_IMAGE_HEIGHT = "height";
-  const std::string HexitecProcessPlugin::CONFIG_ENABLE_REORDER = "reorder";
+  const std::string HexitecReorderPlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
+  const std::string HexitecReorderPlugin::CONFIG_IMAGE_WIDTH = "width";
+  const std::string HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT = "height";
+  const std::string HexitecReorderPlugin::CONFIG_ENABLE_REORDER = "reorder";
 
   /**
    * The constructor sets up logging used within the class.
    */
-  HexitecProcessPlugin::HexitecProcessPlugin() :
+  HexitecReorderPlugin::HexitecReorderPlugin() :
       image_width_(80),
       image_height_(80),
       image_pixels_(image_width_ * image_height_),
@@ -26,9 +26,9 @@ namespace FrameProcessor
 			reorder_pixels_(true)
   {
     // Setup logging for the class
-    logger_ = Logger::getLogger("FW.HexitecProcessPlugin");
+    logger_ = Logger::getLogger("FW.HexitecReorderPlugin");
     logger_->setLevel(Level::getAll());
-    LOG4CXX_TRACE(logger_, "HexitecProcessPlugin constructor.");
+    LOG4CXX_TRACE(logger_, "HexitecReorderPlugin constructor.");
 
     // Setup Pixel order lookup table
     if (!pixelMapInitialised)
@@ -42,7 +42,7 @@ namespace FrameProcessor
   /**
    * Setup pixel look up table
    */
-  void HexitecProcessPlugin::initialisePixelMap()
+  void HexitecReorderPlugin::initialisePixelMap()
   {
      int pmIndex = 0;
 
@@ -62,9 +62,9 @@ namespace FrameProcessor
   /**
    * Destructor.
    */
-  HexitecProcessPlugin::~HexitecProcessPlugin()
+  HexitecReorderPlugin::~HexitecReorderPlugin()
   {
-    LOG4CXX_TRACE(logger_, "HexitecProcessPlugin destructor.");
+    LOG4CXX_TRACE(logger_, "HexitecReorderPlugin destructor.");
   }
 
   /**
@@ -76,28 +76,28 @@ namespace FrameProcessor
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[out] reply - Reference to the reply IpcMessage object.
    */
-  void HexitecProcessPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
+  void HexitecReorderPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
-    if (config.has_param(HexitecProcessPlugin::CONFIG_DROPPED_PACKETS))
+    if (config.has_param(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS))
     {
-      packets_lost_ = config.get_param<int>(HexitecProcessPlugin::CONFIG_DROPPED_PACKETS);
+      packets_lost_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS);
     }
 
-    if (config.has_param(HexitecProcessPlugin::CONFIG_IMAGE_WIDTH))
+    if (config.has_param(HexitecReorderPlugin::CONFIG_IMAGE_WIDTH))
     {
-      image_width_ = config.get_param<int>(HexitecProcessPlugin::CONFIG_IMAGE_WIDTH);
+      image_width_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_IMAGE_WIDTH);
     }
 
-    if (config.has_param(HexitecProcessPlugin::CONFIG_IMAGE_HEIGHT))
+    if (config.has_param(HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT))
     {
-      image_height_ = config.get_param<int>(HexitecProcessPlugin::CONFIG_IMAGE_HEIGHT);
+      image_height_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT);
     }
 
     image_pixels_ = image_width_ * image_height_;
 
-    if (config.has_param(HexitecProcessPlugin::CONFIG_ENABLE_REORDER))
+    if (config.has_param(HexitecReorderPlugin::CONFIG_ENABLE_REORDER))
     {
-      reorder_pixels_ = config.get_param<bool>(HexitecProcessPlugin::CONFIG_ENABLE_REORDER);
+      reorder_pixels_ = config.get_param<bool>(HexitecReorderPlugin::CONFIG_ENABLE_REORDER);
     }
 
   }
@@ -107,10 +107,10 @@ namespace FrameProcessor
    *
    * \param[out] status - Reference to an IpcMessage value to store the status.
    */
-  void HexitecProcessPlugin::status(OdinData::IpcMessage& status)
+  void HexitecReorderPlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for HexitecProcessPlugin");
+    LOG4CXX_DEBUG(logger_, "Status requested for HexitecReorderPlugin");
     status.set_param(get_name() + "/packets_lost", packets_lost_);
   }
 
@@ -119,7 +119,7 @@ namespace FrameProcessor
    *
    * \param[in] frame - Pointer to a Frame object.
    */
-  void HexitecProcessPlugin::process_lost_packets(boost::shared_ptr<Frame> frame)
+  void HexitecReorderPlugin::process_lost_packets(boost::shared_ptr<Frame> frame)
   {
     const Hexitec::FrameHeader* hdr_ptr = static_cast<const Hexitec::FrameHeader*>(frame->get_data());
     LOG4CXX_DEBUG(logger_, "Processing lost packets for frame " << hdr_ptr->frame_number);
@@ -139,7 +139,7 @@ namespace FrameProcessor
    *
    * \param[in] frame - Pointer to a Frame object.
    */
-  void HexitecProcessPlugin::process_frame(boost::shared_ptr<Frame> frame)
+  void HexitecReorderPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
     LOG4CXX_TRACE(logger_, "Reordering frame.");
     LOG4CXX_TRACE(logger_, "Frame size: " << frame->get_data_size());
@@ -283,7 +283,7 @@ namespace FrameProcessor
    *
    * \return size of the reordered image in bytes
    */
-  std::size_t HexitecProcessPlugin::reordered_image_size() {
+  std::size_t HexitecReorderPlugin::reordered_image_size() {
 
     return image_width_ * image_height_ * sizeof(float);
 
@@ -296,7 +296,7 @@ namespace FrameProcessor
    * \param[out] out - Pointer to the allocated memory where the reordered image is written.
    *
    */
-  void HexitecProcessPlugin::reorder_pixels(unsigned short* in, float* out)
+  void HexitecReorderPlugin::reorder_pixels(unsigned short* in, float* out)
   {
     int index = 0;
 
@@ -321,7 +321,7 @@ namespace FrameProcessor
    * \param[out] out - Pointer to the allocated memory where the converted image is written.
    *
    */
-  void HexitecProcessPlugin::convert_pixels_without_reordering(unsigned short* in, float* out)
+  void HexitecReorderPlugin::convert_pixels_without_reordering(unsigned short* in, float* out)
   {
     int index = 0;
 

@@ -5,27 +5,27 @@
 
 #include <iostream>
 
-#include "HexitecProcessPlugin.h"
+#include "HexitecReorderPlugin.h"
 
-class HexitecProcessPluginTestFixture
+class HexitecReorderPluginTestFixture
 {
 public:
-	HexitecProcessPluginTestFixture()
+	HexitecReorderPluginTestFixture()
 	{
-		std::cout << "HexitecProcessPluginTestFixture constructor" << std::endl;
+		std::cout << "HexitecReorderPluginTestFixture constructor" << std::endl;
 	}
 
-	~HexitecProcessPluginTestFixture()
+	~HexitecReorderPluginTestFixture()
 	{
-		std::cout << "HexitecProcessPluginTestFixture destructor" << std::endl;
+		std::cout << "HexitecReorderPluginTestFixture destructor" << std::endl;
 	}
 };
 
-BOOST_FIXTURE_TEST_SUITE(HexitecProcessPluginUnitTest, HexitecProcessPluginTestFixture);
+BOOST_FIXTURE_TEST_SUITE(HexitecReorderPluginUnitTest, HexitecReorderPluginTestFixture);
 
-BOOST_AUTO_TEST_CASE(HexitecProcessPluginTestFixture)
+BOOST_AUTO_TEST_CASE(HexitecReorderPluginTestFixture)
 {
-	std::cout << "HexitecProcessPluginTestFixture test case" << std::endl;
+	std::cout << "HexitecReorderPluginTestFixture test case" << std::endl;
 }
 
 BOOST_AUTO_TEST_SUITE_END();

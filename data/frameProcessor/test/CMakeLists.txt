@@ -21,7 +21,7 @@ endif()
 
 # Define libraries to link against
 target_link_libraries(hexitecFrameProcessorTest
-	    HexitecProcessPlugin
+	    HexitecReorderPlugin
 		${ODINDATA_LIBRARIES} 
 		${Boost_LIBRARIES}
 		${LOG4CXX_LIBRARIES}
