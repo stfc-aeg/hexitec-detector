@@ -19,6 +19,9 @@ using namespace log4cxx::helpers;
 #include "FrameProcessorPlugin.h"
 #include "HexitecDefinitions.h"
 #include "ClassLoader.h"
+///
+#include <fstream>
+#include <sstream>
 
 #define FEM_PIXELS_PER_ROW 80
 #define FEM_PIXELS_PER_COLUMN 80
@@ -49,14 +52,13 @@ namespace FrameProcessor
     static const std::string CONFIG_IMAGE_HEIGHT;
     /** Configuration constant for enable reorder(ing) **/
 		static const std::string CONFIG_ENABLE_REORDER;
-
+    /** Configuration constant for writing raw data (or not) **/
+		static const std::string CONFIG_RAW_DATA;
 
     void process_lost_packets(boost::shared_ptr<Frame> frame);
     void process_frame(boost::shared_ptr<Frame> frame);
     // Float type array version currently used:
     void reorder_pixels(unsigned short* in, float* out);
-//    // Convert pixel data from unsigned short to float data type
-//    void convert_pixels(unsigned short* in, float* out);
     // Convert pixels from unsigned short to float type without reordering
     void convert_pixels_without_reordering(unsigned short* in,
 														 							 float* out);
@@ -67,6 +69,7 @@ namespace FrameProcessor
     uint16_t pixelMap[6400];
     bool pixelMapInitialised;
     bool reorder_pixels_;
+    bool write_raw_data_;
 
     /** Pointer to logger **/
     LoggerPtr logger_;
@@ -80,7 +83,10 @@ namespace FrameProcessor
     int packets_lost_;
 
     /* DEVELOPMENT SPACE - for the other plug-ins' functionalities */
-
+    /// DEBUGGING:
+    int debugFrameCounter;
+    std::ofstream outFile;
+  	void writeFile(std::string filePrefix, float *frame);
 
   };
 

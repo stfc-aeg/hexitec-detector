@@ -31,6 +31,9 @@ namespace FrameProcessor
     directionalDistance = (int)pixelGridSize/2;  // Set to 1 for 3x3: 2 for 5x5 pixel grid
     nRows = image_height_;
     nCols = image_width_;
+    ///
+    debugFrameCounter = 0;
+
   }
 
   /**
@@ -39,6 +42,7 @@ namespace FrameProcessor
   HexitecAdditionPlugin::~HexitecAdditionPlugin()
   {
     LOG4CXX_TRACE(logger_, "HexitecAdditionPlugin destructor.");
+
   }
 
   /**
@@ -134,30 +138,15 @@ namespace FrameProcessor
 				{
 					throw std::runtime_error("Failed to allocate temporary buffer for processed image");
 				}
-				//
-//				float *ptr = static_cast<float *>((processed_image));
-//				LOG4CXX_TRACE(logger_, " -=-=-=-=-=-=-=-=-=- processed_image");
-//				check_memory(ptr, image_pixels_);
-//				LOG4CXX_TRACE(logger_, " -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
-				//
 
 				// Calculate pointer into the input image data based on loop index
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
-				///
-//				LOG4CXX_TRACE(logger_, "Before calling prepareChargedSharing()..");
-//				print_nonzero_pixels(static_cast<float *>(input_ptr), nRows, nCols);
-				///
-
 				// Take Frame object at input_ptr, apply CS Addition algorithm and save results to
 				//	at processed_image('s address)
 				prepareChargedSharing(static_cast<float *>(input_ptr),
 															static_cast<float *>(processed_image) );
-				///
-//				LOG4CXX_TRACE(logger_, "AFTER  calling prepareChargedSharing()..");
-//				print_nonzero_pixels(static_cast<float *>(input_ptr), nRows, nCols);
-				///
 
 				// Set the frame image to the processed image buffer if appropriate
 				if (processed_image)
@@ -231,24 +220,10 @@ namespace FrameProcessor
 		int increment = extendedFrameColumns;
 		float *rowPtr = inFrame;
 
-		///
-//		LOG4CXX_TRACE(logger_, "LAST FEW ROWS IN inFrame..");
-//		print_last_row(inFrame, nRows, nCols);
-		///
-
-		///
-//		LOG4CXX_TRACE(logger_, "VALUES IN extendedFrame BEFORE WE CP FROM inFrame..");
-//		print_nonzero_pixels(extendedFrame, extendedFrameRows, extendedFrameColumns);
-		///
 
 		// Copy inFrame to extendedFrame (with frame of 0's surrounding all four sides)
 		for (int i = startPosn; i < endPosn; )
 		{
-//			if (i < 200)
-//				LOG4CXX_TRACE(logger_, "Let's cp rowPr (" << rowPtr << ") to extendedFrame["
-//						<< i << "] (" << &(extendedFrame[i]) << " and we're moving " << nCols * sizeof(float) << " Bytes. "
-//						<< " Start Cond: " << startPosn << " endPosn: " << endPosn << " increment: " << increment
-//						<< " i: " << i);
 			memcpy(&(extendedFrame[i]), rowPtr, nCols * sizeof(float));
 			rowPtr = rowPtr + nCols;
 			i = i + increment;
@@ -268,15 +243,12 @@ namespace FrameProcessor
 		endPosn = extendedFrameSize - (extendedFrameColumns * directionalDistance)
 								- directionalDistance;
 
-		///
-//		LOG4CXX_TRACE(logger_, "Before calling processAddition()..");
-//		print_last_row(extendedFrame, extendedFrameRows, extendedFrameColumns);
-		///
 		processAddition(extendedFrame, extendedFrameRows, startPosn, endPosn);
-		///
-//		LOG4CXX_TRACE(logger_, "AFTER  calling processAddition()..");
-//		print_last_row(extendedFrame, extendedFrameRows, extendedFrameColumns);
-		///
+
+    ///
+//		writeFile("All_540_frames_", extendedFrame);
+//    debugFrameCounter += 1;
+    ///
 
 		/// Copy CSD frame (i.e. 402x402) back into originally sized frame (400x400)
 		rowPtr = outFrame;
@@ -286,14 +258,6 @@ namespace FrameProcessor
 			 rowPtr = rowPtr + nCols;
 			 i = i + increment;
 		}
-		///
-//		LOG4CXX_TRACE(logger_, " -------------------------------------------- inFrame -------------------------------------------- ");
-//		print_last_row(inFrame, nRows, nCols);
-		///
-		///
-//		LOG4CXX_TRACE(logger_, " ============================================ outFrame ============================================");
-//		print_last_row(outFrame, nRows, nCols);
-		///
 
 		free(extendedFrame);
 		extendedFrame = NULL;
@@ -317,7 +281,7 @@ namespace FrameProcessor
 		int rowIndexEnd   = (directionalDistance+1);
 		int colIndexBegin = rowIndexBegin;
 		int colIndexEnd   = rowIndexEnd;
-		int maxValue;
+		float maxValue;
 
 		for (int i = startPosn; i < endPosn;  i++)
 		{
@@ -430,5 +394,24 @@ namespace FrameProcessor
 		//
 
 	}
+
+  //// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
+	void HexitecAdditionPlugin::writeFile(std::string filePrefix, float *frame)
+	{
+    std::ostringstream hitPixelsStream;
+    hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
+		for (int i = 0; i < FEM_TOTAL_PIXELS; i++ )
+		{
+			if(frame[i] > 0)
+				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
+		}
+		std::string hitPixelsString  = hitPixelsStream.str();
+		std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
+			 + std::string("_ODIN_Cal_detailed.txt");
+		outFile.open(fname.c_str(), std::ofstream::app);
+		outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
+		outFile.close();
+	}
+
 } /* namespace FrameProcessor */
 

@@ -11,10 +11,10 @@ namespace FrameProcessor
 {
 
   const std::string HexitecReorderPlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
-  const std::string HexitecReorderPlugin::CONFIG_IMAGE_WIDTH = "width";
-  const std::string HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT = "height";
-  const std::string HexitecReorderPlugin::CONFIG_ENABLE_REORDER = "reorder";
-
+  const std::string HexitecReorderPlugin::CONFIG_IMAGE_WIDTH 		 = "width";
+  const std::string HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT 	 = "height";
+  const std::string HexitecReorderPlugin::CONFIG_ENABLE_REORDER  = "reorder";
+  const std::string HexitecReorderPlugin::CONFIG_RAW_DATA 			 = "raw_data";
   /**
    * The constructor sets up logging used within the class.
    */
@@ -23,7 +23,8 @@ namespace FrameProcessor
       image_height_(80),
       image_pixels_(image_width_ * image_height_),
       packets_lost_(0),
-			reorder_pixels_(true)
+			reorder_pixels_(true),
+			write_raw_data_(true)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FW.HexitecReorderPlugin");
@@ -36,6 +37,8 @@ namespace FrameProcessor
        initialisePixelMap();
        pixelMapInitialised = true;
     }
+    ///
+    debugFrameCounter = 0;
 
   }
 
@@ -98,6 +101,11 @@ namespace FrameProcessor
     if (config.has_param(HexitecReorderPlugin::CONFIG_ENABLE_REORDER))
     {
       reorder_pixels_ = config.get_param<bool>(HexitecReorderPlugin::CONFIG_ENABLE_REORDER);
+    }
+
+    if (config.has_param(HexitecReorderPlugin::CONFIG_RAW_DATA))
+    {
+      write_raw_data_ = config.get_param<bool>(HexitecReorderPlugin::CONFIG_RAW_DATA);
     }
 
   }
@@ -187,13 +195,6 @@ namespace FrameProcessor
             << ") will exceed dimensions of output image (" << image_pixels_ << ")";
         throw std::runtime_error(msg.str());
       }
-//
-//      // Allocate buffer to receive reordered image.
-//      reordered_image = (void*)malloc(output_image_size);
-//      if (reordered_image == NULL)
-//      {
-//        throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
-//      }
 
       // Allocate buffer for raw data in float data type.
       raw_image = (void*)malloc(output_image_size);
@@ -213,43 +214,34 @@ namespace FrameProcessor
 				convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
 																					static_cast<float *>(raw_image));
       }
+      ///
+//      writeFile("All_540_frames_", static_cast<float *>(raw_image));
+//      debugFrameCounter += 1;
+      ///
 
       if (raw_image)
       {
-      	// Setup of the frame dimensions
-      	dimensions_t dims(2);
-      	dims[0] = image_height_;
-      	dims[1] = image_width_;
+				// Setup of the frame dimensions
+				dimensions_t dims(2);
+				dims[0] = image_height_;
+				dims[1] = image_width_;
 
-      	boost::shared_ptr<Frame> raw_frame;
-      	raw_frame = boost::shared_ptr<Frame>(new Frame("raw_frames"));
+				// Only construct raw data frame if configured
+      	if(write_raw_data_)
+      	{
+					boost::shared_ptr<Frame> raw_frame;
+					raw_frame = boost::shared_ptr<Frame>(new Frame("raw_frames"));
 
-      	raw_frame->set_frame_number(hdr_ptr->frame_number);
+					raw_frame->set_frame_number(hdr_ptr->frame_number);
 
-      	raw_frame->set_dimensions(dims);
-      	raw_frame->copy_data(raw_image, output_image_size);
+					raw_frame->set_dimensions(dims);
+					raw_frame->copy_data(raw_image, output_image_size);
 
 
-  			LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: "
-  														 << frame->get_frame_number());
-        this->push(raw_frame);
-
-//  			free(raw_image);
-//        raw_image = NULL;
-//      }
-//
-//      	// Reorder pixels into the output image
-//				reorder_pixels(static_cast<unsigned short *>(input_ptr),
-//											 static_cast<float *>(reordered_image));
-//
-//
-//			// Set the frame image to the reordered image buffer if appropriate
-//			if (reordered_image)
-//			{
-//				// Setup the frame dimensions
-//				dimensions_t dims(2);
-//				dims[0] = image_height_;
-//				dims[1] = image_width_;
+					LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: "
+																 << frame->get_frame_number());
+					this->push(raw_frame);
+      	}
 
 				boost::shared_ptr<Frame> data_frame;
 				data_frame = boost::shared_ptr<Frame>(new Frame("data"));
@@ -263,8 +255,6 @@ namespace FrameProcessor
 															 << frame->get_frame_number());
 				this->push(data_frame);
 
-//				free(reordered_image);
-//				reordered_image = NULL;
   			free(raw_image);
         raw_image = NULL;
 			}
@@ -305,12 +295,6 @@ namespace FrameProcessor
         // Re-order pixels:
       	index = pixelMap[i];
 				out[index] = (float)in[i];
-        // Don't reorder:
-//        out[i] = in[i];
-//				if (out[i] < 0)
-//					LOG4CXX_ERROR(logger_, "\t\t\t in[ " << i << "] = " << in[i]
-//							<< " out[ " << i << "] = " <<  out[i]);
-
     }
   }
 
@@ -331,6 +315,24 @@ namespace FrameProcessor
 				out[i] = (float)in[i];
     }
   }
+
+  //// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
+	void HexitecReorderPlugin::writeFile(std::string filePrefix, float *frame)
+	{
+    std::ostringstream hitPixelsStream;
+    hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
+		for (int i = 0; i < FEM_TOTAL_PIXELS; i++ )
+		{
+			if(frame[i] > 0)
+				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
+		}
+		std::string hitPixelsString  = hitPixelsStream.str();
+		std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
+			 + std::string("_ODIN_Reorder_detailed.txt");
+		outFile.open(fname.c_str(), std::ofstream::app);
+		outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
+		outFile.close();
+	}
 
 } /* namespace FrameProcessor */
 

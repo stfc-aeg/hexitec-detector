@@ -20,6 +20,10 @@ using namespace log4cxx::helpers;
 #include "FrameProcessorPlugin.h"
 #include "HexitecDefinitions.h"
 #include "ClassLoader.h"
+///
+#include <fstream>
+#include <sstream>
+#include <string.h>
 
 #define FEM_PIXELS_PER_ROW 80
 #define FEM_PIXELS_PER_COLUMN 80
@@ -65,6 +69,12 @@ namespace FrameProcessor
     float *last_frame_;
 
     long long last_frame_number_;
+    // DEBUGGING functions:
+    int debugFrameCounter;
+    std::ofstream outFile;
+    void writeFile(std::string filePrefix, float *frame);
+
+
   };
 
   /**

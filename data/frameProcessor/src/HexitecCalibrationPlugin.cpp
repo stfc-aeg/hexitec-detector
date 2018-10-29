@@ -40,6 +40,8 @@ namespace FrameProcessor
 
 		*gradientValue = 1;
 		*interceptValue = 0;
+    ///
+    debugFrameCounter = 0;
 
   }
 
@@ -161,7 +163,10 @@ namespace FrameProcessor
 
 				calibrate_pixels(static_cast<float *>(input_ptr),
 														 static_cast<float *>(calibrated_image));
-
+		    ///
+//				writeFile("All_540_frames_", static_cast<float *>(calibrated_image));
+//		    debugFrameCounter += 1;
+		    ///
 
 				// Set the frame image to the reordered image buffer if appropriate
 				if (calibrated_image)
@@ -297,6 +302,23 @@ namespace FrameProcessor
 		return success;
   }
 
+  //// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
+	void HexitecCalibrationPlugin::writeFile(std::string filePrefix, float *frame)
+	{
+    std::ostringstream hitPixelsStream;
+    hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
+		for (int i = 0; i < FEM_TOTAL_PIXELS; i++ )
+		{
+			if(frame[i] > 0)
+				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
+		}
+		std::string hitPixelsString  = hitPixelsStream.str();
+		std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
+			 + std::string("_ODIN_Cal_detailed.txt");
+		outFile.open(fname.c_str(), std::ofstream::app);
+		outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
+		outFile.close();
+	}
 
 } /* namespace FrameProcessor */
 

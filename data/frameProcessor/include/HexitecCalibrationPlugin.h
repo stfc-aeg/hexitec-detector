@@ -22,6 +22,10 @@ using namespace log4cxx::helpers;
 
 #include <iostream>
 #include <fstream>
+///
+#include <fstream>
+#include <sstream>
+#include <string.h>
 
 #define FEM_PIXELS_PER_ROW 80
 #define FEM_PIXELS_PER_COLUMN 80
@@ -74,6 +78,11 @@ namespace FrameProcessor
     void setGradients(const char *gradientFilename);
     void setIntercepts(const char *interceptFilename);
     bool getData(const char *filename, float *dataValue, float defaultValue);
+
+    // DEBUGGING functions:
+    int debugFrameCounter;
+    std::ofstream outFile;
+  	void writeFile(std::string filePrefix, float *frame);
 
   };
 

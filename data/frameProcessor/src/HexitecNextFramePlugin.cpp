@@ -29,6 +29,9 @@ namespace FrameProcessor
 
     last_frame_ = (float *) malloc(FEM_TOTAL_PIXELS * sizeof(float));
     memset(last_frame_, 0, FEM_TOTAL_PIXELS * sizeof(float));
+    ///
+    debugFrameCounter = 0;
+
   }
 
   /**
@@ -143,6 +146,10 @@ namespace FrameProcessor
 					apply_algorithm(static_cast<float *>(input_ptr),
 																 static_cast<float *>(corrected_image));
 				}
+		    ///
+//				writeFile("All_540_frames_", static_cast<float *>(corrected_image));
+//				debugFrameCounter += 1;
+		    ///
 
 				// Set the frame image to the corrected image buffer if appropriate
 				if (corrected_image)
@@ -208,20 +215,8 @@ namespace FrameProcessor
 //  	LOG4CXX_TRACE(logger_, " -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
     for (int i=0; i<FEM_TOTAL_PIXELS; i++)
     {
-	/// DEBUGGING:
-////    	if (i > 0)
-//			{
-//				if ( i < 80)
-//				{
-//					LOG4CXX_TRACE(logger_, "NEXT, i= " << i << " in: " << in[i] << " "
-//							<< " \tlast_frame_[" << i << "] = " << last_frame_[i]
-//							<< " \tcond eval: " << (last_frame_[i] > 0.0)
-//							);
-//				}
-//			}
     	// If pixel in last frame is nonzero, clear it from current frame
     	// 	(whether hit or not), otherwise don't clear pixel frame current frame
-//    	if (last_frame_[i] != 0.0)
     	if (last_frame_[i] > 0.0)
     	{
     		;//out[i] = 0.0;		// Redundant (*out calloc'd..)
@@ -234,6 +229,24 @@ namespace FrameProcessor
     // Copy current frame so it can be compared against the following frame
     memcpy(last_frame_, in, FEM_TOTAL_PIXELS * sizeof(float));
   }
+
+  //// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
+	void HexitecNextFramePlugin::writeFile(std::string filePrefix, float *frame)
+	{
+    std::ostringstream hitPixelsStream;
+    hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
+		for (int i = 0; i < FEM_TOTAL_PIXELS; i++ )
+		{
+			if(frame[i] > 0)
+				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
+		}
+		std::string hitPixelsString  = hitPixelsStream.str();
+		std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
+			 + std::string("_ODIN_Cal_detailed.txt");
+		outFile.open(fname.c_str(), std::ofstream::app);
+		outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
+		outFile.close();
+	}
 
 } /* namespace FrameProcessor */
 
