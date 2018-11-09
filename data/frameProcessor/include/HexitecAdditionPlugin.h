@@ -52,6 +52,10 @@ namespace FrameProcessor
     static const std::string CONFIG_IMAGE_HEIGHT;
     /** Configuration constant for pixel_grid_size **/
     static const std::string CONFIG_PIXEL_GRID_SIZE;
+    /** Configuration constant for maximum columns **/
+    static const std::string CONFIG_MAX_COLS;
+    /** Configuration constant for maximum rows **/
+		static const std::string CONFIG_MAX_ROWS;
 
     void process_frame(boost::shared_ptr<Frame> frame);
     std::size_t processed_image_size();
@@ -75,6 +79,9 @@ namespace FrameProcessor
 
     /** Pixel grid size */
     int pixelGridSize;
+    int fem_pixels_per_rows_;
+    int fem_pixels_per_columns_;
+    int fem_total_pixels_;
 
     // DEBUGGING functions:
     void print_nonzero_pixels(float *in, int numberRows, int numberColumns);

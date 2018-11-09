@@ -44,6 +44,10 @@ namespace FrameProcessor
     static const std::string CONFIG_IMAGE_WIDTH;
     /** Configuration constant for image height **/
     static const std::string CONFIG_IMAGE_HEIGHT;
+    /** Configuration constant for maximum columns **/
+    static const std::string CONFIG_MAX_COLS;
+    /** Configuration constant for maximum rows **/
+		static const std::string CONFIG_MAX_ROWS;
 
     void process_frame(boost::shared_ptr<Frame> frame);
     std::size_t reordered_image_size();
@@ -56,6 +60,11 @@ namespace FrameProcessor
     int image_height_;
     /** Image pixel count **/
     int image_pixels_;
+
+    int fem_pixels_per_rows_;
+    int fem_pixels_per_columns_;
+    int fem_total_pixels_;
+
   };
 
   /**

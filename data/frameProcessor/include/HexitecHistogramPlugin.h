@@ -52,6 +52,10 @@ namespace FrameProcessor
     static const std::string CONFIG_BIN_END;
     /** Configuration constant for bin width **/
     static const std::string CONFIG_BIN_WIDTH;
+    /** Configuration constant for maximum columns **/
+    static const std::string CONFIG_MAX_COLS;
+    /** Configuration constant for maximum rows **/
+		static const std::string CONFIG_MAX_ROWS;
 
     void process_frame(boost::shared_ptr<Frame> frame);
 
@@ -80,6 +84,10 @@ namespace FrameProcessor
     float *histogramPerPixel;
     long long *summedHistogram;
     void initialiseHistograms();
+
+    int fem_pixels_per_rows_;
+    int fem_pixels_per_columns_;
+    int fem_total_pixels_;
 
   };
 

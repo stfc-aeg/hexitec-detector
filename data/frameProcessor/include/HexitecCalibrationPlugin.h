@@ -55,6 +55,10 @@ namespace FrameProcessor
     static const std::string CONFIG_GRADIENTS_FILE;
     /** Configuration constant for Intercepts **/
     static const std::string CONFIG_INTERCEPTS_FILE;
+    /** Configuration constant for maximum columns **/
+    static const std::string CONFIG_MAX_COLS;
+    /** Configuration constant for maximum rows **/
+		static const std::string CONFIG_MAX_ROWS;
 
     void process_frame(boost::shared_ptr<Frame> frame);
     void calibrate_pixels(float* in, float* out);
@@ -78,6 +82,10 @@ namespace FrameProcessor
     void setGradients(const char *gradientFilename);
     void setIntercepts(const char *interceptFilename);
     bool getData(const char *filename, float *dataValue, float defaultValue);
+
+    int fem_pixels_per_rows_;
+    int fem_pixels_per_columns_;
+    int fem_total_pixels_;
 
     // DEBUGGING functions:
     int debugFrameCounter;

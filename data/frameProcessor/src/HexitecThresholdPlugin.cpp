@@ -15,6 +15,8 @@ namespace FrameProcessor
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE  = "threshold_mode";
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE = "threshold_value";
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE  = "threshold_file";
+  const std::string HexitecThresholdPlugin::CONFIG_MAX_COLS 				= "max_cols";
+  const std::string HexitecThresholdPlugin::CONFIG_MAX_ROWS 				= "max_rows";
 
   /**
    * The constructor sets up logging used within the class.
@@ -22,7 +24,10 @@ namespace FrameProcessor
   HexitecThresholdPlugin::HexitecThresholdPlugin() :
       image_width_(80),
       image_height_(80),
-      image_pixels_(image_width_ * image_height_)
+      image_pixels_(image_width_ * image_height_),
+	    fem_pixels_per_rows_(80),
+	    fem_pixels_per_columns_(80),
+	    fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FW.HexitecThresholdPlugin");
@@ -132,6 +137,17 @@ namespace FrameProcessor
 	    }
 		}
 
+    if (config.has_param(HexitecThresholdPlugin::CONFIG_MAX_COLS))
+    {
+      fem_pixels_per_columns_ = config.get_param<int>(HexitecThresholdPlugin::CONFIG_MAX_COLS);
+    }
+
+    if (config.has_param(HexitecThresholdPlugin::CONFIG_MAX_ROWS))
+    {
+      fem_pixels_per_rows_ = config.get_param<int>(HexitecThresholdPlugin::CONFIG_MAX_ROWS);
+    }
+
+    fem_total_pixels_ = fem_pixels_per_columns_ * fem_pixels_per_rows_;
   }
 
   /**

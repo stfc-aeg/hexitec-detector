@@ -16,6 +16,8 @@ namespace FrameProcessor
   const std::string HexitecHistogramPlugin::CONFIG_BIN_START    = "bin_start";
   const std::string HexitecHistogramPlugin::CONFIG_BIN_END 		  = "bin_end";
   const std::string HexitecHistogramPlugin::CONFIG_BIN_WIDTH 		= "bin_width";
+  const std::string HexitecHistogramPlugin::CONFIG_MAX_COLS 		= "max_cols";
+  const std::string HexitecHistogramPlugin::CONFIG_MAX_ROWS 		= "max_rows";
 
   /**
    * The constructor sets up logging used within the class.
@@ -25,7 +27,10 @@ namespace FrameProcessor
       image_height_(80),
       image_pixels_(image_width_ * image_height_),
 			max_frames_received_(0),
-			frames_counter_(0)
+			frames_counter_(0),
+	    fem_pixels_per_rows_(80),
+	    fem_pixels_per_columns_(80),
+	    fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FW.HexitecHistogramPlugin");
@@ -127,7 +132,19 @@ namespace FrameProcessor
 
     nBins      = (int)(((binEnd - binStart) / binWidth) + 0.5);
 
-//    histogramPerPixel = hxtBin + nBins;
+    if (config.has_param(HexitecHistogramPlugin::CONFIG_MAX_COLS))
+    {
+      fem_pixels_per_columns_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_MAX_COLS);
+    }
+
+    if (config.has_param(HexitecHistogramPlugin::CONFIG_MAX_ROWS))
+    {
+      fem_pixels_per_rows_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_MAX_ROWS);
+    }
+
+    fem_total_pixels_ = fem_pixels_per_columns_ * fem_pixels_per_rows_;
+
+    //    histogramPerPixel = hxtBin + nBins;
 
     // Free the existing allocated histogram memory
     free(summedHistogram);

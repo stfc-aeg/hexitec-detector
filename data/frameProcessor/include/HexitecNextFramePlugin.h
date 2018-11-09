@@ -51,6 +51,10 @@ namespace FrameProcessor
     static const std::string CONFIG_IMAGE_HEIGHT;
     /** Configuration constant for max frames **/
     static const std::string CONFIG_MAX_FRAMES;
+    /** Configuration constant for maximum columns **/
+    static const std::string CONFIG_MAX_COLS;
+    /** Configuration constant for maximum rows **/
+		static const std::string CONFIG_MAX_ROWS;
 
     void process_frame(boost::shared_ptr<Frame> frame);
     std::size_t reordered_image_size();
@@ -69,6 +73,10 @@ namespace FrameProcessor
     float *last_frame_;
 
     long long last_frame_number_;
+    int fem_pixels_per_rows_;
+    int fem_pixels_per_columns_;
+    int fem_total_pixels_;
+
     // DEBUGGING functions:
     int debugFrameCounter;
     std::ofstream outFile;

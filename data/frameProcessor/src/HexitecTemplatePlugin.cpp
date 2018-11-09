@@ -10,8 +10,10 @@
 namespace FrameProcessor
 {
 
-  const std::string HexitecTemplatePlugin::CONFIG_IMAGE_WIDTH = "width";
+  const std::string HexitecTemplatePlugin::CONFIG_IMAGE_WIDTH  = "width";
   const std::string HexitecTemplatePlugin::CONFIG_IMAGE_HEIGHT = "height";
+  const std::string HexitecTemplatePlugin::CONFIG_MAX_COLS 		 = "max_cols";
+  const std::string HexitecTemplatePlugin::CONFIG_MAX_ROWS 		 = "max_rows";
 
   /**
    * The constructor sets up logging used within the class.
@@ -19,7 +21,10 @@ namespace FrameProcessor
   HexitecTemplatePlugin::HexitecTemplatePlugin() :
       image_width_(80),
       image_height_(80),
-      image_pixels_(image_width_ * image_height_)
+      image_pixels_(image_width_ * image_height_),
+	    fem_pixels_per_rows_(80),
+	    fem_pixels_per_columns_(80),
+	    fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FW.HexitecTemplatePlugin");
@@ -59,6 +64,17 @@ namespace FrameProcessor
 
     image_pixels_ = image_width_ * image_height_;
 
+    if (config.has_param(HexitecTemplatePlugin::CONFIG_MAX_COLS))
+    {
+      fem_pixels_per_columns_ = config.get_param<int>(HexitecTemplatePlugin::CONFIG_MAX_COLS);
+    }
+
+    if (config.has_param(HexitecTemplatePlugin::CONFIG_MAX_ROWS))
+    {
+      fem_pixels_per_rows_ = config.get_param<int>(HexitecTemplatePlugin::CONFIG_MAX_ROWS);
+    }
+
+    fem_total_pixels_ = fem_pixels_per_columns_ * fem_pixels_per_rows_;
   }
 
   /**

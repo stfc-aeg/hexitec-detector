@@ -57,6 +57,10 @@ namespace FrameProcessor
     static const std::string CONFIG_THRESHOLD_VALUE;
     /** Configuration constant for threshold file **/
     static const std::string CONFIG_THRESHOLD_FILE;
+    /** Configuration constant for maximum columns **/
+    static const std::string CONFIG_MAX_COLS;
+    /** Configuration constant for maximum rows **/
+		static const std::string CONFIG_MAX_ROWS;
 
     void process_frame(boost::shared_ptr<Frame> frame);
     std::size_t thresholded_image_size();
@@ -80,6 +84,10 @@ namespace FrameProcessor
     uint16_t *thresholdPerPixel;
     bool thresholdsStatus;
     ThresholdMode thresholdMode;
+
+    int fem_pixels_per_rows_;
+    int fem_pixels_per_columns_;
+    int fem_total_pixels_;
 
   };
 

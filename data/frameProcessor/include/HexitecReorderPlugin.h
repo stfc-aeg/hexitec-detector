@@ -54,6 +54,10 @@ namespace FrameProcessor
 		static const std::string CONFIG_ENABLE_REORDER;
     /** Configuration constant for writing raw data (or not) **/
 		static const std::string CONFIG_RAW_DATA;
+    /** Configuration constant for maximum columns **/
+    static const std::string CONFIG_MAX_COLS;
+    /** Configuration constant for maximum rows **/
+		static const std::string CONFIG_MAX_ROWS;
 
     void process_lost_packets(boost::shared_ptr<Frame> frame);
     void process_frame(boost::shared_ptr<Frame> frame);
@@ -82,7 +86,10 @@ namespace FrameProcessor
     /** Packet loss counter **/
     int packets_lost_;
 
-    /* DEVELOPMENT SPACE - for the other plug-ins' functionalities */
+    int fem_pixels_per_rows_;
+    int fem_pixels_per_columns_;
+    int fem_total_pixels_;
+
     /// DEBUGGING:
     int debugFrameCounter;
     std::ofstream outFile;
