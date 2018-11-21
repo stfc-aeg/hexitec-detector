@@ -9,6 +9,7 @@
 
 #include "HexitecFrameDecoder.h"
 #include "gettime.h"
+#include "version.h"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -50,6 +51,31 @@ HexitecFrameDecoder::HexitecFrameDecoder() :
 //!
 HexitecFrameDecoder::~HexitecFrameDecoder()
 {
+}
+
+int HexitecFrameDecoder::get_version_major()
+{
+  return ODIN_DATA_VERSION_MAJOR;
+}
+
+int HexitecFrameDecoder::get_version_minor()
+{
+  return ODIN_DATA_VERSION_MINOR;
+}
+
+int HexitecFrameDecoder::get_version_patch()
+{
+  return ODIN_DATA_VERSION_PATCH;
+}
+
+std::string HexitecFrameDecoder::get_version_short()
+{
+  return ODIN_DATA_VERSION_STR_SHORT;
+}
+
+std::string HexitecFrameDecoder::get_version_long()
+{
+  return ODIN_DATA_VERSION_STR;
 }
 
 //! Initialise the frame decoder.
@@ -411,7 +437,8 @@ size_t HexitecFrameDecoder::get_next_payload_size(void) const
 //! \param[in] bytes_received - number of packet payload bytes received
 //! \return current frame receive state
 //!
-FrameDecoder::FrameReceiveState HexitecFrameDecoder::process_packet(size_t bytes_received)
+FrameDecoder::FrameReceiveState HexitecFrameDecoder::process_packet(size_t bytes_received,
+		int port, struct sockaddr_in* from_addr)
 {
 
   FrameDecoder::FrameReceiveState frame_state = FrameDecoder::FrameReceiveStateIncomplete;

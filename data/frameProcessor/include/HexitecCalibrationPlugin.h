@@ -43,6 +43,13 @@ namespace FrameProcessor
   public:
     HexitecCalibrationPlugin();
     virtual ~HexitecCalibrationPlugin();
+
+    int get_version_major();
+    int get_version_minor();
+    int get_version_patch();
+    std::string get_version_short();
+    std::string get_version_long();
+
     void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
     void status(OdinData::IpcMessage& status);
 

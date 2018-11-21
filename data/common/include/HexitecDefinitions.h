@@ -10,15 +10,15 @@
 
 namespace Hexitec {
 
-    static const size_t primary_packet_size    = 8000;
+    static const size_t primary_packet_size = 8000;
     static const size_t num_primary_packets = 1;
     static const size_t max_primary_packets = 1;
-    static const size_t tail_packet_size = 4800;
-    static const size_t num_tail_packets = 1;
+    static const size_t tail_packet_size 		= 4800;
+    static const size_t num_tail_packets 		= 1;
 
     static const uint32_t start_of_frame_mask = 1 << 31;
     static const uint32_t end_of_frame_mask   = 1 << 30;
-    static const uint32_t packet_number_mask   = 0x3FFFFFFF;
+    static const uint32_t packet_number_mask  = 0x3FFFFFFF;
 
     static const int32_t default_frame_number = -1;
 

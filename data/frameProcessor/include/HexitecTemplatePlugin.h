@@ -29,13 +29,20 @@ namespace FrameProcessor
 
   /** Template for future Hexitec Frame objects.
    *
-   * This service of the template for all of the remaining hexitec plug-ins to be written.
+   * This template may be the basis for any future hexitec plug-in(s).
    */
   class HexitecTemplatePlugin : public FrameProcessorPlugin
   {
   public:
     HexitecTemplatePlugin();
     virtual ~HexitecTemplatePlugin();
+
+    int get_version_major();
+    int get_version_minor();
+    int get_version_patch();
+    std::string get_version_short();
+    std::string get_version_long();
+
     void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
     void status(OdinData::IpcMessage& status);
 

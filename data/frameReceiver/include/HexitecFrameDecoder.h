@@ -41,6 +41,12 @@ namespace FrameReceiver
     HexitecFrameDecoder();
     ~HexitecFrameDecoder();
 
+    int get_version_major();
+    int get_version_minor();
+    int get_version_patch();
+    std::string get_version_short();
+    std::string get_version_long();
+
     void init(LoggerPtr& logger, OdinData::IpcMessage& config_msg);
     void request_configuration(const std::string param_prefix, OdinData::IpcMessage& config_reply);
 
@@ -58,7 +64,8 @@ namespace FrameReceiver
 
     void* get_next_payload_buffer(void) const;
     size_t get_next_payload_size(void) const;
-    FrameDecoder::FrameReceiveState process_packet (size_t bytes_received);
+    FrameDecoder::FrameReceiveState process_packet (size_t bytes_received,
+    		int port, struct sockaddr_in* from_addr);
 
     void monitor_buffers(void);
     void get_status(const std::string param_prefix, OdinData::IpcMessage& status_msg);

@@ -6,6 +6,7 @@
  */
 
 #include <HexitecThresholdPlugin.h>
+#include "version.h"
 
 namespace FrameProcessor
 {
@@ -15,8 +16,8 @@ namespace FrameProcessor
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE  = "threshold_mode";
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE = "threshold_value";
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE  = "threshold_file";
-  const std::string HexitecThresholdPlugin::CONFIG_MAX_COLS 				= "max_cols";
-  const std::string HexitecThresholdPlugin::CONFIG_MAX_ROWS 				= "max_rows";
+  const std::string HexitecThresholdPlugin::CONFIG_MAX_COLS 			 = "max_cols";
+  const std::string HexitecThresholdPlugin::CONFIG_MAX_ROWS 			 = "max_rows";
 
   /**
    * The constructor sets up logging used within the class.
@@ -30,7 +31,7 @@ namespace FrameProcessor
 	    fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
   {
     // Setup logging for the class
-    logger_ = Logger::getLogger("FW.HexitecThresholdPlugin");
+    logger_ = Logger::getLogger("FP.HexitecThresholdPlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecThresholdPlugin constructor.");
 
@@ -51,6 +52,31 @@ namespace FrameProcessor
     LOG4CXX_TRACE(logger_, "HexitecThresholdPlugin destructor.");
 
     free(thresholdPerPixel);
+  }
+
+  int HexitecThresholdPlugin::get_version_major()
+  {
+    return ODIN_DATA_VERSION_MAJOR;
+  }
+
+  int HexitecThresholdPlugin::get_version_minor()
+  {
+    return ODIN_DATA_VERSION_MINOR;
+  }
+
+  int HexitecThresholdPlugin::get_version_patch()
+  {
+    return ODIN_DATA_VERSION_PATCH;
+  }
+
+  std::string HexitecThresholdPlugin::get_version_short()
+  {
+    return ODIN_DATA_VERSION_STR_SHORT;
+  }
+
+  std::string HexitecThresholdPlugin::get_version_long()
+  {
+    return ODIN_DATA_VERSION_STR;
   }
 
   /**

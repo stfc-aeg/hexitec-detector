@@ -6,6 +6,7 @@
  */
 
 #include <HexitecDiscriminationPlugin.h>
+#include "version.h"
 
 namespace FrameProcessor
 {
@@ -29,7 +30,7 @@ namespace FrameProcessor
 	    fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
   {
     // Setup logging for the class
-    logger_ = Logger::getLogger("FW.HexitecDiscriminationPlugin");
+    logger_ = Logger::getLogger("FP.HexitecDiscriminationPlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecDiscriminationPlugin constructor.");
 
@@ -45,6 +46,31 @@ namespace FrameProcessor
   HexitecDiscriminationPlugin::~HexitecDiscriminationPlugin()
   {
     LOG4CXX_TRACE(logger_, "HexitecDiscriminationPlugin destructor.");
+  }
+
+  int HexitecDiscriminationPlugin::get_version_major()
+  {
+    return ODIN_DATA_VERSION_MAJOR;
+  }
+
+  int HexitecDiscriminationPlugin::get_version_minor()
+  {
+    return ODIN_DATA_VERSION_MINOR;
+  }
+
+  int HexitecDiscriminationPlugin::get_version_patch()
+  {
+    return ODIN_DATA_VERSION_PATCH;
+  }
+
+  std::string HexitecDiscriminationPlugin::get_version_short()
+  {
+    return ODIN_DATA_VERSION_STR_SHORT;
+  }
+
+  std::string HexitecDiscriminationPlugin::get_version_long()
+  {
+    return ODIN_DATA_VERSION_STR;
   }
 
   /**

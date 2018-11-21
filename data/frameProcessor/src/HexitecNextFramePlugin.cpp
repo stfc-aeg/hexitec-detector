@@ -6,6 +6,7 @@
  */
 
 #include <HexitecNextFramePlugin.h>
+#include "version.h"
 
 namespace FrameProcessor
 {
@@ -28,7 +29,7 @@ namespace FrameProcessor
 			fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
   {
     // Setup logging for the class
-    logger_ = Logger::getLogger("FW.HexitecNextFramePlugin");
+    logger_ = Logger::getLogger("FP.HexitecNextFramePlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecNextFramePlugin constructor.");
 
@@ -45,6 +46,31 @@ namespace FrameProcessor
   HexitecNextFramePlugin::~HexitecNextFramePlugin()
   {
     LOG4CXX_TRACE(logger_, "HexitecNextFramePlugin destructor.");
+  }
+
+  int HexitecNextFramePlugin::get_version_major()
+  {
+    return ODIN_DATA_VERSION_MAJOR;
+  }
+
+  int HexitecNextFramePlugin::get_version_minor()
+  {
+    return ODIN_DATA_VERSION_MINOR;
+  }
+
+  int HexitecNextFramePlugin::get_version_patch()
+  {
+    return ODIN_DATA_VERSION_PATCH;
+  }
+
+  std::string HexitecNextFramePlugin::get_version_short()
+  {
+    return ODIN_DATA_VERSION_STR_SHORT;
+  }
+
+  std::string HexitecNextFramePlugin::get_version_long()
+  {
+    return ODIN_DATA_VERSION_STR;
   }
 
   /**
