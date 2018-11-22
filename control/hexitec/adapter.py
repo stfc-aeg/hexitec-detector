@@ -1,147 +1,233 @@
-"""
-adapter.py - EXCALIBUR API adapter for the ODIN server.
+"""Demo adapter for ODIN control hexitec
 
-Tim Nicholls, STFC Application Engineering Group
-"""
+This class implements a simple adapter used for demonstration purposes in a
 
+Christian Angelsen, STFC Application Engineering
+"""
 import logging
-import re
+import tornado
+import time
+from concurrent import futures
+
+from tornado.ioloop import IOLoop
+from tornado.concurrent import run_on_executor
 from tornado.escape import json_decode
+
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
-from excalibur.detector import ExcaliburDetector, ExcaliburDetectorError
+from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin._version import get_versions
 
 
-def require_valid_detector(func):
-    """Decorator method for request handler methods to check that adapter has valid detector."""
-    def wrapper(_self, path, request):
-        if _self.detector is None:
-            return ApiAdapterResponse(
-                'Invalid detector configuration', status_code=500
-            )
-        return func(_self, path, request)
-    return wrapper
+class HexitecAdapter(ApiAdapter):
+    """System info adapter class for the ODIN server.
 
-
-class ExcaliburAdapter(ApiAdapter):
-    """ExcaliburAdapter class.
-
-    This class provides the adapter interface between the ODIN server and the EXCALIBUR detector
-    system, transforming the REST-like API HTTP verbs into the appropriate EXCALIBUR detector
-    control actions
+    This adapter provides ODIN clients with information about the server and the system that it is
+    running on.
     """
 
     def __init__(self, **kwargs):
-        """Initialise the ExcaliburAdapter object.
+        """Initialize the HexitecAdapter object.
 
-        :param kwargs: keyword arguments passed to ApiAdapter as options.
+        This constructor initializes the HexitecAdapter object.
+
+        :param kwargs: keyword arguments specifying options
         """
-        # Initialise the ApiAdapter base class to store adapter options
-        super(ExcaliburAdapter, self).__init__(**kwargs)
+        # Intialise superclass
+        super(HexitecAdapter, self).__init__(**kwargs)
 
-        # Compile the regular expression used to resolve paths into actions and resources
-        self.path_regexp = re.compile('(.*?)/(.*)')
+        # Parse options
+        background_task_enable = bool(self.options.get('background_task_enable', False))
+        background_task_interval = float(self.options.get('background_task_interval', 1.0))
+        
+        self.hexitec = Hexitec(background_task_enable, background_task_interval)
 
-        # Parse the FEM connection information out of the adapter options and initialise the
-        # detector object
-        self.detector = None
-        if 'detector_fems' in self.options:
-            fems = [tuple(fem.strip().split(':')) for fem in self.options['detector_fems'].split(',')]
-            try:
-                self.detector = ExcaliburDetector(fems)
-                logging.debug('ExcaliburAdapter loaded')
-                
-                if 'powercard_fem_idx' in self.options:
-                    try:
-                        powercard_fem_idx = int(self.options['powercard_fem_idx'])
-                    except Exception as e:
-                        logging.error('Failed to parse powercard FEM index from options: {}'.format(e))
-                    else:
-                        logging.debug('Setting power card FEM index to %d', int(self.options['powercard_fem_idx']))
-                        self.detector.set_powercard_fem_idx(powercard_fem_idx)
-                    
-                if 'chip_enable_mask' in self.options:
-                    try:
-                        chip_enable_mask = [int(mask, 0) for mask in self.options['chip_enable_mask'].split(',')]
-                    except ValueError as e:
-                        logging.error("Failed to parse chip enable mask from options: {}".format(e))
-                    else:
-                        logging.debug("Setting chip enable mask for FEMS: {}".format(
-                            ', '.join([hex(mask) for mask in chip_enable_mask]))
-                        )
-                        self.detector.set_chip_enable_mask(chip_enable_mask)
-                        
-            except ExcaliburDetectorError as e:
-                logging.error('ExcaliburAdapter failed to initialise detector: %s', e)
-        else:
-            logging.warning('No detector FEM option specified in configuration')
-            
-            
-    @request_types('application/json')
+        logging.debug('HexitecAdapter loaded')
+
     @response_types('application/json', default='application/json')
-    @require_valid_detector
     def get(self, path, request):
         """Handle an HTTP GET request.
 
-        This method is the implementation of the HTTP GET handler for ExcaliburAdapter.
+        This method handles an HTTP GET request, returning a JSON response.
 
-        :param path: URI path of the GET request
-        :param request: Tornado HTTP request object
-        :return: ApiAdapterResponse object to be returned to the client
+        :param path: URI path of request
+        :param request: HTTP request object
+        :return: an ApiAdapterResponse object containing the appropriate response
         """
         try:
-            response = self.detector.get(path)
+            response = self.hexitec.get(path)
             status_code = 200
-        except ExcaliburDetectorError as e:
+        except ParameterTreeError as e:
             response = {'error': str(e)}
-            logging.error(e)
             status_code = 400
-            
-        return ApiAdapterResponse(response, status_code=status_code)
+
+        content_type = 'application/json'
+
+        return ApiAdapterResponse(response, content_type=content_type,
+                                  status_code=status_code)
 
     @request_types('application/json')
     @response_types('application/json', default='application/json')
-    @require_valid_detector
     def put(self, path, request):
         """Handle an HTTP PUT request.
 
-        This method is the implementation of the HTTP PUT handler for ExcaliburAdapter/
+        This method handles an HTTP PUT request, returning a JSON response.
 
-        :param path: URI path of the PUT request
-        :param request: Tornado HTTP request object
-        :return: ApiAdapterResponse object to be returned to the client
+        :param path: URI path of request
+        :param request: HTTP request object
+        :return: an ApiAdapterResponse object containing the appropriate response
         """
+
+        content_type = 'application/json'
+
         try:
             data = json_decode(request.body)
-            self.detector.set(path, data)
-            response = self.detector.get(path)
+            self.hexitec.set(path, data)
+            response = self.hexitec.get(path)
             status_code = 200
-        except ExcaliburDetectorError as e:
+        except HexitecError as e:
             response = {'error': str(e)}
             status_code = 400
-            logging.error(e)
         except (TypeError, ValueError) as e:
             response = {'error': 'Failed to decode PUT request body: {}'.format(str(e))}
-            logging.error(e)
             status_code = 400
-            
-        return ApiAdapterResponse(response, status_code=status_code)
 
-    @request_types('application/json')
-    @response_types('application/json', default='application/json')
-    @require_valid_detector
+        logging.debug(response)
+
+        return ApiAdapterResponse(response, content_type=content_type,
+                                  status_code=status_code)
+
     def delete(self, path, request):
         """Handle an HTTP DELETE request.
 
-        This method is the implementation of the HTTP DELETE verb for ExcaliburAdapter.
+        This method handles an HTTP DELETE request, returning a JSON response.
 
-        :param path: URI path of the DELETE request
-        :param request: Tornado HTTP request object
-        :return: ApiAdapterResponse object to be returned to the client
+        :param path: URI path of request
+        :param request: HTTP request object
+        :return: an ApiAdapterResponse object containing the appropriate response
         """
-        response = {'response': '{}: DELETE on path {}'.format(self.name, path)}
+        response = 'HexitecAdapter: DELETE on path {}'.format(path)
         status_code = 200
 
         logging.debug(response)
 
         return ApiAdapterResponse(response, status_code=status_code)
 
+
+class HexitecError(Exception):
+    """Simple exception class for PSCUData to wrap lower-level exceptions."""
+
+    pass
+
+
+class Hexitec():
+    """Hexitec - class that extracts and stores information about system-level parameters."""
+
+    # Thread executor used for background tasks
+    executor = futures.ThreadPoolExecutor(max_workers=1)
+
+    def __init__(self, background_task_enable, background_task_interval):
+        """Initialise the Hexitec object.
+
+        This constructor initlialises the Hexitec object, building a parameter tree and
+        launching a background task if enabled
+        """
+        # Save arguments
+        self.background_task_enable = background_task_enable
+        self.background_task_interval = background_task_interval
+
+        # Store initialisation time
+        self.init_time = time.time()
+
+        # Get package version information
+        version_info = get_versions()
+
+        # Build a parameter tree for the background task
+        bg_task = ParameterTree({
+            'count': (lambda: self.background_task_counter, None),
+            'enable': (lambda: self.background_task_enable, self.set_task_enable),
+            'interval': (lambda: self.background_task_interval, self.set_task_interval),
+        })
+
+        # Store all information in a parameter tree
+        self.param_tree = ParameterTree({
+            'odin_version': version_info['version'],
+            'tornado_version': tornado.version,
+            'server_uptime': (self.get_server_uptime, None),
+            'background_task': bg_task 
+        })
+
+        # Set the background task counter to zero
+        self.background_task_counter = 0
+
+        # Launch the background task if enabled in options
+        if self.background_task_enable:
+            logging.debug(
+                "Launching background task with interval %.2f secs", background_task_interval
+            )
+            self.background_task()
+
+    def get_server_uptime(self):
+        """Get the uptime for the ODIN server.
+
+        This method returns the current uptime for the ODIN server.
+        """
+        return time.time() - self.init_time
+
+    def get(self, path):
+        """Get the parameter tree.
+
+        This method returns the parameter tree for use by clients via the Hexitec adapter.
+
+        :param path: path to retrieve from tree
+        """
+        return self.param_tree.get(path)
+
+    def set(self, path, data):
+        """Set parameters in the parameter tree.
+
+        This method simply wraps underlying ParameterTree method so that an exceptions can be
+        re-raised with an appropriate HexitecError.
+
+        :param path: path of parameter tree to set values for
+        :param data: dictionary of new data values to set in the parameter tree
+        """
+        try:
+            self.param_tree.set(path, data)
+        except ParameterTreeError as e:
+            raise HexitecError(e)
+
+    def set_task_interval(self, interval):
+
+        logging.debug("Setting background task interval to %f", interval)
+        self.background_task_interval = float(interval)
+        
+    def set_task_enable(self, enable):
+
+        logging.debug("Setting background task enable to %s", enable)
+
+        current_enable = self.background_task_enable
+        self.background_task_enable = bool(enable)
+
+        if not current_enable:
+            logging.debug("Restarting background task")
+            self.background_task()
+
+
+    @run_on_executor
+    def background_task(self):
+        """Run the adapter background task.
+
+        This simply increments the background counter and sleeps for the specified interval,
+        before adding itself as a callback to the IOLoop instance to be called again.
+
+        """
+        if self.background_task_counter < 10 or self.background_task_counter % 20 == 0:
+            logging.debug("Background task running, count = %d", self.background_task_counter)
+
+        self.background_task_counter += 1
+        time.sleep(self.background_task_interval)
+
+        if self.background_task_enable:
+            IOLoop.instance().add_callback(self.background_task)
+        else:
+            logging.debug("Background task no longer enabled, stopping")
