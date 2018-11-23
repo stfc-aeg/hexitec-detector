@@ -68,7 +68,7 @@ namespace FrameProcessor
 		static const std::string CONFIG_MAX_ROWS;
 
     void process_frame(boost::shared_ptr<Frame> frame);
-    void calibrate_pixels(float* in, float* out);
+    void calibrate_pixels(float *in, float *out);
 
     std::size_t calibrated_image_size();
 
@@ -81,11 +81,10 @@ namespace FrameProcessor
     /** Image pixel count **/
     int image_pixels_;
 
-    int frameSize;
-    bool gradientsStatus;
-    bool interceptsStatus;
-    float *gradientValue;
-    float *interceptValue;
+    bool gradients_status_;
+    bool intercepts_status_;
+    float *gradient_values_;
+    float *intercept_values_;
     void setGradients(const char *gradientFilename);
     void setIntercepts(const char *interceptFilename);
     bool getData(const char *filename, float *dataValue, float defaultValue);

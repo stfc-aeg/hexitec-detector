@@ -67,13 +67,13 @@ namespace FrameProcessor
     void process_frame(boost::shared_ptr<Frame> frame);
     std::size_t processed_image_size();
 
-    void prepareChargedSharing(float *inFrame, float *outFrame);
-    void processAddition(float *extendedFrame, int extendedFrameRows,
-    										 int startPosn, int endPosn);
+    void prepare_charged_sharing(float *input_frame, float *output_frame);
+  	void process_addition(float *extended_frame, int extended_frame_rows,
+  												int start_position, int end_position);
 
-    int directionalDistance;
-    int nRows;
-    int nCols;
+    int directional_distance_;
+    int number_rows_;
+    int number_columns_;
 
     /** Pointer to logger **/
     LoggerPtr logger_;
@@ -85,7 +85,7 @@ namespace FrameProcessor
     int image_pixels_;
 
     /** Pixel grid size */
-    int pixelGridSize;
+    int pixel_grid_size_;
     int fem_pixels_per_rows_;
     int fem_pixels_per_columns_;
     int fem_total_pixels_;

@@ -30,7 +30,8 @@ namespace FrameProcessor
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecReorderPlugin");
     logger_->setLevel(Level::getAll());
-    LOG4CXX_TRACE(logger_, "HexitecReorderPlugin constructor.");
+    LOG4CXX_TRACE(logger_, "HexitecReorderPlugin version " <<
+    												this->get_version_long() << " loaded.");
 
     // Setup Pixel order lookup table
     if (!pixelMapInitialised)
@@ -103,7 +104,7 @@ namespace FrameProcessor
    * - (bitdepth) - Removed
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
-   * \param[out] reply - Reference to the reply IpcMessage object.
+   * \param[in] reply - Reference to the reply IpcMessage object.
    */
   void HexitecReorderPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
@@ -139,7 +140,7 @@ namespace FrameProcessor
   /**
    * Collate status information for the plugin.  The status is added to the status IpcMessage object.
    *
-   * \param[out] status - Reference to an IpcMessage value to store the status.
+   * \param[in] status - Reference to an IpcMessage value to store the status.
    */
   void HexitecReorderPlugin::status(OdinData::IpcMessage& status)
   {
@@ -198,19 +199,15 @@ namespace FrameProcessor
         static_cast<const char*>(frame->get_data()) + sizeof(Hexitec::FrameHeader)
     );
 
-    // Set pointer to the input image data
+    // Define pointer to the input image data
     void* input_ptr = static_cast<void *>(
         static_cast<char *>(const_cast<void *>(data_ptr)));
 
-//    // Pointer to reordered image buffer - will be allocated on demand
-//    void* reordered_image = NULL;
-
-    // Pointer to raw image buffer (of data type float)
+    // Pointer to raw image buffer
     void* raw_image = NULL;
 
     try
     {
-
       // Check that the pixels are contained within the dimensions of the
       // specified output image, otherwise throw an error
       if (FEM_TOTAL_PIXELS > image_pixels_)
@@ -295,7 +292,7 @@ namespace FrameProcessor
   }
 
   /**
-   * Determine the size of a reordered image size.
+   * Determine the size of a reordered image.
    *
    * \return size of the reordered image in bytes
    */
@@ -309,10 +306,10 @@ namespace FrameProcessor
    * Reorder an image's pixels into geographical order.
    *
    * \param[in] in - Pointer to the incoming image data.
-   * \param[out] out - Pointer to the allocated memory where the reordered image is written.
+   * \param[in] out - Pointer to the allocated memory where the reordered image is written.
    *
    */
-  void HexitecReorderPlugin::reorder_pixels(unsigned short* in, float* out)
+  void HexitecReorderPlugin::reorder_pixels(unsigned short *in, float *out)
   {
     int index = 0;
 
@@ -328,10 +325,10 @@ namespace FrameProcessor
    * Convert an image's pixels from unsigned short to float data type, and reorder.
    *
    * \param[in] in - Pointer to the incoming image data.
-   * \param[out] out - Pointer to the allocated memory where the converted image is written.
+   * \param[in] out - Pointer to the allocated memory where the converted image is written.
    *
    */
-  void HexitecReorderPlugin::convert_pixels_without_reordering(unsigned short* in, float* out)
+  void HexitecReorderPlugin::convert_pixels_without_reordering(unsigned short *in, float *out)
   {
     int index = 0;
 

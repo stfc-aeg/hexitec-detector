@@ -33,14 +33,14 @@ namespace FrameProcessor
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecThresholdPlugin");
     logger_->setLevel(Level::getAll());
-    LOG4CXX_TRACE(logger_, "HexitecThresholdPlugin constructor.");
+    LOG4CXX_TRACE(logger_, "HexitecThresholdPlugin version " <<
+    												this->get_version_long() << " loaded.");
 
-    thresholdsStatus = true;
-    thresholdValue = 3;
-    thresholdPerPixel = (uint16_t *) malloc(FEM_TOTAL_PIXELS * sizeof(uint16_t));
-    memset(thresholdPerPixel, 0, FEM_TOTAL_PIXELS * sizeof(uint16_t));
+    thresholds_status_		= false;
+    threshold_value_ 			= 0;
+    threshold_per_pixel_	= (uint16_t *) calloc(FEM_TOTAL_PIXELS, sizeof(uint16_t));
     /// Set threshold mode to none (initially; 0=none, 1=value ,2=file)
-    thresholdMode = (ThresholdMode)0;
+    threshold_mode_ = (ThresholdMode)0;
 
   }
 
@@ -51,7 +51,7 @@ namespace FrameProcessor
   {
     LOG4CXX_TRACE(logger_, "HexitecThresholdPlugin destructor.");
 
-    free(thresholdPerPixel);
+    free(threshold_per_pixel_);
   }
 
   int HexitecThresholdPlugin::get_version_major()
@@ -83,10 +83,17 @@ namespace FrameProcessor
    * Configure the Hexitec plugin.  This receives an IpcMessage which should be processed
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
-   * - bitdepth
+   * - image_width_ 						<=> width
+ 	 * - image_height_	 					<=> height
+   * - max_frames_received_			<=> max_frames_received
+   * - threshold_mode_					<=> threshold_mode
+   * - threshold_value_					<=> threshold_value
+   * - threshold_file_					<=> threshold_file
+	 * - fem_pixels_per_columns_	<=> max_cols
+	 * - fem_pixels_per_rows_ 		<=> max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
-   * \param[out] reply - Reference to the reply IpcMessage object.
+   * \param[in] reply - Reference to the reply IpcMessage object.
    */
   void HexitecThresholdPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
@@ -104,25 +111,26 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE))
 		{
-	    std::string threshold_mode = config.get_param<std::string>(HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE);
+	    std::string threshold_mode = config.get_param<std::string>(
+	    		HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE);
 	    /// Which threshold mode selected?
 	    if (threshold_mode.compare(std::string("none")) == 0)
 	    {
-	    	thresholdMode = (ThresholdMode)0;
+	    	threshold_mode_ = (ThresholdMode)0;
 	    	LOG4CXX_TRACE(logger_, "User selected threshold mode: none");
 	    }
 	    else if (threshold_mode.compare(std::string("value")) == 0)
 	    {
-	    	thresholdMode = (ThresholdMode)1;
+	    	threshold_mode_ = (ThresholdMode)1;
 	    	LOG4CXX_TRACE(logger_, "User selected threshold mode: value");
 	    }
 	    else if (threshold_mode.compare(std::string("file")) == 0)
 	    {
-	    	thresholdMode = (ThresholdMode)2;
+	    	threshold_mode_ = (ThresholdMode)2;
 	    	LOG4CXX_TRACE(logger_, "User selected threshold mode: file");
 	    }
 	    /// Setup threshold value(s) accordingly
-	    switch (thresholdMode)
+	    switch (threshold_mode_)
 	    {
 	    	case 0:
 	    	{
@@ -134,8 +142,9 @@ namespace FrameProcessor
 	    		// Setup threshold using provided value
 	        if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE))
 	    		{
-	    	    thresholdValue = config.get_param<int>(HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE);
-	    			LOG4CXX_TRACE(logger_, "Setting threshold value to: " << thresholdValue);
+	    	    threshold_value_ = config.get_param<int>(
+	    	    		HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE);
+	    			LOG4CXX_TRACE(logger_, "Setting threshold value to: " << threshold_value_);
 	    		}
 	    		break;
 	    	}
@@ -144,10 +153,11 @@ namespace FrameProcessor
 	    		// Setup thresholds from file provided
 	        if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE))
 	    		{
-	    	    std::string threshold_file = config.get_param<std::string>(HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE);
+	    	    std::string threshold_file = config.get_param<std::string>(
+	    	    		HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE);
 
 						LOG4CXX_TRACE(logger_, "Setting thresholds from file: " << threshold_file);
-						if (setThresholdPerPixel(threshold_file.c_str()))
+						if (set_threshold_per_pixel(threshold_file.c_str()))
 						{
 							LOG4CXX_TRACE(logger_, "Read thresholds from file successfully");
 						}
@@ -179,7 +189,7 @@ namespace FrameProcessor
   /**
    * Collate status information for the plugin.  The status is added to the status IpcMessage object.
    *
-   * \param[out] status - Reference to an IpcMessage value to store the status.
+   * \param[in] status - Reference to an IpcMessage value to store the status.
    */
   void HexitecThresholdPlugin::status(OdinData::IpcMessage& status)
   {
@@ -188,8 +198,7 @@ namespace FrameProcessor
   }
 
   /**
-   * Perform processing on the frame.  Depending on the selected bit depth
-   * the corresponding pixel re-ordering algorithm is executed.
+   * Perform processing on the frame.  Apply selected threshold mode.
    *
    * \param[in] frame - Pointer to a Frame object.
    */
@@ -219,7 +228,6 @@ namespace FrameProcessor
 
 			try
 			{
-
 				// Check that the pixels are contained within the dimensions of the
 				// specified output image, otherwise throw an error
 				if (FEM_TOTAL_PIXELS > image_pixels_)
@@ -238,12 +246,12 @@ namespace FrameProcessor
 					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
 				}
 
-				// Set pointer to the input image data
+				// Define pointer to the input image data
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
 				// Execute selected method of applying threshold(s) (none, value, or file)
-				switch (thresholdMode)
+				switch (threshold_mode_)
 				{
 					case 0:
 					{
@@ -256,13 +264,13 @@ namespace FrameProcessor
 					}
 					case 1:
 					{
-						processThresholdValue(static_cast<float *>(input_ptr),
+						process_threshold_value(static_cast<float *>(input_ptr),
 																	static_cast<float *>(thresholded_image));
 						break;
 					}
 					case 2:
 					{
-						processThresholdFile(static_cast<float *>(input_ptr),
+						process_threshold_file(static_cast<float *>(input_ptr),
 													 	 	 	 static_cast<float *>(thresholded_image));
 						break;
 					}
@@ -311,7 +319,6 @@ namespace FrameProcessor
 					free(thresholded_image);
 					thresholded_image = NULL;
 				}
-
 			}
 			catch (const std::exception& e)
 			{
@@ -327,7 +334,7 @@ namespace FrameProcessor
   }
 
   /**
-   * Determine the size of a reordered image size based on the counter depth.
+   * Determine the size of a processed image.
    *
    * \return size of the reordered image in bytes
    */
@@ -338,44 +345,18 @@ namespace FrameProcessor
   }
 
   /**
-   * Zero all pixels below thresholdValue's value
+   * Zero all pixels below threshold_value_.
    *
    * \param[in] in - Pointer to the incoming image data.
-   * \param[out] out - Pointer to memory where the thresholded image is written
+   * \param[in] out - Pointer to memory where the thresholded image is written
    *
    */
-  void HexitecThresholdPlugin::processThresholdValue(float* in, float* out)
+  void HexitecThresholdPlugin::process_threshold_value(float *in, float *out)
   {
     for (int i=0; i < FEM_TOTAL_PIXELS; i++)
     {
       // Clear pixel if it doesn't meet in the threshold:
-	  if (in[i] < thresholdValue)
-	  {
-	  	out[i] = 0;
-	  }
-	  else
-	  {
-    	out[i] = in[i];
-	  }
-//	  if (i < 15)
-//  	    LOG4CXX_TRACE(logger_, "DEBUG, in[" << i << "] = " << in[i] << " out[" << i << "] = " << out[i]
-//															 << " (thresholdValue = " << thresholdValue << ")");
-    }
-  }
-
-  /**
-   * Zero all pixels below not meeting corresponding pixel threshold
-   *
-   * \param[in] in - Pointer to the incoming image data.
-   * \param[out] out - Pointer to memory where the thresholded image is written
-   *
-   */
-  void HexitecThresholdPlugin::processThresholdFile(float* in, float* out)
-  {
-    for (int i=0; i < FEM_TOTAL_PIXELS; i++)
-    {
-      // Clear pixel if it doesn't meet in the threshold:
-			if (in[i] < thresholdPerPixel[i])
+			if (in[i] < threshold_value_)
 			{
 				out[i] = 0;
 			}
@@ -383,22 +364,56 @@ namespace FrameProcessor
 			{
 				out[i] = in[i];
 			}
-//		  if (i < 15)
-//	  	  LOG4CXX_TRACE(logger_, "DEBUG, in[" << i << "] = " << in[i] << " out[" << i << "] = " << out[i]
-//															 << " (thresholdPerPixel[" << i << "] = " << thresholdPerPixel[i]  << ")");
     }
   }
 
-  // Helper functions:
-  bool HexitecThresholdPlugin::setThresholdPerPixel(const char * thresholdFilename)
+  /**
+   * Zero each pixel not meeting its corresponding pixel threshold.
+   *
+   * \param[in] in - Pointer to the incoming image data.
+   * \param[in] out - Pointer to memory where the thresholded image is written
+   *
+   */
+  void HexitecThresholdPlugin::process_threshold_file(float *in, float *out)
   {
-    uint16_t defaultValue = 0;
-    thresholdsStatus = getData(thresholdFilename, defaultValue);
-
-    return thresholdsStatus;
+    for (int i=0; i < FEM_TOTAL_PIXELS; i++)
+    {
+      // Clear pixel if it doesn't meet in the threshold:
+			if (in[i] < threshold_per_pixel_[i])
+			{
+				out[i] = 0;
+			}
+			else
+			{
+				out[i] = in[i];
+			}
+    }
   }
 
-  bool HexitecThresholdPlugin::getData(const char *filename, uint16_t defaultValue)
+  /**
+   * Set each pixel threshold from the values by the provided file.
+   *
+   * \param[in] threshold_filename - the filename containing threshold values.
+   *
+   * \return bool indicating whether reading file was successful
+   */
+  bool HexitecThresholdPlugin::set_threshold_per_pixel(const char *threshold_filename)
+  {
+    uint16_t defaultValue = 0;
+    thresholds_status_ = get_data(threshold_filename, defaultValue);
+
+    return thresholds_status_;
+  }
+
+  /**
+   * Set each pixel threshold from the values by the provided file.
+   *
+   * \param[in] threshold_filename - the filename containing threshold values.
+   * \param[in] default_value - Default value if there's any issues reading the file
+   *
+   * \return bool indicating whether reading file was successful
+   */
+  bool HexitecThresholdPlugin::get_data(const char *filename, uint16_t default_value)
   {
   	int index = 0, thresholdFromFile = 0;
     bool success = true;
@@ -409,7 +424,7 @@ namespace FrameProcessor
     {
       for (int val = 0; val < FEM_TOTAL_PIXELS; val ++)
       {
-        thresholdPerPixel[val] = defaultValue;
+        threshold_per_pixel_[val] = default_value;
       }
       success = false;
       LOG4CXX_WARN(logger_, "Couldn't access threshold file, using default value");
@@ -423,10 +438,7 @@ namespace FrameProcessor
 
 				while( ss >> thresholdFromFile )
 				{
-					thresholdPerPixel[index] = thresholdFromFile;
-//					if (index < 15)
-//						 LOG4CXX_TRACE(logger_, "thresholdFromFile = " << thresholdFromFile
-//								 << " thresholdPerPixel[" << index << " ] = " << thresholdPerPixel[index]);
+					threshold_per_pixel_[index] = thresholdFromFile;
 					index++;
 				}
 			}
@@ -438,7 +450,7 @@ namespace FrameProcessor
     {
       for (int val = index; val < FEM_TOTAL_PIXELS; val ++)
       {
-				thresholdPerPixel[val] = defaultValue;
+				threshold_per_pixel_[val] = default_value;
       }
     }
 		else

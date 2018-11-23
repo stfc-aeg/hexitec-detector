@@ -30,7 +30,8 @@ namespace FrameProcessor
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecTemplatePlugin");
     logger_->setLevel(Level::getAll());
-    LOG4CXX_TRACE(logger_, "HexitecTemplatePlugin constructor.");
+    LOG4CXX_TRACE(logger_, "HexitecTemplatePlugin version " <<
+    												this->get_version_long() << " loaded.");
 
   }
 
@@ -71,10 +72,13 @@ namespace FrameProcessor
    * Configure the Hexitec plugin.  This receives an IpcMessage which should be processed
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
-   * - bitdepth
+   * - image_width_ 						<=> width
+ 	 * - image_height_	 					<=> height
+	 * - fem_pixels_per_columns_	<=> max_cols
+	 * - fem_pixels_per_rows_ 		<=> max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
-   * \param[out] reply - Reference to the reply IpcMessage object.
+   * \param[in] reply - Reference to the reply IpcMessage object.
    */
   void HexitecTemplatePlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
@@ -106,7 +110,7 @@ namespace FrameProcessor
   /**
    * Collate status information for the plugin.  The status is added to the status IpcMessage object.
    *
-   * \param[out] status - Reference to an IpcMessage value to store the status.
+   * \param[in] status - Reference to an IpcMessage value to store the status.
    */
   void HexitecTemplatePlugin::status(OdinData::IpcMessage& status)
   {
@@ -115,8 +119,8 @@ namespace FrameProcessor
   }
 
   /**
-   * Perform processing on the frame.  Depending on the selected bit depth
-   * the corresponding pixel re-ordering algorithm is executed.
+   * Perform processing on the frame.  For a new plugin, amend this
+   *  function process data as intended.
    *
    * \param[in] frame - Pointer to a Frame object.
    */
@@ -158,19 +162,20 @@ namespace FrameProcessor
 					throw std::runtime_error(msg.str());
 				}
 
-				// Allocate buffer to receive reordered image.
-				reordered_image = (void*)malloc(output_image_size);
+				// Allocate buffer to receive proccessed image
+				reordered_image = (void*)calloc(image_pixels_, sizeof(float));
 				if (reordered_image == NULL)
 				{
 					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
 				}
 
-				// Calculate pointer into the input image data based on loop index
+				// Define pointer to the input image data
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
-	//        reorder_pixels(static_cast<float *>(input_ptr),
-	//                             static_cast<float *>(reordered_image));
+				///TODO: This function do not exist; Design it to match requirements
+//	        reorder_pixels(static_cast<float *>(input_ptr),
+//	                             static_cast<float *>(reordered_image));
 
 
 				// Set the frame image to the reordered image buffer if appropriate
@@ -211,7 +216,7 @@ namespace FrameProcessor
   }
 
   /**
-   * Determine the size of a reordered image size based on the counter depth.
+   * Determine the size of a processed image.
    *
    * \return size of the reordered image in bytes
    */

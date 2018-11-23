@@ -81,16 +81,16 @@ namespace FrameProcessor
     /** Image pixel count **/
     int image_pixels_;
 
-    void processThresholdValue(float* in, float* out);
-    void processThresholdFile(float* in, float* out);
-    bool getData(const char *filename, uint16_t defaultValue);
-    bool setThresholdPerPixel(const char * thresholdFilename);
+    void process_threshold_value(float *in, float *out);
+    void process_threshold_file(float *in, float *out);
+    bool get_data(const char *filename, uint16_t default_value);
+    bool set_threshold_per_pixel(const char *threshold_filename);
 
     // Member variables:
-    unsigned int thresholdValue;
-    uint16_t *thresholdPerPixel;
-    bool thresholdsStatus;
-    ThresholdMode thresholdMode;
+    unsigned int threshold_value_;
+    uint16_t *threshold_per_pixel_;
+    bool thresholds_status_;
+    ThresholdMode threshold_mode_;
 
     int fem_pixels_per_rows_;
     int fem_pixels_per_columns_;

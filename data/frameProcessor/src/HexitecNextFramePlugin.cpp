@@ -31,10 +31,10 @@ namespace FrameProcessor
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecNextFramePlugin");
     logger_->setLevel(Level::getAll());
-    LOG4CXX_TRACE(logger_, "HexitecNextFramePlugin constructor.");
+    LOG4CXX_TRACE(logger_, "HexitecNextFramePlugin version " <<
+    												this->get_version_long() << " loaded.");
 
-    last_frame_ = (float *) malloc(FEM_TOTAL_PIXELS * sizeof(float));
-    memset(last_frame_, 0, FEM_TOTAL_PIXELS * sizeof(float));
+    last_frame_ = (float *) calloc(FEM_TOTAL_PIXELS, sizeof(float));
     ///
     debugFrameCounter = 0;
 
@@ -77,10 +77,13 @@ namespace FrameProcessor
    * Configure the Hexitec plugin.  This receives an IpcMessage which should be processed
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
-   * - bitdepth
+   * - image_width_ 						<=> width
+ 	 * - image_height_	 					<=> height
+	 * - fem_pixels_per_columns_	<=> max_cols
+	 * - fem_pixels_per_rows_ 		<=> max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
-   * \param[out] reply - Reference to the reply IpcMessage object.
+   * \param[in] reply - Reference to the reply IpcMessage object.
    */
   void HexitecNextFramePlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
@@ -112,7 +115,7 @@ namespace FrameProcessor
   /**
    * Collate status information for the plugin.  The status is added to the status IpcMessage object.
    *
-   * \param[out] status - Reference to an IpcMessage value to store the status.
+   * \param[in] status - Reference to an IpcMessage value to store the status.
    */
   void HexitecNextFramePlugin::status(OdinData::IpcMessage& status)
   {
@@ -121,8 +124,8 @@ namespace FrameProcessor
   }
 
   /**
-   * Perform processing on the frame.  Depending on the selected bit depth
-   * the corresponding pixel re-ordering algorithm is executed.
+   * Perform processing on the frame.  If same pixel hit in current frame as in the previous,
+   * 	set pixel in current frame to zero.
    *
    * \param[in] frame - Pointer to a Frame object.
    */
@@ -166,13 +169,14 @@ namespace FrameProcessor
 				}
 
 				// Allocate buffer to receive reordered image.
-				corrected_image = (void *)calloc(image_width_ * image_height_, sizeof(float));
+				// Use calloc as not every pixel may be copied from  input frame to output frame
+				corrected_image = (void *)calloc(image_pixels_, sizeof(float));
 				if (corrected_image == NULL)
 				{
 					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
 				}
 
-				// Pointer to the input image
+				// Define pointer to the input image data
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
@@ -185,7 +189,8 @@ namespace FrameProcessor
 				}
 				else
 				{
-					// Compare current frame versus last frame, if same pixel hit in both then clear both pixels
+					// Compare current frame versus last frame, if same pixel hit in both
+					// 	then clear current pixel
 					apply_algorithm(static_cast<float *>(input_ptr),
 																 static_cast<float *>(corrected_image));
 				}
@@ -236,7 +241,7 @@ namespace FrameProcessor
   }
 
   /**
-   * Determine the size of a reordered image size based on the counter depth.
+   * Determine the size of a processed image.
    *
    * \return size of the reordered image in bytes
    */
@@ -250,12 +255,11 @@ namespace FrameProcessor
    * 		in the last frame.
    *
    * \param[in] in - Pointer to the incoming image data.
-   * \param[out] out - Pointer to the allocated memory for the corrected image.
+   * \param[in] out - Pointer to the allocated memory for the corrected image.
    *
    */
-  void HexitecNextFramePlugin::apply_algorithm(float* in, float* out)
+  void HexitecNextFramePlugin::apply_algorithm(float *in, float *out)
   {
-//  	LOG4CXX_TRACE(logger_, " -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
     for (int i=0; i<FEM_TOTAL_PIXELS; i++)
     {
     	// If pixel in last frame is nonzero, clear it from current frame
@@ -273,7 +277,7 @@ namespace FrameProcessor
     memcpy(last_frame_, in, FEM_TOTAL_PIXELS * sizeof(float));
   }
 
-  //// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
+  //// Debug function: Takes a file prefix and frame, and writes all nonzero pixels to a file
 	void HexitecNextFramePlugin::writeFile(std::string filePrefix, float *frame)
 	{
     std::ostringstream hitPixelsStream;

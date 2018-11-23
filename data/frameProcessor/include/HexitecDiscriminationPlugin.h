@@ -65,9 +65,9 @@ namespace FrameProcessor
     void processDiscrimination(float *extendedFrame, int extendedFrameRows,
                                int startPosn, int endPosn);
 
-    int directionalDistance;
-    int nRows;
-    int nCols;
+    int directional_distance_;
+    int number_rows_;
+    int number_columns_;
 
     /** Pointer to logger **/
     LoggerPtr logger_;
@@ -78,7 +78,7 @@ namespace FrameProcessor
     /** Image pixel count **/
     int image_pixels_;
 
-    int pixelGridSize;
+    int pixel_grid_size_;
     int fem_pixels_per_rows_;
     int fem_pixels_per_columns_;
     int fem_total_pixels_;

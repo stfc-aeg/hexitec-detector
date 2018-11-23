@@ -66,8 +66,9 @@ namespace FrameProcessor
 
     void process_frame(boost::shared_ptr<Frame> frame);
 
+    void add_frame_data_to_histogram_with_sum(float *frame);
+    // function copied from HexitecGigE, but not currently in use:
     void addFrameDataToHistogram(float *frame);
-    void addFrameDataToHistogramWithSum(float *frame);
 
     /** Pointer to logger **/
     LoggerPtr logger_;
@@ -82,14 +83,13 @@ namespace FrameProcessor
     /** Count number of frames **/
     int frames_counter_;
 
-    int frameSize;
-    long long binStart;
-    long long binEnd;
-    float binWidth;
-    long long nBins;
-    float *hxtBin;
-    float *histogramPerPixel;
-    long long *summedHistogram;
+    long long bin_start_;
+    long long bin_end_;
+    float bin_width_;
+    long long number_bins_;
+    float *hexitec_bin_;
+    float *histogram_per_pixel_;
+    long long *summed_histogram_;
     void initialiseHistograms();
 
     int fem_pixels_per_rows_;

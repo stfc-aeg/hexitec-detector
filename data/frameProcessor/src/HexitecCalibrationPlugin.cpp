@@ -25,11 +25,10 @@ namespace FrameProcessor
       image_width_(80),
       image_height_(80),
       image_pixels_(image_width_ * image_height_),
-			gradientsStatus(false),
-			interceptsStatus(false),
-			gradientValue(NULL),
-			interceptValue(NULL),
-			frameSize(6400),	// Redundant, Replace all cases of frameSize with image_pixels_
+			gradients_status_(false),
+			intercepts_status_(false),
+			gradient_values_(NULL),
+			intercept_values_(NULL),
 			fem_pixels_per_rows_(80),
 			fem_pixels_per_columns_(80),
 			fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
@@ -37,15 +36,14 @@ namespace FrameProcessor
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecCalibrationPlugin");
     logger_->setLevel(Level::getAll());
-    LOG4CXX_TRACE(logger_, "HexitecCalibrationPlugin constructor.");
+    LOG4CXX_TRACE(logger_, "HexitecCalibrationPlugin version " <<
+    												this->get_version_long() << " loaded.");
 
-		gradientValue = (float *) malloc(frameSize * sizeof(float));
-		memset(gradientValue, 0, frameSize * sizeof(float));
-		interceptValue = (float *) malloc(frameSize * sizeof(float));
-		memset(interceptValue, 0, frameSize * sizeof(float));
+		gradient_values_ = (float *) calloc(image_pixels_, sizeof(float));
+		intercept_values_ = (float *) calloc(image_pixels_, sizeof(float));
 
-		*gradientValue = 1;
-		*interceptValue = 0;
+		*gradient_values_ = 1;
+		*intercept_values_ = 0;
     ///
     debugFrameCounter = 0;
 
@@ -58,8 +56,8 @@ namespace FrameProcessor
   {
     LOG4CXX_TRACE(logger_, "HexitecCalibrationPlugin destructor.");
 
-	 free(gradientValue);
-	 free(interceptValue);
+	 free(gradient_values_);
+	 free(intercept_values_);
   }
 
   int HexitecCalibrationPlugin::get_version_major()
@@ -91,10 +89,15 @@ namespace FrameProcessor
    * Configure the Hexitec plugin.  This receives an IpcMessage which should be processed
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
-   * - bitdepth
+   * - image_width_ 						<=> width
+ 	 * - image_height_	 					<=> height
+ 	 * - gradients_filename 			<=> gradients_file
+ 	 * - intercepts_filename 			<=> intercepts_file
+	 * - fem_pixels_per_columns_	<=> max_cols
+	 * - fem_pixels_per_rows_ 		<=> max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
-   * \param[out] reply - Reference to the reply IpcMessage object.
+   * \param[in] reply - Reference to the reply IpcMessage object.
    */
   void HexitecCalibrationPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
@@ -119,9 +122,9 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE))
 		{
-	    std::string intercept_file = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE);
-			LOG4CXX_TRACE(logger_, "Setting intercepts from file: " << intercept_file);
-			setIntercepts(intercept_file.c_str());
+	    std::string intercepts_file = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE);
+			LOG4CXX_TRACE(logger_, "Setting intercepts from file: " << intercepts_file);
+			setIntercepts(intercepts_file.c_str());
 		}
 
     if (config.has_param(HexitecCalibrationPlugin::CONFIG_MAX_COLS))
@@ -140,7 +143,7 @@ namespace FrameProcessor
   /**
    * Collate status information for the plugin.  The status is added to the status IpcMessage object.
    *
-   * \param[out] status - Reference to an IpcMessage value to store the status.
+   * \param[in] status - Reference to an IpcMessage value to store the status.
    */
   void HexitecCalibrationPlugin::status(OdinData::IpcMessage& status)
   {
@@ -149,8 +152,8 @@ namespace FrameProcessor
   }
 
   /**
-   * Perform processing on the frame.  Depending on the selected bit depth
-   * the corresponding pixel re-ordering algorithm is executed.
+   * Perform processing on the frame.  Each pixel is calibrated with the gradient and intercept values
+   *  provided by the two corresponding files.
    *
    * \param[in] frame - Pointer to a Frame object.
    */
@@ -180,7 +183,6 @@ namespace FrameProcessor
 
 			try
 			{
-
 				// Check that the pixels are contained within the dimensions of the
 				// specified output image, otherwise throw an error
 				if (FEM_TOTAL_PIXELS > image_pixels_)
@@ -199,7 +201,7 @@ namespace FrameProcessor
 					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
 				}
 
-				// Calculate pointer into the input image data based on loop index
+				// Define pointer to the input image data
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
@@ -247,7 +249,7 @@ namespace FrameProcessor
   }
 
   /**
-   * Determine the size of a reordered image size based on the counter depth.
+   * Determine the size of a processed image.
    *
    * \return size of the reordered image in bytes
    */
@@ -260,25 +262,30 @@ namespace FrameProcessor
    * Calibrate an image's pixels.
    *
    * \param[in] in 	 - Pointer to the incoming image data.
-   * \param[out] out - Pointer to the allocated memory where
+   * \param[in] out - Pointer to the allocated memory where
    * 										the calibrated pixels will be stored.
    */
-  void HexitecCalibrationPlugin::calibrate_pixels(float* in, float* out)
+  void HexitecCalibrationPlugin::calibrate_pixels(float *in, float *out)
   {
     for (int i=0; i<FEM_TOTAL_PIXELS; i++)
     {
      	if (in[i] > 0)
      	{
-     		out[i] = (in[i] * gradientValue[i])  + interceptValue[i];
+     		out[i] = (in[i] * gradient_values_[i])  + intercept_values_[i];
      	}
     }
   }
 
+  /**
+   * Set the filename containing the gradient values.
+   *
+   * \param[in] gradientFilename - The name of the gradient file.
+   */
   void HexitecCalibrationPlugin::setGradients(const char *gradientFilename)
   {
     float defaultValue = 1;
-    gradientsStatus = getData(gradientFilename, gradientValue, defaultValue);
-    if (gradientsStatus)
+    gradients_status_ = getData(gradientFilename, gradient_values_, defaultValue);
+    if (gradients_status_)
     {
     	LOG4CXX_TRACE(logger_, "Setting Gradients Successful, used file: " << gradientFilename);
     }
@@ -288,11 +295,16 @@ namespace FrameProcessor
     }
   }
 
+  /**
+   * Set the filename containing the intercept values.
+   *
+   * \param[in] interceptFilename - The name of the intercept file.
+   */
   void HexitecCalibrationPlugin::setIntercepts(const char *interceptFilename)
   {
     float defaultValue = 0;
-    interceptsStatus = getData(interceptFilename, interceptValue, defaultValue);
-    if (interceptsStatus)
+    intercepts_status_ = getData(interceptFilename, intercept_values_, defaultValue);
+    if (intercepts_status_)
     {
     	LOG4CXX_TRACE(logger_, "Setting Intercepts Successful, used file: " << interceptFilename);
     }
@@ -302,6 +314,17 @@ namespace FrameProcessor
     }
   }
 
+  /**
+   * Read all the values from the provided file.  If the file is too short, pad missing
+   * 	values using the provided default value.
+   *
+   * \param[in] filename - The name of the file to be read.
+   * \param[in] dataValue - Array that will receive values read from file.
+   * \param[in] defaultValue - The default value used if filename is too short to
+   * 	(provide image_pixels_ number of values).
+   *
+   * \return bool indicating success of reading file
+   */
   bool HexitecCalibrationPlugin::getData(const char *filename, float *dataValue, float defaultValue)
   {
   	int i = 0;
@@ -314,7 +337,7 @@ namespace FrameProcessor
 		{
 			LOG4CXX_TRACE(logger_, "Couldn't open file, using default values");
 
-			for (int val = 0; val < frameSize; val ++)
+			for (int val = 0; val < image_pixels_; val ++)
 			{
 				dataValue[val] = defaultValue;
 			}
@@ -325,9 +348,9 @@ namespace FrameProcessor
 			i++;
 		}
 
-		if (i < frameSize)
+		if (i < image_pixels_)
 		{
-			for (int val = i; val < frameSize; val ++)
+			for (int val = i; val < image_pixels_; val ++)
 			{
 				dataValue[val] = defaultValue;
 				if (i == val)

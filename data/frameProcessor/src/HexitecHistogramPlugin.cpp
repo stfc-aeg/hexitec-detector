@@ -36,13 +36,13 @@ namespace FrameProcessor
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecHistogramPlugin");
     logger_->setLevel(Level::getAll());
-    LOG4CXX_TRACE(logger_, "HexitecHistogramPlugin constructor.");
+    LOG4CXX_TRACE(logger_, "HexitecHistogramPlugin version " <<
+    												this->get_version_long() << " loaded.");
 
-    frameSize = image_width_ * image_height_;
-    binStart   = 0;
-    binEnd     = 8000;
-    binWidth   = 10;
-    nBins      = (int)(((binEnd - binStart) / binWidth) + 0.5);
+    bin_start_   = 0;
+    bin_end_     = 8000;
+    bin_width_   = 10;
+    number_bins_ = (int)(((bin_end_ - bin_start_) / bin_width_) + 0.5);
 
     initialiseHistograms();
   }
@@ -54,12 +54,12 @@ namespace FrameProcessor
   {
     LOG4CXX_TRACE(logger_, "HexitecHistogramPlugin destructor.");
 
-    free(summedHistogram);
-    summedHistogram = NULL;
-    free(hxtBin);
-    hxtBin = NULL;
-    // histogramPerPixel points at memory within hxtBin
-    histogramPerPixel = NULL;
+    free(summed_histogram_);
+    summed_histogram_ = NULL;
+    free(hexitec_bin_);
+    hexitec_bin_ = NULL;
+    // histogram_per_pixel_ points at memory within hexitec_bin_
+    histogram_per_pixel_ = NULL;
   }
 
   int HexitecHistogramPlugin::get_version_major()
@@ -93,17 +93,16 @@ namespace FrameProcessor
    */
   void HexitecHistogramPlugin::initialiseHistograms()
   {
-    hxtBin = (float *) malloc(((nBins * frameSize) + nBins) * sizeof(float));
-    memset(hxtBin, 0, ((nBins * frameSize) + nBins) * sizeof(float) );
-    histogramPerPixel = hxtBin + nBins;
+		hexitec_bin_ = (float *) calloc((number_bins_ * image_pixels_) + number_bins_, sizeof(float));
 
-    summedHistogram = (long long *) malloc(nBins * sizeof(long long));
-    memset(summedHistogram, 0, nBins * sizeof(long long));
+    histogram_per_pixel_ = hexitec_bin_ + number_bins_;
+
+    summed_histogram_ = (long long *) calloc(number_bins_, sizeof(long long));
 
     // Initialise bins
-    float currentBin = binStart;
-    float *pHxtBin = hxtBin;
-    for (long long i = binStart; i < nBins; i++, currentBin += binWidth)
+    float currentBin = bin_start_;
+    float *pHxtBin = hexitec_bin_;
+    for (long long i = bin_start_; i < number_bins_; i++, currentBin += bin_width_)
     {
        *pHxtBin = currentBin;
        pHxtBin++;
@@ -114,13 +113,17 @@ namespace FrameProcessor
    * Configure the Hexitec plugin.  This receives an IpcMessage which should be processed
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
-   * - max_frames_received
-   * - binStart
-   * - binEnd
-   * - binWidth
+   * - image_width_ 						<=> width
+ 	 * - image_height_	 					<=> height
+   * - max_frames_received_			<=> max_frames_received
+   * - bin_start_								<=> bin_start_
+   * - bin_end_									<=> bin_end_
+   * - bin_width_								<=> bin_width_
+	 * - fem_pixels_per_columns_	<=> max_cols
+	 * - fem_pixels_per_rows_ 		<=> max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
-   * \param[out] reply - Reference to the reply IpcMessage object.
+   * \param[in] reply - Reference to the reply IpcMessage object.
    */
   void HexitecHistogramPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
@@ -143,20 +146,20 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_START))
     {
-    	binStart = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_START);
+    	bin_start_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_START);
 		}
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_END))
     {
-    	binEnd = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_END);
+    	bin_end_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_END);
     }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_WIDTH))
 		{
-    	binWidth = config.get_param<double>(HexitecHistogramPlugin::CONFIG_BIN_WIDTH);
+    	bin_width_ = config.get_param<double>(HexitecHistogramPlugin::CONFIG_BIN_WIDTH);
 		}
 
-    nBins      = (int)(((binEnd - binStart) / binWidth) + 0.5);
+    number_bins_      = (int)(((bin_end_ - bin_start_) / bin_width_) + 0.5);
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_MAX_COLS))
     {
@@ -170,13 +173,13 @@ namespace FrameProcessor
 
     fem_total_pixels_ = fem_pixels_per_columns_ * fem_pixels_per_rows_;
 
-    //    histogramPerPixel = hxtBin + nBins;
+    //    histogram_per_pixel_ = hexitec_bin_ + number_bins_;
 
     // Free the existing allocated histogram memory
-    free(summedHistogram);
-    summedHistogram = NULL;
-    free(hxtBin);
-    hxtBin = NULL;
+    free(summed_histogram_);
+    summed_histogram_ = NULL;
+    free(hexitec_bin_);
+    hexitec_bin_ = NULL;
     // (Re-)Initialise memory
     initialiseHistograms();
   }
@@ -184,7 +187,7 @@ namespace FrameProcessor
   /**
    * Collate status information for the plugin.  The status is added to the status IpcMessage object.
    *
-   * \param[out] status - Reference to an IpcMessage value to store the status.
+   * \param[in] status - Reference to an IpcMessage value to store the status.
    */
   void HexitecHistogramPlugin::status(OdinData::IpcMessage& status)
   {
@@ -219,12 +222,12 @@ namespace FrameProcessor
 			{
 				frames_counter_++;
 
-				// Pointer to the input image data
+				// Define pointer to the input image data
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
 				// Add this frame's contribution onto histograms
-				addFrameDataToHistogramWithSum(static_cast<float *>(input_ptr));
+				add_frame_data_to_histogram_with_sum(static_cast<float *>(input_ptr));
 
 				// Write histograms to disc when the maximum number of frames received
 				if (frames_counter_ == max_frames_received_)
@@ -232,14 +235,14 @@ namespace FrameProcessor
 					/// Time to push current histogram data
 
 					// Determine the size of the histograms
-					const std::size_t float_size = nBins * sizeof(float);
-					const std::size_t long_long_size = nBins * sizeof(long long);
+					const std::size_t float_size = number_bins_ * sizeof(float);
+					const std::size_t long_long_size = number_bins_ * sizeof(long long);
 		      /// Total amount of memory covered by the pixel histograms
-		      const std::size_t pixel_histograms_size = frameSize * nBins * sizeof(float);
+		      const std::size_t pixel_histograms_size = image_pixels_ * number_bins_ * sizeof(float);
 
 					// Setup the dimension(s) for energy_bins, summed_histograms
 					dimensions_t dims(1);
-					dims[0] = nBins;
+					dims[0] = number_bins_;
 
 					// Setup the energy bins
 
@@ -250,7 +253,7 @@ namespace FrameProcessor
 					energy_bins->set_frame_number(0);
 
 					energy_bins->set_dimensions(dims);
-					energy_bins->copy_data(hxtBin, float_size);
+					energy_bins->copy_data(hexitec_bin_, float_size);
 
 					LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
 																 " dataset, frame number: " << 0);
@@ -265,7 +268,7 @@ namespace FrameProcessor
 					summed_histograms->set_frame_number(0);
 
 					summed_histograms->set_dimensions(dims);
-					summed_histograms->copy_data(summedHistogram, long_long_size);
+					summed_histograms->copy_data(summed_histogram_, long_long_size);
 
 					LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
 																 " dataset, frame number: " << 0);
@@ -275,8 +278,8 @@ namespace FrameProcessor
 
 					// Setup the dimensions pixel_histograms
 					dimensions_t pxls_dims(2);
-					pxls_dims[0] = frameSize;
-					pxls_dims[1] = nBins;
+					pxls_dims[0] = image_pixels_;
+					pxls_dims[1] = number_bins_;
 
 					dataset_name = "pixel_histograms";
 
@@ -286,21 +289,21 @@ namespace FrameProcessor
 					pixel_histograms->set_frame_number(0);
 
 					pixel_histograms->set_dimensions(pxls_dims);
-					pixel_histograms->copy_data(histogramPerPixel, pixel_histograms_size);
+					pixel_histograms->copy_data(histogram_per_pixel_, pixel_histograms_size);
 
 					LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
 																 " dataset, frame number: " << 0);
 					this->push(pixel_histograms);
 
 					// Clear histogram values
-			    memset(histogramPerPixel, 0, (nBins * frameSize) * sizeof(float));
-			    memset(summedHistogram, 0, nBins * sizeof(long long));
+			    memset(histogram_per_pixel_, 0, (number_bins_ * image_pixels_) * sizeof(float));
+			    memset(summed_histogram_, 0, number_bins_ * sizeof(long long));
 
 					frames_counter_ = 0;
 				}
 
 				/// Histogram will access data dataset but not change it in any way
-				/// 	Therefore do not need to check frame dimensions, malloc memory,
+				/// 	Therefore do not need to check frame dimensions, allocated memory,
 				/// 	etc
 
 				// Pass on data dataset unmodified:
@@ -323,52 +326,31 @@ namespace FrameProcessor
     }
 	}
 
-  // Called when the user NOT selected spectrum option
-  void HexitecHistogramPlugin::addFrameDataToHistogram(float *frame)
+  /**
+   * Perform processing on the frame.  Calculate histograms based upon
+   * each frame, writing resulting datasets to file when configured
+	 * maximum number of frames received.
+   *
+   * \param[frame] frame - Pointer to a Frame object.
+   */
+  void HexitecHistogramPlugin::add_frame_data_to_histogram_with_sum(float *frame)
   {
-      float *currentHistogram = &histogramPerPixel[0];
-      float thisEnergy;
-      int bin;
-      int pixel;
-
-      for (int i = 0; i < frameSize; i++)
-      {
-         pixel = i;
-         thisEnergy = frame[i];
-         if (thisEnergy == 0)
-             continue;
-         bin = (int)((thisEnergy / binWidth));
-         if (bin <= nBins)
-         {
-            (*(currentHistogram + (pixel * nBins) + bin))++;
-         }
-         else
-         {
-   /*         qDebug() << "BAD BIN = " << bin << " in pixel " << pixel << " ("
-                     << (int)(pixel/80) << "," << (pixel % 80) <<")"*/;
-         }
-      }
-  }
-
-  // Called when the user HAS selected spectrum option
-  void HexitecHistogramPlugin::addFrameDataToHistogramWithSum(float *frame)
-  {
-		float *currentHistogram = &histogramPerPixel[0];
-		long long *summed = &summedHistogram[0];
+		float *currentHistogram = &histogram_per_pixel_[0];
+		long long *summed = &summed_histogram_[0];
 		float thisEnergy;
 		int bin;
 		int pixel;
-		for (int i = 0; i < frameSize; i++)
+		for (int i = 0; i < image_pixels_; i++)
 		{
 			pixel = i;
 			thisEnergy = frame[i];
 
 			if (thisEnergy <= 0.0)
 				continue;
-			bin = (int)((thisEnergy / binWidth));
-			if (bin <= nBins)
+			bin = (int)((thisEnergy / bin_width_));
+			if (bin <= number_bins_)
 			{
-				(*(currentHistogram + (pixel * nBins) + bin))++;
+				(*(currentHistogram + (pixel * number_bins_) + bin))++;
 				(*(summed + bin)) ++;
 			}
 			else
@@ -377,6 +359,33 @@ namespace FrameProcessor
 									<< (int)(pixel/80) << "," << (pixel % 80) <<")"*/;
 			}
 		}
+  }
+
+  // Called when the user NOT selected spectrum option
+  void HexitecHistogramPlugin::addFrameDataToHistogram(float *frame)
+  {
+      float *currentHistogram = &histogram_per_pixel_[0];
+      float thisEnergy;
+      int bin;
+      int pixel;
+
+      for (int i = 0; i < image_pixels_; i++)
+      {
+         pixel = i;
+         thisEnergy = frame[i];
+         if (thisEnergy == 0)
+             continue;
+         bin = (int)((thisEnergy / bin_width_));
+         if (bin <= number_bins_)
+         {
+            (*(currentHistogram + (pixel * number_bins_) + bin))++;
+         }
+         else
+         {
+   /*         qDebug() << "BAD BIN = " << bin << " in pixel " << pixel << " ("
+                     << (int)(pixel/80) << "," << (pixel % 80) <<")"*/;
+         }
+      }
   }
 
 } /* namespace FrameProcessor */
