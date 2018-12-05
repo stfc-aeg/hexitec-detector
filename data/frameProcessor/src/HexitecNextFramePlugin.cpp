@@ -210,6 +210,7 @@ namespace FrameProcessor
 					boost::shared_ptr<Frame> data_frame;
 					data_frame = boost::shared_ptr<Frame>(new Frame(dataset));
 
+					data_frame->set_data_type(raw_float);
 					data_frame->set_frame_number(current_frame_number);
 
 					data_frame->set_dimensions(dims);

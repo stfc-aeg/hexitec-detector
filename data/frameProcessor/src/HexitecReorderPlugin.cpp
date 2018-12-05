@@ -255,6 +255,7 @@ namespace FrameProcessor
 					boost::shared_ptr<Frame> raw_frame;
 					raw_frame = boost::shared_ptr<Frame>(new Frame("raw_frames"));
 
+					raw_frame->set_data_type(raw_float);
 					raw_frame->set_frame_number(hdr_ptr->frame_number);
 
 					raw_frame->set_dimensions(dims);
@@ -269,6 +270,7 @@ namespace FrameProcessor
 				boost::shared_ptr<Frame> data_frame;
 				data_frame = boost::shared_ptr<Frame>(new Frame("data"));
 
+				data_frame->set_data_type(raw_float);
 				data_frame->set_frame_number(hdr_ptr->frame_number);
 
 				data_frame->set_dimensions(dims);

@@ -231,6 +231,7 @@ namespace FrameProcessor
 
 				// Write histograms to disc when the maximum number of frames received
 				if (frames_counter_ == max_frames_received_)
+//				if ((frames_counter_ % max_frames_received_) == 0)	// Test pixel_histograms.
 				{
 					/// Time to push current histogram data
 
@@ -251,6 +252,7 @@ namespace FrameProcessor
 					energy_bins = boost::shared_ptr<Frame>(new Frame(dataset_name));
 
 					energy_bins->set_frame_number(0);
+					energy_bins->set_data_type(raw_float);
 
 					energy_bins->set_dimensions(dims);
 					energy_bins->copy_data(hexitec_bin_, float_size);
@@ -266,6 +268,7 @@ namespace FrameProcessor
 					summed_histograms = boost::shared_ptr<Frame>(new Frame(dataset_name));
 
 					summed_histograms->set_frame_number(0);
+					summed_histograms->set_data_type(raw_64bit);
 
 					summed_histograms->set_dimensions(dims);
 					summed_histograms->copy_data(summed_histogram_, long_long_size);
@@ -287,6 +290,7 @@ namespace FrameProcessor
 					pixel_histograms = boost::shared_ptr<Frame>(new Frame(dataset_name));
 
 					pixel_histograms->set_frame_number(0);
+					pixel_histograms->set_data_type(raw_float);
 
 					pixel_histograms->set_dimensions(pxls_dims);
 					pixel_histograms->copy_data(histogram_per_pixel_, pixel_histograms_size);

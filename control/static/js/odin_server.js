@@ -8,7 +8,7 @@ $( document ).ready(function() {
 });
 
 function poll_update() {
-    update_background_task();
+/*    update_background_task(); */
     setTimeout(poll_update, 500);   
 }
 
@@ -47,4 +47,30 @@ function change_enable() {
         contentType: "application/json",
         data: JSON.stringify({'enable': enabled})
     });
+}
+
+function test_button() {
+    var enabled = $('#task-enable').prop('checked');
+    console.log("Changing enabled " + (enabled ? "true" : "false") + " to " + !(enabled ? "true" : "false"));
+    $.ajax({
+        type: "PUT",
+        url: '/api/' + api_version + '/hexitec/background_task',
+        contentType: "application/json",
+        data: JSON.stringify({'enable': !enabled})
+    });
+}
+
+function filename_button()
+{
+    var filename = $('#filename-text').prop('value');
+/*    console.log("filename_button(), Sample text contains: " + filename ); */
+
+    $.ajax(`api/` + api_version + `/hexitec/test_area`, {
+        method: "PUT",
+        contentType: "application/json",
+        processData: false,
+        data: JSON.stringify({'target_text': filename })
+    });
+    /* Write filename to target_name's text field */
+    $('#target-name').html(filename);
 }

@@ -1,6 +1,6 @@
-"""Demo adapter for ODIN control hexitec
+"""Adapter for Hexitec ODIN control
 
-This class implements a simple adapter used for demonstration purposes in a
+This class implements an  adapter used for Hexitec
 
 Christian Angelsen, STFC Application Engineering
 """
@@ -37,7 +37,7 @@ class HexitecAdapter(ApiAdapter):
 
         # Parse options
         background_task_enable = bool(self.options.get('background_task_enable', False))
-        background_task_interval = float(self.options.get('background_task_interval', 1.0))
+        background_task_interval = float(self.options.get('background_task_interval', 5.0))
         
         self.hexitec = Hexitec(background_task_enable, background_task_interval)
 
@@ -53,6 +53,7 @@ class HexitecAdapter(ApiAdapter):
         :param request: HTTP request object
         :return: an ApiAdapterResponse object containing the appropriate response
         """
+
         try:
             response = self.hexitec.get(path)
             status_code = 200
@@ -81,6 +82,7 @@ class HexitecAdapter(ApiAdapter):
 
         try:
             data = json_decode(request.body)
+            data = self.convert_to_string(data)
             self.hexitec.set(path, data)
             response = self.hexitec.get(path)
             status_code = 200
@@ -111,7 +113,24 @@ class HexitecAdapter(ApiAdapter):
         logging.debug(response)
 
         return ApiAdapterResponse(response, status_code=status_code)
+    
+    """ ADDED TO PREVENT unicode / string mismatch type error """
+    def convert_to_string(self, obj):
+        """
+        Convert all unicode parts of a dictionary or list to standard strings.
+        This method may not handle special characters well!
+        :param obj: the dictionary, list, or unicode string
+        :return: the same data type as obj, but with unicode strings converted to python strings.
+        """
+        if isinstance(obj, dict):
+            return {self.convert_to_string(key): self.convert_to_string(value)
+                    for key, value in obj.items()}
+        elif isinstance(obj, list):
+            return [self.convert_to_string(element) for element in obj]
+        elif isinstance(obj, unicode):
+            return obj.encode('utf-8')
 
+        return obj
 
 class HexitecError(Exception):
     """Simple exception class for PSCUData to wrap lower-level exceptions."""
@@ -148,12 +167,26 @@ class Hexitec():
             'interval': (lambda: self.background_task_interval, self.set_task_interval),
         })
 
+        # Test area for checking things in the UI
+        test_area = ParameterTree({
+            'target_text': "(blank)"
+        })
+
+        # Build live_view (vars) area here
+        #  - redundant, use live_view adapter instead !
+        live_view = ParameterTree({
+            'image': "blank",
+            'clip_range': [0, 0]
+        })
+
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
             'odin_version': version_info['version'],
             'tornado_version': tornado.version,
             'server_uptime': (self.get_server_uptime, None),
-            'background_task': bg_task 
+            'background_task': bg_task,
+            'test_area': test_area#,
+#            'live_view': live_view
         })
 
         # Set the background task counter to zero
