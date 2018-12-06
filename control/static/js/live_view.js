@@ -7,13 +7,35 @@ var LiveViewApp = (function()
     var autosize_enable = false;
     var clip_slider = null;
     var size_slider = null;
-    var api_url = '/api/0.1/live_view/';
+    var api_url = '/api/0.1/';    //'/api/0.1/live_view/';
+    var live_view_url = api_url + 'live_view/';
+    var odin_data_url = api_url + 'hexitec/odin_data/';
     var img_elem = null;
     var img_scaling = 1.0;
+    // Vars added for Odin-Data
     var reorder_enable = true;
+    var height_rows = 80;
+    var width_columns = 80;
+    var threshold_enable = false;
+    var charged_sharing_enable = false;
+    var addition_enable = false;
+    var discrimination_enable = false;
 
+    
     var init = function() 
     {
+        // $('.radio1').on('switch-change', function () {
+        //     $('.radio1').bootstrapSwitch('toggleRadioState');
+        // });
+        // // or
+        // $('.radio1').on('switch-change', function () {
+        //     $('.radio1').bootstrapSwitch('toggleRadioStateAllowUncheck');
+        // });
+        // // or
+        // $('.radio1').on('switch-change', function () {
+        //     $('.radio1').bootstrapSwitch('toggleRadioStateAllowUncheck', false);
+        // });
+    
 
         // Get reference to image element and attch the resize function to its onLoad event
         img_elem = $('#liveview_image');
@@ -22,13 +44,43 @@ var LiveViewApp = (function()
             resizeImage();
         });
 
-        /// Do I need this to style a checkbox into a ON/OFF slider?
-        // Configure auto-update switch
+        /// Style checkbox(s) into a ON/OFF slider
+
+        // Configure Reorder switch
         $("[name='reorder_enable']").bootstrapSwitch();
         $("[name='reorder_enable']").bootstrapSwitch('state', reorder_enable, true);
         $('input[name="reorder_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
             changeReorderEnable();
         });
+
+        // Configure Threshold switch
+        $("[name='threshold_enable']").bootstrapSwitch();
+        $("[name='threshold_enable']").bootstrapSwitch('state', threshold_enable, true);
+        $('input[name="threshold_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
+            changeThresholdEnable();
+        });
+
+        // Configure Charged Sharing switch
+        $("[name='charged_sharing_enable']").bootstrapSwitch();
+        $("[name='charged_sharing_enable']").bootstrapSwitch('state', charged_sharing_enable, true);
+        $('input[name="charged_sharing_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
+            changeChargedSharingEnable();
+        });
+
+        // Configure Addition switch
+        $("[name='addition_enable']").bootstrapSwitch();
+        $("[name='addition_enable']").bootstrapSwitch('state', addition_enable, true);
+        $('input[name="addition_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
+            changeAdditionEnable();
+        });
+
+        // Configure Charged Sharing switch
+        $("[name='discrimination_enable']").bootstrapSwitch();
+        $("[name='discrimination_enable']").bootstrapSwitch('state', discrimination_enable, true);
+        $('input[name="discrimination_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
+            changeDiscriminationEnable();
+        });
+
         ///
 
         // Configure auto-update switch
@@ -60,7 +112,7 @@ var LiveViewApp = (function()
         size_slider.slider(!autosize_enable ? "enable" : "disable");
 
         // Retrieve API data and populate controls
-        $.getJSON(api_url, function (response)
+        $.getJSON(live_view_url, function (response)
         {
             buildColormapSelect(response.colormap_selected, response.colormap_options);
             updateClipRange(response.data_min_max, true);
@@ -117,10 +169,65 @@ var LiveViewApp = (function()
         liveview_enable = $("[name='liveview_enable']").bootstrapSwitch('state');
     };
 
-    // Skelton definition for now
+    // Needed this in addition to the corresponding definition in init()
+    //  $("[name='htmls_named_func']").bootstrapSwitch();
     var changeReorderEnable = function()
     {
         reorder_enable = $("[name='reorder_enable']").bootstrapSwitch('state');
+        $.ajax({
+            type: "PUT",
+            url: odin_data_url + 'reorder',
+            contentType: "application/json",
+            data: JSON.stringify({"enable": reorder_enable})
+        });
+    };
+
+    var changeThresholdEnable = function()
+    {
+        threshold_enable = $("[name='threshold_enable']").bootstrapSwitch('state');
+        $.ajax({
+            type: "PUT",
+            url: odin_data_url + 'threshold',
+            contentType: "application/json",
+            data: JSON.stringify({"enable": threshold_enable})
+        });
+    };
+
+    var changeChargedSharingEnable = function()
+    {
+        /* Don't need to set anything specifically in the API for this
+            since either one of Addition/Discrimination is true or
+            neither (the former means CS is enabled, latter CS disabled) 
+        */
+        // charged_sharing_enable = $("[name='charged_sharing_enable']").bootstrapSwitch('state');
+        // $.ajax({
+        //     type: "PUT",
+        //     url: odin_data_url + 'charged_sharing',
+        //     contentType: "application/json",
+        //     data: JSON.stringify({"enable": charged_sharing_enable})
+        // });
+    };
+
+    var changeAdditionEnable = function()
+    {
+        addition_enable = $("[name='addition_enable']").bootstrapSwitch('state');
+        $.ajax({
+            type: "PUT",
+            url: odin_data_url + 'charged_sharing',
+            contentType: "application/json",
+            data: JSON.stringify({"addition": addition_enable})
+        });
+    };
+
+    var changeDiscriminationEnable = function()
+    {
+        discrimination_enable = $("[name='discrimination_enable']").bootstrapSwitch('state');
+        $.ajax({
+            type: "PUT",
+            url: odin_data_url + 'charged_sharing',
+            contentType: "application/json",
+            data: JSON.stringify({"discrimination": discrimination_enable})
+        });
     };
 
     var updateClipRange = function(data_min_max, reset_current=false)
@@ -173,7 +280,7 @@ var LiveViewApp = (function()
         console.log('Clip range changed: min=' + clip_range[0] + " max=" + clip_range[1]);
         $.ajax({
             type: "PUT",
-            url: api_url,
+            url: live_view_url,
             contentType: "application/json",
             data: JSON.stringify({"clip_range": clip_range})
         });
@@ -200,7 +307,7 @@ var LiveViewApp = (function()
         console.log("Colormap changed to " + value)
         $.ajax({
             type: "PUT",
-            url: api_url,
+            url: live_view_url,
             contentType: "application/json",
             data: '{"colormap_selected": "' + value +'" }'
         });
@@ -211,7 +318,7 @@ var LiveViewApp = (function()
     {
         img_elem.attr("src", img_elem.attr("data-src") + '?' +  new Date().getTime());
 
-        $.getJSON(api_url + "data_min_max", function(response)
+        $.getJSON(live_view_url + "data_min_max", function(response)
         {
             updateClipRange(response.data_min_max, !clip_enable);
         });

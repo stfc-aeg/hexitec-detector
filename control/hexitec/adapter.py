@@ -172,11 +172,34 @@ class Hexitec():
             'target_text': "(blank)"
         })
 
-        # Build live_view (vars) area here
-        #  - redundant, use live_view adapter instead !
-        live_view = ParameterTree({
-            'image': "blank",
-            'clip_range': [0, 0]
+        # Reorder
+        reorder = ParameterTree({
+            'height': 80,   # UI's rows = .config's height
+            'width': 80,    # columns = width
+            'enable': True
+        })
+
+        # Threshold
+        threshold = ParameterTree({
+            'file': None,
+            'value': 100,
+            'mode': None,
+            'enable': False
+        })
+
+        # Charged Sharing
+        charged_sharing = ParameterTree({
+            # 'enable': False,
+            'addition': False,
+            'discrimination': False,
+            'pixel_grid_size': 3
+        })
+
+        # Build odin_data (vars) area here
+        odin_data = ParameterTree({
+            'reorder': reorder,
+            'threshold': threshold,
+            'charged_sharing': charged_sharing
         })
 
         # Store all information in a parameter tree
@@ -185,8 +208,8 @@ class Hexitec():
             'tornado_version': tornado.version,
             'server_uptime': (self.get_server_uptime, None),
             'background_task': bg_task,
-            'test_area': test_area#,
-#            'live_view': live_view
+            'test_area': test_area,
+            'odin_data': odin_data
         })
 
         # Set the background task counter to zero

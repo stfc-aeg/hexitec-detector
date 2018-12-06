@@ -152,35 +152,109 @@
             </td>
           </tr>
 
-          <tr>  <!-- First row -->
-            <td>  <!-- First row, 1st column -->
+          <tr>  <!-- Row 2 -->
+            <td>  <!-- Column 1 -->
               Rows:&nbsp;
             </td>
-            <td>  <!-- First row, 2nd column -->
+            <td>  <!-- Column 2 -->
               <div class="text-rows">
-                <input type="text" id="rows-text" value="80">
+                <input type="text" id="rows-text" onChange='reorder_rows_changed()' value="80">
               </div>
             </td>
-            <td>  <!-- First row, 3rd column -->
+            <td>  <!-- Column 3 -->
               Columns:&nbsp;
             </td>
-            <td>  <!-- First row, 4th column -->
-              <div class="text-ccolumns">
-                  <input type="text" id="columns-text" value="80">
+            <td>  <!-- Column 4 -->
+              <div class="text-columns">
+                  <input type="text" id="columns-text" onChange='reorder_columns_changed()' value="80">
                 </div>
               </td>
           </tr>
-          <tr>  <!-- Second Row -->
-            <td>
-              Row2, Col1
+          <tr>  <!-- Row 3 -->
+            <td>  <!-- Column 2 -->
+              <th>Threshold&nbsp;</th>
             </td>
-          </tr>
-          <tr>  <!-- First row -->
-            <td>  <!-- First row, 1st column -->
-              <th>Reorder&nbsp;</th>
+            <td>
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
+                  <input type="checkbox" name="threshold_enable" data-size="small">
+                </div>
+              </div>
             </td>
           </tr>
 
+          <tr>  <!-- Row 2 -->
+            <td>  <!-- Column 1 -->
+              Filename:&nbsp;
+            </td>
+            <td>  <!-- Column 2 -->
+              <div class="text-characters">
+                <input type="text" id="treshold-filename" onChange='threshold_filename_changed()' value="/path/to/somewhere.txt">
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>  <!-- Column 3 -->
+              Value:&nbsp;
+            </td>
+            <td>  <!-- Column 4 -->
+              <div class="text-integer">
+                <input type="text" id="threshold-value" onChange='threshold_value_changed()' value="100">
+              </div>
+            </td>
+          </tr>
+          <tr>
+              <td>  <!-- Column 5 -->
+                Mode:&nbsp;
+              </td>
+              <td>  <!-- Column 6 -->
+                <div class="text-characters">
+                  <input type="text" id="threshold-mode" onChange='threshold_mode_changed()' value="None">
+                </div>
+              </td>
+            </tr>
+  
+            <tr>  <!-- Row  -->
+              <td>  <!-- Column 1 -->
+                <th>Charged Sharing&nbsp;</th>
+              </td>
+              <td>  <!-- Column 2 -->
+                <div class="row sidebar-row vertical-align">
+                  <div class="col-xs-7">
+                    <input type="checkbox" name="charged_sharing_enable" data-size="small">
+                  </div>
+                </div>
+              </td>
+            </tr>
+  
+            <tr>  <!-- Row  -->
+              <td>  <!-- Column 1 -->
+                <th>Addition&nbsp;</th>
+              </td>
+              <td>  <!-- Column 2 -->
+                <div class="row sidebar-row vertical-align">
+                  <div class="col-xs-7">
+                    <input type="checkbox" name="addition_enable" data-size="small">
+                  </div>
+                </div>
+              </td>
+            </tr>
+    
+            <tr>  <!-- Row  -->
+              <td>  <!-- Column 1 -->
+                <th>Discrimination&nbsp;</th>
+              </td>
+              <td>  <!-- Column 2 -->
+                <div class="row sidebar-row vertical-align">
+                  <div class="col-xs-7">
+                    <input type="checkbox" name="discrimination_enable" data-size="small">
+                  </div>
+                </div>
+              </td>
+            </tr>
+  
+
+  
         </tbody>
       </table>
     </div> <!-- well sidebar-nav-fixed -->
