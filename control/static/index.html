@@ -16,9 +16,37 @@
     <link href="js/bootstrap-slider-10.2.1/css/bootstrap-slider.css" rel="stylesheet">
     <link href="js/bootstrap-slider-10.2.1/css/bootstrap-slider.min.css" rel="stylesheet">
 
+    <!-- Moved from bottom: -->
+    <script src="js/jquery-2.2.3.min.js"></script>
+
+    <!-- Turn radiobuttons into switches?-->
+    <script src="js/bootstrap-switch/highlight.js"></script>
+    <script src="js/bootstrap-switch/bootstrap-switch.js"></script>
+    <!-- <script src="js/bootstrap-switch/main.js"></script> -->
+
 
   </head>
   <body>
+      <form name="myForm">
+          <input type="radio" name="myRadios"  value="1" />
+          <input type="radio" name="myRadios"  value="2" />
+      </form>
+      Test put: <input type="checkbox" name="test_put" data-size="small">
+      Test get: <input type="checkbox" name="test_get" data-size="small">
+
+      <script>
+          var rad = document.myForm.myRadios;
+          var prev = null;
+          for(var i = 0; i < rad.length; i++) {
+              rad[i].addEventListener('change', function() {
+                  (prev)? console.log(prev.value):null;
+                  if(this !== prev) {
+                      prev = this;
+                  }
+                  console.log(this.value)
+              });
+          }
+      </script>
 
     <div class="container">
 
@@ -57,10 +85,6 @@
     </nav>
     
     <table class="overall-table" align="center">
-      <!-- <thead> - the element is used to identify one/more rows of a table containing labels rather than data.-->
-      <!-- <th> - column header - rather than table data. -->
-      <!-- <tr> - table row - is used to group together <th> or <td> values into single row of table heading or data values. -->
-      <!-- <td> - table data - Create cells within a row -->
       <thead></thead>
       <tbody>
         <td>
@@ -139,8 +163,8 @@
         <thead></thead>
         <tbody>
 
-          <tr>  <!-- Row 1 -->
-            <td>  <!-- Column 1 -->
+          <tr>  
+            <td>  
               <th>Reorder&nbsp;</th>
             </td>
             <td>
@@ -152,26 +176,27 @@
             </td>
           </tr>
 
-          <tr>  <!-- Row 2 -->
-            <td>  <!-- Column 1 -->
+          <tr>  
+            <td>  
               Rows:&nbsp;
             </td>
-            <td>  <!-- Column 2 -->
+            <td>
               <div class="text-rows">
                 <input type="text" id="rows-text" onChange='reorder_rows_changed()' value="80">
               </div>
             </td>
-            <td>  <!-- Column 3 -->
+            <td>
               Columns:&nbsp;
             </td>
-            <td>  <!-- Column 4 -->
+            <td>
               <div class="text-columns">
-                  <input type="text" id="columns-text" onChange='reorder_columns_changed()' value="80">
-                </div>
-              </td>
+                <input type="text" id="columns-text" onChange='reorder_columns_changed()' value="80">
+              </div>
+            </td>
           </tr>
-          <tr>  <!-- Row 3 -->
-            <td>  <!-- Column 2 -->
+
+          <tr>  
+            <td>
               <th>Threshold&nbsp;</th>
             </td>
             <td>
@@ -183,81 +208,202 @@
             </td>
           </tr>
 
-          <tr>  <!-- Row 2 -->
-            <td>  <!-- Column 1 -->
+          <tr>  
+            <td>  
               Filename:&nbsp;
             </td>
-            <td>  <!-- Column 2 -->
+            <td>
               <div class="text-characters">
-                <input type="text" id="treshold-filename" onChange='threshold_filename_changed()' value="/path/to/somewhere.txt">
+                <input type="text" id="threshold-filename" onChange='threshold_filename_changed()' value="/path/to/thresholds.txt">
               </div>
             </td>
           </tr>
           <tr>
-            <td>  <!-- Column 3 -->
+            <td>  
               Value:&nbsp;
             </td>
-            <td>  <!-- Column 4 -->
+            <td>  
               <div class="text-integer">
                 <input type="text" id="threshold-value" onChange='threshold_value_changed()' value="100">
               </div>
             </td>
           </tr>
           <tr>
-              <td>  <!-- Column 5 -->
+              <td>
                 Mode:&nbsp;
               </td>
-              <td>  <!-- Column 6 -->
+              <td>
                 <div class="text-characters">
                   <input type="text" id="threshold-mode" onChange='threshold_mode_changed()' value="None">
                 </div>
               </td>
             </tr>
   
-            <tr>  <!-- Row  -->
-              <td>  <!-- Column 1 -->
-                <th>Charged Sharing&nbsp;</th>
+            <tr>  
+              <td>  
+
               </td>
-              <td>  <!-- Column 2 -->
+              <td> 
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
-                    <input type="checkbox" name="charged_sharing_enable" data-size="small">
+
                   </div>
                 </div>
               </td>
             </tr>
   
-            <tr>  <!-- Row  -->
-              <td>  <!-- Column 1 -->
-                <th>Addition&nbsp;</th>
+            <tr>  
+              <td>
               </td>
-              <td>  <!-- Column 2 -->
+              <td> 
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
-                    <input type="checkbox" name="addition_enable" data-size="small">
+
                   </div>
                 </div>
               </td>
             </tr>
     
-            <tr>  <!-- Row  -->
-              <td>  <!-- Column 1 -->
-                <th>Discrimination&nbsp;</th>
+            <tr>
+              <td>  
+                
               </td>
-              <td>  <!-- Column 2 -->
+              <td> 
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
-                    <input type="checkbox" name="discrimination_enable" data-size="small">
+
                   </div>
                 </div>
               </td>
             </tr>
-  
 
-  
-        </tbody>
-      </table>
-    </div> <!-- well sidebar-nav-fixed -->
+          <tr>  
+            <td>  
+              <th>Next Frame&nbsp;</th>
+            </td>
+            <td>
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
+                  <input type="checkbox" name="next_frame_enable" data-size="small">
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td>  
+              <th>Calibration&nbsp;</th>
+            </td>
+            <td>
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
+                  <input type="checkbox" name="calibration_enable" data-size="small">
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td>  
+              Gradients:&nbsp;
+            </td>
+            <td>
+              <div class="text-characters">
+                <input type="text" id="gradients-filename" onChange='gradients_filename_changed()' value="/path/to/gradients.txt">
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>  
+              Intercepts:&nbsp;
+            </td>
+            <td>
+              <div class="text-characters">
+                <input type="text" id="intercepts-filename" onChange='intercepts_filename_changed()' value="/path/to/intercepts.txt">
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <th>CS: None / Add / Dis:&nbsp;</th>
+            </td>
+            <td>
+              <form id="myForm">
+                <input type="radio" id="noneButton" name="radio1" class="switch-radio1" value="none">
+                <input type="radio" id="addButton" name="radio1" class="switch-radio1" value="add">
+                <input type="radio" id="disButton" name="radio1" class="switch-radio1" value="dis">
+              </form>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              Pixel Grid Size:&nbsp;
+            </td>
+            <td>
+              <div class="text-columns">
+                <input type="text" id="pixel-grid-size-text" onChange='pixel_grid_size_changed()' value="3">
+              </div>
+            </td>
+          </tr>
+
+          <tr>  
+            <td>  
+              <th>Histogram&nbsp;</th>
+            </td>
+            <td>
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
+                  <input type="checkbox" name="histogram_enable" data-size="small">
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>  
+            <td>  
+              Max Frames Received:&nbsp;
+            </td>
+            <td>
+              <div class="text-rows">
+                <input type="text" id="max-frames-received-text" onChange='max_frames_received_changed()' value="540">
+              </div>
+            </td>
+          <tr>
+            <td>
+              Bin Start:&nbsp;
+            </td>
+            <td>
+              <div class="text-columns">
+                <input type="text" id="bin-start-text" onChange='bin_start_changed()' value="0">
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              Bin End:&nbsp;
+            </td>
+            <td>
+              <div class="text-columns">
+                <input type="text" id="bin-end-text" onChange='bin_end_changed()' value="8000">
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td> 
+              Bin Width:&nbsp;
+            </td>
+            <td> 
+              <div class="text-columns">
+                <input type="text" id="bin-width-text" onChange='bin_width_changed()' value="10.0">
+              </div>
+            </td>
+          </tr>
+
+      </tbody>
+    </table>
+
+  </div> <!-- well sidebar-nav-fixed -->
 
 
 <!-- Section nicked from LiveView UI.. -->
@@ -345,7 +491,7 @@
         </div> <!-- container-fluid-->
 
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-    <script src="js/jquery-2.2.3.min.js"></script>
+    <!-- <script src="js/jquery-2.2.3.min.js"></script> -->
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="js/bootstrap-3.3.6-dist/js/bootstrap.min.js"></script>
     <script src="js/odin_server.js"></script>

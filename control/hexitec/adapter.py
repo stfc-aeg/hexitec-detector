@@ -53,7 +53,6 @@ class HexitecAdapter(ApiAdapter):
         :param request: HTTP request object
         :return: an ApiAdapterResponse object containing the appropriate response
         """
-
         try:
             response = self.hexitec.get(path)
             status_code = 200
@@ -77,7 +76,6 @@ class HexitecAdapter(ApiAdapter):
         :param request: HTTP request object
         :return: an ApiAdapterResponse object containing the appropriate response
         """
-
         content_type = 'application/json'
 
         try:
@@ -181,9 +179,16 @@ class Hexitec():
 
         # Threshold
         threshold = ParameterTree({
-            'file': None,
+            'threshold_filename': "",
             'value': 100,
-            'mode': None,
+            'mode': "",
+            'enable': False
+        })
+
+        # Calibration
+        calibration = ParameterTree({
+            'gradients_filename': "",
+            'intercepts_filename': "",
             'enable': False
         })
 
@@ -195,11 +200,23 @@ class Hexitec():
             'pixel_grid_size': 3
         })
 
+        # Histogram
+        histogram = ParameterTree({
+            'enable': False,
+            'max_frames_received': 540,
+            'bin_start': 0,
+            'bin_end': 8000,
+            'bin_width': 10.0
+        })
+
         # Build odin_data (vars) area here
         odin_data = ParameterTree({
             'reorder': reorder,
             'threshold': threshold,
-            'charged_sharing': charged_sharing
+            'next_frame': False,
+            'calibration': calibration,
+            'charged_sharing': charged_sharing,
+            'histogram': histogram
         })
 
         # Store all information in a parameter tree

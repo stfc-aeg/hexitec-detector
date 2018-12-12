@@ -20,7 +20,11 @@ var LiveViewApp = (function()
     var charged_sharing_enable = false;
     var addition_enable = false;
     var discrimination_enable = false;
-
+    var next_frame_enable = false;
+    var calibration_enable = false;
+    var histogram_enable = false;
+    var test_put = false;
+    var test_get = false;
     
     var init = function() 
     {
@@ -79,6 +83,41 @@ var LiveViewApp = (function()
         $("[name='discrimination_enable']").bootstrapSwitch('state', discrimination_enable, true);
         $('input[name="discrimination_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
             changeDiscriminationEnable();
+        });
+
+        // Configure Next Frame switch
+        $("[name='next_frame_enable']").bootstrapSwitch();
+        $("[name='next_frame_enable']").bootstrapSwitch('state', next_frame_enable, true);
+        $('input[name="next_frame_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
+            changeNextFrameEnable();
+        });
+
+        // Configure Calibration switch
+        $("[name='calibration_enable']").bootstrapSwitch();
+        $("[name='calibration_enable']").bootstrapSwitch('state', calibration_enable, true);
+        $('input[name="calibration_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
+            changeCalibrationEnable();
+        });
+
+        // Configure Histogram switch
+        $("[name='histogram_enable']").bootstrapSwitch();
+        $("[name='histogram_enable']").bootstrapSwitch('state', histogram_enable, true);
+        $('input[name="histogram_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
+            changeHistogramEnable();
+        });
+
+        // testPut function..
+        $("[name='test_put']").bootstrapSwitch();
+        $("[name='test_put']").bootstrapSwitch('state', test_put, true);
+        $('input[name="test_put"]').on('switchChange.bootstrapSwitch', function(event,state) {
+            testPut();
+        });
+
+        // testGet function..
+        $("[name='test_get']").bootstrapSwitch();
+        $("[name='test_get']").bootstrapSwitch('state', test_get, true);
+        $('input[name="test_get"]').on('switchChange.bootstrapSwitch', function(event,state) {
+            testGet();
         });
 
         ///
@@ -191,10 +230,66 @@ var LiveViewApp = (function()
             contentType: "application/json",
             data: JSON.stringify({"enable": threshold_enable})
         });
+        console.log("threshold: " + threshold_enable);
+    };
+
+    var changeNextFrameEnable = function()
+    {
+        next_frame_enable = $("[name='next_frame_enable']").bootstrapSwitch('state');
+        console.log("next_frame_enable: " + next_frame_enable);
+        $.ajax({
+            type: "PUT",
+            url: odin_data_url + 'next_frame',
+            contentType: "application/json",
+            data: JSON.stringify(next_frame_enable)
+        });
+        console.log("next frame: " + next_frame_enable);
+    };
+
+    var testPut = function()
+    {
+        console.log("Testing PUT -> config/hdf/file/path = ...");
+        $.ajax({
+            type: "PUT",
+            url: 'config/hdf/file',
+            // url: '/api/0.1/hexitec/odin_data/' + 'reorder', // Correct path..
+            // url: 'hdf/file',
+            contentType: "application/json",
+            data: JSON.stringify({"path": "/path/to/file.txt"})
+        });
+    };
+
+    var testGet = function()
+    {
+        console.log("testGet()..");
+        // $.getJSON('/api/' + api_version + '/hexitec/background_task', function(response) {
+        $.getJSON('config/hdf/file', function(response) {
+        // $.getJSON('hdf/file', function(response) {   // FrameProcessorapp:458
+            // var path = response.file.path;
+            // var task_enabled = response.background_task.enable;
+            console.log("Hiya");
+            // console.log(task_enabled);
+        });
+    };
+
+    var changeCalibrationEnable = function()
+    {
+        calibration_enable = $("[name='calibration_enable']").bootstrapSwitch('state');
+        console.log("calibration_enable: " + calibration_enable);
+        $.ajax({
+            type: "PUT",
+            url: odin_data_url + 'calibration',
+            contentType: "application/json",
+            data: JSON.stringify({"enable": calibration_enable})
+        });
+        console.log("calibration: " + calibration_enable);
     };
 
     var changeChargedSharingEnable = function()
     {
+        console.log("using name: " + $("[name='charged_sharing_enable']").bootstrapSwitch('state'));
+        console.log("using id: " + $("[id='charged_sharing_enable']").prop('state'));
+        
         /* Don't need to set anything specifically in the API for this
             since either one of Addition/Discrimination is true or
             neither (the former means CS is enabled, latter CS disabled) 
@@ -228,6 +323,19 @@ var LiveViewApp = (function()
             contentType: "application/json",
             data: JSON.stringify({"discrimination": discrimination_enable})
         });
+    };
+
+    var changeHistogramEnable = function()
+    {
+        histogram_enable = $("[name='histogram_enable']").bootstrapSwitch('state');
+        console.log("histogram_enable: " + histogram_enable);
+        $.ajax({
+            type: "PUT",
+            url: odin_data_url + 'histogram',
+            contentType: "application/json",
+            data: JSON.stringify({"enable": histogram_enable})
+        });
+        console.log("histogram: " + histogram_enable);
     };
 
     var updateClipRange = function(data_min_max, reset_current=false)
@@ -386,3 +494,4 @@ $( document ).ready(function()
         }('natural' + prop, prop.toLowerCase()));
     }
 }(jQuery));
+
