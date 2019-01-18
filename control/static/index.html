@@ -7,23 +7,24 @@
     <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
     <title>Hexitec Server</title>
 
-    <!-- Bootstrap -->
-    <link href="js/bootstrap-3.3.6-dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/odin-server.css" rel="stylesheet">
-    <!-- Bootstrap -->
-    <link href="js/bootstrap-3.3.6-dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="js/bootstrap-3.3.6-dist/css/bootstrap-switch.min.css" rel="stylesheet">
-    <link href="js/bootstrap-slider-10.2.1/css/bootstrap-slider.css" rel="stylesheet">
-    <link href="js/bootstrap-slider-10.2.1/css/bootstrap-slider.min.css" rel="stylesheet">
-
-    <!-- Moved from bottom: -->
     <script src="js/jquery-2.2.3.min.js"></script>
+
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="js/bootstrap-3.3.6-dist/dist/js/bootstrap.min.js"></script>
+    <script src="js/odin_server.js"></script>
+    <link href="css/odin-server.css" rel="stylesheet">
+
+    <!-- Bootstrap -->
+    <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
+    <link href="js/bootstrap-3.3.6-dist/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="js/bootstrap-3.3.6-dist/dist/css/bootstrap-switch.min.css" rel="stylesheet">   <!-- Comment out & load JSON will change checkboxes as they should -->
+    <link href="js/bootstrap-slider-10.2.1/css/bootstrap-slider.css" rel="stylesheet">
+    <!-- <link href="js/bootstrap-slider-10.2.1/css/bootstrap-slider.min.css" rel="stylesheet"> -->
 
     <!-- Turn radiobuttons into switches?-->
     <script src="js/bootstrap-switch/highlight.js"></script>
     <script src="js/bootstrap-switch/bootstrap-switch.js"></script>
-    <!-- <script src="js/bootstrap-switch/main.js"></script> -->
-
+    <script src="js/bootstrap-switch/main.js"></script>    <!-- Comment out and CS checkbox will be bootstrapified (but click becomes unreliable..) -->
 
   </head>
   <body>
@@ -87,25 +88,6 @@
     <table class="overall-table" align="center">
       <thead></thead>
       <tbody>
-        <td>
-          <th>Heading1</th>
-        </td>
-        <td>
-            <th>Heading2</th>
-        </td>
-        <tr>  <!-- First row -->
-          <td>  <!-- First row, first column -->
-            Row1,Col1
-          </td>
-          <td>  <!-- First row, second column -->
-            Row1,Col2
-          </td>
-        </tr>
-        <tr>  <!-- Second Row -->
-          <td>
-            Row2, Col1
-          </td>
-        </tr>
         <tr>  <!-- Third Row -->
           <td>
             R3 A progress bar:
@@ -162,6 +144,14 @@
       <table class="overall-table" align="center">
         <thead></thead>
         <tbody>
+          <tr>
+            <td>
+              <div class="button-sample">
+                <input type="button" id="defaults-button" onclick="defaults_button()" value="Load Settings"/>
+              </div>
+  
+            </td>
+          </tr>
 
           <tr>  
             <td>  
@@ -170,7 +160,9 @@
             <td>
               <div class="row sidebar-row vertical-align">
                 <div class="col-xs-7">
-                  <input type="checkbox" name="reorder_enable" data-size="small">
+                  <input type="checkbox" id='reorderButton' name="reorder_enable" data-size="small">
+                  <!-- <p>Enable background task:&nbsp;<input type="checkbox" id="task-enable" onclick="change_enable()"/> -->
+
                 </div>
               </div>
             </td>
@@ -186,7 +178,7 @@
               </div>
             </td>
             <td>
-              Columns:&nbsp;
+              &nbsp;Columns:&nbsp;
             </td>
             <td>
               <div class="text-columns">
@@ -234,8 +226,14 @@
               </td>
               <td>
                 <div class="text-characters">
-                  <input type="text" id="threshold-mode" onChange='threshold_mode_changed()' value="None">
+                  <!-- <input type="text" id="threshold-mode" onChange='threshold_mode_changed()' value="None"> -->
+
+                  <input type="text" id="threshold-mode" onchange='threshold_mode_changed(this)' placeholder="Threshold Mode" value="None" required/>
                 </div>
+              </td>
+              <td></td> <!-- Leave column blank-->
+              <td>
+                &nbsp;<span id="threshold-mode-warning">&nbsp;</span>
               </td>
             </tr>
   
@@ -328,6 +326,7 @@
             <td>
               <th>CS: None / Add / Dis:&nbsp;</th>
             </td>
+            <td></td>  <!-- Add empty cell or set of three radio buttons will upset Page layout -->
             <td>
               <form id="myForm">
                 <input type="radio" id="noneButton" name="radio1" class="switch-radio1" value="none">
@@ -335,6 +334,18 @@
                 <input type="radio" id="disButton" name="radio1" class="switch-radio1" value="dis">
               </form>
             </td>
+          </tr>
+          <tr>
+            <div class="container">
+              <div class="row">
+                <div class="col-sm-6">
+                    <h3 class="h5">A demo of radio buttons as switch</h3>
+                    <input type="radio" name="radio1" checked data-on-color="success" data-off-color="warning" class="switch-radio1">
+                    <input type="radio" name="radio1" data-on-color="success" data-off-color="warning" class="switch-radio1">
+                    <input type="radio" name="radio1" data-on-color="success" data-off-color="primary"  class="switch-radio1">
+                </div>
+              </div>
+            </div>
           </tr>
           <tr>
             <td>
@@ -490,14 +501,8 @@
             </div> <!-- row fluid-row -->
         </div> <!-- container-fluid-->
 
-    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-    <!-- <script src="js/jquery-2.2.3.min.js"></script> -->
-    <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="js/bootstrap-3.3.6-dist/js/bootstrap.min.js"></script>
-    <script src="js/odin_server.js"></script>
-
     <!-- Pinched from live_view example.. -->
-    <script src="js/bootstrap-3.3.6-dist/js/bootstrap-switch.min.js"></script>
+    <script src="js/bootstrap-3.3.6-dist/dist/js/bootstrap-switch.min.js"></script>
     <script src="js/bootstrap-slider-10.2.1/js/bootstrap-slider.min.js"></script>
     <script src='js/live_view.js'></script>
     

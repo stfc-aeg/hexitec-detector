@@ -32,6 +32,10 @@ body {
 .spacer {
     display: block;
 }
+
+.bad {
+    border-color: red;
+}
     
 #progress-bar {
     width: 100px;
