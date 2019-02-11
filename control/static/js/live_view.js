@@ -129,28 +129,12 @@ var LiveViewApp = (function()
 
     var testPut = function()
     {
-        console.log("Testing PUT -> config/hdf/file/path = ...");
-        $.ajax({
-            type: "PUT",
-            url: 'config/hdf/file',
-            // url: '/api/0.1/hexitec/odin_data/' + 'reorder', // Correct path..
-            // url: 'hdf/file',
-            contentType: "application/json",
-            data: JSON.stringify({"path": "/path/to/file.txt"})
-        });
+        console.log("Testing live_view.js' testPut()");
     };
 
     var testGet = function()
     {
         console.log("testGet()..");
-        // $.getJSON('/api/' + api_version + '/hexitec/background_task', function(response) {
-        $.getJSON('config/hdf/file', function(response) {
-        // $.getJSON('hdf/file', function(response) {   // FrameProcessorapp:458
-            // var path = response.file.path;
-            // var task_enabled = response.background_task.enable;
-            console.log("testGet() Done?");
-            // console.log(task_enabled);
-        });
     };
 
     var updateClipRange = function(data_min_max, reset_current=false)

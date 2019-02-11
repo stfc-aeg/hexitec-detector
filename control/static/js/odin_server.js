@@ -4,59 +4,57 @@ var api_url = '/api/' + api_version + '/';
 var odin_data_url = api_url + 'hexitec/odin_data/';
 // Vars added for Odin-Data
 var reorder_enable = null;
-var threshold_enable = false;
-var charged_sharing_enable = false;
-var addition_enable = false;
-var discrimination_enable = false;
-var next_frame_enable = false;
-var calibration_enable = false;
-var histogram_enable = false;
+var threshold_enable = null;
+var charged_sharing_enable = null;
+var addition_enable = null;
+var discrimination_enable = null;
+var next_frame_enable = null;
+var calibration_enable = null;
+var histogram_enable = null;
 
 $( document ).ready(function()
 {
-    update_api_version();
-    update_api_adapters();
+    $('.dec-number').on('change', function () {
+        const value = Number($(this).val());
+        $(this).val(value.toFixed(2));
+   });
+   
+    // update_api_version();
+    // update_api_adapters();
     poll_update()
-
-    $('#myForm').on('click', function () {
-
-        var value = $("[name=radio]:checked").val();
-
-        var noneButton = $('#noneButton').prop('checked');  // Not really needed as add/dis buttons decide
-        var addButton = $('#addButton').prop('checked');
-        var disButton = $('#disButton').prop('checked');
-        var discriminate_enable = false;
-        var addition_enable = false;
-
-        // console.log("Value: " + value + " noneButton: " + noneButton + " addButton: " + addButton + " disButton: " + disButton);
-        if (noneButton === true)
-        {
-            console.log("if identified none");
-        }
-        if (addButton === true)
-        {
-            console.log("if identified add");
-            addition_enable = true;
-        }
-        if (disButton === true)
-        {
-            console.log("if identified dis");
-            discriminate_enable = true;
-        }
-
-        $.ajax({
-            type: "PUT",
-            url: '/api/' + api_version + '/hexitec/odin_data/charged_sharing',
-            contentType: "application/json",
-            data: JSON.stringify({"addition": addition_enable})
-        });
     
-        $.ajax({
-            type: "PUT",
-            url: '/api/' + api_version + '/hexitec/odin_data/charged_sharing',
-            contentType: "application/json",
-            data: JSON.stringify({"discrimination": discriminate_enable})
-        });
+    $(".bootstrap-switch").bootstrapSwitch({
+        'size': 'midi',
+        'onSwitchChange': function(event, state) {
+
+            var discriminate_enable = false;
+            var addition_enable = false;
+    
+                // Do your logic in here according to the value 
+            if ($(this).val() == "none")
+            {
+                console.log("Clicked on none");
+            }
+            if ($(this).val() == "add")
+            {
+                console.log("Clicked on add");
+                addition_enable = true;
+            }
+            if ($(this).val() == "dis")
+            {
+                console.log("Clicked on dis");
+                discriminate_enable = true;
+            }
+            var pixel_grid_size = $('#pixel-grid-size-text').prop('value');
+            var charged_sharing_payload = {"charged_sharing": {"addition": addition_enable, "discrimination": discriminate_enable, "pixel_grid_size": parseInt(pixel_grid_size)} };
+
+            $.ajax({
+                type: "PUT",
+                url: '/api/' + api_version + '/hexitec/odin_data',
+                contentType: "application/json",
+                data: JSON.stringify(charged_sharing_payload)
+            });
+        }
     })
 
     /// Style checkbox(s) into a ON/OFF slider
@@ -124,86 +122,72 @@ function poll_update() {
     setTimeout(poll_update, 500);   
 }
 
-function update_api_version() {
+// function update_api_version() {
 
-    $.getJSON('/api', function(response) {
-        $('#api-version').html(response.api_version);
-        api_version = response.api_version;
-    });
-}
+//     $.getJSON('/api', function(response) {
+//         $('#api-version').html(response.api_version);
+//         api_version = response.api_version;
+//     });
+// }
 
-function update_api_adapters() {
+// function update_api_adapters() {
 
-    $.getJSON('/api/' + api_version + '/adapters/', function(response) {
-        adapter_list = response.adapters.join(", ");
-        $('#api-adapters').html(adapter_list);
-    });
-}
+//     $.getJSON('/api/' + api_version + '/adapters/', function(response) {
+//         adapter_list = response.adapters.join(", ");
+//         $('#api-adapters').html(adapter_list);
+//     });
+// }
 
-function update_background_task() {
+// function update_background_task() {
 
-    $.getJSON('/api/' + api_version + '/hexitec/background_task', function(response) {
-        var task_count = response.background_task.count;
-        var task_enabled = response.background_task.enable;
-        $('#task-count').html(task_count);
-        $('#task-enable').prop('checked', task_enabled);
-    });
-}
+//     $.getJSON('/api/' + api_version + '/hexitec/background_task', function(response) {
+//         var task_count = response.background_task.count;
+//         var task_enabled = response.background_task.enable;
+//         $('#task-count').html(task_count);
+//         $('#task-enable').prop('checked', task_enabled);
+//     });
+// }
 
-function change_enable() {
-    var enabled = $('#task-enable').prop('checked');
-    console.log("Enabled changed to " + (enabled ? "true" : "false"));
-    $.ajax({
-        type: "PUT",
-        url: '/api/' + api_version + '/hexitec/background_task',
-        contentType: "application/json",
-        data: JSON.stringify({'enable': enabled})
-    });
-}
+// // Development purposes only:
+// function filename_button()
+// {
+//     var filename = $('#filename-text').prop('value');
+//     console.log("filename_button(), Sample text contains: " + filename ); 
 
-function test_button() {
-    var enabled = $('#task-enable').prop('checked');
-    console.log("Changing enabled " + (enabled ? "true" : "false") + " to " + !(enabled ? "true" : "false"));
-    $.ajax({
-        type: "PUT",
-        url: '/api/' + api_version + '/hexitec/background_task',
-        contentType: "application/json",
-        data: JSON.stringify({'enable': !enabled})
-    });
-}
+//     $.ajax({
+//         type: "PUT",
+//         url: '/api/' + api_version + `/hexitec/test_area`,
+//         contentType: "application/json",
+//         data: JSON.stringify({'target_text': filename })
+//     });
+//     /* Write filename to target_name's text field */
+//     $('#target-name').html(filename);
+// }
 
-// Development purposes only:
-function filename_button()
-{
-    var filename = $('#filename-text').prop('value');
-    console.log("filename_button(), Sample text contains: " + filename ); 
+// function defaults_button()
+// {
+//     console.log("GOING TO LOAD data.json NOW !");
+//     load_defaults_from_json();
 
-    $.ajax({
-        type: "PUT",
-        url: '/api/' + api_version + `/hexitec/test_area`,
-        contentType: "application/json",
-        data: JSON.stringify({'target_text': filename })
-    });
-    /* Write filename to target_name's text field */
-    $('#target-name').html(filename);
-}
-
-function defaults_button()
-{
-    console.log("GOING TO LOAD data.json NOW !");
-    load_defaults_from_json();
-
-}
+// }
 
 function reorder_rows_changed()
 {
     var reorder_rows = $('#rows-text').prop('value');
-    console.log("reorder_rows(), text is now: " + reorder_rows); 
+    console.log("reorder_rows(), text is now: " + reorder_rows);
 
     $.ajax(`/api/` + api_version + `/hexitec/odin_data/reorder`, {
         method: "PUT",
         contentType: "application/json",
-        data: JSON.stringify({'height': parseInt(reorder_rows) })
+        data: JSON.stringify({'height': parseInt(reorder_rows) }),
+        success: function(result) {
+            //console.log("Success");
+            $('#rows-warning').html("");
+        },
+        error: function(request, msg, error) {
+            console.log(request + " " + msg + " " + error);
+            $('#rows-warning').html(error);
+        }
     });
 }
 
@@ -215,7 +199,15 @@ function reorder_columns_changed()
     $.ajax(`/api/` + api_version + `/hexitec/odin_data/reorder`, {
         method: "PUT",
         contentType: "application/json",
-        data: JSON.stringify({'width': parseInt(reorder_columns) })
+        data: JSON.stringify({'width': parseInt(reorder_columns) }),
+        success: function(result) {
+            //console.log("Success");
+            $('#columns-warning').html("");
+        },
+        error: function(request, msg, error) {
+            console.log(request + " " + msg + " " + error);
+            $('#columns-warning').html(error);
+        }
     });
 }
 
@@ -227,7 +219,15 @@ function threshold_filename_changed()
     $.ajax(`/api/` + api_version + `/hexitec/odin_data/threshold`, {
         method: "PUT",
         contentType: "application/json",
-        data: JSON.stringify({'threshold_filename': threshold_filename })
+        data: JSON.stringify({'threshold_filename': threshold_filename }),
+        success: function(result) {
+            //console.log("Success");
+            $('#threshold-filename-warning').html("");
+        },
+        error: function(request, msg, error) {
+            console.log(request + " " + msg + " " + error);
+            $('#threshold-filename-warning').html(error);
+        }
     });
 }
 
@@ -239,7 +239,16 @@ function threshold_value_changed()
     $.ajax(`/api/` + api_version + `/hexitec/odin_data/threshold`, {
         method: "PUT",
         contentType: "application/json",
-        data: JSON.stringify({'value': parseInt(threshold_value) })
+        data: JSON.stringify({'value': parseInt(threshold_value) }),
+        success: function(result) {
+            //console.log("Success");
+            $('#threshold-value-warning').html("");
+        },
+        error: function(request, msg, error) {
+            console.log(request + " " + msg + " " + error);
+            $('#threshold-value-warning').html(error);
+        }
+
     });
 }
 
@@ -272,7 +281,15 @@ function gradients_filename_changed()
     $.ajax(`/api/` + api_version + `/hexitec/odin_data/calibration`, {
         method: "PUT",
         contentType: "application/json",
-        data: JSON.stringify({'gradients_filename': gradients_filename })
+        data: JSON.stringify({'gradients_filename': gradients_filename }),
+        success: function(result) {
+            //console.log("Success");
+            $('#gradients-warning').html("");
+        },
+        error: function(request, msg, error) {
+            console.log(request + " " + msg + " " + error);
+            $('#gradients-warning').html(error);
+        }
     });
 }
 
@@ -284,9 +301,16 @@ function intercepts_filename_changed()
     $.ajax(`/api/` + api_version + `/hexitec/odin_data/calibration`, {
         method: "PUT",
         contentType: "application/json",
-        data: JSON.stringify({'intercepts_filename': intercepts_filename })
+        data: JSON.stringify({'intercepts_filename': intercepts_filename }),
+        success: function(result) {
+            //console.log("Success");
+            $('#intercepts-warning').html("");
+        },
+        error: function(request, msg, error) {
+            console.log(request + " " + msg + " " + error);
+            $('#intercepts-warning').html(error);
+        }
     });
-
 }
 
 function pixel_grid_size_changed()
@@ -297,7 +321,15 @@ function pixel_grid_size_changed()
     $.ajax(`/api/` + api_version + `/hexitec/odin_data/charged_sharing`, {
         method: "PUT",
         contentType: "application/json",
-        data: JSON.stringify({'pixel_grid_size': parseInt(pixel_grid_size) })
+        data: JSON.stringify({'pixel_grid_size': parseInt(pixel_grid_size) }),
+        success: function(result) {
+            //console.log("Success");
+            $('#pixel-warning').html("");
+        },
+        error: function(request, msg, error) {
+            console.log(request + " " + msg + " " + error);
+            $('#pixel-warning').html(error);
+        }
     });
 }
 
@@ -309,7 +341,15 @@ function max_frames_received_changed()
     $.ajax(`/api/` + api_version + `/hexitec/odin_data/histogram`, {
         method: "PUT",
         contentType: "application/json",
-        data: JSON.stringify({'max_frames_received': parseInt(max_frames_received) })
+        data: JSON.stringify({'max_frames_received': parseInt(max_frames_received) }),
+        success: function(result) {
+            //console.log("Success");
+            $('#frames-warning').html("");
+        },
+        error: function(request, msg, error) {
+            console.log(request + " " + msg + " " + error);
+            $('#frames-warning').html(error);
+        }
     });
 }
 
@@ -321,7 +361,15 @@ function bin_start_changed()
     $.ajax(`/api/` + api_version + `/hexitec/odin_data/histogram`, {
         method: "PUT",
         contentType: "application/json",
-        data: JSON.stringify({'bin_start': parseInt(bin_start) })
+        data: JSON.stringify({'bin_start': parseInt(bin_start) }),
+        success: function(result) {
+            //console.log("Success");
+            $('#bin-start-warning').html("");
+        },
+        error: function(request, msg, error) {
+            console.log(request + " " + msg + " " + error);
+            $('#bin-start-warning').html(error);
+        }
     });
 }
 
@@ -333,19 +381,34 @@ function bin_end_changed()
     $.ajax(`/api/` + api_version + `/hexitec/odin_data/histogram`, {
         method: "PUT",
         contentType: "application/json",
-        data: JSON.stringify({'bin_end': parseInt(bin_end) })
+        data: JSON.stringify({'bin_end': parseInt(bin_end) }),
+        success: function(result) {
+            //console.log("Success");
+            $('#bin-end-warning').html("");
+        },
+        error: function(request, msg, error) {
+            console.log(request + " " + msg + " " + error);
+            $('#bin-end-warning').html(error);
+        }
     });
 }
 
 function bin_width_changed()
 {
-    var bin_width = $('#bin-width-text').prop('value');
-    console.log("bin_width(), text is now: " + bin_width); 
+    var bin_width = parseFloat( $('#bin-width-text').prop('value'));
 
     $.ajax(`/api/` + api_version + `/hexitec/odin_data/histogram`, {
         method: "PUT",
         contentType: "application/json",
-        data: JSON.stringify({'bin_width': parseFloat(bin_width) })
+        data: JSON.stringify({'bin_width': bin_width }),
+        success: function(result) {
+            //console.log("Success");
+            $('#bin-width-warning').html("");
+        },
+        error: function(request, msg, error) {
+            console.log(request + " " + msg + " " + error);
+            $('#bin-width-warning').html(error);
+        }
     });
 }
 
@@ -363,49 +426,50 @@ function loadJSON(path, callback) {
     xobj.send(null);  
  }
 
-function load_defaults_from_json() { 
-    console.log("load_defaults_from_json called");
-    var json;
-    loadJSON("data.json", function(response) {
-        json = JSON.parse(response);
-        console.log(json); // Successfully shows the result
-        console.log("json.background_task.count: " + json.background_task.count);
-        // Read json values into variables..
-        reorder_enable = json.odin_data.reorder.enable;
-        threshold_enable = json.odin_data.threshold.enable;
-        // charged_sharing_enable = json.odin_data.;   // Redundant - no such API variable
-        // addition_enable = json.odin_data.charged_sharing.addition;
-        // discrimination_enable = json.odin_data.charged_sharing.discrimination;
-        next_frame_enable = json.odin_data.next_frame;
-        calibration_enable = json.odin_data.calibration.enable;
-        histogram_enable = json.odin_data.histogram.enable;
-        var reorder_rows = json.odin_data.reorder.height;
-        var reorder_columns = json.odin_data.reorder.width;
-        // Sanity Check: Write to console variables..
-        console.log("json.odin_data.reorder.enable: " + reorder_enable);
-        console.log(" threshold_enable: " + threshold_enable);
-        // console.log(" addition_enable: " + addition_enable);
-        // console.log(" discrimination_enable: " + discrimination_enable);
-        console.log(" next_frame_enable: " + next_frame_enable);
-        console.log(" calibration_enable: " + calibration_enable);
-        console.log(" histogram_enable: " + histogram_enable);
-        // Update UI checkboxes, API tree
-        // Update reorder enable..
-        updateReorderEnable(reorder_enable);
-        updateThresholdEnable(threshold_enable);
-        updateNextFrameEnable(next_frame_enable);
-        updateCalibrationEnable(calibration_enable);
-        updateHistogramEnable(histogram_enable);
-        updateReorderRows(reorder_rows);
+// function load_defaults_from_json() { 
+//     console.log("load_defaults_from_json called");
+//     var json;
+//     loadJSON("data.json", function(response) {
+//         json = JSON.parse(response);
+//         console.log(json); // Successfully shows the result
+//         // console.log("json.background_task.count: " + json.background_task.count);
+//         // Read json values into variables..
+//         reorder_enable = json.odin_data.reorder.enable;
+//         threshold_enable = json.odin_data.threshold.enable;
+//         // charged_sharing_enable = json.odin_data.;   // Redundant - no such API variable
+//         // addition_enable = json.odin_data.charged_sharing.addition;
+//         // discrimination_enable = json.odin_data.charged_sharing.discrimination;
+//         next_frame_enable = json.odin_data.next_frame;
+//         calibration_enable = json.odin_data.calibration.enable;
+//         histogram_enable = json.odin_data.histogram.enable;
+//         var reorder_rows = json.odin_data.reorder.height;
+//         var reorder_columns = json.odin_data.reorder.width;
+//         // Sanity Check: Write to console variables..
+//         console.log("json.odin_data.reorder.enable: " + reorder_enable);
+//         console.log(" threshold_enable: " + threshold_enable);
+//         // console.log(" addition_enable: " + addition_enable);
+//         // console.log(" discrimination_enable: " + discrimination_enable);
+//         console.log(" next_frame_enable: " + next_frame_enable);
+//         console.log(" calibration_enable: " + calibration_enable);
+//         console.log(" histogram_enable: " + histogram_enable);
+//         // Update UI checkboxes, API tree
+//         // Update reorder enable..
+//         updateReorderEnable(reorder_enable);
+//         updateThresholdEnable(threshold_enable);
+//         updateNextFrameEnable(next_frame_enable);
+//         updateCalibrationEnable(calibration_enable);
+//         updateHistogramEnable(histogram_enable);
+//         updateReorderRows(reorder_rows);
         
-    });
-    // console.log("json is undefined here because var json out of scope now: " +json); // TypeError: json is undefined
-}
+//     });
+//     // console.log("json is undefined here because var json out of scope now: " +json); // TypeError: json is undefined
+// }
 
 
 // Restricts input for each element in the set of matched elements to the given inputFilter.
 (function($) {
     $.fn.inputFilter = function(inputFilter) {
+        console.log("inputFilter()");
         return this.on("input keydown keyup mousedown mouseup select contextmenu drop", function() {
             if (inputFilter(this.value)) {
                 this.oldValue = this.value;
@@ -434,7 +498,7 @@ $("#bin-start-text").inputFilter(function(value) {
     return /^-?\d*$/.test(value); });
 $("#bin-end-text").inputFilter(function(value) {
     return /^-?\d*$/.test(value); });
-        
+
 // Integers 3 or 5 only:
 $("#pixel-grid-size-text").inputFilter(function(value) {
     return /^\d*$/.test(value) && (value === "" || parseInt(value) === 3 || parseInt(value) === 5); });
@@ -674,17 +738,4 @@ function updateReorderRows(reorder_rows) {
         contentType: "application/json",
         data: JSON.stringify({'height': parseInt(reorder_rows) })
     });
-}
-
-// function reorder_columns_changed()
-// {
-//     var reorder_columns = $('#columns-text').prop('value');
-//     console.log("reorder_columns(), text is now: " + reorder_columns); 
-
-//     $.ajax(`/api/` + api_version + `/hexitec/odin_data/reorder`, {
-//         method: "PUT",
-//         contentType: "application/json",
-//         data: JSON.stringify({'width': parseInt(reorder_columns) })
-//     });
-// }
-
+};

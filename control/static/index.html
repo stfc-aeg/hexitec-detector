@@ -10,56 +10,36 @@
     <script src="js/jquery-2.2.3.min.js"></script>
 
     <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="js/bootstrap-3.3.6-dist/dist/js/bootstrap.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
     <script src="js/odin_server.js"></script>
     <link href="css/odin-server.css" rel="stylesheet">
 
     <!-- Bootstrap -->
     <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
-    <link href="js/bootstrap-3.3.6-dist/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="js/bootstrap-3.3.6-dist/dist/css/bootstrap-switch.min.css" rel="stylesheet">   <!-- Comment out & load JSON will change checkboxes as they should -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap-switch.min.css" rel="stylesheet">   <!-- Comment out & load JSON will change checkboxes as they should -->
     <link href="js/bootstrap-slider-10.2.1/css/bootstrap-slider.css" rel="stylesheet">
     <!-- <link href="js/bootstrap-slider-10.2.1/css/bootstrap-slider.min.css" rel="stylesheet"> -->
 
     <!-- Turn radiobuttons into switches?-->
     <script src="js/bootstrap-switch/highlight.js"></script>
     <script src="js/bootstrap-switch/bootstrap-switch.js"></script>
-    <script src="js/bootstrap-switch/main.js"></script>    <!-- Comment out and CS checkbox will be bootstrapified (but click becomes unreliable..) -->
+    <!--<script src="js/bootstrap-switch/main.js"></script>    <!-- Comment out and CS checkbox will be bootstrapified (but click becomes unreliable..) -->
 
   </head>
   <body>
-      <form name="myForm">
-          <input type="radio" name="myRadios"  value="1" />
-          <input type="radio" name="myRadios"  value="2" />
-      </form>
+    <!-- Testing purposes: -->
       Test put: <input type="checkbox" name="test_put" data-size="small">
       Test get: <input type="checkbox" name="test_get" data-size="small">
-
-      <script>
-          var rad = document.myForm.myRadios;
-          var prev = null;
-          for(var i = 0; i < rad.length; i++) {
-              rad[i].addEventListener('change', function() {
-                  (prev)? console.log(prev.value):null;
-                  if(this !== prev) {
-                      prev = this;
-                  }
-                  console.log(this.value)
-              });
-          }
-      </script>
-
+    
     <div class="container">
 
       <div class="odin-server">
-        <h1>Hexitec Control</h1>
+        <!-- <h1>Hexitec Control</h1> -->
 <!--        <p class="lead">Welcome to the Hexitec Odin Control!</p> -->
-        <p>API version is:&nbsp;<span id="api-version">&nbsp;</span>
-          &nbsp;Registered API adapters:&nbsp;<span id="api-adapters">&nbsp;</span></p>
-        <p>Hexitec background task count:&nbsp;<span id="task-count">&nbsp;</span></p>
-        <p>Enable background task:&nbsp;<input type="checkbox" id="task-enable" onclick="change_enable()"/>
-        &nbsp;<input type="button" id="test-button" onclick="test_button()" value="flip checkbox"/></p> <!-- Works fine -->
-        
+        <!-- <p>API version is:&nbsp;<span id="api-version">&nbsp;</span>
+          &nbsp;Registered API adapters:&nbsp;<span id="api-adapters">&nbsp;</span></p> -->
+        <!-- <p>Hexitec background task count:&nbsp;<span id="task-count">&nbsp;</span></p> -->
       </div>
 
     </div><!-- /.container -->
@@ -99,43 +79,6 @@
           </td>
         </tr>
 
-        <tr>  <!-- Fourth Row -->
-          <td>
-            R4 Connect to Detector:
-          </td>
-          <td>
-            <div id="connect-checkbox" class="all-rounded">
-              <input type="checkbox" id="connect-detector" onclick="connect_detector()"/>
-            </div>
-          </td>
-        </tr>
-
-        <tr>  <!-- Fifth Row -->
-          <td>
-            R5 A sample text field:
-          </td>
-          <td>
-            <div class="text-sample">
-              <input type="text" id="filename-text" value="/path/to/file.txt">
-            </div>
-          </td>
-          <td>
-            <div class="text-sample">
-              <input type="button" id="filename-button" onclick="filename_button()" value="wat butt?"/> <!-- Get this to work? -->
-            </div>
-          </td>
-        </tr>
-
-        <tr>  <!-- Row 6 -->
-          <td>
-            R6 A target text field:
-          </td>
-          <td>
-            <div id="text-target">
-              Target text:&nbsp;<input type="text" id="target-name"/>
-            </div>
-          </td>
-        </tr>
       </tbody>
     </table>
 <!-- ---->
@@ -144,24 +87,16 @@
       <table class="overall-table" align="center">
         <thead></thead>
         <tbody>
-          <tr>
-            <td>
-              <div class="button-sample">
-                <input type="button" id="defaults-button" onclick="defaults_button()" value="Load Settings"/>
-              </div>
-  
-            </td>
-          </tr>
 
           <tr>  
             <td>  
               <th>Reorder&nbsp;</th>
             </td>
+            <td>&nbsp;</td>
             <td>
               <div class="row sidebar-row vertical-align">
                 <div class="col-xs-7">
                   <input type="checkbox" id='reorderButton' name="reorder_enable" data-size="small">
-                  <!-- <p>Enable background task:&nbsp;<input type="checkbox" id="task-enable" onclick="change_enable()"/> -->
 
                 </div>
               </div>
@@ -178,6 +113,9 @@
               </div>
             </td>
             <td>
+              <span id="rows-warning">&nbsp;</span>
+            </td>
+            <td>
               &nbsp;Columns:&nbsp;
             </td>
             <td>
@@ -185,12 +123,16 @@
                 <input type="text" id="columns-text" onChange='reorder_columns_changed()' value="80">
               </div>
             </td>
-          </tr>
+            <td>
+              <span id="columns-warning">&nbsp;</span>
+            </td>
+            </tr>
 
           <tr>  
             <td>
               <th>Threshold&nbsp;</th>
             </td>
+            <td>&nbsp;</td>
             <td>
               <div class="row sidebar-row vertical-align">
                 <div class="col-xs-7">
@@ -210,6 +152,10 @@
               </div>
             </td>
           </tr>
+          <td>
+            <span id="threshold-filename-warning">&nbsp;</span>
+          </td>
+
           <tr>
             <td>  
               Value:&nbsp;
@@ -219,66 +165,70 @@
                 <input type="text" id="threshold-value" onChange='threshold_value_changed()' value="100">
               </div>
             </td>
+            <td>
+              &nbsp;<span id="threshold-value-warning">&nbsp;</span>
+            </td>
           </tr>
           <tr>
-              <td>
-                Mode:&nbsp;
-              </td>
-              <td>
-                <div class="text-characters">
-                  <!-- <input type="text" id="threshold-mode" onChange='threshold_mode_changed()' value="None"> -->
+            <td>
+              Mode:&nbsp;
+            </td>
+            <td>
+              <div class="text-characters">
+                <!-- <input type="text" id="threshold-mode" onChange='threshold_mode_changed()' value="None"> -->
 
-                  <input type="text" id="threshold-mode" onchange='threshold_mode_changed(this)' placeholder="Threshold Mode" value="None" required/>
-                </div>
-              </td>
-              <td></td> <!-- Leave column blank-->
-              <td>
-                &nbsp;<span id="threshold-mode-warning">&nbsp;</span>
-              </td>
-            </tr>
+                <input type="text" id="threshold-mode" onchange='threshold_mode_changed(this)' placeholder="Threshold Mode" value="None" required/>
+              </div>
+            </td>
+            <td></td> <!-- Leave column blank-->
+            <td>
+              &nbsp;<span id="threshold-mode-warning">&nbsp;</span>
+            </td>
+          </tr>
   
-            <tr>  
-              <td>  
+          <tr>  
+            <td>  
 
-              </td>
-              <td> 
-                <div class="row sidebar-row vertical-align">
-                  <div class="col-xs-7">
+            </td>
+            <td> 
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
 
-                  </div>
                 </div>
-              </td>
-            </tr>
+              </div>
+            </td>
+          </tr>
+
+          <tr>  
+            <td>
+            </td>
+            <td> 
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
+
+                </div>
+              </div>
+            </td>
+          </tr>
   
-            <tr>  
-              <td>
-              </td>
-              <td> 
-                <div class="row sidebar-row vertical-align">
-                  <div class="col-xs-7">
+          <tr>
+            <td>  
+              
+            </td>
+            <td> 
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
 
-                  </div>
                 </div>
-              </td>
-            </tr>
-    
-            <tr>
-              <td>  
-                
-              </td>
-              <td> 
-                <div class="row sidebar-row vertical-align">
-                  <div class="col-xs-7">
-
-                  </div>
-                </div>
-              </td>
-            </tr>
+              </div>
+            </td>
+          </tr>
 
           <tr>  
             <td>  
               <th>Next Frame&nbsp;</th>
             </td>
+            <td>&nbsp;</td>
             <td>
               <div class="row sidebar-row vertical-align">
                 <div class="col-xs-7">
@@ -292,6 +242,7 @@
             <td>  
               <th>Calibration&nbsp;</th>
             </td>
+            <td>&nbsp;</td>
             <td>
               <div class="row sidebar-row vertical-align">
                 <div class="col-xs-7">
@@ -311,6 +262,9 @@
               </div>
             </td>
           </tr>
+          <td>
+            <span id="gradients-warning">&nbsp;</span>
+          </td>
           <tr>
             <td>  
               Intercepts:&nbsp;
@@ -320,6 +274,9 @@
                 <input type="text" id="intercepts-filename" onChange='intercepts_filename_changed()' value="/path/to/intercepts.txt">
               </div>
             </td>
+            <td>
+              <span id="intercepts-warning">&nbsp;</span>
+            </td>
           </tr>
 
           <tr>
@@ -327,25 +284,12 @@
               <th>CS: None / Add / Dis:&nbsp;</th>
             </td>
             <td></td>  <!-- Add empty cell or set of three radio buttons will upset Page layout -->
+            <td>&nbsp;</td>
             <td>
-              <form id="myForm">
-                <input type="radio" id="noneButton" name="radio1" class="switch-radio1" value="none">
-                <input type="radio" id="addButton" name="radio1" class="switch-radio1" value="add">
-                <input type="radio" id="disButton" name="radio1" class="switch-radio1" value="dis">
-              </form>
-            </td>
-          </tr>
-          <tr>
-            <div class="container">
-              <div class="row">
-                <div class="col-sm-6">
-                    <h3 class="h5">A demo of radio buttons as switch</h3>
-                    <input type="radio" name="radio1" checked data-on-color="success" data-off-color="warning" class="switch-radio1">
-                    <input type="radio" name="radio1" data-on-color="success" data-off-color="warning" class="switch-radio1">
-                    <input type="radio" name="radio1" data-on-color="success" data-off-color="primary"  class="switch-radio1">
-                </div>
-              </div>
-            </div>
+                <input id="cbox1" name="GroupedSwitches" class="bootstrap-switch" type="radio" data-off-text="OFF" data-on-text="ON" checked="true" value="none">
+                <input id="cbox2" name="GroupedSwitches" class="bootstrap-switch" type="radio" data-off-text="OFF" data-on-text="ON"  value="add">
+                <input id="cbox3" name="GroupedSwitches" class="bootstrap-switch" type="radio" data-off-text="OFF" data-on-text="ON"  value="dis">
+             </td>
           </tr>
           <tr>
             <td>
@@ -356,12 +300,16 @@
                 <input type="text" id="pixel-grid-size-text" onChange='pixel_grid_size_changed()' value="3">
               </div>
             </td>
+            <td>
+              <span id="pixel-warning">&nbsp;</span>
+            </td>
           </tr>
 
           <tr>  
             <td>  
               <th>Histogram&nbsp;</th>
             </td>
+            <td>&nbsp;</td>
             <td>
               <div class="row sidebar-row vertical-align">
                 <div class="col-xs-7">
@@ -380,6 +328,9 @@
                 <input type="text" id="max-frames-received-text" onChange='max_frames_received_changed()' value="540">
               </div>
             </td>
+            <td>
+              <span id="frames-warning">&nbsp;</span>
+            </td>
           <tr>
             <td>
               Bin Start:&nbsp;
@@ -388,6 +339,9 @@
               <div class="text-columns">
                 <input type="text" id="bin-start-text" onChange='bin_start_changed()' value="0">
               </div>
+            </td>
+            <td>
+              <span id="bin-start-warning">&nbsp;</span>
             </td>
           </tr>
           <tr>
@@ -399,6 +353,9 @@
                 <input type="text" id="bin-end-text" onChange='bin_end_changed()' value="8000">
               </div>
             </td>
+            <td>
+              <span id="bin-end-warning">&nbsp;</span>
+            </td>
           </tr>
           <tr>
             <td> 
@@ -408,6 +365,9 @@
               <div class="text-columns">
                 <input type="text" id="bin-width-text" onChange='bin_width_changed()' value="10.0">
               </div>
+            </td>
+            <td>
+              <span id="bin-width-warning">&nbsp;</span>
             </td>
           </tr>
 

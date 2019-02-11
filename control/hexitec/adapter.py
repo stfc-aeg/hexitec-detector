@@ -174,14 +174,14 @@ class Hexitec():
         reorder = ParameterTree({
             'height': 80,   # UI's rows = .config's height
             'width': 80,    # columns = width
-            'enable': True
+            'enable': False
         })
 
         # Threshold
         threshold = ParameterTree({
             'threshold_filename': "",
             'value': 100,
-            'mode': "",
+            'mode': "None",
             'enable': False
         })
 
@@ -194,7 +194,6 @@ class Hexitec():
 
         # Charged Sharing
         charged_sharing = ParameterTree({
-            # 'enable': False,
             'addition': False,
             'discrimination': False,
             'pixel_grid_size': 3

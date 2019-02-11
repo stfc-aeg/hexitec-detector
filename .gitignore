@@ -140,6 +140,9 @@ tags
 # CMake out-of-source build directories for data component
 /data/build*
 
+# Ignore (currently on use) bootstrap folders (contents)
+control/static/js/bootstrap-3.3.6-dist/*
+
 # Ignore Qt project file (used to view source code in QtCreator)
 <<<<<<< HEAD
 *.pro
