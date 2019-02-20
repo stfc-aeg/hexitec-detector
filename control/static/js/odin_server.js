@@ -11,6 +11,7 @@ var discrimination_enable = null;
 var next_frame_enable = null;
 var calibration_enable = null;
 var histogram_enable = null;
+var hdf_write_enable = null;
 
 $( document ).ready(function()
 {
@@ -115,6 +116,15 @@ $( document ).ready(function()
         changeHistogramEnable();
     });
 
+    // Configure hdf write switch
+    $("[name='hdf_write_enable']").bootstrapSwitch({disabled:true});
+    $("[name='hdf_write_enable']").bootstrapSwitch('state', hdf_write_enable, true);
+    
+    $('input[name="hdf_write_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
+        changeHdfWriteEnable();
+    });
+
+
 });
 
 function poll_update() {
@@ -148,29 +158,6 @@ function poll_update() {
 //     });
 // }
 
-// // Development purposes only:
-// function filename_button()
-// {
-//     var filename = $('#filename-text').prop('value');
-//     console.log("filename_button(), Sample text contains: " + filename ); 
-
-//     $.ajax({
-//         type: "PUT",
-//         url: '/api/' + api_version + `/hexitec/test_area`,
-//         contentType: "application/json",
-//         data: JSON.stringify({'target_text': filename })
-//     });
-//     /* Write filename to target_name's text field */
-//     $('#target-name').html(filename);
-// }
-
-// function defaults_button()
-// {
-//     console.log("GOING TO LOAD data.json NOW !");
-//     load_defaults_from_json();
-
-// }
-
 function reorder_rows_changed()
 {
     var reorder_rows = $('#rows-text').prop('value');
@@ -181,7 +168,6 @@ function reorder_rows_changed()
         contentType: "application/json",
         data: JSON.stringify({'height': parseInt(reorder_rows) }),
         success: function(result) {
-            //console.log("Success");
             $('#rows-warning').html("");
         },
         error: function(request, msg, error) {
@@ -201,7 +187,6 @@ function reorder_columns_changed()
         contentType: "application/json",
         data: JSON.stringify({'width': parseInt(reorder_columns) }),
         success: function(result) {
-            //console.log("Success");
             $('#columns-warning').html("");
         },
         error: function(request, msg, error) {
@@ -221,12 +206,10 @@ function threshold_filename_changed()
         contentType: "application/json",
         data: JSON.stringify({'threshold_filename': threshold_filename }),
         success: function(result) {
-            //console.log("Success");
             $('#threshold-filename-warning').html("");
         },
         error: function(request, msg, error) {
-            console.log(request + " " + msg + " " + error);
-            $('#threshold-filename-warning').html(error);
+            $('#threshold-filename-warning').html(error + ": " + request.responseText);
         }
     });
 }
@@ -241,12 +224,10 @@ function threshold_value_changed()
         contentType: "application/json",
         data: JSON.stringify({'value': parseInt(threshold_value) }),
         success: function(result) {
-            //console.log("Success");
             $('#threshold-value-warning').html("");
         },
         error: function(request, msg, error) {
-            console.log(request + " " + msg + " " + error);
-            $('#threshold-value-warning').html(error);
+            $('#threshold-value-warning').html(error + ": " + request.responseText);
         }
 
     });
@@ -283,12 +264,10 @@ function gradients_filename_changed()
         contentType: "application/json",
         data: JSON.stringify({'gradients_filename': gradients_filename }),
         success: function(result) {
-            //console.log("Success");
             $('#gradients-warning').html("");
         },
         error: function(request, msg, error) {
-            console.log(request + " " + msg + " " + error);
-            $('#gradients-warning').html(error);
+            $('#gradients-warning').html(error + ": " + request.responseText);
         }
     });
 }
@@ -303,12 +282,10 @@ function intercepts_filename_changed()
         contentType: "application/json",
         data: JSON.stringify({'intercepts_filename': intercepts_filename }),
         success: function(result) {
-            //console.log("Success");
             $('#intercepts-warning').html("");
         },
         error: function(request, msg, error) {
-            console.log(request + " " + msg + " " + error);
-            $('#intercepts-warning').html(error);
+            $('#intercepts-warning').html(error + ": " + request.responseText);
         }
     });
 }
@@ -323,12 +300,10 @@ function pixel_grid_size_changed()
         contentType: "application/json",
         data: JSON.stringify({'pixel_grid_size': parseInt(pixel_grid_size) }),
         success: function(result) {
-            //console.log("Success");
             $('#pixel-warning').html("");
         },
         error: function(request, msg, error) {
-            console.log(request + " " + msg + " " + error);
-            $('#pixel-warning').html(error);
+            $('#pixel-warning').html(error + ": " + request.responseText);
         }
     });
 }
@@ -343,12 +318,10 @@ function max_frames_received_changed()
         contentType: "application/json",
         data: JSON.stringify({'max_frames_received': parseInt(max_frames_received) }),
         success: function(result) {
-            //console.log("Success");
             $('#frames-warning').html("");
         },
         error: function(request, msg, error) {
-            console.log(request + " " + msg + " " + error);
-            $('#frames-warning').html(error);
+            $('#frames-warning').html(error + ": " + request.responseText);
         }
     });
 }
@@ -363,12 +336,10 @@ function bin_start_changed()
         contentType: "application/json",
         data: JSON.stringify({'bin_start': parseInt(bin_start) }),
         success: function(result) {
-            //console.log("Success");
             $('#bin-start-warning').html("");
         },
         error: function(request, msg, error) {
-            console.log(request + " " + msg + " " + error);
-            $('#bin-start-warning').html(error);
+            $('#bin-start-warning').html(error + ": " + request.responseText);
         }
     });
 }
@@ -383,12 +354,10 @@ function bin_end_changed()
         contentType: "application/json",
         data: JSON.stringify({'bin_end': parseInt(bin_end) }),
         success: function(result) {
-            //console.log("Success");
             $('#bin-end-warning').html("");
         },
         error: function(request, msg, error) {
-            console.log(request + " " + msg + " " + error);
-            $('#bin-end-warning').html(error);
+            $('#bin-end-warning').html(error + ": " + request.responseText);
         }
     });
 }
@@ -402,119 +371,13 @@ function bin_width_changed()
         contentType: "application/json",
         data: JSON.stringify({'bin_width': bin_width }),
         success: function(result) {
-            //console.log("Success");
             $('#bin-width-warning').html("");
         },
         error: function(request, msg, error) {
-            console.log(request + " " + msg + " " + error);
-            $('#bin-width-warning').html(error);
+            $('#bin-width-warning').html(error + ": " + request.responseText);
         }
     });
 }
-
-function loadJSON(path, callback) {
-    console.log("path: " + path); 
-    var xobj = new XMLHttpRequest();
-        xobj.overrideMimeType("application/json");
-    xobj.open('GET', path, true);
-    xobj.onreadystatechange = function () {
-          if (xobj.readyState == 4 && xobj.status == "200") {
-            callback(xobj.responseText);
-          }
-    };
-    console.log("xobj.status:" + xobj.status);
-    xobj.send(null);  
- }
-
-// function load_defaults_from_json() { 
-//     console.log("load_defaults_from_json called");
-//     var json;
-//     loadJSON("data.json", function(response) {
-//         json = JSON.parse(response);
-//         console.log(json); // Successfully shows the result
-//         // console.log("json.background_task.count: " + json.background_task.count);
-//         // Read json values into variables..
-//         reorder_enable = json.odin_data.reorder.enable;
-//         threshold_enable = json.odin_data.threshold.enable;
-//         // charged_sharing_enable = json.odin_data.;   // Redundant - no such API variable
-//         // addition_enable = json.odin_data.charged_sharing.addition;
-//         // discrimination_enable = json.odin_data.charged_sharing.discrimination;
-//         next_frame_enable = json.odin_data.next_frame;
-//         calibration_enable = json.odin_data.calibration.enable;
-//         histogram_enable = json.odin_data.histogram.enable;
-//         var reorder_rows = json.odin_data.reorder.height;
-//         var reorder_columns = json.odin_data.reorder.width;
-//         // Sanity Check: Write to console variables..
-//         console.log("json.odin_data.reorder.enable: " + reorder_enable);
-//         console.log(" threshold_enable: " + threshold_enable);
-//         // console.log(" addition_enable: " + addition_enable);
-//         // console.log(" discrimination_enable: " + discrimination_enable);
-//         console.log(" next_frame_enable: " + next_frame_enable);
-//         console.log(" calibration_enable: " + calibration_enable);
-//         console.log(" histogram_enable: " + histogram_enable);
-//         // Update UI checkboxes, API tree
-//         // Update reorder enable..
-//         updateReorderEnable(reorder_enable);
-//         updateThresholdEnable(threshold_enable);
-//         updateNextFrameEnable(next_frame_enable);
-//         updateCalibrationEnable(calibration_enable);
-//         updateHistogramEnable(histogram_enable);
-//         updateReorderRows(reorder_rows);
-        
-//     });
-//     // console.log("json is undefined here because var json out of scope now: " +json); // TypeError: json is undefined
-// }
-
-
-// Restricts input for each element in the set of matched elements to the given inputFilter.
-(function($) {
-    $.fn.inputFilter = function(inputFilter) {
-        console.log("inputFilter()");
-        return this.on("input keydown keyup mousedown mouseup select contextmenu drop", function() {
-            if (inputFilter(this.value)) {
-                this.oldValue = this.value;
-                this.oldSelectionStart = this.selectionStart;
-                this.oldSelectionEnd = this.selectionEnd;
-            } else if (this.hasOwnProperty("oldValue")) {
-                this.value = this.oldValue;
-                this.setSelectionRange(this.oldSelectionStart, this.oldSelectionEnd);
-            }
-        });
-    };
-}(jQuery));
-  
-  
-// Install input filters.
-// Integers only:
-$("#rows-text").inputFilter(function(value) {
-    return /^-?\d*$/.test(value); });
-$("#columns-text").inputFilter(function(value) {
-    return /^-?\d*$/.test(value); });
-$("#threshold-value").inputFilter(function(value) {
-    return /^-?\d*$/.test(value); });
-$("#max-frames-received-text").inputFilter(function(value) {
-    return /^-?\d*$/.test(value); });
-$("#bin-start-text").inputFilter(function(value) {
-    return /^-?\d*$/.test(value); });
-$("#bin-end-text").inputFilter(function(value) {
-    return /^-?\d*$/.test(value); });
-
-// Integers 3 or 5 only:
-$("#pixel-grid-size-text").inputFilter(function(value) {
-    return /^\d*$/.test(value) && (value === "" || parseInt(value) === 3 || parseInt(value) === 5); });
-
-// Allowing floating type:
-$("#bin-width-text").inputFilter(function(value) {
-    return /^-?\d*[.,]?\d*$/.test(value); });
-// $("#currencyTextBox").inputFilter(function(value) {
-//     return /^-?\d*[.,]?\d{0,2}$/.test(value); });
-// $("#uintTextBox").inputFilter(function(value) {
-//     return /^\d*$/.test(value); });
-// $("#hexTextBox").inputFilter(function(value) {
-//     return /^[0-9a-f]*$/i.test(value); });
-
-
-// Test migrating from live_view.js to here..
 
 var changeReorderEnable = function()
 {
@@ -647,95 +510,122 @@ var changeHistogramEnable = function()
     console.log("histogram: " + histogram_enable);
 };
 
+//// Odin Data Placeholder for now:
 
-/// Experimental, utilised by load_defaults_from_json()
-function updateReorderEnable(reorder_enable) {
-
+var changeHdfWriteEnable = function()
+{
+    hdf_write_enable = $("[name='hdf_write_enable']").bootstrapSwitch('state');
+    console.log("Odin server, Odin Data.. hdf_write_enable? " + hdf_write_enable + "JSON: " + JSON.stringify(hdf_write_enable));
     $.ajax({
         type: "PUT",
-        url: odin_data_url + 'reorder',
+        url: api_url + 'fp/config/hdf/write',
         contentType: "application/json",
-        data: JSON.stringify({"enable": reorder_enable})
+        data: JSON.stringify(hdf_write_enable),
+        success: function(result) {
+            console.log("Success");
+            $('#hdf-write-enable-warning').html("");
+            // If write Enabled, must disable config files, file path and filename  (and vice versa)
+            if (hdf_write_enable == true)
+            {
+                console.log("writing is true");
+                $('#fr-config').prop('disabled', true);
+                $('#fp-config').prop('disabled', true);
+                $('#hdf-file-path').prop('disabled', true);
+                $('#hdf-file-name').prop('disabled', true);
+            }
+            else
+            {
+                console.log("writing is false");
+                $('#fr-config').prop('disabled', false);
+                $('#fp-config').prop('disabled', false);
+                $('#hdf-file-path').prop('disabled', false);
+                $('#hdf-file-name').prop('disabled', false);
+            }
+        },
+        error: function(request, msg, error) {
+            // console.log("request: " + request + " msg: " + msg + " error: " + error);
+            $('#hdf-write-enable-warning').html(error + ": " + request.responseText);
+        }
     });
-    // Aaaand, update reorder html element 
-    // $('#reorderButton').prop('checked', reorder_enable);
-    $("[name='reorder_enable']").bootstrapSwitch('state', reorder_enable, true);
 };
 
-function updateThresholdEnable(threshold_enable) {
-
+function fp_config_changed()
+{
+    var fp_config_file = $('#fp-config').prop('value');
     $.ajax({
         type: "PUT",
-        url: odin_data_url + 'threshold',
+        url: api_url + 'fp/config/config_file',
         contentType: "application/json",
-        data: JSON.stringify({"enable": threshold_enable})
+        data: fp_config_file,
+        success: function(result) {
+            $('#fp-config-warning').html("");
+            $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
+        },
+        error: function(request, msg, error) {
+            $('#fp-config-warning').html(error + ": " + request.responseText);
+            $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
+        }
     });
-    $("[name='threshold_enable']").bootstrapSwitch('state', threshold_enable, true);
 };
 
-function updateNextFrameEnable(next_frame_enable) {
-
+function fr_config_changed()
+{
+    var fr_config_file = $('#fr-config').prop('value');
     $.ajax({
         type: "PUT",
-        url: odin_data_url + 'next_frame',
+        url: api_url + 'fr/config/config_file',
         contentType: "application/json",
-        data: JSON.stringify(next_frame_enable)
+        data: (fr_config_file),
+        success: function(result) {
+            $('#fr-config-warning').html("");
+            $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
+        },
+        error: function(request, msg, error) {
+            $('#fr-config-warning').html(error + ": " + request.responseText);
+            $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
+        }
     });
-    $("[name='next_frame_enable']").bootstrapSwitch('state', next_frame_enable, true);
 };
 
-function updateCalibrationEnable(calibration_enable) {
-
+//curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/fp/config/hdf/file/path -d "/tmp"
+function hdf_file_path_changed()
+{
+    var hdf_file_path = $('#hdf-file-path').prop('value');
     $.ajax({
         type: "PUT",
-        url: odin_data_url + 'calibration',
+        url: api_url + 'fp/config/hdf/file/path',
         contentType: "application/json",
-        data: JSON.stringify({"enable": calibration_enable})
+        data: (hdf_file_path),
+        success: function(result) {
+            $('#hdf-file-path-warning').html("");
+            $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
+        },
+        error: function(request, msg, error) {
+            $('#hdf-file-path-warning').html(error + ": " + request.responseText);
+            $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
+        }
     });
-    $("[name='calibration_enable']").bootstrapSwitch('state', calibration_enable, true);
 };
 
-function updateAdditionEnable(addition_enable) {
-
+// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/fp/config/hdf/file/name -d "test"
+function hdf_file_name_changed()
+{
+    var hdf_file_name = $('#hdf-file-name').prop('value');
     $.ajax({
         type: "PUT",
-        url: odin_data_url + 'charged_sharing',
+        url: api_url + 'fp/config/hdf/file/name',
         contentType: "application/json",
-        data: JSON.stringify({"addition": addition_enable})
-    });
-    $("[name='addition_enable']").bootstrapSwitch('state', addition_enable, true);
-
-};
-
-function updateDiscriminationEnable(discrimination_enable) {
-
-    $.ajax({
-        type: "PUT",
-        url: odin_data_url + 'charged_sharing',
-        contentType: "application/json",
-        data: JSON.stringify({"discrimination": discrimination_enable})
-    });
-    $("[name='discrimination_enable']").bootstrapSwitch('state', discrimination_enable, true);
-};
-
-function updateHistogramEnable(histogram_enable) {
-
-    $.ajax({
-        type: "PUT",
-        url: odin_data_url + 'histogram',
-        contentType: "application/json",
-        data: JSON.stringify({"enable": histogram_enable})
-    });
-    $("[name='histogram_enable']").bootstrapSwitch('state', histogram_enable, true);
-};
-
-function updateReorderRows(reorder_rows) {
-    
-    $('#rows-text').prop('value')  = reorder_rows;
-
-    $.ajax(`/api/` + api_version + `/hexitec/odin_data/reorder`, {
-        method: "PUT",
-        contentType: "application/json",
-        data: JSON.stringify({'height': parseInt(reorder_rows) })
+        data: (hdf_file_name),
+        success: function(result) {
+            $('#hdf-file-name-warning').html("");
+            $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
+        },
+        error: function(request, msg, error) {
+            $('#hdf-file-name-warning').html(error + ": " + request.responseText);
+            $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
+        }
     });
 };
+
+
+

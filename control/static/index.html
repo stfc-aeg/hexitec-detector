@@ -90,6 +90,87 @@
 
           <tr>  
             <td>  
+              <th>hdf/write&nbsp;</th>
+            </td>
+            <td>&nbsp;</td>
+            <td>
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
+                  <input type="checkbox" id='hdfWriteButton' name="hdf_write_enable" data-size="small">
+                </div>
+              </div>
+            </td>
+            <td>
+              <span id="hdf-write-enable-warning">&nbsp;</span>
+            </td>
+          </tr>
+
+          <tr>  
+            <td>  
+              FR Config File:&nbsp;
+            </td>
+            <td>
+              <div class="text-rows">
+                <input type="text" id="fr-config" onChange='fr_config_changed()' value="fr_config.json">
+              </div>
+            </td>
+            <td>
+              <td><span id="fr-config-warning">&nbsp;</span></td>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              FP Config File:&nbsp;
+            </td>
+            <td>
+              <div class="text-columns">
+                <input type="text" id="fp-config" onChange='fp_config_changed()' value= "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/hexitec_fp.json">
+              </div>
+            </td>
+            <td>
+              <td><span id="fp-config-warning">&nbsp;</span></td>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              hdf/file/path:&nbsp;
+            </td>
+            <td>
+              <div class="text-columns">
+                <input type="text" id="hdf-file-path" onChange='hdf_file_path_changed()' value= "/some/path">
+              </div>
+            </td>
+            <td>
+              <td><span id="hdf-file-path-warning">&nbsp;</span></td>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              hdf/file/name:&nbsp;
+            </td>
+            <td>
+              <div class="text-columns">
+                <input type="text" id="hdf-file-name" onChange='hdf_file_name_changed()' value= "/some/name">
+              </div>
+            </td>
+            <td>
+              <td><span id="hdf-file-name-warning">&nbsp;</span></td>
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+
+    </div> <!-- well sidebar-nav-fixed -->
+
+<!-- ---->
+    <div class="well sidebar-nav-fixed">
+      <table class="overall-table" align="center">
+        <thead></thead>
+        <tbody>
+
+          <tr>  
+            <td>  
               <th>Reorder&nbsp;</th>
             </td>
             <td>&nbsp;</td>
@@ -126,7 +207,7 @@
             <td>
               <span id="columns-warning">&nbsp;</span>
             </td>
-            </tr>
+          </tr>
 
           <tr>  
             <td>
@@ -263,7 +344,7 @@
             </td>
           </tr>
           <td>
-            <span id="gradients-warning"></span>
+            <td><span id="gradients-warning"></span></td>
           </td>
           <tr>
             <td>  
@@ -275,7 +356,7 @@
               </div>
             </td>
             <td>
-              <span id="intercepts-warning">&nbsp;</span>
+              <td><span id="intercepts-warning">&nbsp;</span></td>
             </td>
           </tr>
 
@@ -301,7 +382,7 @@
               </div>
             </td>
             <td>
-              <span id="pixel-warning">&nbsp;</span>
+              <td><span id="pixel-warning">&nbsp;</span></td>
             </td>
           </tr>
 
@@ -341,7 +422,7 @@
               </div>
             </td>
             <td>
-              <span id="bin-start-warning">&nbsp;</span>
+              <td><span id="bin-start-warning">&nbsp;</span></td>
             </td>
           </tr>
           <tr>
@@ -353,8 +434,9 @@
                 <input type="text" id="bin-end-text" onChange='bin_end_changed()' value="8000">
               </div>
             </td>
+            <td></td>
             <td>
-              <span id="bin-end-warning">&nbsp;</span>
+              <td><span id="bin-end-warning">&nbsp;</span></td>
             </td>
           </tr>
           <tr>
@@ -367,7 +449,7 @@
               </div>
             </td>
             <td>
-              <span id="bin-width-warning">&nbsp;</span>
+              <td><span id="bin-width-warning">&nbsp;</span></td>
             </td>
           </tr>
 
