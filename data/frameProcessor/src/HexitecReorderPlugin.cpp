@@ -137,6 +137,11 @@ namespace FrameProcessor
 
   }
 
+  void HexitecReorderPlugin::requestConfiguration(OdinData::IpcMessage& reply)
+  {
+
+  }
+
   /**
    * Collate status information for the plugin.  The status is added to the status IpcMessage object.
    *
@@ -147,6 +152,14 @@ namespace FrameProcessor
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecReorderPlugin");
     status.set_param(get_name() + "/packets_lost", packets_lost_);
+  }
+
+  /**
+   * Reset process plugin statistics, i.e. counter of packets lost
+   */
+  bool HexitecReorderPlugin::reset_statistics()
+  {
+
   }
 
   /**

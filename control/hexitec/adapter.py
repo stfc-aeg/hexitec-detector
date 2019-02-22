@@ -131,7 +131,7 @@ class HexitecAdapter(ApiAdapter):
         return obj
 
 class HexitecError(Exception):
-    """Simple exception class for PSCUData to wrap lower-level exceptions."""
+    """Simple exception class for Hexitec to wrap lower-level exceptions."""
 
     pass
 
@@ -192,11 +192,12 @@ class Hexitec():
             'enable': False
         })
 
+        self.pixel_grid_size = 3
         # Charged Sharing
         charged_sharing = ParameterTree({
             'addition': False,
             'discrimination': False,
-            'pixel_grid_size': 3
+            'pixel_grid_size': (self._get_pixel_grid_size, self._set_pixel_grid_size)
         })
 
         # Histogram
@@ -237,6 +238,17 @@ class Hexitec():
                 "Launching background task with interval %.2f secs", background_task_interval
             )
             self.background_task()
+
+    def _get_pixel_grid_size (self):
+
+        return self.pixel_grid_size
+
+    def _set_pixel_grid_size (self, pixel_grid_size):
+
+        if (pixel_grid_size == 3 or pixel_grid_size == 5):
+            self.pixel_grid_size = pixel_grid_size
+        else:
+            raise HexitecError("Must be 3 or 5")
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.
