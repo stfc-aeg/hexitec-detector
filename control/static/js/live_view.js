@@ -10,9 +10,6 @@ var LiveViewApp = (function()
     var api_url = '/api/0.1/live_view/';
     var img_elem = null;
     var img_scaling = 1.0;
-    // Vars added for Odin-Data
-    var test_put = false;
-    var test_get = false;
     
     var init = function() 
     {
@@ -24,22 +21,6 @@ var LiveViewApp = (function()
         });
 
         /// Style checkbox(s) into a ON/OFF slider
-
-        // testPut function..
-        $("[name='test_put']").bootstrapSwitch();
-        $("[name='test_put']").bootstrapSwitch('state', test_put, true);
-        $('input[name="test_put"]').on('switchChange.bootstrapSwitch', function(event,state) {
-            testPut();
-        });
-
-        // testGet function..
-        $("[name='test_get']").bootstrapSwitch();
-        $("[name='test_get']").bootstrapSwitch('state', test_get, true);
-        $('input[name="test_get"]').on('switchChange.bootstrapSwitch', function(event,state) {
-            testGet();
-        });
-
-        ///
 
         // Configure auto-update switch
         $("[name='liveview_enable']").bootstrapSwitch();
@@ -125,16 +106,6 @@ var LiveViewApp = (function()
     var changeLiveViewEnable = function() 
     {
         liveview_enable = $("[name='liveview_enable']").bootstrapSwitch('state');
-    };
-
-    var testPut = function()
-    {
-        console.log("Testing live_view.js' testPut()");
-    };
-
-    var testGet = function()
-    {
-        console.log("testGet()..");
     };
 
     var updateClipRange = function(data_min_max, reset_current=false)

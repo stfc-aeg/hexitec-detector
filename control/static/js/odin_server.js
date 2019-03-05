@@ -171,8 +171,7 @@ function reorder_rows_changed()
             $('#rows-warning').html("");
         },
         error: function(request, msg, error) {
-            console.log(request + " " + msg + " " + error);
-            $('#rows-warning').html(error);
+            $('#rows-warning').html(error + ": " + request.responseText);
         }
     });
 }
@@ -190,8 +189,7 @@ function reorder_columns_changed()
             $('#columns-warning').html("");
         },
         error: function(request, msg, error) {
-            console.log(request + " " + msg + " " + error);
-            $('#columns-warning').html(error);
+            $('#columns-warning').html(error + ": " + request.responseText);
         }
     });
 }
@@ -229,7 +227,6 @@ function threshold_value_changed()
         error: function(request, msg, error) {
             $('#threshold-value-warning').html(error + ": " + request.responseText);
         }
-
     });
 }
 
@@ -237,21 +234,17 @@ function threshold_mode_changed(el)
 {
     var threshold_mode = $('#threshold-mode').prop('value');
 
-    if ((new RegExp("^None$").test(el.value) == true) || 
-        (new RegExp("^Value$").test(el.value) == true) ||
-        (new RegExp("^Filename$").test(el.value) == true))
-    {
-        // Correct choice, clear warning & send new choice
-        $('#threshold-mode-warning').html("");
-
-        $.ajax(`/api/` + api_version + `/hexitec/odin_data/threshold`, {
-            method: "PUT",
-            contentType: "application/json",
-            data: JSON.stringify({'mode': threshold_mode })
-        });
-    } else {
-        $('#threshold-mode-warning').html("Valid choices: None, Value, Filename");
-    }
+    $.ajax(`/api/` + api_version + `/hexitec/odin_data/threshold`, {
+        method: "PUT",
+        contentType: "application/json",
+        data: JSON.stringify({'mode': threshold_mode }),
+        success: function(result) {
+            $('#threshold-mode-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#threshold-mode-warning').html(error + ": " + request.responseText);
+        }
+    });
 }
 
 function gradients_filename_changed()
@@ -365,7 +358,7 @@ function bin_end_changed()
 function bin_width_changed()
 {
     var bin_width = parseFloat( $('#bin-width-text').prop('value'));
-
+    console.log("bin_width: " + bin_width);
     $.ajax(`/api/` + api_version + `/hexitec/odin_data/histogram`, {
         method: "PUT",
         contentType: "application/json",

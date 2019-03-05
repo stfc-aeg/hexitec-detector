@@ -8,6 +8,14 @@ import logging
 import tornado
 import time
 from concurrent import futures
+# Making checking for integer type Python2/3 independent
+import sys
+if sys.version_info < (3, ):
+    integer_types = (int, long,)
+    float_types = (float, long,)
+else:
+    integer_types = (int,)
+    float_types = (float,)
 
 from tornado.ioloop import IOLoop
 from tornado.concurrent import run_on_executor
@@ -170,18 +178,22 @@ class Hexitec():
             'target_text': "(blank)"
         })
 
+        self.height = 80
+        self.width = 80
         # Reorder
         reorder = ParameterTree({
-            'height': 80,   # UI's rows = .config's height
-            'width': 80,    # columns = width
+            'height': (self._get_height, self._set_height),   # UI's rows = .config's height
+            'width': (self._get_width, self._set_width),    # columns = width
             'enable': False
         })
 
+        self.threshold_value = 100
+        self.threshold_mode = "None"
         # Threshold
         threshold = ParameterTree({
             'threshold_filename': "",
-            'value': 100,
-            'mode': "None",
+            'value': (self._get_threshold_value, self._set_threshold_value),
+            'mode': (self._get_threshold_mode, self._set_threshold_mode),
             'enable': False
         })
 
@@ -200,13 +212,17 @@ class Hexitec():
             'pixel_grid_size': (self._get_pixel_grid_size, self._set_pixel_grid_size)
         })
 
+        self.max_frames_received = 540
+        self.bin_start = 0
+        self.bin_end = 8000
+        self.bin_width = 10.0
         # Histogram
         histogram = ParameterTree({
             'enable': False,
-            'max_frames_received': 540,
-            'bin_start': 0,
-            'bin_end': 8000,
-            'bin_width': 10.0
+            'max_frames_received': (self._get_max_frames_received, self._set_max_frames_received),
+            'bin_start': (self._get_bin_start, self._set_bin_start),
+            'bin_end': (self._get_bin_end, self._set_bin_end),
+            'bin_width': (self._get_bin_width, self._set_bin_width)
         })
 
         # Build odin_data (vars) area here
@@ -239,16 +255,144 @@ class Hexitec():
             )
             self.background_task()
 
-    def _get_pixel_grid_size (self):
+    def _get_height(self):
+
+        return self.height
+        
+    def _set_height(self, rows):
+        """Check that rows is an integer, above zero
+        """
+        if (isinstance(rows, integer_types)):
+            if (rows > 0):
+                self.height = rows
+            else:
+                raise HexitecError("Must be > 0")
+        else:
+            raise HexitecError("Must be an integer")
+
+    def _get_width(self):
+
+        return self.width
+        
+    def _set_width(self, columns):
+        """Check that columns is an integer, above zero
+        """
+        if (isinstance(columns, integer_types)):
+            if (columns > 0):
+                self.width = columns
+            else:
+                raise HexitecError("Must be > 0")
+        else:
+            raise HexitecError("Must be an integer")
+
+    def _get_threshold_value(self):
+
+        return self.threshold_value
+        
+    def _set_threshold_value(self, value):
+        """Check that (threshold) value is an integer, zero or above
+        """
+        if (isinstance(value, integer_types)):
+            if (value >= 0):
+                self.threshold_value = value
+            else:
+                raise HexitecError("Must be >= 0")
+        else:
+            raise HexitecError("Must be an integer")
+
+    def _get_pixel_grid_size(self):
 
         return self.pixel_grid_size
 
-    def _set_pixel_grid_size (self, pixel_grid_size):
-
-        if (pixel_grid_size == 3 or pixel_grid_size == 5):
-            self.pixel_grid_size = pixel_grid_size
+    def _set_pixel_grid_size(self, pixel_grid_size):
+        """Check that pixel grid size is an integer, either 3 or 5
+        """
+        if (isinstance(pixel_grid_size, integer_types)):
+            if (pixel_grid_size == 3 or pixel_grid_size == 5):
+                self.pixel_grid_size = pixel_grid_size
+            else:
+                raise HexitecError("Must be 3 or 5")
         else:
-            raise HexitecError("Must be 3 or 5")
+            raise HexitecError("Must be an integer")
+
+    def _get_max_frames_received(self):
+
+        return self.max_frames_received
+
+    def _set_max_frames_received(self, max_frames_received):
+        """Check that max_frames_received is an integer, above zero
+        """
+        if (isinstance(max_frames_received, integer_types)):
+            if (max_frames_received > 0):
+                self.max_frames_received = max_frames_received
+            else:
+                raise HexitecError("Must be above zero")
+        else:
+            raise HexitecError("Must be an integer")
+
+    def _get_bin_start(self):
+
+        return self.bin_start
+
+    def _set_bin_start(self, bin_start):
+        """Check that bin_start is an integer, zero or above
+        """
+        if (isinstance(bin_start, integer_types)):
+            if (bin_start >= 0):
+                self.bin_start = bin_start
+            else:
+                raise HexitecError("Must be zero or above")
+        else:
+            raise HexitecError("Must be an integer")
+
+    def _get_bin_end(self):
+
+        return self.bin_end
+
+    def _set_bin_end(self, bin_end):
+        """Check that bin_end is an integer, above zero
+        """
+        if (isinstance(bin_end, integer_types)):
+            if (bin_end > 0):
+                self.bin_end = bin_end
+            else:
+                raise HexitecError("Must be above zero")
+        else:
+            raise HexitecError("Must be an integer")
+
+    def _get_bin_width(self):
+
+        return self.bin_width
+
+    def _set_bin_width(self, bin_width):
+        """Check that bin_width is a float, above zero
+        """
+        # JavaScript converts zero fractionals into integers
+        #   (I.e. 10.0 -> 10); Force integers to be floats:
+        if (isinstance(bin_width, integer_types)):
+            bin_width = float(bin_width)
+
+        if (isinstance(bin_width, float_types)):
+            if (bin_width >= 0):
+                self.bin_width = bin_width
+            else:
+                raise HexitecError("Must be above zero")
+        else:
+            raise HexitecError("Must be a float")
+
+    def _get_threshold_mode(self):
+
+        return self.threshold_mode
+
+    def _set_threshold_mode(self, mode):
+        """Check that the threshold mode is either of
+            None, Value or Filename
+            """
+        validChoices = ("None", "Value", "Filename")
+        if (mode in validChoices):
+            self.threshold_mode = mode
+        else:
+            raise HexitecError("Must be either of: None, Value or Filename")
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.
