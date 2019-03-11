@@ -27,9 +27,10 @@ using namespace log4cxx::helpers;
 namespace FrameProcessor
 {
 
-  /** Template for future Hexitec Frame objects.
+  /** Histogram for Hexitec Frame objects.
    *
-   * This service of the template for all of the remaining hexitec plug-ins to be written.
+   * The HexitecHistogramPlugin calculates histogram data from all processed frames
+   * and periodically writes these histograms to disk.
    */
   class HexitecHistogramPlugin : public FrameProcessorPlugin
   {
@@ -44,7 +45,9 @@ namespace FrameProcessor
     std::string get_version_long();
 
     void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
+    void requestConfiguration(OdinData::IpcMessage& reply);
     void status(OdinData::IpcMessage& status);
+    bool reset_statistics(void);
 
   private:
     /** Configuration constant for image width **/
@@ -63,6 +66,9 @@ namespace FrameProcessor
     static const std::string CONFIG_MAX_COLS;
     /** Configuration constant for maximum rows **/
 		static const std::string CONFIG_MAX_ROWS;
+		///
+		static const std::string CONFIG_BOLLOX;
+		bool bollox;
 
     void process_frame(boost::shared_ptr<Frame> frame);
 
@@ -83,9 +89,9 @@ namespace FrameProcessor
     /** Count number of frames **/
     int frames_counter_;
 
-    long long bin_start_;
-    long long bin_end_;
-    float bin_width_;
+    long bin_start_;
+    long bin_end_;
+    double bin_width_;
     long long number_bins_;
     float *hexitec_bin_;
     float *histogram_per_pixel_;

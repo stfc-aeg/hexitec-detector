@@ -14,8 +14,8 @@ namespace FrameProcessor
   const std::string HexitecAdditionPlugin::CONFIG_IMAGE_WIDTH 		= "width";
   const std::string HexitecAdditionPlugin::CONFIG_IMAGE_HEIGHT 		= "height";
   const std::string HexitecAdditionPlugin::CONFIG_PIXEL_GRID_SIZE = "pixel_grid_size";
-  const std::string HexitecAdditionPlugin::CONFIG_MAX_COLS 				= "max_cols";
-  const std::string HexitecAdditionPlugin::CONFIG_MAX_ROWS 				= "max_rows";
+  const std::string HexitecAdditionPlugin::CONFIG_MAX_COLS 				= "fem_max_cols";
+  const std::string HexitecAdditionPlugin::CONFIG_MAX_ROWS 				= "fem_max_rows";
 
   /**
    * The constructor sets up logging used within the class.
@@ -84,8 +84,8 @@ namespace FrameProcessor
    * - image_width_ 						<=> width
  	 * - image_height_	 					<=> height
  	 * - pixel_grid_size_ 				<=> pixel_grid_size
-	 * - fem_pixels_per_columns_	<=> max_cols
-	 * - fem_pixels_per_rows_ 		<=> max_rows
+	 * - fem_pixels_per_columns_	<=> fem_max_cols
+	 * - fem_pixels_per_rows_ 		<=> fem_max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -124,6 +124,17 @@ namespace FrameProcessor
     fem_total_pixels_ = fem_pixels_per_columns_ * fem_pixels_per_rows_;
   }
 
+  void HexitecAdditionPlugin::requestConfiguration(OdinData::IpcMessage& reply)
+  {
+  	// Return the configuration of the process plugin
+  	std::string base_str = get_name() + "/";
+  	reply.set_param(base_str + HexitecAdditionPlugin::CONFIG_IMAGE_WIDTH, image_width_);
+    reply.set_param(base_str + HexitecAdditionPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
+    reply.set_param(base_str + HexitecAdditionPlugin::CONFIG_PIXEL_GRID_SIZE, pixel_grid_size_);
+    reply.set_param(base_str + HexitecAdditionPlugin::CONFIG_MAX_COLS, fem_pixels_per_columns_);
+    reply.set_param(base_str + HexitecAdditionPlugin::CONFIG_MAX_ROWS, fem_pixels_per_rows_);
+  }
+
   /**
    * Collate status information for the plugin.  The status is added to the status IpcMessage object.
    *
@@ -133,6 +144,22 @@ namespace FrameProcessor
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecAdditionPlugin");
+    status.set_param(get_name() + "/image_width", image_width_);
+    status.set_param(get_name() + "/image_height", image_height_);
+    status.set_param(get_name() + "/pixel_grid_size", pixel_grid_size_);
+    status.set_param(get_name() + "/fem_max_rows", fem_pixels_per_rows_);
+    status.set_param(get_name() + "/fem_max_cols", fem_pixels_per_columns_);
+  }
+
+  /**
+   * Reset process plugin statistics
+   */
+  bool HexitecAdditionPlugin::reset_statistics(void)
+  {
+
+  	// Nowt to reset..?
+
+  	return true;
   }
 
   /**

@@ -13,8 +13,8 @@ namespace FrameProcessor
 
   const std::string HexitecTemplatePlugin::CONFIG_IMAGE_WIDTH  = "width";
   const std::string HexitecTemplatePlugin::CONFIG_IMAGE_HEIGHT = "height";
-  const std::string HexitecTemplatePlugin::CONFIG_MAX_COLS 		 = "max_cols";
-  const std::string HexitecTemplatePlugin::CONFIG_MAX_ROWS 		 = "max_rows";
+  const std::string HexitecTemplatePlugin::CONFIG_MAX_COLS 		 = "fem_max_cols";
+  const std::string HexitecTemplatePlugin::CONFIG_MAX_ROWS 		 = "fem_max_rows";
 
   /**
    * The constructor sets up logging used within the class.
@@ -74,8 +74,8 @@ namespace FrameProcessor
    * plugin supports the following configuration parameters:
    * - image_width_ 						<=> width
  	 * - image_height_	 					<=> height
-	 * - fem_pixels_per_columns_	<=> max_cols
-	 * - fem_pixels_per_rows_ 		<=> max_rows
+	 * - fem_pixels_per_columns_	<=> fem_max_cols
+	 * - fem_pixels_per_rows_ 		<=> fem_max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -107,6 +107,16 @@ namespace FrameProcessor
     fem_total_pixels_ = fem_pixels_per_columns_ * fem_pixels_per_rows_;
   }
 
+  void HexitecTemplatePlugin::requestConfiguration(OdinData::IpcMessage& reply)
+  {
+    // Return the configuration of the process plugin
+    std::string base_str = get_name() + "/";
+    reply.set_param(base_str + HexitecTemplatePlugin::CONFIG_IMAGE_WIDTH, image_width_);
+    reply.set_param(base_str + HexitecTemplatePlugin::CONFIG_IMAGE_HEIGHT, image_height_);
+    reply.set_param(base_str + HexitecTemplatePlugin::CONFIG_MAX_COLS, fem_pixels_per_columns_);
+    reply.set_param(base_str + HexitecTemplatePlugin::CONFIG_MAX_ROWS, fem_pixels_per_rows_);
+  }
+
   /**
    * Collate status information for the plugin.  The status is added to the status IpcMessage object.
    *
@@ -116,6 +126,21 @@ namespace FrameProcessor
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecTemplatePlugin");
+    status.set_param(get_name() + "/image_width", image_width_);
+    status.set_param(get_name() + "/image_height", image_height_);
+    status.set_param(get_name() + "/fem_max_rows", fem_pixels_per_rows_);
+    status.set_param(get_name() + "/fem_max_cols", fem_pixels_per_columns_);
+  }
+
+  /**
+   * Reset process plugin statistics
+   */
+  bool HexitecTemplatePlugin::reset_statistics(void)
+  {
+
+    // Nowt to reset..?
+
+    return true;
   }
 
   /**

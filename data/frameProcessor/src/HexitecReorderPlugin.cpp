@@ -16,6 +16,9 @@ namespace FrameProcessor
   const std::string HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT 	 = "height";
   const std::string HexitecReorderPlugin::CONFIG_ENABLE_REORDER  = "reorder";
   const std::string HexitecReorderPlugin::CONFIG_RAW_DATA 			 = "raw_data";
+  const std::string HexitecReorderPlugin::CONFIG_MAX_COLS 		 	 = "fem_max_cols";
+  const std::string HexitecReorderPlugin::CONFIG_MAX_ROWS      	 = "fem_max_rows";
+
   /**
    * The constructor sets up logging used within the class.
    */
@@ -42,6 +45,9 @@ namespace FrameProcessor
     ///
     debugFrameCounter = 0;
 
+    /// Test making fem total pixels user configurable..
+//    fem_total_pixels_ = FEM_TOTAL_PIXELS;
+    ///
   }
 
   /**
@@ -101,7 +107,12 @@ namespace FrameProcessor
    * Configure the Hexitec plugin.  This receives an IpcMessage which should be processed
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
-   * - (bitdepth) - Removed
+   * - image_width_ 						<=> width
+   * - image_height_						<=> height
+   * - reorder_pixels_ 					<=> reorder
+   * - write_raw_data_ 					<=> raw_data
+   * - fem_pixels_per_columns_	<=> fem_max_cols
+   * - fem_pixels_per_rows_			<=> fem_max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -135,11 +146,30 @@ namespace FrameProcessor
       write_raw_data_ = config.get_param<bool>(HexitecReorderPlugin::CONFIG_RAW_DATA);
     }
 
+    if (config.has_param(HexitecReorderPlugin::CONFIG_MAX_ROWS))
+    {
+      fem_pixels_per_rows_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_MAX_ROWS);
+    }
+
+    if (config.has_param(HexitecReorderPlugin::CONFIG_MAX_COLS))
+    {
+      fem_pixels_per_columns_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_MAX_COLS);
+    }
+
+    fem_total_pixels_ = fem_pixels_per_rows_ * fem_pixels_per_columns_;
   }
 
   void HexitecReorderPlugin::requestConfiguration(OdinData::IpcMessage& reply)
   {
-
+  	// Return the configuration of the reorder plugin
+  	std::string base_str = get_name() + "/";
+    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_DROPPED_PACKETS, packets_lost_);
+    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_IMAGE_WIDTH, image_width_);
+    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
+    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_ENABLE_REORDER, reorder_pixels_);
+    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_RAW_DATA, write_raw_data_);
+    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_MAX_ROWS, fem_pixels_per_rows_);
+    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_MAX_COLS, fem_pixels_per_columns_);
   }
 
   /**
@@ -152,6 +182,13 @@ namespace FrameProcessor
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecReorderPlugin");
     status.set_param(get_name() + "/packets_lost", packets_lost_);
+    status.set_param(get_name() + "/image_width", image_width_);
+    status.set_param(get_name() + "/image_height", image_height_);
+    status.set_param(get_name() + "/reorder", reorder_pixels_);
+    status.set_param(get_name() + "/raw_data", write_raw_data_);
+    status.set_param(get_name() + "/fem_max_rows", fem_pixels_per_rows_);
+    status.set_param(get_name() + "/fem_max_cols", fem_pixels_per_columns_);
+
   }
 
   /**
@@ -159,7 +196,10 @@ namespace FrameProcessor
    */
   bool HexitecReorderPlugin::reset_statistics()
   {
+    LOG4CXX_DEBUG(logger_, "Statistics reset requested for Reorder plugin")
 
+    // Reset packets lost counter
+    packets_lost_ = 0;
   }
 
   /**

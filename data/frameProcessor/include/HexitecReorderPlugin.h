@@ -48,12 +48,9 @@ namespace FrameProcessor
     std::string get_version_long();
 
     void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
-    void requestConfiguration(OdinData::IpcMessage& reply);	// New
+    void requestConfiguration(OdinData::IpcMessage& reply);
     void status(OdinData::IpcMessage& status);
-    bool reset_statistics();	// New
-
-//    virtual bool reset_statistics();
-//    virtual void requestConfiguration(OdinData::IpcMessage& reply);
+    bool reset_statistics();
 
   private:
     /** Configuration constant for clearing out dropped packet counters **/

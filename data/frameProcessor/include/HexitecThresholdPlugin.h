@@ -34,9 +34,8 @@ namespace FrameProcessor
 
   /** Processing of Hexitec Frame objects.
    *
-   * The HexitecThresholdPlugin class is currently responsible for receiving a raw data
-   * Frame object and reordering the data into valid Hexitec frames according to the selected
-   * bit depth.
+   * The HexitecThresholdPlugin class receives Frame objects
+   * and reorders the data into valid Hexitec frames.
    */
   class HexitecThresholdPlugin : public FrameProcessorPlugin
   {
@@ -51,7 +50,9 @@ namespace FrameProcessor
     std::string get_version_long();
 
     void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
+    void requestConfiguration(OdinData::IpcMessage& reply);
     void status(OdinData::IpcMessage& status);
+    bool reset_statistics(void);
 
   private:
     /** Configuration constant for image width **/
@@ -91,6 +92,7 @@ namespace FrameProcessor
     uint16_t *threshold_per_pixel_;
     bool thresholds_status_;
     ThresholdMode threshold_mode_;
+    std::string threshold_file_;
 
     int fem_pixels_per_rows_;
     int fem_pixels_per_columns_;

@@ -27,9 +27,9 @@ using namespace log4cxx::helpers;
 namespace FrameProcessor
 {
 
-  /** Template for future Hexitec Frame objects.
+  /** Implements Discrimination algorithm on Hexitec Frame objects.
    *
-   * This service of the template for all of the remaining hexitec plug-ins to be written.
+   * If any hit pixel have any neighbour(s) with hits, clear all hit pixels.
    */
   class HexitecDiscriminationPlugin : public FrameProcessorPlugin
   {
@@ -44,7 +44,9 @@ namespace FrameProcessor
     std::string get_version_long();
 
     void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
+    void requestConfiguration(OdinData::IpcMessage& reply);
     void status(OdinData::IpcMessage& status);
+    bool reset_statistics(void);
 
   private:
     /** Configuration constant for image width **/

@@ -17,8 +17,8 @@ namespace FrameProcessor
   const std::string HexitecHistogramPlugin::CONFIG_BIN_START    = "bin_start";
   const std::string HexitecHistogramPlugin::CONFIG_BIN_END 		  = "bin_end";
   const std::string HexitecHistogramPlugin::CONFIG_BIN_WIDTH 		= "bin_width";
-  const std::string HexitecHistogramPlugin::CONFIG_MAX_COLS 		= "max_cols";
-  const std::string HexitecHistogramPlugin::CONFIG_MAX_ROWS 		= "max_rows";
+  const std::string HexitecHistogramPlugin::CONFIG_MAX_COLS 		= "fem_max_cols";
+  const std::string HexitecHistogramPlugin::CONFIG_MAX_ROWS 		= "fem_max_rows";
 
   /**
    * The constructor sets up logging used within the class.
@@ -102,7 +102,7 @@ namespace FrameProcessor
     // Initialise bins
     float currentBin = bin_start_;
     float *pHxtBin = hexitec_bin_;
-    for (long long i = bin_start_; i < number_bins_; i++, currentBin += bin_width_)
+    for (long i = bin_start_; i < number_bins_; i++, currentBin += bin_width_)
     {
        *pHxtBin = currentBin;
        pHxtBin++;
@@ -116,11 +116,11 @@ namespace FrameProcessor
    * - image_width_ 						<=> width
  	 * - image_height_	 					<=> height
    * - max_frames_received_			<=> max_frames_received
-   * - bin_start_								<=> bin_start_
-   * - bin_end_									<=> bin_end_
-   * - bin_width_								<=> bin_width_
-	 * - fem_pixels_per_columns_	<=> max_cols
-	 * - fem_pixels_per_rows_ 		<=> max_rows
+   * - bin_start_								<=> bin_start
+   * - bin_end_									<=> bin_end
+   * - bin_width_								<=> bin_width
+   * - fem_pixels_per_columns_	<=> fem_max_cols
+   * - fem_pixels_per_rows_			<=> fem_max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -146,12 +146,12 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_START))
     {
-    	bin_start_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_START);
+    	bin_start_ = config.get_param<long>(HexitecHistogramPlugin::CONFIG_BIN_START);
 		}
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_END))
     {
-    	bin_end_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_END);
+    	bin_end_ = config.get_param<long>(HexitecHistogramPlugin::CONFIG_BIN_END);
     }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_WIDTH))
@@ -159,7 +159,7 @@ namespace FrameProcessor
     	bin_width_ = config.get_param<double>(HexitecHistogramPlugin::CONFIG_BIN_WIDTH);
 		}
 
-    number_bins_      = (int)(((bin_end_ - bin_start_) / bin_width_) + 0.5);
+    number_bins_  = (int)(((bin_end_ - bin_start_) / bin_width_) + 0.5);
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_MAX_COLS))
     {
@@ -184,6 +184,20 @@ namespace FrameProcessor
     initialiseHistograms();
   }
 
+  void HexitecHistogramPlugin::requestConfiguration(OdinData::IpcMessage& reply)
+  {
+  	// Return the configuration of the histogram plugin
+  	std::string base_str = get_name() + "/";
+		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_IMAGE_WIDTH, image_width_);
+		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
+		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_MAX_FRAMES , max_frames_received_);
+		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_START, bin_start_);
+		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_END , bin_end_);
+		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_WIDTH, bin_width_);
+		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_MAX_COLS, fem_pixels_per_columns_);
+		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_MAX_ROWS, fem_pixels_per_rows_);
+  }
+
   /**
    * Collate status information for the plugin.  The status is added to the status IpcMessage object.
    *
@@ -193,6 +207,34 @@ namespace FrameProcessor
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecHistogramPlugin");
+    status.set_param(get_name() + "/image_width", image_width_);
+    status.set_param(get_name() + "/image_height", image_height_);
+    status.set_param(get_name() + "/max_frames_received", max_frames_received_);
+    status.set_param(get_name() + "/bin_start", bin_start_);
+    status.set_param(get_name() + "/bin_end", bin_end_);
+    status.set_param(get_name() + "/bin_width", bin_width_);
+    status.set_param(get_name() + "/fem_max_rows", fem_pixels_per_rows_);
+    status.set_param(get_name() + "/fem_max_cols", fem_pixels_per_columns_);
+
+  }
+
+  /**
+   * Reset process plugin statistics, i.e. counter of packets lost
+   */
+  bool HexitecHistogramPlugin::reset_statistics(void)
+  {
+  	// Reset These parameters or not..??!
+    image_pixels_ = image_width_ * image_height_;
+    number_bins_  = (int)(((bin_end_ - bin_start_) / bin_width_) + 0.5);
+    // Free the existing allocated histogram memory
+    free(summed_histogram_);
+    summed_histogram_ = NULL;
+    free(hexitec_bin_);
+    hexitec_bin_ = NULL;
+    // (Re-)Initialise memory
+    initialiseHistograms();
+
+    return true;
   }
 
   /**

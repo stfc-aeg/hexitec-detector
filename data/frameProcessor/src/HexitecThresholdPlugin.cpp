@@ -16,8 +16,8 @@ namespace FrameProcessor
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE  = "threshold_mode";
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE = "threshold_value";
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE  = "threshold_file";
-  const std::string HexitecThresholdPlugin::CONFIG_MAX_COLS 			 = "max_cols";
-  const std::string HexitecThresholdPlugin::CONFIG_MAX_ROWS 			 = "max_rows";
+  const std::string HexitecThresholdPlugin::CONFIG_MAX_COLS 			 = "fem_max_cols";
+  const std::string HexitecThresholdPlugin::CONFIG_MAX_ROWS 			 = "fem_max_rows";
 
   /**
    * The constructor sets up logging used within the class.
@@ -89,8 +89,8 @@ namespace FrameProcessor
    * - threshold_mode_					<=> threshold_mode
    * - threshold_value_					<=> threshold_value
    * - threshold_file_					<=> threshold_file
-	 * - fem_pixels_per_columns_	<=> max_cols
-	 * - fem_pixels_per_rows_ 		<=> max_rows
+	 * - fem_pixels_per_columns_	<=> fem_max_cols
+	 * - fem_pixels_per_rows_ 		<=> fem_max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -153,11 +153,11 @@ namespace FrameProcessor
 	    		// Setup thresholds from file provided
 	        if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE))
 	    		{
-	    	    std::string threshold_file = config.get_param<std::string>(
+	    	    threshold_file_ = config.get_param<std::string>(
 	    	    		HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE);
 
-						LOG4CXX_TRACE(logger_, "Setting thresholds from file: " << threshold_file);
-						if (set_threshold_per_pixel(threshold_file.c_str()))
+						LOG4CXX_TRACE(logger_, "Setting thresholds from file: " << threshold_file_);
+						if (set_threshold_per_pixel(threshold_file_.c_str()))
 						{
 							LOG4CXX_TRACE(logger_, "Read thresholds from file successfully");
 						}
@@ -186,6 +186,20 @@ namespace FrameProcessor
     fem_total_pixels_ = fem_pixels_per_columns_ * fem_pixels_per_rows_;
   }
 
+
+  void HexitecThresholdPlugin::requestConfiguration(OdinData::IpcMessage& reply)
+  {
+    // Return the configuration of the process plugin
+    std::string base_str = get_name() + "/";
+    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_IMAGE_WIDTH, image_width_);
+    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
+    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE , threshold_mode_);
+    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE, threshold_value_);
+    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE , threshold_file_);
+    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_MAX_COLS, fem_pixels_per_columns_);
+    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_MAX_ROWS, fem_pixels_per_rows_);
+  }
+
   /**
    * Collate status information for the plugin.  The status is added to the status IpcMessage object.
    *
@@ -195,6 +209,25 @@ namespace FrameProcessor
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecThresholdPlugin");
+    status.set_param(get_name() + "/image_width", image_width_);
+    status.set_param(get_name() + "/image_height", image_height_);
+    status.set_param(get_name() + "/threshold_mode", threshold_mode_);
+    status.set_param(get_name() + "/threshold_value", threshold_value_);
+    status.set_param(get_name() + "/threshold_file_", threshold_file_);
+    status.set_param(get_name() + "/fem_max_rows", fem_pixels_per_rows_);
+    status.set_param(get_name() + "/fem_max_cols", fem_pixels_per_columns_);
+
+  }
+
+  /**
+   * Reset process plugin statistics
+   */
+  bool HexitecThresholdPlugin::reset_statistics(void)
+  {
+
+    // Nowt to reset..?
+
+    return true;
   }
 
   /**
