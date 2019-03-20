@@ -23,10 +23,6 @@ using namespace log4cxx::helpers;
 #include <iostream>
 #include <fstream>
 
-#define FEM_PIXELS_PER_ROW 80
-#define FEM_PIXELS_PER_COLUMN 80
-#define FEM_TOTAL_PIXELS (FEM_PIXELS_PER_ROW * FEM_PIXELS_PER_COLUMN)
-
 namespace FrameProcessor
 {
 
@@ -86,13 +82,14 @@ namespace FrameProcessor
     void process_threshold_file(float *in, float *out);
     bool get_data(const char *filename, uint16_t default_value);
     bool set_threshold_per_pixel(const char *threshold_filename);
+    std::string determineThresholdMode(int mode);
 
     // Member variables:
     unsigned int threshold_value_;
     uint16_t *threshold_per_pixel_;
     bool thresholds_status_;
     ThresholdMode threshold_mode_;
-    std::string threshold_file_;
+    std::string threshold_filename_;
 
     int fem_pixels_per_rows_;
     int fem_pixels_per_columns_;

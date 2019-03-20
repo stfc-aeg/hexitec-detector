@@ -146,7 +146,7 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_START))
     {
-    	bin_start_ = config.get_param<long>(HexitecHistogramPlugin::CONFIG_BIN_START);
+    	bin_start_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_START);
 		}
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_END))

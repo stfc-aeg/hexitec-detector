@@ -20,10 +20,6 @@ using namespace log4cxx::helpers;
 #include "HexitecDefinitions.h"
 #include "ClassLoader.h"
 
-#define FEM_PIXELS_PER_ROW 80
-#define FEM_PIXELS_PER_COLUMN 80
-#define FEM_TOTAL_PIXELS (FEM_PIXELS_PER_ROW * FEM_PIXELS_PER_COLUMN)
-
 namespace FrameProcessor
 {
 

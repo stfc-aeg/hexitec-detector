@@ -27,10 +27,6 @@ using namespace log4cxx::helpers;
 #include <sstream>
 #include <string.h>
 
-#define FEM_PIXELS_PER_ROW 80
-#define FEM_PIXELS_PER_COLUMN 80
-#define FEM_TOTAL_PIXELS (FEM_PIXELS_PER_ROW * FEM_PIXELS_PER_COLUMN)
-
 namespace FrameProcessor
 {
 
@@ -91,8 +87,8 @@ namespace FrameProcessor
     void setIntercepts(const char *interceptFilename);
     bool getData(const char *filename, float *dataValue, float defaultValue);
 
-    std::string gradients_file_;
-    std::string intercepts_file_;
+    std::string gradients_filename_;
+    std::string intercepts_filename_;
 
     int fem_pixels_per_rows_;
     int fem_pixels_per_columns_;

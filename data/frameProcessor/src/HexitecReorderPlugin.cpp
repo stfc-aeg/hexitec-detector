@@ -28,7 +28,11 @@ namespace FrameProcessor
       image_pixels_(image_width_ * image_height_),
       packets_lost_(0),
 			reorder_pixels_(true),
-			write_raw_data_(true)
+			write_raw_data_(true),
+			pixelMapInitialised(false),
+			fem_pixels_per_columns_(80),
+			fem_pixels_per_rows_(80),
+			fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecReorderPlugin");
@@ -45,9 +49,6 @@ namespace FrameProcessor
     ///
     debugFrameCounter = 0;
 
-    /// Test making fem total pixels user configurable..
-//    fem_total_pixels_ = FEM_TOTAL_PIXELS;
-    ///
   }
 
   /**
@@ -263,11 +264,11 @@ namespace FrameProcessor
     {
       // Check that the pixels are contained within the dimensions of the
       // specified output image, otherwise throw an error
-      if (FEM_TOTAL_PIXELS > image_pixels_)
+      if (fem_total_pixels_ > image_pixels_)
       {
         std::stringstream msg;
         msg << "Pixel count inferred from FEM ("
-            << FEM_TOTAL_PIXELS
+            << fem_total_pixels_
             << ") will exceed dimensions of output image (" << image_pixels_ << ")";
         throw std::runtime_error(msg.str());
       }
@@ -368,7 +369,7 @@ namespace FrameProcessor
   {
     int index = 0;
 
-    for (int i=0; i<FEM_TOTAL_PIXELS; i++)
+    for (int i=0; i<fem_total_pixels_; i++)
     {
         // Re-order pixels:
       	index = pixelMap[i];
@@ -387,7 +388,7 @@ namespace FrameProcessor
   {
     int index = 0;
 
-    for (int i=0; i<FEM_TOTAL_PIXELS; i++)
+    for (int i=0; i<fem_total_pixels_; i++)
     {
 				// Do not reorder pixels:
 				out[i] = (float)in[i];
@@ -399,7 +400,7 @@ namespace FrameProcessor
 	{
     std::ostringstream hitPixelsStream;
     hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-		for (int i = 0; i < FEM_TOTAL_PIXELS; i++ )
+		for (int i = 0; i < fem_total_pixels_; i++ )
 		{
 			if(frame[i] > 0)
 				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";

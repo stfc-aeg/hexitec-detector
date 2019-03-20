@@ -103,6 +103,8 @@ namespace FrameProcessor
     }
 
     image_pixels_ = image_width_ * image_height_;
+    number_rows_ = image_height_;
+    number_columns_ = image_width_;
 
     if (config.has_param(HexitecAdditionPlugin::CONFIG_PIXEL_GRID_SIZE))
     {
@@ -156,7 +158,6 @@ namespace FrameProcessor
    */
   bool HexitecAdditionPlugin::reset_statistics(void)
   {
-
   	// Nowt to reset..?
 
   	return true;
@@ -195,11 +196,11 @@ namespace FrameProcessor
 			{
 				// Check that the pixels are contained within the dimensions of the
 				// specified output image, otherwise throw an error
-				if (FEM_TOTAL_PIXELS > image_pixels_)
+				if (fem_total_pixels_ > image_pixels_)
 				{
 					std::stringstream msg;
 					msg << "Pixel count inferred from FEM ("
-							<< FEM_TOTAL_PIXELS
+							<< fem_total_pixels_
 							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
 					throw std::runtime_error(msg.str());
 				}
@@ -467,7 +468,7 @@ namespace FrameProcessor
 	{
     std::ostringstream hitPixelsStream;
     hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-		for (int i = 0; i < FEM_TOTAL_PIXELS; i++ )
+		for (int i = 0; i < fem_total_pixels_; i++ )
 		{
 			if(frame[i] > 0)
 				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";

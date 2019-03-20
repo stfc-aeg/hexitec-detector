@@ -23,10 +23,6 @@ using namespace log4cxx::helpers;
 #include <fstream>
 #include <sstream>
 
-#define FEM_PIXELS_PER_ROW 80
-#define FEM_PIXELS_PER_COLUMN 80
-#define FEM_TOTAL_PIXELS (FEM_PIXELS_PER_ROW * FEM_PIXELS_PER_COLUMN)
-
 namespace FrameProcessor
 {
 

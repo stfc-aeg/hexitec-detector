@@ -34,7 +34,7 @@ namespace FrameProcessor
     LOG4CXX_TRACE(logger_, "HexitecNextFramePlugin version " <<
     												this->get_version_long() << " loaded.");
 
-    last_frame_ = (float *) calloc(FEM_TOTAL_PIXELS, sizeof(float));
+    last_frame_ = (float *) calloc(fem_total_pixels_, sizeof(float));
     ///
     debugFrameCounter = 0;
 
@@ -46,6 +46,8 @@ namespace FrameProcessor
   HexitecNextFramePlugin::~HexitecNextFramePlugin()
   {
     LOG4CXX_TRACE(logger_, "HexitecNextFramePlugin destructor.");
+    free(last_frame_);
+    last_frame_ = NULL;
   }
 
   int HexitecNextFramePlugin::get_version_major()
@@ -142,7 +144,6 @@ namespace FrameProcessor
    */
   bool HexitecNextFramePlugin::reset_statistics(void)
   {
-
     // Nowt to reset..?
 
     return true;
@@ -184,11 +185,11 @@ namespace FrameProcessor
 			{
 				// Check that the pixels are contained within the dimensions of the
 				// specified output image, otherwise throw an error
-				if (FEM_TOTAL_PIXELS > image_pixels_)
+				if (fem_total_pixels_ > image_pixels_)
 				{
 					std::stringstream msg;
 					msg << "Pixel count inferred from FEM ("
-							<< FEM_TOTAL_PIXELS
+							<< fem_total_pixels_
 							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
 					throw std::runtime_error(msg.str());
 				}
@@ -248,7 +249,7 @@ namespace FrameProcessor
 					last_frame_number_ = current_frame_number;
 
 					// Copy current (corrected) frame into last frame's place
-					memcpy(last_frame_, corrected_image, FEM_TOTAL_PIXELS * sizeof(float));
+					memcpy(last_frame_, corrected_image, fem_total_pixels_ * sizeof(float));
 					free(corrected_image);
 					corrected_image = NULL;
 				}
@@ -286,7 +287,7 @@ namespace FrameProcessor
    */
   void HexitecNextFramePlugin::apply_algorithm(float *in, float *out)
   {
-    for (int i=0; i<FEM_TOTAL_PIXELS; i++)
+    for (int i=0; i<fem_total_pixels_; i++)
     {
     	// If pixel in last frame is nonzero, clear it from current frame
     	// 	(whether hit or not), otherwise don't clear pixel frame current frame
@@ -300,7 +301,7 @@ namespace FrameProcessor
     	}
     }
     // Copy current frame so it can be compared against the following frame
-    memcpy(last_frame_, in, FEM_TOTAL_PIXELS * sizeof(float));
+    memcpy(last_frame_, in, fem_total_pixels_ * sizeof(float));
   }
 
   //// Debug function: Takes a file prefix and frame, and writes all nonzero pixels to a file
@@ -308,7 +309,7 @@ namespace FrameProcessor
 	{
     std::ostringstream hitPixelsStream;
     hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-		for (int i = 0; i < FEM_TOTAL_PIXELS; i++ )
+		for (int i = 0; i < fem_total_pixels_; i++ )
 		{
 			if(frame[i] > 0)
 				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";

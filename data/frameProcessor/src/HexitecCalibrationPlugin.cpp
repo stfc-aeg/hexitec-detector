@@ -13,8 +13,8 @@ namespace FrameProcessor
 
   const std::string HexitecCalibrationPlugin::CONFIG_IMAGE_WIDTH 		 = "width";
   const std::string HexitecCalibrationPlugin::CONFIG_IMAGE_HEIGHT 	 = "height";
-  const std::string HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE  = "gradients_file";
-  const std::string HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE = "intercepts_file";
+  const std::string HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE  = "gradients_filename";
+  const std::string HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE = "intercepts_filename";
   const std::string HexitecCalibrationPlugin::CONFIG_MAX_COLS 			 = "fem_max_cols";
   const std::string HexitecCalibrationPlugin::CONFIG_MAX_ROWS 			 = "fem_max_rows";
 
@@ -31,7 +31,9 @@ namespace FrameProcessor
 			intercept_values_(NULL),
 			fem_pixels_per_rows_(80),
 			fem_pixels_per_columns_(80),
-			fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
+			fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_),
+			gradients_filename_(""),
+			intercepts_filename_("")
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecCalibrationPlugin");
@@ -115,16 +117,16 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE))
 		{
-			gradients_file_ = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE);
-			LOG4CXX_TRACE(logger_, "Setting gradients from file: " << gradients_file_);
-			setGradients(gradients_file_.c_str());
+			gradients_filename_ = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE);
+			LOG4CXX_TRACE(logger_, "Setting gradients from file: " << gradients_filename_);
+			setGradients(gradients_filename_.c_str());
 		}
 
     if (config.has_param(HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE))
 		{
-	    intercepts_file_ = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE);
-			LOG4CXX_TRACE(logger_, "Setting intercepts from file: " << intercepts_file_);
-			setIntercepts(intercepts_file_.c_str());
+	    intercepts_filename_ = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE);
+			LOG4CXX_TRACE(logger_, "Setting intercepts from file: " << intercepts_filename_);
+			setIntercepts(intercepts_filename_.c_str());
 		}
 
     if (config.has_param(HexitecCalibrationPlugin::CONFIG_MAX_COLS))
@@ -138,6 +140,7 @@ namespace FrameProcessor
     }
 
     fem_total_pixels_ = fem_pixels_per_columns_ * fem_pixels_per_rows_;
+
   }
 
   void HexitecCalibrationPlugin::requestConfiguration(OdinData::IpcMessage& reply)
@@ -146,8 +149,8 @@ namespace FrameProcessor
     std::string base_str = get_name() + "/";
     reply.set_param(base_str + HexitecCalibrationPlugin::CONFIG_IMAGE_WIDTH, image_width_);
     reply.set_param(base_str + HexitecCalibrationPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
-    reply.set_param(base_str + HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE, gradients_file_);
-    reply.set_param(base_str + HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE, intercepts_file_);
+    reply.set_param(base_str + HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE, gradients_filename_);
+    reply.set_param(base_str + HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE, intercepts_filename_);
     reply.set_param(base_str + HexitecCalibrationPlugin::CONFIG_MAX_COLS, fem_pixels_per_columns_);
     reply.set_param(base_str + HexitecCalibrationPlugin::CONFIG_MAX_ROWS, fem_pixels_per_rows_);
 
@@ -164,8 +167,8 @@ namespace FrameProcessor
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecCalibrationPlugin");
     status.set_param(get_name() + "/image_width", image_width_);
     status.set_param(get_name() + "/image_height", image_height_);
-    status.set_param(get_name() + "/gradients_file", gradients_file_);
-    status.set_param(get_name() + "/intercepts_file", intercepts_file_);
+    status.set_param(get_name() + "/gradients_filename", gradients_filename_);
+    status.set_param(get_name() + "/intercepts_filename", intercepts_filename_);
     status.set_param(get_name() + "/fem_max_rows", fem_pixels_per_rows_);
     status.set_param(get_name() + "/fem_max_cols", fem_pixels_per_columns_);
   }
@@ -214,11 +217,11 @@ namespace FrameProcessor
 			{
 				// Check that the pixels are contained within the dimensions of the
 				// specified output image, otherwise throw an error
-				if (FEM_TOTAL_PIXELS > image_pixels_)
+				if (fem_total_pixels_ > image_pixels_)
 				{
 					std::stringstream msg;
 					msg << "Pixel count inferred from FEM ("
-							<< FEM_TOTAL_PIXELS
+							<< fem_total_pixels_
 							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
 					throw std::runtime_error(msg.str());
 				}
@@ -297,7 +300,7 @@ namespace FrameProcessor
    */
   void HexitecCalibrationPlugin::calibrate_pixels(float *in, float *out)
   {
-    for (int i=0; i<FEM_TOTAL_PIXELS; i++)
+    for (int i=0; i<fem_total_pixels_; i++)
     {
      	if (in[i] > 0)
      	{
@@ -385,7 +388,8 @@ namespace FrameProcessor
 				dataValue[val] = defaultValue;
 				if (i == val)
 					LOG4CXX_TRACE(logger_, "Only found " << i << " values in " << filename
-						 << "; Padding remaining with default value: " << defaultValue);
+							<< " (Expected: " << image_pixels_ << "); Padding with default value: "
+							<< defaultValue);
 			}
 		}
 		else
@@ -402,7 +406,7 @@ namespace FrameProcessor
 	{
     std::ostringstream hitPixelsStream;
     hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-		for (int i = 0; i < FEM_TOTAL_PIXELS; i++ )
+		for (int i = 0; i < fem_total_pixels_; i++ )
 		{
 			if(frame[i] > 0)
 				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";

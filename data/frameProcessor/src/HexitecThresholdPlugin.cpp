@@ -15,7 +15,7 @@ namespace FrameProcessor
   const std::string HexitecThresholdPlugin::CONFIG_IMAGE_HEIGHT 	 = "height";
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE  = "threshold_mode";
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE = "threshold_value";
-  const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE  = "threshold_file";
+  const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE  = "threshold_filename";
   const std::string HexitecThresholdPlugin::CONFIG_MAX_COLS 			 = "fem_max_cols";
   const std::string HexitecThresholdPlugin::CONFIG_MAX_ROWS 			 = "fem_max_rows";
 
@@ -26,9 +26,10 @@ namespace FrameProcessor
       image_width_(80),
       image_height_(80),
       image_pixels_(image_width_ * image_height_),
-	    fem_pixels_per_rows_(80),
 	    fem_pixels_per_columns_(80),
-	    fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
+	    fem_pixels_per_rows_(80),
+	    fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_),
+			threshold_filename_("")
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecThresholdPlugin");
@@ -38,7 +39,7 @@ namespace FrameProcessor
 
     thresholds_status_		= false;
     threshold_value_ 			= 0;
-    threshold_per_pixel_	= (uint16_t *) calloc(FEM_TOTAL_PIXELS, sizeof(uint16_t));
+    threshold_per_pixel_	= (uint16_t *) calloc(fem_total_pixels_, sizeof(uint16_t));
     /// Set threshold mode to none (initially; 0=none, 1=value ,2=file)
     threshold_mode_ = (ThresholdMode)0;
 
@@ -88,7 +89,7 @@ namespace FrameProcessor
    * - max_frames_received_			<=> max_frames_received
    * - threshold_mode_					<=> threshold_mode
    * - threshold_value_					<=> threshold_value
-   * - threshold_file_					<=> threshold_file
+   * - threshold_filename_					<=> threshold_file
 	 * - fem_pixels_per_columns_	<=> fem_max_cols
 	 * - fem_pixels_per_rows_ 		<=> fem_max_rows
    *
@@ -124,53 +125,34 @@ namespace FrameProcessor
 	    	threshold_mode_ = (ThresholdMode)1;
 	    	LOG4CXX_TRACE(logger_, "User selected threshold mode: value");
 	    }
-	    else if (threshold_mode.compare(std::string("file")) == 0)
+	    else if (threshold_mode.compare(std::string("filename")) == 0)
 	    {
 	    	threshold_mode_ = (ThresholdMode)2;
-	    	LOG4CXX_TRACE(logger_, "User selected threshold mode: file");
+	    	LOG4CXX_TRACE(logger_, "User selected threshold mode: filename");
 	    }
-	    /// Setup threshold value(s) accordingly
-	    switch (threshold_mode_)
-	    {
-	    	case 0:
-	    	{
-	    		// Threshold mode None means no need to read in threshold value/file this time
-	    		break;
-	    	}
-	    	case 1:
-	    	{
-	    		// Setup threshold using provided value
-	        if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE))
-	    		{
-	    	    threshold_value_ = config.get_param<int>(
-	    	    		HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE);
-	    			LOG4CXX_TRACE(logger_, "Setting threshold value to: " << threshold_value_);
-	    		}
-	    		break;
-	    	}
-	    	case 2:
-	    	{
-	    		// Setup thresholds from file provided
-	        if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE))
-	    		{
-	    	    threshold_file_ = config.get_param<std::string>(
-	    	    		HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE);
+		}
 
-						LOG4CXX_TRACE(logger_, "Setting thresholds from file: " << threshold_file_);
-						if (set_threshold_per_pixel(threshold_file_.c_str()))
-						{
-							LOG4CXX_TRACE(logger_, "Read thresholds from file successfully");
-						}
-						else
-						{
-							LOG4CXX_ERROR(logger_, "Failed to read thresholds from file")
-						}
-	    		}
-	    		break;
-	    	}
-	    	default:
-	    		break;
-	    }
+		if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE))
+		{
+			threshold_value_ = config.get_param<int>(
+					HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE);
+			LOG4CXX_TRACE(logger_, "Setting threshold value to: " << threshold_value_);
+		}
+
+		if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE))
+		{
+			threshold_filename_ = config.get_param<std::string>(
+					HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE);
+
+			LOG4CXX_TRACE(logger_, "Setting thresholds from file: " << threshold_filename_);
+			if (set_threshold_per_pixel(threshold_filename_.c_str()))
+			{
+				LOG4CXX_TRACE(logger_, "Read thresholds from file successfully");
+			}
+			else
+			{
+				LOG4CXX_ERROR(logger_, "Failed to read thresholds from file")
+			}
 		}
 
     if (config.has_param(HexitecThresholdPlugin::CONFIG_MAX_COLS))
@@ -193,9 +175,11 @@ namespace FrameProcessor
     std::string base_str = get_name() + "/";
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_IMAGE_WIDTH, image_width_);
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
-    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE , threshold_mode_);
+    int mode = int(threshold_mode_);
+    std::string mode_str = determineThresholdMode(mode);
+    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE , mode_str);
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE, threshold_value_);
-    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE , threshold_file_);
+    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE , threshold_filename_);
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_MAX_COLS, fem_pixels_per_columns_);
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_MAX_ROWS, fem_pixels_per_rows_);
   }
@@ -211,12 +195,35 @@ namespace FrameProcessor
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecThresholdPlugin");
     status.set_param(get_name() + "/image_width", image_width_);
     status.set_param(get_name() + "/image_height", image_height_);
-    status.set_param(get_name() + "/threshold_mode", threshold_mode_);
+    int mode = int(threshold_mode_);
+    std::string mode_str = determineThresholdMode(mode);
+    status.set_param(get_name() + "/threshold_mode", mode_str);
     status.set_param(get_name() + "/threshold_value", threshold_value_);
-    status.set_param(get_name() + "/threshold_file_", threshold_file_);
+    status.set_param(get_name() + "/threshold_filename", threshold_filename_);
     status.set_param(get_name() + "/fem_max_rows", fem_pixels_per_rows_);
     status.set_param(get_name() + "/fem_max_cols", fem_pixels_per_columns_);
 
+  }
+
+  /**
+   * Convert threshold mode (enumerated integer) into string
+   */
+  std::string HexitecThresholdPlugin::determineThresholdMode(int mode)
+  {
+  	std::string mode_str = "";
+    switch(mode)
+    {
+    	case 0:
+    		mode_str = "none";
+    		break;
+    	case 1:
+    		mode_str = "value";
+    		break;
+    	case 2:
+    		mode_str = "filename";
+    		break;
+    }
+    return mode_str;
   }
 
   /**
@@ -224,7 +231,6 @@ namespace FrameProcessor
    */
   bool HexitecThresholdPlugin::reset_statistics(void)
   {
-
     // Nowt to reset..?
 
     return true;
@@ -263,11 +269,11 @@ namespace FrameProcessor
 			{
 				// Check that the pixels are contained within the dimensions of the
 				// specified output image, otherwise throw an error
-				if (FEM_TOTAL_PIXELS > image_pixels_)
+				if (fem_total_pixels_ > image_pixels_)
 				{
 					std::stringstream msg;
 					msg << "Pixel count inferred from FEM ("
-							<< FEM_TOTAL_PIXELS
+							<< fem_total_pixels_
 							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
 					throw std::runtime_error(msg.str());
 				}
@@ -387,7 +393,7 @@ namespace FrameProcessor
    */
   void HexitecThresholdPlugin::process_threshold_value(float *in, float *out)
   {
-    for (int i=0; i < FEM_TOTAL_PIXELS; i++)
+    for (int i=0; i < fem_total_pixels_; i++)
     {
       // Clear pixel if it doesn't meet in the threshold:
 			if (in[i] < threshold_value_)
@@ -410,7 +416,7 @@ namespace FrameProcessor
    */
   void HexitecThresholdPlugin::process_threshold_file(float *in, float *out)
   {
-    for (int i=0; i < FEM_TOTAL_PIXELS; i++)
+    for (int i=0; i < fem_total_pixels_; i++)
     {
       // Clear pixel if it doesn't meet in the threshold:
 			if (in[i] < threshold_per_pixel_[i])
@@ -456,7 +462,7 @@ namespace FrameProcessor
 
     if (!inFile)
     {
-      for (int val = 0; val < FEM_TOTAL_PIXELS; val ++)
+      for (int val = 0; val < fem_total_pixels_; val ++)
       {
         threshold_per_pixel_[val] = default_value;
       }
@@ -480,9 +486,9 @@ namespace FrameProcessor
 
     // If file do not contain enough threshold values for all pixels,
     // 	assign default threshold to remaining pixels
-    if (index < FEM_TOTAL_PIXELS)
+    if (index < fem_total_pixels_)
     {
-      for (int val = index; val < FEM_TOTAL_PIXELS; val ++)
+      for (int val = index; val < fem_total_pixels_; val ++)
       {
 				threshold_per_pixel_[val] = default_value;
       }

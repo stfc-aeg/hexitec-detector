@@ -20,10 +20,6 @@ using namespace log4cxx::helpers;
 #include "HexitecDefinitions.h"
 #include "ClassLoader.h"
 
-#define FEM_PIXELS_PER_ROW 80
-#define FEM_PIXELS_PER_COLUMN 80
-#define FEM_TOTAL_PIXELS (FEM_PIXELS_PER_ROW * FEM_PIXELS_PER_COLUMN)
-
 namespace FrameProcessor
 {
 
@@ -66,9 +62,6 @@ namespace FrameProcessor
     static const std::string CONFIG_MAX_COLS;
     /** Configuration constant for maximum rows **/
 		static const std::string CONFIG_MAX_ROWS;
-		///
-		static const std::string CONFIG_BOLLOX;
-		bool bollox;
 
     void process_frame(boost::shared_ptr<Frame> frame);
 
@@ -89,8 +82,8 @@ namespace FrameProcessor
     /** Count number of frames **/
     int frames_counter_;
 
-    long bin_start_;
-    long bin_end_;
+    int bin_start_;
+    int bin_end_;
     double bin_width_;
     long long number_bins_;
     float *hexitec_bin_;

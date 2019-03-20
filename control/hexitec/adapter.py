@@ -8,6 +8,9 @@ import logging
 import tornado
 import time
 from concurrent import futures
+#
+from tornado import escape
+
 # Making checking for integer type Python2/3 independent
 import sys
 if sys.version_info < (3, ):
@@ -85,10 +88,21 @@ class HexitecAdapter(ApiAdapter):
         :return: an ApiAdapterResponse object containing the appropriate response
         """
         content_type = 'application/json'
-
+        #
+        logging.debug("-=-=-=-=-=-=- PUT path: %s", path)
+        # logging.debug("-=-=-=-=-=-=- PUT request: %s", request)
+        logging.debug("-=-=-=-=-=-=- PUT request.body: %s", str(escape.url_unescape(request.body)))
+        request_command = path.strip('/')
+        logging.debug("-=-=-=-=-=-=- PUT request_command: %s", request_command)
+        # logging.debug("filename" in request.body)
         try:
             data = json_decode(request.body)
             data = self.convert_to_string(data)
+            # logging.debug("data: %s" , data)
+            # if "filename" in data:
+            #     logging.debug("   Yes we have a file name here")
+            # else:
+            #     logging.debug("   Nope we don't have a filename")
             self.hexitec.set(path, data)
             response = self.hexitec.get(path)
             status_code = 200
@@ -192,8 +206,8 @@ class Hexitec():
         # Threshold
         threshold = ParameterTree({
             'threshold_filename': "",
-            'value': (self._get_threshold_value, self._set_threshold_value),
-            'mode': (self._get_threshold_mode, self._set_threshold_mode),
+            'threshold_value': (self._get_threshold_value, self._set_threshold_value),
+            'threshold_mode': (self._get_threshold_mode, self._set_threshold_mode),
             'enable': False
         })
 
@@ -386,13 +400,13 @@ class Hexitec():
 
     def _set_threshold_mode(self, mode):
         """Check that the threshold mode is either of
-            None, Value or Filename
+            none, value or filename
             """
-        validChoices = ("None", "Value", "Filename")
+        validChoices = ("none", "value", "filename")
         if (mode in validChoices):
             self.threshold_mode = mode
         else:
-            raise HexitecError("Must be either of: None, Value or Filename")
+            raise HexitecError("Must be either of: none, value or filename")
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.
