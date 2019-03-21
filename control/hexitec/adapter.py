@@ -8,8 +8,6 @@ import logging
 import tornado
 import time
 from concurrent import futures
-#
-from tornado import escape
 
 # Making checking for integer type Python2/3 independent
 import sys
@@ -88,21 +86,9 @@ class HexitecAdapter(ApiAdapter):
         :return: an ApiAdapterResponse object containing the appropriate response
         """
         content_type = 'application/json'
-        #
-        logging.debug("-=-=-=-=-=-=- PUT path: %s", path)
-        # logging.debug("-=-=-=-=-=-=- PUT request: %s", request)
-        logging.debug("-=-=-=-=-=-=- PUT request.body: %s", str(escape.url_unescape(request.body)))
-        request_command = path.strip('/')
-        logging.debug("-=-=-=-=-=-=- PUT request_command: %s", request_command)
-        # logging.debug("filename" in request.body)
         try:
             data = json_decode(request.body)
             data = self.convert_to_string(data)
-            # logging.debug("data: %s" , data)
-            # if "filename" in data:
-            #     logging.debug("   Yes we have a file name here")
-            # else:
-            #     logging.debug("   Nope we don't have a filename")
             self.hexitec.set(path, data)
             response = self.hexitec.get(path)
             status_code = 200
