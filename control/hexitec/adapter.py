@@ -45,10 +45,9 @@ class HexitecAdapter(ApiAdapter):
         super(HexitecAdapter, self).__init__(**kwargs)
 
         # Parse options
-        background_task_enable = bool(self.options.get('background_task_enable', False))
-        background_task_interval = float(self.options.get('background_task_interval', 5.0))
-        
-        self.hexitec = Hexitec(background_task_enable, background_task_interval)
+        # background_task_enable = bool(self.options.get('background_task_enable', False))
+                
+        self.hexitec = Hexitec()
 
         logging.debug('HexitecAdapter loaded')
 
@@ -150,15 +149,15 @@ class Hexitec():
     # Thread executor used for background tasks
     executor = futures.ThreadPoolExecutor(max_workers=1)
 
-    def __init__(self, background_task_enable, background_task_interval):
+    def __init__(self):
         """Initialise the Hexitec object.
 
         This constructor initlialises the Hexitec object, building a parameter tree and
         launching a background task if enabled
         """
         # Save arguments
-        self.background_task_enable = background_task_enable
-        self.background_task_interval = background_task_interval
+        # self.background_task_enable = background_task_enable
+        # self.background_task_interval = background_task_interval
 
         # Store initialisation time
         self.init_time = time.time()
@@ -167,11 +166,11 @@ class Hexitec():
         version_info = get_versions()
 
         # Build a parameter tree for the background task
-        bg_task = ParameterTree({
-            'count': (lambda: self.background_task_counter, None),
-            'enable': (lambda: self.background_task_enable, self.set_task_enable),
-            'interval': (lambda: self.background_task_interval, self.set_task_interval),
-        })
+        # bg_task = ParameterTree({
+        #     'count': (lambda: self.background_task_counter, None),
+        #     'enable': (lambda: self.background_task_enable, self.set_task_enable),
+        #     'interval': (lambda: self.background_task_interval, self.set_task_interval),
+        # })
 
         # Test area for checking things in the UI
         test_area = ParameterTree({
@@ -184,7 +183,8 @@ class Hexitec():
         reorder = ParameterTree({
             'height': (self._get_height, self._set_height),   # UI's rows = .config's height
             'width': (self._get_width, self._set_width),    # columns = width
-            'enable': False
+            'enable': False,
+            'raw_data': False
         })
 
         self.threshold_value = 100
@@ -240,20 +240,20 @@ class Hexitec():
             'odin_version': version_info['version'],
             'tornado_version': tornado.version,
             'server_uptime': (self.get_server_uptime, None),
-            'background_task': bg_task,
+            # 'background_task': bg_task,
             'test_area': test_area,
             'odin_data': odin_data
         })
 
-        # Set the background task counter to zero
-        self.background_task_counter = 0
+        # # Set the background task counter to zero
+        # self.background_task_counter = 0
 
-        # Launch the background task if enabled in options
-        if self.background_task_enable:
-            logging.debug(
-                "Launching background task with interval %.2f secs", background_task_interval
-            )
-            self.background_task()
+        # # Launch the background task if enabled in options
+        # if self.background_task_enable:
+        #     logging.debug(
+        #         "Launching background task with interval %.2f secs", background_task_interval
+        #     )
+        #     self.background_task()
 
     def _get_height(self):
 
@@ -424,38 +424,38 @@ class Hexitec():
         except ParameterTreeError as e:
             raise HexitecError(e)
 
-    def set_task_interval(self, interval):
+    # def set_task_interval(self, interval):
 
-        logging.debug("Setting background task interval to %f", interval)
-        self.background_task_interval = float(interval)
+    #     logging.debug("Setting background task interval to %f", interval)
+    #     self.background_task_interval = float(interval)
         
-    def set_task_enable(self, enable):
+    # def set_task_enable(self, enable):
 
-        logging.debug("Setting background task enable to %s", enable)
+    #     logging.debug("Setting background task enable to %s", enable)
 
-        current_enable = self.background_task_enable
-        self.background_task_enable = bool(enable)
+    #     current_enable = self.background_task_enable
+    #     self.background_task_enable = bool(enable)
 
-        if not current_enable:
-            logging.debug("Restarting background task")
-            self.background_task()
+    #     if not current_enable:
+    #         logging.debug("Restarting background task")
+    #         self.background_task()
 
 
-    @run_on_executor
-    def background_task(self):
-        """Run the adapter background task.
+    # @run_on_executor
+    # def background_task(self):
+    #     """Run the adapter background task.
 
-        This simply increments the background counter and sleeps for the specified interval,
-        before adding itself as a callback to the IOLoop instance to be called again.
+    #     This simply increments the background counter and sleeps for the specified interval,
+    #     before adding itself as a callback to the IOLoop instance to be called again.
 
-        """
-        if self.background_task_counter < 10 or self.background_task_counter % 20 == 0:
-            logging.debug("Background task running, count = %d", self.background_task_counter)
+    #     """
+    #     if self.background_task_counter < 10 or self.background_task_counter % 20 == 0:
+    #         logging.debug("Background task running, count = %d", self.background_task_counter)
 
-        self.background_task_counter += 1
-        time.sleep(self.background_task_interval)
+    #     self.background_task_counter += 1
+    #     time.sleep(self.background_task_interval)
 
-        if self.background_task_enable:
-            IOLoop.instance().add_callback(self.background_task)
-        else:
-            logging.debug("Background task no longer enabled, stopping")
+    #     if self.background_task_enable:
+    #         IOLoop.instance().add_callback(self.background_task)
+    #     else:
+    #         logging.debug("Background task no longer enabled, stopping")

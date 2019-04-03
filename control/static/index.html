@@ -24,25 +24,16 @@
     <!-- Turn radiobuttons into switches?-->
     <script src="js/bootstrap-switch/highlight.js"></script>
     <script src="js/bootstrap-switch/bootstrap-switch.js"></script>
-    <!--<script src="js/bootstrap-switch/main.js"></script>    <!-- Comment out and CS checkbox will be bootstrapified (but click becomes unreliable..) -->
 
   </head>
   <body>
-    <!-- Testing purposes: -->
-      <!-- Test put: <input type="checkbox" name="test_put" data-size="small">
-      Test get: <input type="checkbox" name="test_get" data-size="small"> -->
     
-    <div class="container">
+    <!-- <div class="container">
 
       <div class="odin-server">
-        <!-- <h1>Hexitec Control</h1> -->
-<!--        <p class="lead">Welcome to the Hexitec Odin Control!</p> -->
-        <!-- <p>API version is:&nbsp;<span id="api-version">&nbsp;</span>
-          &nbsp;Registered API adapters:&nbsp;<span id="api-adapters">&nbsp;</span></p> -->
-        <!-- <p>Hexitec background task count:&nbsp;<span id="task-count">&nbsp;</span></p> -->
       </div>
 
-    </div><!-- /.container -->
+    </div> -->
 
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
@@ -68,9 +59,9 @@
     <table class="overall-table" align="center">
       <thead></thead>
       <tbody>
-        <tr>  <!-- Third Row -->
+        <tr>
           <td>
-            R3 A progress bar:
+            Test Area.. R3 A progress bar:
           </td>
           <td>
             <div id="progress-bar" class="all-rounded">
@@ -186,6 +177,21 @@
 
           <tr>  
             <td>  
+              <th>Raw Data&nbsp;</th>
+            </td>
+            <td>&nbsp;</td>
+            <td>
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
+                  <input type="checkbox" id='rawDataButton' name="raw_data_enable" data-size="small">
+
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>  
+            <td>  
               Rows:&nbsp;
             </td>
             <td>
@@ -256,9 +262,7 @@
             </td>
             <td>
               <div class="text-characters">
-                <!-- <input type="text" id="threshold-mode" onChange='threshold_mode_changed()' value="None"> -->
-
-                <input type="text" id="threshold-mode" onchange='threshold_mode_changed(this)' placeholder="Threshold Mode" value="none" required/>
+                <input type="text" id="threshold-mode" onchange='threshold_mode_changed()' placeholder="Threshold Mode" value="none" required/>
               </div>
             </td>
             <td></td> <!-- Leave column blank-->
@@ -267,44 +271,6 @@
             </td>
           </tr>
   
-          <tr>  
-            <td>  
-
-            </td>
-            <td> 
-              <div class="row sidebar-row vertical-align">
-                <div class="col-xs-7">
-
-                </div>
-              </div>
-            </td>
-          </tr>
-
-          <tr>  
-            <td>
-            </td>
-            <td> 
-              <div class="row sidebar-row vertical-align">
-                <div class="col-xs-7">
-
-                </div>
-              </div>
-            </td>
-          </tr>
-  
-          <tr>
-            <td>  
-              
-            </td>
-            <td> 
-              <div class="row sidebar-row vertical-align">
-                <div class="col-xs-7">
-
-                </div>
-              </div>
-            </td>
-          </tr>
-
           <tr>  
             <td>  
               <th>Next Frame&nbsp;</th>
@@ -460,93 +426,93 @@
 
 
 <!-- Section nicked from LiveView UI.. -->
-      <div class="container-fluid">
-            <div class="row fluid-row">
+  <div class="container-fluid">
+    <div class="row fluid-row">
 
-                <div class="span3">
-                    <div class="well sidebar-nav-fixed">
-                        <div class="container-fluid">
-                            <div class="row sidebar-title">
-                                <h3>Live View Demo</h3>
-                            </div>
-                            <div class="row sidebar-row vertical-align">
-                                <div class="col-xs-5">
-                                    <b>Auto&#8209;update:</b> 
-                                </div>
-                                <div class="col-xs-7">
-                                    <input type="checkbox" name="liveview_enable" data-size="small">
-                                </div>
-                            </div>
-                            <div class="row sidebar-row vertical-align">
-                                <div class="col-xs-5">
-                                    <b>Colour&nbsp;map:</b> 
-                                </div>
-                                <div class="col-xs-7">
-                                    <select class="form-control" id="colormap_select">
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="row sidebar-row vertical-align">
-                                <div class="col-xs-5">
-                                    <b>Clipping:</b> 
-                                </div>
-                                <div class="col-xs-7">
-                                    <input type="checkbox" name="clip_enable" data-size="small":">
-                                </div>
-                            </div>
-                            <div class="row sidebar-row vertical-align row-bold">
-                                <div class="col-xs-3 text-left" id="clip_min">&nbsp;</div>
-                                <div class="col-xs-6 text-center">Range</div>
-                                <div class="col-xs-3 text-right" id="clip_max">&nbsp;</div>
-                            </div>
-                            <div class="row sidebar-row sidebar-row-full">
-                                <div class="col-xs12 range-col">
-                                    <input id="clip_range"
-                                        type="text" value="" data-slider-id="clip-range" 
-                                        data-slider-min="0" data-slider-max="100" 
-                                        data-slider-step="1" data-slider-value="[0,100]"
-                                    />
-                                </div>
-                            </div>
-                            <div class="row sidebar-row vertical-align">
-                                <div class="col-xs-5">
-                                    <b>Auto&#8209;sizing:</b> 
-                                </div>
-                                <div class="col-xs-7">
-                                    <input type="checkbox" name="autosize_enable" data-size="small":">
-                                </div>
-                            </div>
-                            <div class="row sidebar-row vertical-align row-bold">
-                                <div class="col-xs-3 text-left" id="clip_min">0%</div>
-                                <div class="col-xs-6 text-center">Size</div>
-                                <div class="col-xs-3 text-right" id="clip_max">100%</div>
-                            </div>
-                            <div class="row sidebar-row sidebar-row-full">
-                                <div class="col-xs12 range-col">
-                                    <input id="size_range"
-                                        type="text" value="" data-slider-id="size-range" 
-                                        data-slider-min="0" data-slider-max="100" 
-                                        data-slider-step="1" data-slider-value="100"
-                                    />
-                                </div>
-                            </div>
-                        </div> <!-- container-fluid --> 
-                    </div> <!-- well sidebar-nav-fixed -->
-                </div> <!-- span3 -->
+      <div class="span3">
+        <div class="well sidebar-nav-fixed">
+          <div class="container-fluid">
+            <div class="row sidebar-title">
+              <h3>Live View Demo</h3>
+            </div>
+            <div class="row sidebar-row vertical-align">
+              <div class="col-xs-5">
+                <b>Auto&#8209;update:</b> 
+              </div>
+              <div class="col-xs-7">
+                <input type="checkbox" name="liveview_enable" data-size="small">
+              </div>
+            </div>
+            <div class="row sidebar-row vertical-align">
+              <div class="col-xs-5">
+                <b>Colour&nbsp;map:</b> 
+              </div>
+              <div class="col-xs-7">
+                <select class="form-control" id="colormap_select">
+                </select>
+              </div>
+            </div>
+            <div class="row sidebar-row vertical-align">
+              <div class="col-xs-5">
+                <b>Clipping:</b> 
+              </div>
+              <div class="col-xs-7">
+                <input type="checkbox" name="clip_enable" data-size="small":">
+              </div>
+            </div>
+            <div class="row sidebar-row vertical-align row-bold">
+              <div class="col-xs-3 text-left" id="clip_min">&nbsp;</div>
+              <div class="col-xs-6 text-center">Range</div>
+              <div class="col-xs-3 text-right" id="clip_max">&nbsp;</div>
+            </div>
+            <div class="row sidebar-row sidebar-row-full">
+              <div class="col-xs12 range-col">
+                <input id="clip_range"
+                  type="text" value="" data-slider-id="clip-range" 
+                  data-slider-min="0" data-slider-max="100" 
+                  data-slider-step="1" data-slider-value="[0,100]"
+                />
+              </div>
+            </div>
+            <div class="row sidebar-row vertical-align">
+              <div class="col-xs-5">
+                <b>Auto&#8209;sizing:</b> 
+              </div>
+              <div class="col-xs-7">
+                <input type="checkbox" name="autosize_enable" data-size="small":">
+              </div>
+            </div>
+            <div class="row sidebar-row vertical-align row-bold">
+              <div class="col-xs-3 text-left" id="clip_min">0%</div>
+              <div class="col-xs-6 text-center">Size</div>
+              <div class="col-xs-3 text-right" id="clip_max">100%</div>
+            </div>
+            <div class="row sidebar-row sidebar-row-full">
+              <div class="col-xs12 range-col">
+                <input id="size_range"
+                  type="text" value="" data-slider-id="size-range" 
+                  data-slider-min="0" data-slider-max="100" 
+                  data-slider-step="1" data-slider-value="100"
+                />
+              </div>
+            </div>
+          </div> <!-- container-fluid --> 
+        </div> <!-- well sidebar-nav-fixed -->
+      </div> <!-- span3 -->
 
-                <div class="span9 span-fixed-sidebar">
-                    <div id="liveview_container" class="odin-server live-image">
-                        <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image'>
-                    </div> <!-- odin-server -->
-                </div> <!-- span9 -->
+      <div class="span9 span-fixed-sidebar">
+        <div id="liveview_container" class="odin-server live-image">
+          <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image'>
+        </div> <!-- odin-server -->
+      </div> <!-- span9 -->
 
-            </div> <!-- row fluid-row -->
-        </div> <!-- container-fluid-->
+    </div> <!-- row fluid-row -->
+  </div> <!-- container-fluid-->
 
-    <!-- Pinched from live_view example.. -->
-    <script src="js/bootstrap-3.3.6-dist/dist/js/bootstrap-switch.min.js"></script>
-    <script src="js/bootstrap-slider-10.2.1/js/bootstrap-slider.min.js"></script>
-    <script src='js/live_view.js'></script>
+  <!-- Pinched from live_view example.. -->
+  <script src="js/bootstrap-3.3.6-dist/dist/js/bootstrap-switch.min.js"></script>
+  <script src="js/bootstrap-slider-10.2.1/js/bootstrap-slider.min.js"></script>
+  <script src='js/live_view.js'></script>
     
   </body>
 </html>

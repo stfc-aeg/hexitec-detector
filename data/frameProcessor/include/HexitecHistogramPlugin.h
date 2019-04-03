@@ -62,6 +62,8 @@ namespace FrameProcessor
     static const std::string CONFIG_MAX_COLS;
     /** Configuration constant for maximum rows **/
 		static const std::string CONFIG_MAX_ROWS;
+    /** Configuration constant for flush_histograms **/
+		static const std::string CONFIG_FLUSH_HISTOS;
 
     void process_frame(boost::shared_ptr<Frame> frame);
 
@@ -81,6 +83,8 @@ namespace FrameProcessor
     int max_frames_received_;
     /** Count number of frames **/
     int frames_counter_;
+    /** Flush (remaining data to) histograms **/
+    bool flush_histograms_;
 
     int bin_start_;
     int bin_end_;
@@ -90,6 +94,7 @@ namespace FrameProcessor
     float *histogram_per_pixel_;
     long long *summed_histogram_;
     void initialiseHistograms();
+    void writeHistogramsToDisk();
 
     int fem_pixels_per_rows_;
     int fem_pixels_per_columns_;
