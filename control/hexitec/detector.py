@@ -19,7 +19,7 @@ from odin.util import decode_request_body
 class IacDetectorAdapter(ApiAdapter):
     """Detector adapter class for Inter Adapter Communications.
 
-    This adapter impelements the basic operations of GET and PUT,
+    This adapter implements the basic operations of GET and PUT,
     and allows another adapter to interact with it via these methods.
     """
 
@@ -68,14 +68,20 @@ class IacDetectorAdapter(ApiAdapter):
         """
         logging.debug("IAC Hexitec PUT")
         response = {}
+        status_code = 200
 
         for key, value in self.adapters.items():
             if path.startswith(key):
                 # Lose 'key/' from start of path
                 relative_path = path.split(key + '/')
-                response[key] = value.put(path=relative_path[1], request=request).data
+                # response[key] = value.put(path=relative_path[1], request=request).data
+                reply = value.put(path=relative_path[1], request=request)
+                if reply.status_code != 200:
+                    status_code = reply.status_code
+                    response = reply.data
+                # print " ! ", reply.data, reply.status_code, reply
         content_type = "application/json"
-        status_code = 200
+        # status_code = 200
 
         logging.debug(response)
 

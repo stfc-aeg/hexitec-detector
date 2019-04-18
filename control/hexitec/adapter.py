@@ -1,6 +1,6 @@
 """Adapter for Hexitec ODIN control
 
-This class implements an  adapter used for Hexitec
+This class implements an adapter used for Hexitec
 
 Christian Angelsen, STFC Application Engineering
 """
@@ -28,10 +28,9 @@ from odin._version import get_versions
 
 
 class HexitecAdapter(ApiAdapter):
-    """System info adapter class for the ODIN server.
+    """Hexitec adapter class for the ODIN server.
 
-    This adapter provides ODIN clients with information about the server and the system that it is
-    running on.
+    This adapter provides ODIN clients with information about the Hexitec system.
     """
 
     def __init__(self, **kwargs):
@@ -183,7 +182,7 @@ class Hexitec():
         reorder = ParameterTree({
             'height': (self._get_height, self._set_height),   # UI's rows = .config's height
             'width': (self._get_width, self._set_width),    # columns = width
-            'enable': False,
+            'reorder': False,
             'raw_data': False
         })
 
@@ -205,10 +204,14 @@ class Hexitec():
         })
 
         self.pixel_grid_size = 3
-        # Charged Sharing
-        charged_sharing = ParameterTree({
-            'addition': False,
-            'discrimination': False,
+        # Addition (Charged Sharing)
+        addition = ParameterTree({
+            'enable': False,
+            'pixel_grid_size': (self._get_pixel_grid_size, self._set_pixel_grid_size)
+        })
+        # Discrimination (Charged Sharing)
+        discrimination = ParameterTree({
+            'enable': False,
             'pixel_grid_size': (self._get_pixel_grid_size, self._set_pixel_grid_size)
         })
 
@@ -231,7 +234,8 @@ class Hexitec():
             'threshold': threshold,
             'next_frame': False,
             'calibration': calibration,
-            'charged_sharing': charged_sharing,
+            'addition': addition,
+            'discrimination': discrimination,
             'histogram': histogram
         })
 

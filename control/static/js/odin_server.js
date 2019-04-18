@@ -122,11 +122,288 @@ $( document ).ready(function()
     // Configure hdf write switch
     $("[name='hdf_write_enable']").bootstrapSwitch({disabled:true});
     $("[name='hdf_write_enable']").bootstrapSwitch('state', hdf_write_enable, true);
-    
     $('input[name="hdf_write_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
         changeHdfWriteEnable();
     });
+
+    // Test bootstrap button..
+
+    $('#storeButton').on('click', function(event) {
+        // Hardcoded paths are bad but no way around it here: (Move this away from the install folder !)
+        var sequence_file_1 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_hexitec_fp_sequence_1.json";
+
+        $.ajax({
+            type: "PUT",
+            url: api_url + 'detector/fp/config/config_file',
+            contentType: "application/json",
+            data: sequence_file_1,
+            success: function(result) {
+                $('#fp-config-warning').html("");
+                $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
+            },
+            error: function(request, msg, error) {
+                $('#fp-config-warning').html(error + ": " + format_error_message(request.responseText));
+                $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
+            }
+        });
+    });
+
+    $('#executeButton').on('click', function(event) {
+        var execute_file_1 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_1.json";
+        $.ajax({
+            type: "PUT",
+            url: api_url + 'detector/fp/config/config_file',
+            contentType: "application/json",
+            data: execute_file_1,
+            success: function(result) {
+                $('#fp-config-warning').html("");
+                $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
+            },
+            error: function(request, msg, error) {
+                $('#fp-config-warning').html(error + ": " + format_error_message(request.responseText));
+                $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
+            }
+        });
+    });
+    console.log("abide?");
+
+    var reorder_rows = $('#rows-text').prop('value');
+    reorder_rows = JSON.stringify(parseInt(reorder_rows));
+
+    // $.getJSON(api_url +`hexitec/odin_data/addition/height`, function(response) {
+    //     console.log("response1: " + response.toSource());
+    //     console.log("type of response, response.toSource: " + typeof response + " " + typeof response.toSource());
+    // });
+
+    // $.getJSON(api_url + 'detector/fp/config/addition/height', function(response) {
+    //     console.log("response2: " + JSON.stringify(response, null, 4) );
+    //     console.log("typeof JSON.stringify: " + typeof JSON.stringify(response, null, 4));
+    // });
+    
+    // /// Test this  with ability to check for error, timeout et cetera
+    // var handlerURL = api_url + 'detector/fp/config/addition/height';
+    // jQuery.getJSON(handlerURL, 
+    // function(jsonResult){
+    //     console.log("1. Success -> " + jsonResult.toSource());
+    // })
+    // .done(function() { console.log('getJSON request succeeded!'); })
+    // .fail(function(jqXHR, textStatus, errorThrown) { console.log('getJSON request failed! ' + textStatus); })
+    // .always(function() { console.log('getJSON request ended!'); });
+    
+    // handlerURL = api_url +`hexitec/odin_data/reorder/height`;
+    // jQuery.getJSON(handlerURL, 
+    // function(jsonResult){
+    //     console.log(".2 Success -> " + JSON.stringify(jsonResult));
+    // })
+    // .done(function() { console.log('getJSON request succeeded!'); })
+    // .fail(function(jqXHR, textStatus, errorThrown) { console.log('getJSON request failed! ' + textStatus + " -> " + errorThrown ); })
+    // .always(function() { console.log('getJSON request ended!'); });
+
+    initialise_with_server_values();
+
+
 });
+
+function initialise_with_server_values() {
+
+    // get_hdf_value(`hdf/file_path`,   'hdf-file-path-text');  // fine
+    // get_hdf_value(`hdf/file_name`,   'hdf-file-name-text');  // fine
+    // get_server_value(`reorder/height`,  'rows-text');    // fine
+    // get_server_value(`reorder/width`,   'columns-text'); // fine
+    // get_server_value(`threshold/threshold_filename`,  'threshold-filename-text');    // fine
+    // get_server_value(`threshold/threshold_mode`,      'threshold-mode-text');        // fine
+    // get_server_value(`threshold/threshold_value`,     'threshold-value-text');       // fine
+
+    // get_server_value(`calibration/gradients_filename`,  'gradients-filename-text');     // fine
+    // get_server_value(`calibration/intercepts_filename`, 'intercepts-filename-text');    // fine
+
+    // get_server_value(`addition/pixel_grid_size`, 'pixel-grid-size-text');   // fine
+    // get_server_value(`discrimination/pixel_grid_size`, 'pixel-grid-size-text'); // fine
+
+    // get_server_value(`histogram/max_frames_received`, 'max-frames-received-text');  // These four: fine
+    // get_server_value(`histogram/bin_start`,           'bin-start-text');
+    // get_server_value(`histogram/bin_end`,             'bin-end-text');
+    // get_server_value(`histogram/bin_width`,           'bin-width-text');
+
+    // get_bool_value(`reorder/reorder`,           'reorder_enable');  // Works
+    // get_bool_value(`reorder/raw_data`,          'raw_data_enable');  // Works
+    get_bool_value(`threshold/enable`,             'threshold_enable');
+    // get_bool_value(`reorder/reorder`,           'reorder_enable');
+    // get_bool_value(`reorder/reorder`,           'reorder_enable');
+    // get_bool_value(`reorder/reorder`,           'reorder_enable');
+    // get_bool_value(`reorder/reorder`,           'reorder_enable');
+    // get_bool_value(`reorder/reorder`,           'reorder_enable');
+    // get_bool_value(`reorder/reorder`,           'reorder_enable');
+
+}
+
+
+// http://localhost:8888/api/0.1/detector/fp/status/hdf
+function get_hdf_value(path, elementId) {
+
+    // hdf is a special case, it's information not readily available underneath /status/
+    // var p1 = api_url + `hexitec/odin_data/` + path;
+    // var p2 = api_url + 'detector/fp/config/'  + path;
+    var p2 = api_url + 'detector/fp/status/' + path;
+    // console.log(" p2: " + p2);
+
+    $.ajax({
+        type: "GET",
+        url: p2,
+        contentType: "application/json",
+        success: function(params) {
+            // console.log("It (" + path + ") exists, it contains: " + params.toSource() + " ie " + JSON.stringify(params))
+            
+            for (i in params) {
+                for (key in params[i]) {
+                    var key_value = params[i][key];
+                    if (elementId.includes("hdf-file-name-text"))
+                    {
+                        // If it's filename it will look something like: ["an_example_filename_000001.h5"]
+                        //  Remove [], "" characters, only displaying:    an_example_filename
+                        var param_str = JSON.stringify(params[i][key]);
+                        var withoutQuotation = param_str.replace(/"/g,'');
+                        var withoutBrackets = withoutQuotation.replace('[', '').replace(']', '');
+                        var idx = withoutBrackets.lastIndexOf("_");
+                        key_value = withoutBrackets.substr(0, idx);
+                    }
+
+                    document.getElementById(elementId).value = key_value;                    
+                }
+            }
+        },
+        error: function(request, msg, error) {
+            console.log("Path (" + path + ") not found; request: " + request + 
+                        " msg: '" + msg + "' error: " + error );
+        }
+    });
+}
+
+function get_server_value(path, elementId) {
+    
+    // `hexitec/odin_data/ reorder/height`
+    // vs
+    // 'detector/fp/config/ reorder/height'
+    var p1 = api_url + `hexitec/odin_data/` + path;
+    var p2 = api_url + 'detector/fp/config/'  + path;
+    console.log("p1: " + p1 + " p2: " + p2);
+    $.ajax(p1, {
+        method: "GET",
+        contentType: "application/json",
+        success: function(result) {
+            // console.log("Plugin loaded.")
+
+            // HexitecReorderPlugin
+            $.ajax({
+                type: "GET",
+                url: p2,
+                contentType: "application/json",
+                success: function(params) {
+                    console.log("It (" + path + ") exists, it contains: " + params.toSource() + " ie " + JSON.stringify(params))
+                    
+                    for (i in params){
+                        // console.log(i);
+                        for (key in params[i]){
+                            console.log("'" + key + "' : '" + params[i][key] + "'");
+
+                            // Only update element if key has an actual value.
+                            //  If the plugin hasn't been loaded, then key value is "" (ie null, nowt)
+                            if (params[i][key] == "") 
+                            {
+                                // console.log("Key is empty");
+                            }
+                            else
+                            {
+                                key_value = params[i][key];
+                                document.getElementById(elementId).value = key_value;
+                            }
+                            
+                            // console.log
+                            // $('#rows-text').html( params[i][key]);  // Doesn't work
+                            // $('#rows-text').html( 0);  // Doesn't work
+                            // console.log("What type? " + typeof params[i][key]);
+                            // $('#rows-warning').html(0);  // Works
+                            // document.getElementById(elementId).value = params[i][key];   // Works
+                            // document.getElementById("columns-text").value = 42; // Works
+                            // $('#columns-text').text(445);   // Doesn't work
+                            // $('#columns-text').text("445"); // Doesn't work 
+                        }
+                    }
+                },
+                error: function(request, msg, error) {
+                    // In practice won't get here - if path not sound, the outer error func is called
+                    $('#rows-warning').html(error + ": " + format_error_message(request.responseText));
+                    // console.log("It doesn't exist! -> " + error + ": " + format_error_message(request.responseText))
+                }
+            });
+        },
+        error: function(request, msg, error) {
+            // It doesn't exist - plugin not loaded
+            console.log("Path (" + path + ") not found");
+            // console.log("ajax test FAIL! -> " + error + ": " + format_error_message(request.responseText))
+        }
+    });
+}
+
+function get_bool_value(path, elementId) {
+
+    var p1 = api_url + `hexitec/odin_data/` + path;
+    var p2 = api_url + 'detector/fp/config/'  + path;
+    $.ajax(p1, {
+        method: "GET",
+        contentType: "application/json",
+        success: function(result) {
+
+            $.ajax({
+                type: "GET",
+                url: p2,
+                contentType: "application/json",
+                success: function(params) {
+                    console.log("It (" + path + ") exists, it contains: " + params.toSource() + " ie " + JSON.stringify(params))
+                    
+                    for (i in params){
+                        // console.log(i);
+                        for (key in params[i]){
+                            console.log("'" + key + "' : '" + params[i][key] + "'");
+
+                            // Only update element if key has an actual value.
+                            //  If the plugin hasn't been loaded, then key value is "" (ie null, nowt)
+                            if (params[i][key] == "") 
+                            {
+                                console.log("Key is empty");
+                            }
+                            else
+                            {
+                                // params[i][key] is of type object; convert to string 
+                                //  and turn it into the corresponding boolean value
+                                key_value = JSON.stringify(params[i][key]);
+                                if (key_value.includes("false"))
+                                {
+                                    key_value = false;
+                                }
+                                else
+                                {
+                                    key_value = true;
+                                }
+                                $("[name='" + elementId + "']").bootstrapSwitch('state', key_value, true);  // should work?
+                            }
+                        }
+                    }
+                },
+                error: function(request, msg, error) {
+                    // In practice won't get here - if path not sound, the outer error func is called
+                    $('#rows-warning').html(error + ": " + format_error_message(request.responseText));
+                    // console.log("It doesn't exist! -> " + error + ": " + format_error_message(request.responseText))
+                }
+            });
+        },
+        error: function(request, msg, error) {
+            // It doesn't exist - plugin not loaded
+            console.log("Path (" + path + ") not found");
+        }
+    });
+}
+
 
 function poll_update() {
 /*    update_background_task(); */
@@ -220,7 +497,7 @@ function reorder_rows_changed()
             });
         },
         error: function(request, msg, error) {
-            $('#rows-warning').html(error + ": " + request.responseText);
+            $('#rows-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
@@ -287,14 +564,14 @@ function reorder_columns_changed()
             });
         },
         error: function(request, msg, error) {
-            $('#columns-warning').html(error + ": " + request.responseText);
+            $('#columns-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
 
 function threshold_filename_changed()
 {
-    var threshold_filename = $('#threshold-filename').prop('value');
+    var threshold_filename = $('#threshold-filename-text').prop('value');
     threshold_filename = JSON.stringify(threshold_filename);
 
     $.ajax(api_url + `hexitec/odin_data/threshold/threshold_filename`, {
@@ -312,14 +589,14 @@ function threshold_filename_changed()
             });
         },
         error: function(request, msg, error) {
-            $('#threshold-filename-warning').html(error + ": " + request.responseText);
+            $('#threshold-filename-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
 
 function threshold_value_changed()
 {
-    var threshold_value = $('#threshold-value').prop('value');
+    var threshold_value = $('#threshold-value-text').prop('value');
     threshold_value = JSON.stringify(parseInt(threshold_value));
 
     $.ajax(api_url + `hexitec/odin_data/threshold/threshold_value`, {
@@ -337,14 +614,14 @@ function threshold_value_changed()
             });
         },
         error: function(request, msg, error) {
-            $('#threshold-value-warning').html(error + ": " + request.responseText);
+            $('#threshold-value-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
 
 function threshold_mode_changed()
 {
-    var threshold_mode = $('#threshold-mode').prop('value');
+    var threshold_mode = $('#threshold-mode-text').prop('value');
     threshold_mode = JSON.stringify(threshold_mode);
 
     $.ajax(api_url + `hexitec/odin_data/threshold/threshold_mode`, {
@@ -362,14 +639,14 @@ function threshold_mode_changed()
             });
         },
         error: function(request, msg, error) {
-            $('#threshold-mode-warning').html(error + ": " + request.responseText);
+            $('#threshold-mode-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
 
 function gradients_filename_changed()
 {
-    var gradients_filename = $('#gradients-filename').prop('value');
+    var gradients_filename = $('#gradients-filename-text').prop('value');
     gradients_filename = JSON.stringify(gradients_filename);
 
     $.ajax(api_url + `hexitec/odin_data/calibration/gradients_filename`, {
@@ -387,14 +664,14 @@ function gradients_filename_changed()
             });
         },
         error: function(request, msg, error) {
-            $('#gradients-warning').html(error + ": " + request.responseText);
+            $('#gradients-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
 
 function intercepts_filename_changed()
 {
-    var intercepts_filename = $('#intercepts-filename').prop('value');
+    var intercepts_filename = $('#intercepts-filename-text').prop('value');
     intercepts_filename = JSON.stringify(intercepts_filename);
 
     $.ajax(api_url + `hexitec/odin_data/calibration/intercepts_filename`, {
@@ -412,7 +689,7 @@ function intercepts_filename_changed()
             });
         },
         error: function(request, msg, error) {
-            $('#intercepts-warning').html(error + ": " + request.responseText);
+            $('#intercepts-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
@@ -444,7 +721,7 @@ function pixel_grid_size_changed()
             });
         },
         error: function(request, msg, error) {
-            $('#pixel-warning').html(error + ": " + request.responseText);
+            $('#pixel-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
@@ -469,7 +746,7 @@ function max_frames_received_changed()
             });
         },
         error: function(request, msg, error) {
-            $('#frames-warning').html(error + ": " + request.responseText);
+            $('#frames-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
@@ -494,7 +771,7 @@ function bin_start_changed()
             });
         },
         error: function(request, msg, error) {
-            $('#bin-start-warning').html(error + ": " + request.responseText);
+            $('#bin-start-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
@@ -519,7 +796,7 @@ function bin_end_changed()
             });
         },
         error: function(request, msg, error) {
-            $('#bin-end-warning').html(error + ": " + request.responseText);
+            $('#bin-end-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
@@ -544,7 +821,7 @@ function bin_width_changed()
             });
         },
         error: function(request, msg, error) {
-            $('#bin-width-warning').html(error + ": " + request.responseText);
+            $('#bin-width-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
@@ -730,37 +1007,43 @@ var changeHdfWriteEnable = function()
         contentType: "application/json",
         data: JSON.stringify(hdf_write_enable),
         success: function(result) {
-            console.log("Success");
             $('#hdf-write-enable-warning').html("");
             // If write Enabled, must disable config files, file path and filename (and vice versa)
             if (hdf_write_enable == true)
             {
                 console.log("writing is true");
                 $('#fr-config').prop('disabled', true);
-                $('#fp-config').prop('disabled', true);
-                $('#hdf-file-path').prop('disabled', true);
-                $('#hdf-file-name').prop('disabled', true);
+                $('#fp-config-text').prop('disabled', true);
+                $('#hdf-file-path-text').prop('disabled', true);
+                $('#hdf-file-name-text').prop('disabled', true);
             }
             else
             {
                 console.log("writing is false");
                 $('#fr-config').prop('disabled', false);
-                $('#fp-config').prop('disabled', false);
-                $('#hdf-file-path').prop('disabled', false);
-                $('#hdf-file-name').prop('disabled', false);
+                $('#fp-config-text').prop('disabled', false);
+                $('#hdf-file-path-text').prop('disabled', false);
+                $('#hdf-file-name-text').prop('disabled', false);
             }
         },
         error: function(request, msg, error) {
             // console.log("request: " + request + " msg: " + msg + " error: " + error);
-            $('#hdf-write-enable-warning').html(error + ": " + request.responseText);
+            $('#hdf-write-enable-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 };
 
+function format_error_message(error) {
+    // Error messages typically look like: 
+    //  "error": "File name must not be empty"
+    var withoutQuotation = error.replace(/"/g,'');
+    var withoutBrackets = withoutQuotation.replace('{', '').replace('}', '');
+    return withoutBrackets.replace('error: ','');
+}
+
 function fp_config_changed()
 {
-    var fp_config_file = $('#fp-config').prop('value');
-    console.log( " I HAVE CHANGED !");
+    var fp_config_file = $('#fp-config-text').prop('value');
     $.ajax({
         type: "PUT",
         url: api_url + 'detector/fp/config/config_file',
@@ -771,7 +1054,7 @@ function fp_config_changed()
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
         },
         error: function(request, msg, error) {
-            $('#fp-config-warning').html(error + ": " + request.responseText);
+            $('#fp-config-warning').html(error + ": " + format_error_message(request.responseText));
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
         }
     });
@@ -790,7 +1073,7 @@ function fr_config_changed()
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
         },
         error: function(request, msg, error) {
-            $('#fr-config-warning').html(error + ": " + request.responseText);
+            $('#fr-config-warning').html(error + ": " + format_error_message(request.responseText));
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
         }
     });
@@ -799,7 +1082,7 @@ function fr_config_changed()
 //curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/fp/config/hdf/file/path -d "/tmp"
 function hdf_file_path_changed()
 {
-    var hdf_file_path = $('#hdf-file-path').prop('value');
+    var hdf_file_path = $('#hdf-file-path-text').prop('value');
     $.ajax({
         type: "PUT",
         url: api_url + 'detector/fp/config/hdf/file/path',
@@ -810,7 +1093,7 @@ function hdf_file_path_changed()
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
         },
         error: function(request, msg, error) {
-            $('#hdf-file-path-warning').html(error + ": " + request.responseText);
+            $('#hdf-file-path-warning').html(error + ": " + format_error_message(request.responseText));
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
         }
     });
@@ -819,7 +1102,7 @@ function hdf_file_path_changed()
 // curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/fp/config/hdf/file/name -d "test"
 function hdf_file_name_changed()
 {
-    var hdf_file_name = $('#hdf-file-name').prop('value');
+    var hdf_file_name = $('#hdf-file-name-text').prop('value');
     $.ajax({
         type: "PUT",
         url: api_url + 'detector/fp/config/hdf/file/name',
@@ -830,7 +1113,7 @@ function hdf_file_name_changed()
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
         },
         error: function(request, msg, error) {
-            $('#hdf-file-name-warning').html(error + ": " + request.responseText);
+            $('#hdf-file-name-warning').html(error + ": " + format_error_message(request.responseText));
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
         }
     });

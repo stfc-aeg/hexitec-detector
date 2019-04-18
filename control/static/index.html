@@ -69,7 +69,11 @@
             </div>
           </td>
         </tr>
-
+        <tr>
+          <input type="button" class="btn btn-primary" id='storeButton' name="store_enable" data-size="small" value="store">
+          <input type="button" class="btn btn-primary" id='executeButton' name="store_enable" data-size="small" value="execute">
+          
+        </tr>
       </tbody>
     </table>
 <!-- ---->
@@ -92,7 +96,7 @@
               </div>
             </td>
             <td>
-              <span id="hdf-write-enable-warning">&nbsp;</span>
+              &nbsp;<span id="hdf-write-enable-warning">&nbsp;</span>
             </td>
           </tr>
 
@@ -102,11 +106,11 @@
             </td>
             <td>
               <div class="text-rows">
-                <input type="text" id="fr-config" onChange='fr_config_changed()' value="fr_config.json">
+                <input type="text" id="fr-config-text" onChange='fr_config_changed()' placeholder="fr_config.json" value="">
               </div>
             </td>
             <td>
-              <td><span id="fr-config-warning">&nbsp;</span></td>
+              &nbsp;<td><span id="fr-config-warning">&nbsp;</span></td>
             </td>
           </tr>
           <tr>
@@ -115,11 +119,11 @@
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="fp-config" onChange='fp_config_changed()' value= "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/hexitec_fp.json">
+                <input type="text" id="fp-config-text" onChange='fp_config_changed()' placeholder="fp_config.json" value= "">
               </div>
             </td>
             <td>
-              <td><span id="fp-config-warning">&nbsp;</span></td>
+              &nbsp;<td><span id="fp-config-warning">&nbsp;</span></td>
             </td>
           </tr>
           <tr>
@@ -128,11 +132,11 @@
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="hdf-file-path" onChange='hdf_file_path_changed()' value= "/some/path">
+                <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' value= "">
               </div>
             </td>
             <td>
-              <td><span id="hdf-file-path-warning">&nbsp;</span></td>
+              &nbsp;<td><span id="hdf-file-path-warning">&nbsp;</span></td>
             </td>
           </tr>
           <tr>
@@ -141,11 +145,11 @@
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="hdf-file-name" onChange='hdf_file_name_changed()' value= "/some/name">
+                <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' value= "">
               </div>
             </td>
             <td>
-              <td><span id="hdf-file-name-warning">&nbsp;</span></td>
+              &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
             </td>
           </tr>
 
@@ -196,22 +200,22 @@
             </td>
             <td>
               <div class="text-rows">
-                <input type="text" id="rows-text" onChange='reorder_rows_changed()' value="80">
+                <input type="text" id="rows-text" onChange='reorder_rows_changed()' value="">
               </div>
             </td>
             <td>
-              <span id="rows-warning">&nbsp;</span>
+              &nbsp;<span id="rows-warning">&nbsp;</span>
             </td>
             <td>
               &nbsp;Columns:&nbsp;
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="columns-text" onChange='reorder_columns_changed()' value="80">
+                <input type="text" id="columns-text" onChange='reorder_columns_changed()' value="">
               </div>
             </td>
             <td>
-              <span id="columns-warning">&nbsp;</span>
+              &nbsp;<span id="columns-warning">&nbsp;</span>
             </td>
           </tr>
 
@@ -235,12 +239,12 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="threshold-filename" onChange='threshold_filename_changed()' value="/path/to/thresholds.txt">
+                <input type="text" id="threshold-filename-text" onChange='threshold_filename_changed()' value="">
               </div>
             </td>
           </tr>
           <td>
-            <span id="threshold-filename-warning">&nbsp;</span>
+            &nbsp;<span id="threshold-filename-warning">&nbsp;</span>
           </td>
 
           <tr>
@@ -249,7 +253,7 @@
             </td>
             <td>  
               <div class="text-integer">
-                <input type="text" id="threshold-value" onChange='threshold_value_changed()' value="100">
+                <input type="text" id="threshold-value-text" onChange='threshold_value_changed()' value="">
               </div>
             </td>
             <td>
@@ -262,7 +266,7 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="threshold-mode" onchange='threshold_mode_changed()' placeholder="Threshold Mode" value="none" required/>
+                <input type="text" id="threshold-mode-text" onchange='threshold_mode_changed()' value="" required/>
               </div>
             </td>
             <td></td> <!-- Leave column blank-->
@@ -305,12 +309,12 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="gradients-filename" onChange='gradients_filename_changed()' value="/path/to/gradients.txt">
+                <input type="text" id="gradients-filename-text" onChange='gradients_filename_changed()' value="">
               </div>
             </td>
           </tr>
           <td>
-            <td><span id="gradients-warning"></span></td>
+            &nbsp;<td><span id="gradients-warning"></span></td>
           </td>
           <tr>
             <td>  
@@ -318,11 +322,11 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="intercepts-filename" onChange='intercepts_filename_changed()' value="/path/to/intercepts.txt">
+                <input type="text" id="intercepts-filename-text" onChange='intercepts_filename_changed()' value="">
               </div>
             </td>
             <td>
-              <td><span id="intercepts-warning">&nbsp;</span></td>
+              &nbsp;<td><span id="intercepts-warning">&nbsp;</span></td>
             </td>
           </tr>
 
@@ -344,11 +348,11 @@
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="pixel-grid-size-text" onChange='pixel_grid_size_changed()' value="3">
+                <input type="text" id="pixel-grid-size-text" onChange='pixel_grid_size_changed()' value="">
               </div>
             </td>
             <td>
-              <td><span id="pixel-warning">&nbsp;</span></td>
+              &nbsp;<td><span id="pixel-warning">&nbsp;</span></td>
             </td>
           </tr>
 
@@ -372,11 +376,11 @@
             </td>
             <td>
               <div class="text-rows">
-                <input type="text" id="max-frames-received-text" onChange='max_frames_received_changed()' value="540">
+                <input type="text" id="max-frames-received-text" onChange='max_frames_received_changed()' value="">
               </div>
             </td>
             <td>
-              <span id="frames-warning">&nbsp;</span>
+              &nbsp;<span id="frames-warning">&nbsp;</span>
             </td>
           <tr>
             <td>
@@ -384,11 +388,11 @@
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="bin-start-text" onChange='bin_start_changed()' value="0">
+                <input type="text" id="bin-start-text" onChange='bin_start_changed()' value="">
               </div>
             </td>
             <td>
-              <td><span id="bin-start-warning">&nbsp;</span></td>
+              &nbsp;<td><span id="bin-start-warning">&nbsp;</span></td>
             </td>
           </tr>
           <tr>
@@ -397,12 +401,12 @@
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="bin-end-text" onChange='bin_end_changed()' value="8000">
+                <input type="text" id="bin-end-text" onChange='bin_end_changed()' value="">
               </div>
             </td>
             <td></td>
             <td>
-              <td><span id="bin-end-warning">&nbsp;</span></td>
+              &nbsp;<td><span id="bin-end-warning">&nbsp;</span></td>
             </td>
           </tr>
           <tr>
@@ -411,11 +415,11 @@
             </td>
             <td> 
               <div class="text-columns">
-                <input type="text" id="bin-width-text" onChange='bin_width_changed()' value="10.0">
+                <input type="text" id="bin-width-text" onChange='bin_width_changed()' value="">
               </div>
             </td>
             <td>
-              <td><span id="bin-width-warning">&nbsp;</span></td>
+              &nbsp;<td><span id="bin-width-warning">&nbsp;</span></td>
             </td>
           </tr>
 
