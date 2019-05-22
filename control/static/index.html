@@ -72,6 +72,8 @@
         <tr>
           <input type="button" class="btn btn-primary" id='storeButton' name="store_enable" data-size="small" value="store">
           <input type="button" class="btn btn-primary" id='executeButton' name="store_enable" data-size="small" value="execute">
+          Adding Apply button:&nbsp;
+          <input type="button" class="btn btn-primary" id='applyButton' name="store_enable" data-size="small" value="apply">
           
         </tr>
       </tbody>
@@ -119,7 +121,7 @@
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="fp-config-text" onChange='fp_config_changed()' placeholder="fp_config.json" value= "">
+                <input type="text" id="fp-config-text" onChange='fp_config_changed()' placeholder="fp_config.json" value= "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/hexitec_fp_min.json">
               </div>
             </td>
             <td>
@@ -150,6 +152,20 @@
             </td>
             <td>
               &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              hdf/frames:&nbsp;
+            </td>
+            <td>
+              <div class="text-columns">
+                <input type="text" id="hdf-frames-text" onChange='hdf_frames_changed()' value= "">
+              </div>
+            </td>
+            <td>
+              &nbsp;<td><span id="hdf-frames-warning">&nbsp;</span></td>
             </td>
           </tr>
 
@@ -200,7 +216,7 @@
             </td>
             <td>
               <div class="text-rows">
-                <input type="text" id="rows-text" onChange='reorder_rows_changed()' value="">
+                <input type="text" id="rows-text" onChange='reorder_rows_changed()' value="80">
               </div>
             </td>
             <td>
@@ -211,7 +227,7 @@
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="columns-text" onChange='reorder_columns_changed()' value="">
+                <input type="text" id="columns-text" onChange='reorder_columns_changed()' value="80">
               </div>
             </td>
             <td>
@@ -227,7 +243,7 @@
             <td>
               <div class="row sidebar-row vertical-align">
                 <div class="col-xs-7">
-                  <input type="checkbox" name="threshold_enable" data-size="small">
+                  <input type="checkbox" name="threshold_enable" data-size="small" style="visibility:hidden">
                 </div>
               </div>
             </td>
@@ -239,10 +255,14 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="threshold-filename-text" onChange='threshold_filename_changed()' value="">
+                <input type="text" id="threshold-filename-text" onChange='threshold_filename_changed()' value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/t_threshold_file.txt">
               </div>
             </td>
           </tr>
+          <td>
+          </td>
+          <td>
+          </td>
           <td>
             &nbsp;<span id="threshold-filename-warning">&nbsp;</span>
           </td>
@@ -253,7 +273,7 @@
             </td>
             <td>  
               <div class="text-integer">
-                <input type="text" id="threshold-value-text" onChange='threshold_value_changed()' value="">
+                <input type="text" id="threshold-value-text" onChange='threshold_value_changed()' value="100">
               </div>
             </td>
             <td>
@@ -266,7 +286,7 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="threshold-mode-text" onchange='threshold_mode_changed()' value="" required/>
+                <input type="text" id="threshold-mode-text" onchange='threshold_mode_changed()' value="value" required/>
               </div>
             </td>
             <td></td> <!-- Leave column blank-->
@@ -309,12 +329,14 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="gradients-filename-text" onChange='gradients_filename_changed()' value="">
+                <input type="text" id="gradients-filename-text" onChange='gradients_filename_changed()' value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/m_Cold_500V.txt">
               </div>
             </td>
           </tr>
           <td>
-            &nbsp;<td><span id="gradients-warning"></span></td>
+          </td>
+          <td>
+            &nbsp;<td><span id="gradients-filename-warning"></span></td>
           </td>
           <tr>
             <td>  
@@ -322,11 +344,13 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="intercepts-filename-text" onChange='intercepts_filename_changed()' value="">
+                <input type="text" id="intercepts-filename-text" onChange='intercepts_filename_changed()' value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/c_Cold_500V.txt">
               </div>
             </td>
             <td>
-              &nbsp;<td><span id="intercepts-warning">&nbsp;</span></td>
+            </td>
+            <td>
+              &nbsp;<td><span id="intercepts-filename-warning">&nbsp;</span></td>
             </td>
           </tr>
 
@@ -348,7 +372,7 @@
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="pixel-grid-size-text" onChange='pixel_grid_size_changed()' value="">
+                <input type="text" id="pixel-grid-size-text" onChange='pixel_grid_size_changed()' value="3">
               </div>
             </td>
             <td>
@@ -364,7 +388,7 @@
             <td>
               <div class="row sidebar-row vertical-align">
                 <div class="col-xs-7">
-                  <input type="checkbox" name="histogram_enable" data-size="small">
+                  <input type="checkbox" name="histogram_enable" data-size="small" style="visibility:hidden">
                 </div>
               </div>
             </td>
@@ -376,7 +400,7 @@
             </td>
             <td>
               <div class="text-rows">
-                <input type="text" id="max-frames-received-text" onChange='max_frames_received_changed()' value="">
+                <input type="text" id="max-frames-received-text" onChange='max_frames_received_changed()' value="540">
               </div>
             </td>
             <td>
@@ -388,7 +412,7 @@
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="bin-start-text" onChange='bin_start_changed()' value="">
+                <input type="text" id="bin-start-text" onChange='bin_start_changed()' value="0">
               </div>
             </td>
             <td>
@@ -401,7 +425,7 @@
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="bin-end-text" onChange='bin_end_changed()' value="">
+                <input type="text" id="bin-end-text" onChange='bin_end_changed()' value="8000">
               </div>
             </td>
             <td></td>
@@ -415,7 +439,7 @@
             </td>
             <td> 
               <div class="text-columns">
-                <input type="text" id="bin-width-text" onChange='bin_width_changed()' value="">
+                <input type="text" id="bin-width-text" onChange='bin_width_changed()' value="10">
               </div>
             </td>
             <td>

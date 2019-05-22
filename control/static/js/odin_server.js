@@ -3,15 +3,14 @@ api_version = '0.1';
 var api_url = '/api/' + api_version + '/';
 var odin_data_url = api_url + 'hexitec/odin_data/';
 // Vars added for Odin-Data
-var reorder_enable = null;
-var raw_data_enable = null;
-var threshold_enable = null;
-var addition_enable = null;
-var discrimination_enable = null;
-var next_frame_enable = null;
-var calibration_enable = null;
-var histogram_enable = null;
-var hdf_write_enable = null;
+var reorder_enable = false;
+var raw_data_enable = false;
+var addition_enable = false;
+var discrimination_enable = false;
+var charged_sharing_enable = false; // Track state to ease logic inside apply_ui_values()
+var next_frame_enable = false;
+var calibration_enable = false;
+var hdf_write_enable = false;
 
 $( document ).ready(function()
 {
@@ -28,40 +27,91 @@ $( document ).ready(function()
         'size': 'midi',
         'onSwitchChange': function(event, state) {
 
-            var discriminate_enable = false;
-            var addition_enable = false;
-    
-                // Do your logic in here according to the value 
-            if ($(this).val() == "none")
-            {
-                console.log("Clicked on none");
-            }
+            // Assume cs/add/dis all false, Let if statements decide which one(s) are true
+            charged_sharing_enable = false;
+            addition_enable = false;
+            discrimination_enable = false;
+
             if ($(this).val() == "add")
             {
-                console.log("Clicked on add");
                 addition_enable = true;
+                charged_sharing_enable = true;
             }
             if ($(this).val() == "dis")
             {
-                console.log("Clicked on dis");
-                discriminate_enable = true;
+                discrimination_enable = true;
+                charged_sharing_enable = true;
             }
             var pixel_grid_size = $('#pixel-grid-size-text').prop('value');
-            var charged_sharing_payload = {"charged_sharing": 
-                                {"addition": addition_enable, 
-                                "discrimination": discriminate_enable, 
+
+            var addition_payload = {"addition": 
+                                {"enable": addition_enable,
                                 "pixel_grid_size": parseInt(pixel_grid_size)} };
 
+            var discrimination_payload = {"discrimination": 
+                                {"enable": discrimination_enable, 
+                                "pixel_grid_size": parseInt(pixel_grid_size)} };
+
+            // ODIN paramTree
             $.ajax({
                 type: "PUT",
                 url: '/api/' + api_version + '/hexitec/odin_data',
                 contentType: "application/json",
-                data: JSON.stringify(charged_sharing_payload)
+                data: JSON.stringify(addition_payload),
+                success: function(result) {
+                    console.log("Successfully updated Addition settings in odin_data");
+                },
+                error: function(request, msg, error) {
+                    console.log("FAILED to update Addition settings in odin_data: " + error);
+                }
+            });
+
+            // ODIN paramTree
+            $.ajax({
+                type: "PUT",
+                url: '/api/' + api_version + '/hexitec/odin_data',
+                contentType: "application/json",
+                data: JSON.stringify(discrimination_payload),
+                success: function(result) {
+                    console.log("Successfully updated Discrimination settings in odin_data");
+                },
+                error: function(request, msg, error) {
+                    console.log("FAILED to update Discrimination settings in odin_data: " + error);
+                }
+            });
+
+            // plugin param
+            $.ajax({
+                type: "PUT",
+                url: api_url + 'detector/fp/config',
+                contentType: "application/json",
+                data: JSON.stringify(addition_payload),
+                success: function(result) {
+                    console.log("Successfully updated Addition plugin settings");
+                },
+                error: function(request, msg, error) {
+                    console.log("FAILED to update Addition plugin settings: " + error);
+                }
+            });
+
+            // plugin param
+            $.ajax({
+                type: "PUT",
+                url: api_url + 'detector/fp/config',
+                contentType: "application/json",
+                data: JSON.stringify(discrimination_payload),
+                success: function(result) {
+                    console.log("Successfully updated Discrimination plugin settings");
+                },
+                error: function(request, msg, error) {
+                    console.log("FAILED to update Discrimination plugin settings: " + error);
+                }
             });
         }
     })
 
-    /// Style checkbox(s) into a ON/OFF slider
+
+    /// Style checkbox(es) into a ON/OFF slider
 
     // Configure Reorder switch
     $("[name='reorder_enable']").bootstrapSwitch();
@@ -75,13 +125,6 @@ $( document ).ready(function()
     $("[name='raw_data_enable']").bootstrapSwitch('state', raw_data_enable, true);
     $('input[name="raw_data_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
         changeRawDataEnable();
-    });
-
-    // Configure Threshold switch
-    $("[name='threshold_enable']").bootstrapSwitch();
-    $("[name='threshold_enable']").bootstrapSwitch('state', threshold_enable, true);
-    $('input[name="threshold_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
-        changeThresholdEnable();
     });
 
     // Configure Addition switch
@@ -112,13 +155,6 @@ $( document ).ready(function()
         changeCalibrationEnable();
     });
 
-    // Configure Histogram switch
-    $("[name='histogram_enable']").bootstrapSwitch();
-    $("[name='histogram_enable']").bootstrapSwitch('state', histogram_enable, true);
-    $('input[name="histogram_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
-        changeHistogramEnable();
-    });
-
     // Configure hdf write switch
     $("[name='hdf_write_enable']").bootstrapSwitch({disabled:true});
     $("[name='hdf_write_enable']").bootstrapSwitch('state', hdf_write_enable, true);
@@ -126,28 +162,19 @@ $( document ).ready(function()
         changeHdfWriteEnable();
     });
 
-    // Test bootstrap button..
+    // Buttons for loading sequence config files, Applying settings
 
     $('#storeButton').on('click', function(event) {
-        // Hardcoded paths are bad but no way around it here: (Move this away from the install folder !)
-        var sequence_file_1 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_hexitec_fp_sequence_1.json";
-
-        $.ajax({
-            type: "PUT",
-            url: api_url + 'detector/fp/config/config_file',
-            contentType: "application/json",
-            data: sequence_file_1,
-            success: function(result) {
-                $('#fp-config-warning').html("");
-                $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
-            },
-            error: function(request, msg, error) {
-                $('#fp-config-warning').html(error + ": " + format_error_message(request.responseText));
-                $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
-            }
-        });
+        // Load the 12 different sequence files
+        store_sequence_files();
     });
 
+    $('#applyButton').on('click', function(event) {
+        apply_ui_values();
+    });
+
+
+    // Test button:
     $('#executeButton').on('click', function(event) {
         var execute_file_1 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_1.json";
         $.ajax({
@@ -165,243 +192,207 @@ $( document ).ready(function()
             }
         });
     });
-    console.log("abide?");
-
-    var reorder_rows = $('#rows-text').prop('value');
-    reorder_rows = JSON.stringify(parseInt(reorder_rows));
-
-    // $.getJSON(api_url +`hexitec/odin_data/addition/height`, function(response) {
-    //     console.log("response1: " + response.toSource());
-    //     console.log("type of response, response.toSource: " + typeof response + " " + typeof response.toSource());
-    // });
-
-    // $.getJSON(api_url + 'detector/fp/config/addition/height', function(response) {
-    //     console.log("response2: " + JSON.stringify(response, null, 4) );
-    //     console.log("typeof JSON.stringify: " + typeof JSON.stringify(response, null, 4));
-    // });
-    
-    // /// Test this  with ability to check for error, timeout et cetera
-    // var handlerURL = api_url + 'detector/fp/config/addition/height';
-    // jQuery.getJSON(handlerURL, 
-    // function(jsonResult){
-    //     console.log("1. Success -> " + jsonResult.toSource());
-    // })
-    // .done(function() { console.log('getJSON request succeeded!'); })
-    // .fail(function(jqXHR, textStatus, errorThrown) { console.log('getJSON request failed! ' + textStatus); })
-    // .always(function() { console.log('getJSON request ended!'); });
-    
-    // handlerURL = api_url +`hexitec/odin_data/reorder/height`;
-    // jQuery.getJSON(handlerURL, 
-    // function(jsonResult){
-    //     console.log(".2 Success -> " + JSON.stringify(jsonResult));
-    // })
-    // .done(function() { console.log('getJSON request succeeded!'); })
-    // .fail(function(jqXHR, textStatus, errorThrown) { console.log('getJSON request failed! ' + textStatus + " -> " + errorThrown ); })
-    // .always(function() { console.log('getJSON request ended!'); });
-
-    initialise_with_server_values();
-
-
 });
 
-function initialise_with_server_values() {
+function store_sequence_files() {
 
-    // get_hdf_value(`hdf/file_path`,   'hdf-file-path-text');  // fine
-    // get_hdf_value(`hdf/file_name`,   'hdf-file-name-text');  // fine
-    // get_server_value(`reorder/height`,  'rows-text');    // fine
-    // get_server_value(`reorder/width`,   'columns-text'); // fine
-    // get_server_value(`threshold/threshold_filename`,  'threshold-filename-text');    // fine
-    // get_server_value(`threshold/threshold_mode`,      'threshold-mode-text');        // fine
-    // get_server_value(`threshold/threshold_value`,     'threshold-value-text');       // fine
+    // Hardcoded paths are bad but no way around it here: (Move this away from the install folder !)
+    var sequence_file_1 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_1.json";
+    var sequence_file_2 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_2.json";
+    var sequence_file_3 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_3.json";
+    var sequence_file_4 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_4.json";
+    var sequence_file_5 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_5.json";
+    var sequence_file_6 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_6.json";
+    var sequence_file_7 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_7.json";
+    var sequence_file_8 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_8.json";
+    var sequence_file_9 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_9.json";
+    var sequence_file_10 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_10.json";
+    var sequence_file_11 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_11.json";
+    var sequence_file_12 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_12.json";
 
-    // get_server_value(`calibration/gradients_filename`,  'gradients-filename-text');     // fine
-    // get_server_value(`calibration/intercepts_filename`, 'intercepts-filename-text');    // fine
-
-    // get_server_value(`addition/pixel_grid_size`, 'pixel-grid-size-text');   // fine
-    // get_server_value(`discrimination/pixel_grid_size`, 'pixel-grid-size-text'); // fine
-
-    // get_server_value(`histogram/max_frames_received`, 'max-frames-received-text');  // These four: fine
-    // get_server_value(`histogram/bin_start`,           'bin-start-text');
-    // get_server_value(`histogram/bin_end`,             'bin-end-text');
-    // get_server_value(`histogram/bin_width`,           'bin-width-text');
-
-    // get_bool_value(`reorder/reorder`,           'reorder_enable');  // Works
-    // get_bool_value(`reorder/raw_data`,          'raw_data_enable');  // Works
-    get_bool_value(`threshold/enable`,             'threshold_enable');
-    // get_bool_value(`reorder/reorder`,           'reorder_enable');
-    // get_bool_value(`reorder/reorder`,           'reorder_enable');
-    // get_bool_value(`reorder/reorder`,           'reorder_enable');
-    // get_bool_value(`reorder/reorder`,           'reorder_enable');
-    // get_bool_value(`reorder/reorder`,           'reorder_enable');
-    // get_bool_value(`reorder/reorder`,           'reorder_enable');
+    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_1);
+    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_2);
+    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_3);
+    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_4);
+    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_5);
+    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_6);
+    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_7);
+    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_8);
+    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_9);
+    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_10);
+    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_11);
+    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_12);
 
 }
 
-
-// http://localhost:8888/api/0.1/detector/fp/status/hdf
-function get_hdf_value(path, elementId) {
-
-    // hdf is a special case, it's information not readily available underneath /status/
-    // var p1 = api_url + `hexitec/odin_data/` + path;
-    // var p2 = api_url + 'detector/fp/config/'  + path;
-    var p2 = api_url + 'detector/fp/status/' + path;
-    // console.log(" p2: " + p2);
+// send_sequence_file: Used to store or execute the sequence of plugin(s)
+//  defined by (a json) file
+function send_sequence_file(path, file) {
 
     $.ajax({
-        type: "GET",
-        url: p2,
+        type: "PUT",
+        url: path,
         contentType: "application/json",
-        success: function(params) {
-            // console.log("It (" + path + ") exists, it contains: " + params.toSource() + " ie " + JSON.stringify(params))
-            
-            for (i in params) {
-                for (key in params[i]) {
-                    var key_value = params[i][key];
-                    if (elementId.includes("hdf-file-name-text"))
-                    {
-                        // If it's filename it will look something like: ["an_example_filename_000001.h5"]
-                        //  Remove [], "" characters, only displaying:    an_example_filename
-                        var param_str = JSON.stringify(params[i][key]);
-                        var withoutQuotation = param_str.replace(/"/g,'');
-                        var withoutBrackets = withoutQuotation.replace('[', '').replace(']', '');
-                        var idx = withoutBrackets.lastIndexOf("_");
-                        key_value = withoutBrackets.substr(0, idx);
-                    }
+        data: file,
+        success: function(result) {
+            console.log("Successfully loaded configuration file: " + file);
+        },
+        error: function(request, msg, error) {
+            console.log("Failed to load configuration file: " + file);
+        }
+    });
+}
 
-                    document.getElementById(elementId).value = key_value;                    
+// apply_ui_values: Disconnect existing sequence of plugins, 
+//  load the sequence of plugins corresponding to UI settings
+function apply_ui_values() {
+
+    // Hardcoded paths are bad but no way around it here: (Move this away from the install folder ?!)
+    var sequence_file_1 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_1.json";
+    var sequence_file_2 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_2.json";
+    var sequence_file_3 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_3.json";
+    var sequence_file_4 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_4.json";
+    var sequence_file_5 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_5.json";
+    var sequence_file_6 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_6.json";
+    var sequence_file_7 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_7.json";
+    var sequence_file_8 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_8.json";
+    var sequence_file_9 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_9.json";
+    var sequence_file_10 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_10.json";
+    var sequence_file_11 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_11.json";
+    var sequence_file_12 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_12.json";
+    
+    // Start by loading (executing) the corresponding JSON config file
+    //   (disconnects currently connected plugins, connects up selected plugins)
+    if (next_frame_enable == true) 
+    {
+        if (calibration_enable  == true) 
+        {
+            // Next = true, calibration = true
+            if (charged_sharing_enable == true)
+            {
+                // Next = true, calibration = true, CS = true
+                // Is CS Addition or Discrimination?
+                if (addition_enable == true)
+                {
+                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_8);
+                }
+                if (discrimination_enable == true)
+                {
+                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_12);
                 }
             }
-        },
-        error: function(request, msg, error) {
-            console.log("Path (" + path + ") not found; request: " + request + 
-                        " msg: '" + msg + "' error: " + error );
+            else
+            {
+                // next = true, calibration = true CS = false
+                send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_4);
+            }
         }
-    });
-}
-
-function get_server_value(path, elementId) {
-    
-    // `hexitec/odin_data/ reorder/height`
-    // vs
-    // 'detector/fp/config/ reorder/height'
-    var p1 = api_url + `hexitec/odin_data/` + path;
-    var p2 = api_url + 'detector/fp/config/'  + path;
-    console.log("p1: " + p1 + " p2: " + p2);
-    $.ajax(p1, {
-        method: "GET",
-        contentType: "application/json",
-        success: function(result) {
-            // console.log("Plugin loaded.")
-
-            // HexitecReorderPlugin
-            $.ajax({
-                type: "GET",
-                url: p2,
-                contentType: "application/json",
-                success: function(params) {
-                    console.log("It (" + path + ") exists, it contains: " + params.toSource() + " ie " + JSON.stringify(params))
-                    
-                    for (i in params){
-                        // console.log(i);
-                        for (key in params[i]){
-                            console.log("'" + key + "' : '" + params[i][key] + "'");
-
-                            // Only update element if key has an actual value.
-                            //  If the plugin hasn't been loaded, then key value is "" (ie null, nowt)
-                            if (params[i][key] == "") 
-                            {
-                                // console.log("Key is empty");
-                            }
-                            else
-                            {
-                                key_value = params[i][key];
-                                document.getElementById(elementId).value = key_value;
-                            }
-                            
-                            // console.log
-                            // $('#rows-text').html( params[i][key]);  // Doesn't work
-                            // $('#rows-text').html( 0);  // Doesn't work
-                            // console.log("What type? " + typeof params[i][key]);
-                            // $('#rows-warning').html(0);  // Works
-                            // document.getElementById(elementId).value = params[i][key];   // Works
-                            // document.getElementById("columns-text").value = 42; // Works
-                            // $('#columns-text').text(445);   // Doesn't work
-                            // $('#columns-text').text("445"); // Doesn't work 
-                        }
-                    }
-                },
-                error: function(request, msg, error) {
-                    // In practice won't get here - if path not sound, the outer error func is called
-                    $('#rows-warning').html(error + ": " + format_error_message(request.responseText));
-                    // console.log("It doesn't exist! -> " + error + ": " + format_error_message(request.responseText))
+        else
+        {
+            // next = true, calibration = false
+            if (charged_sharing_enable == true)
+            {
+                // next = true, calib = false, cs == true
+                // Is CS Addition or Discrimination?
+                if (addition_enable == true)
+                {
+                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_6);
                 }
-            });
-        },
-        error: function(request, msg, error) {
-            // It doesn't exist - plugin not loaded
-            console.log("Path (" + path + ") not found");
-            // console.log("ajax test FAIL! -> " + error + ": " + format_error_message(request.responseText))
-        }
-    });
-}
-
-function get_bool_value(path, elementId) {
-
-    var p1 = api_url + `hexitec/odin_data/` + path;
-    var p2 = api_url + 'detector/fp/config/'  + path;
-    $.ajax(p1, {
-        method: "GET",
-        contentType: "application/json",
-        success: function(result) {
-
-            $.ajax({
-                type: "GET",
-                url: p2,
-                contentType: "application/json",
-                success: function(params) {
-                    console.log("It (" + path + ") exists, it contains: " + params.toSource() + " ie " + JSON.stringify(params))
-                    
-                    for (i in params){
-                        // console.log(i);
-                        for (key in params[i]){
-                            console.log("'" + key + "' : '" + params[i][key] + "'");
-
-                            // Only update element if key has an actual value.
-                            //  If the plugin hasn't been loaded, then key value is "" (ie null, nowt)
-                            if (params[i][key] == "") 
-                            {
-                                console.log("Key is empty");
-                            }
-                            else
-                            {
-                                // params[i][key] is of type object; convert to string 
-                                //  and turn it into the corresponding boolean value
-                                key_value = JSON.stringify(params[i][key]);
-                                if (key_value.includes("false"))
-                                {
-                                    key_value = false;
-                                }
-                                else
-                                {
-                                    key_value = true;
-                                }
-                                $("[name='" + elementId + "']").bootstrapSwitch('state', key_value, true);  // should work?
-                            }
-                        }
-                    }
-                },
-                error: function(request, msg, error) {
-                    // In practice won't get here - if path not sound, the outer error func is called
-                    $('#rows-warning').html(error + ": " + format_error_message(request.responseText));
-                    // console.log("It doesn't exist! -> " + error + ": " + format_error_message(request.responseText))
+                if (discrimination_enable == true)
+                {
+                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_10);
                 }
-            });
-        },
-        error: function(request, msg, error) {
-            // It doesn't exist - plugin not loaded
-            console.log("Path (" + path + ") not found");
+            }
+            else
+            {
+                // next = true, calib = false, cs = false
+                send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_2);
+            }
         }
-    });
+    }
+    else    // next_frame not selected
+    {
+        if (calibration_enable == true)
+        {
+            // Next = false, Calibration = true
+            if (charged_sharing_enable == true)
+            {
+                // Next = false, calibration = true, CS = true
+                // Is CS Addition or Discrimination?
+                if (addition_enable == true)
+                {
+                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_7);
+                }
+                if (discrimination_enable == true)
+                {
+                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_11);
+                }
+            }
+            else
+            {
+                // next = false calibration = true, CS = false
+                send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_3);
+            }
+        }
+        else    // next_frame, calibration not selected
+        {
+            if (charged_sharing_enable == true) 
+            {
+                // Next = false, calibration = false, CS = true
+                // CS is Addition or Discrimination?
+                if (addition_enable == true)
+                {
+                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_5);
+                }
+                if (discrimination_enable == true)
+                {
+                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_9);
+                }
+            }
+            else
+            {
+                // next = False, calibration = False, charged_sharing = False
+                send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_1);
+            }
+        }
+    }
+
+    // Load all UI settings into corresponding plugins
+    changeReorderEnable();
+    changeRawDataEnable();
+    reorder_rows_changed();
+    reorder_columns_changed();
+
+    var threshold_mode = $('#threshold-mode-text').prop('value');
+    // Check whether threshold filename mode requested
+    //  (0 if strings equal, 1 if they're different)
+    if (threshold_mode.localeCompare("filename") == 0)
+    {
+        threshold_filename_changed();
+    }
+    threshold_value_changed();
+    threshold_mode_changed();
+
+    gradients_filename_changed();
+    intercepts_filename_changed();
+    pixel_grid_size_changed();
+    max_frames_received_changed();
+    bin_start_changed();
+    bin_end_changed();
+    bin_width_changed();
+
+    // Don't (re-)load FP config file from UI or config may be changed unintentionally
+    // fp_config_changed(); 
+    hdf_file_path_changed();
+    hdf_file_name_changed();
+    hdf_frames_changed();
+
+    // If hdf write already enabled, toggle off and on so hdf settings sent
+    if ( $("[name='hdf_write_enable']").prop('checked') )
+    {
+        setHdfWrite(0);
+        setHdfWrite(1);
+    }
 }
 
 
@@ -440,61 +431,20 @@ function reorder_rows_changed()
 {
     var reorder_rows = $('#rows-text').prop('value');
     reorder_rows = JSON.stringify(parseInt(reorder_rows));
+    // Each plugin has a height parameter, must update all seven
     $.ajax(api_url + `hexitec/odin_data/reorder/height`, {
         method: "PUT",
         contentType: "application/json",
         data: reorder_rows,
         success: function(result) {
             $('#rows-warning').html("");
-            // HexitecAdditionPlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/addition/height',
-                contentType: "application/json",
-                data: reorder_rows,
-            });
-            // HexitecCalibrationPlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/calibration/height',
-                contentType: "application/json",
-                data: reorder_rows,
-            });
-            // HexitecDiscriminationPlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/discrimination/height',
-                contentType: "application/json",
-                data: reorder_rows,
-            });
-            // HexitecHistogramPlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/histogram/height',
-                contentType: "application/json",
-                data: reorder_rows,
-            });
-            // HexitecNextFramePlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/next_frame/height',
-                contentType: "application/json",
-                data: reorder_rows,
-            });
-            // HexitecReorderPlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/reorder/height',
-                contentType: "application/json",
-                data: reorder_rows,
-            });
-            // HexitecThresholdPlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/threshold/height',
-                contentType: "application/json",
-                data: reorder_rows,
-            });
+            update_plugin_value("addition", "height", reorder_rows);
+            update_plugin_value("calibration", "height", reorder_rows);
+            update_plugin_value("discrimination", "height", reorder_rows);
+            update_plugin_value("histogram", "height", reorder_rows);
+            update_plugin_value("next_frame", "height", reorder_rows);
+            update_plugin_value("reorder", "height", reorder_rows);
+            update_plugin_value("threshold", "height", reorder_rows);
         },
         error: function(request, msg, error) {
             $('#rows-warning').html(error + ": " + format_error_message(request.responseText));
@@ -506,66 +456,36 @@ function reorder_columns_changed()
 {
     var reorder_columns = $('#columns-text').prop('value');
     reorder_columns = JSON.stringify(parseInt(reorder_columns));
-
+    // Each plugin has a width parameter, must update all seven
     $.ajax(api_url + `hexitec/odin_data/reorder/width`, {
         method: "PUT",
         contentType: "application/json",
         data: reorder_columns,
         success: function(result) {
             $('#columns-warning').html("");
-            // HexitecAdditionPlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/addition/width',
-                contentType: "application/json",
-                data: reorder_columns,
-            });
-            // HexitecCalibrationPlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/calibration/width',
-                contentType: "application/json",
-                data: reorder_columns,
-            });
-            // HexitecDiscriminationPlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/discrimination/width',
-                contentType: "application/json",
-                data: reorder_columns,
-            });
-            // HexitecHistogramPlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/histogram/width',
-                contentType: "application/json",
-                data: reorder_columns,
-            });
-            // HexitecNextFramePlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/next_frame/width',
-                contentType: "application/json",
-                data: reorder_columns,
-            });
-            // HexitecReorderPlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/reorder/width',
-                contentType: "application/json",
-                data: reorder_columns,
-            });
-            // HexitecThresholdPlugin
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'detector/fp/config/threshold/width',
-                contentType: "application/json",
-                data: reorder_columns,
-            });
+            update_plugin_value("addition", "width", reorder_columns);
+            update_plugin_value("calibration", "width", reorder_columns);
+            update_plugin_value("discrimination", "width", reorder_columns);
+            update_plugin_value("histogram", "width", reorder_columns);
+            update_plugin_value("next_frame", "width", reorder_columns);
+            update_plugin_value("reorder", "width", reorder_columns);
+            update_plugin_value("threshold", "width", reorder_columns);
         },
         error: function(request, msg, error) {
             $('#columns-warning').html(error + ": " + format_error_message(request.responseText));
         }
+    });
+}
+
+// update_plugin_value: Helps reorder_rows_changed(),
+//  reorder_columns_changed() to set a plugin's key's value
+function update_plugin_value(plugin, key, value)
+{
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'detector/fp/config/' + plugin + '/' + key,
+        contentType: "application/json",
+        data: value,
     });
 }
 
@@ -580,12 +500,19 @@ function threshold_filename_changed()
         data: threshold_filename,
         success: function(result) {
             $('#threshold-filename-warning').html("");
-            // Write to HexitecThresholdPlugin
             $.ajax({
                 type: "PUT",
                 url: api_url + 'detector/fp/config/threshold/threshold_filename',
                 contentType: "application/json",
                 data: threshold_filename,
+                success: function(result) {
+                    console.log("threshold_filename  ACCEPTED");
+                    $('#threshold-filename-warning').html("");
+                },
+                error: function(request, msg, error) {
+                    console.log("threshold_filename REJECTED");
+                    $('#threshold-filename-warning').html(error + ": " + format_error_message(request.responseText));
+                }
             });
         },
         error: function(request, msg, error) {
@@ -605,7 +532,6 @@ function threshold_value_changed()
         data: threshold_value,
         success: function(result) {
             $('#threshold-value-warning').html("");
-            // Write to HexitecThresholdPlugin
             $.ajax({
                 type: "PUT",
                 url: api_url + 'detector/fp/config/threshold/threshold_value',
@@ -630,7 +556,6 @@ function threshold_mode_changed()
         data: threshold_mode,
         success: function(result) {
             $('#threshold-mode-warning').html("");
-            // Write to HexitecThresholdPlugin
             $.ajax({
                 type: "PUT",
                 url: api_url + 'detector/fp/config/threshold/threshold_mode',
@@ -655,12 +580,17 @@ function gradients_filename_changed()
         data: gradients_filename,
         success: function(result) {
             $('#gradients-warning').html("");
-            // Write to HexitecCalibrationPlugin
             $.ajax({
                 type: "PUT",
                 url: api_url + 'detector/fp/config/calibration/gradients_filename',
                 contentType: "application/json",
                 data: gradients_filename,
+                success: function(result) {
+                    $('#gradients-filename-warning').html("");
+                },
+                error: function(request, msg, error) {
+                    $('#gradients-filename-warning').html(error + ": " + format_error_message(request.responseText));
+                }
             });
         },
         error: function(request, msg, error) {
@@ -680,12 +610,17 @@ function intercepts_filename_changed()
         data: intercepts_filename,
         success: function(result) {
             $('#intercepts-warning').html("");
-            // Write to HexitecCalibrationPlugin
             $.ajax({
                 type: "PUT",
                 url: api_url + 'detector/fp/config/calibration/intercepts_filename',
                 contentType: "application/json",
                 data: intercepts_filename,
+                success: function(result) {
+                    $('#intercepts-filename-warning').html("");
+                },
+                error: function(request, msg, error) {
+                    $('#intercepts-filename-warning').html(error + ": " + format_error_message(request.responseText));
+                }
             });
         },
         error: function(request, msg, error) {
@@ -694,25 +629,39 @@ function intercepts_filename_changed()
     });
 }
 
+// pixel_grid_size_changed: Both Addition and Discrimination have this setting,
+//  need to update both as Odin current cannot reliably tell us which plugin is loaded
 function pixel_grid_size_changed()
 {
     var pixel_grid_size = $('#pixel-grid-size-text').prop('value');
     pixel_grid_size = JSON.stringify(parseInt( pixel_grid_size));
 
-    $.ajax(api_url + `hexitec/odin_data/charged_sharing/pixel_grid_size`, {
+    // Targeting HexitecAdditionPlugin
+    $.ajax(api_url + `hexitec/odin_data/addition/pixel_grid_size`, {
         method: "PUT",
         contentType: "application/json",
         data: pixel_grid_size,
         success: function(result) {
             $('#pixel-warning').html("");
-            // Targeting HexitecAdditionPlugin
             $.ajax({
                 type: "PUT",
                 url: api_url + 'detector/fp/config/addition/pixel_grid_size',
                 contentType: "application/json",
                 data: pixel_grid_size,
             });
-            // Targeting HexitecDiscriminationPlugin
+        },
+        error: function(request, msg, error) {
+            $('#pixel-warning').html(error + ": " + format_error_message(request.responseText));
+        }
+    });
+
+    // Targeting HexitecDiscriminationPlugin
+    $.ajax(api_url + `hexitec/odin_data/discrimination/pixel_grid_size`, {
+        method: "PUT",
+        contentType: "application/json",
+        data: pixel_grid_size,
+        success: function(result) {
+            $('#pixel-warning').html("");
             $.ajax({
                 type: "PUT",
                 url: api_url + 'detector/fp/config/discrimination/pixel_grid_size',
@@ -726,6 +675,7 @@ function pixel_grid_size_changed()
     });
 }
 
+// max_frames_received_changed: Sets number of frames processed before histograms written to disk
 function max_frames_received_changed()
 {
     var max_frames_received = $('#max-frames-received-text').prop('value');
@@ -737,7 +687,6 @@ function max_frames_received_changed()
         data: max_frames_received,
         success: function(result) {
             $('#frames-warning').html("");
-            // Write to HexitecHistogramPlugin
             $.ajax({
                 type: "PUT",
                 url: api_url + 'detector/fp/config/histogram/max_frames_received',
@@ -762,7 +711,6 @@ function bin_start_changed()
         data: bin_start,
         success: function(result) {
             $('#bin-start-warning').html("");
-            // Write to HexitecHistogramPlugin
             $.ajax({
                 type: "PUT",
                 url: api_url + 'detector/fp/config/histogram/bin_start',
@@ -787,7 +735,6 @@ function bin_end_changed()
         data: bin_end,
         success: function(result) {
             $('#bin-end-warning').html("");
-            // Write to HexitecHistogramPlugin
             $.ajax({
                 type: "PUT",
                 url: api_url + 'detector/fp/config/histogram/bin_end',
@@ -812,7 +759,6 @@ function bin_width_changed()
         data: bin_width,
         success: function(result) {
             $('#bin-width-warning').html("");
-            // Write to HexitecHistogramPlugin
             $.ajax({
                 type: "PUT",
                 url: api_url + 'detector/fp/config/histogram/bin_width',
@@ -829,12 +775,6 @@ function bin_width_changed()
 var changeReorderEnable = function()
 {
     reorder_enable = $("[name='reorder_enable']").bootstrapSwitch('state');
-    $.ajax({
-        type: "PUT",
-        url: odin_data_url + 'reorder',
-        contentType: "application/json",
-        data: JSON.stringify({"enable": reorder_enable})
-    });
     // Write straight into HexitecReorderPlugin's variable
     $.ajax({
         type: "PUT",
@@ -853,12 +793,6 @@ var changeReorderEnable = function()
 var changeRawDataEnable = function ()
 {
     raw_data_enable = $("[name='raw_data_enable']").bootstrapSwitch('state');
-    $.ajax({
-        type: "PUT",
-        url: odin_data_url + 'reorder',
-        contentType: "application/json",
-        data: JSON.stringify({"raw_data": raw_data_enable})
-    });
     // Write straight into HexitecReorderPlugin's variable
     $.ajax({
         type: "PUT",
@@ -874,30 +808,26 @@ var changeRawDataEnable = function ()
     });
 };
 
-
-var changeThresholdEnable = function()
+var changeNextFrameEnable = function()
 {
-    threshold_enable = $("[name='threshold_enable']").bootstrapSwitch('state');
+    next_frame_enable = $("[name='next_frame_enable']").bootstrapSwitch('state');
     $.ajax({
         type: "PUT",
-        url: odin_data_url + 'threshold',
+        url: odin_data_url + 'next_frame',
         contentType: "application/json",
-        data: JSON.stringify({"enable": threshold_enable})
+        data: JSON.stringify(next_frame_enable)
     });
-    console.log("threshold: " + threshold_enable);
-    // Write straight into HexitecReorderPlugin's variable  Need to be converted into a load/unload threshold Plugin instruction!
-    // $.ajax({
-    //     type: "PUT",
-    //     url: api_url + 'detector/fp/config/threshold',
-    //     contentType: "application/json",
-    //     data: JSON.stringify(threshold_enable),
-    //     success: function(result) {
-    //         console.log("Threshold successfully toggled");
-    //     },
-    //     error: function(request, msg, error) {
-    //         console.log("Threshold couldn't be toggled");
-    //     }
-    // });
+};
+
+var changeCalibrationEnable = function()
+{
+    calibration_enable = $("[name='calibration_enable']").bootstrapSwitch('state');
+    $.ajax({
+        type: "PUT",
+        url: odin_data_url + 'calibration',
+        contentType: "application/json",
+        data: JSON.stringify({"enable": calibration_enable})
+    });
 };
 
 var changeNextFrameEnable = function()
@@ -920,45 +850,6 @@ var changeCalibrationEnable = function()
         contentType: "application/json",
         data: JSON.stringify({"enable": calibration_enable})
     });
-    console.log("calibration: " + calibration_enable);
-};
-
-var changeThresholdEnable = function()
-{
-    threshold_enable = $("[name='threshold_enable']").bootstrapSwitch('state');
-    $.ajax({
-        type: "PUT",
-        url: odin_data_url + 'threshold',
-        contentType: "application/json",
-        data: JSON.stringify({"enable": threshold_enable})
-    });
-    console.log("threshold: " + threshold_enable);
-};
-
-var changeNextFrameEnable = function()
-{
-    next_frame_enable = $("[name='next_frame_enable']").bootstrapSwitch('state');
-    console.log("next_frame_enable: " + next_frame_enable);
-    $.ajax({
-        type: "PUT",
-        url: odin_data_url + 'next_frame',
-        contentType: "application/json",
-        data: JSON.stringify(next_frame_enable)
-    });
-    console.log("next frame: " + next_frame_enable);
-};
-
-var changeCalibrationEnable = function()
-{
-    calibration_enable = $("[name='calibration_enable']").bootstrapSwitch('state');
-    console.log("calibration_enable: " + calibration_enable);
-    $.ajax({
-        type: "PUT",
-        url: odin_data_url + 'calibration',
-        contentType: "application/json",
-        data: JSON.stringify({"enable": calibration_enable})
-    });
-    console.log("calibration: " + calibration_enable);
 };
 
 var changeAdditionEnable = function()
@@ -974,7 +865,7 @@ var changeAdditionEnable = function()
 
 var changeDiscriminationEnable = function()
 {
-    discrimination_enable = $("[name='discrimination_enable']").bootstrapSwitch('state');
+    console.log("changeDiscrm called");
     $.ajax({
         type: "PUT",
         url: odin_data_url + 'charged_sharing',
@@ -983,24 +874,16 @@ var changeDiscriminationEnable = function()
     });
 };
 
-var changeHistogramEnable = function()
-{
-    histogram_enable = $("[name='histogram_enable']").bootstrapSwitch('state');
-    console.log("histogram_enable: " + histogram_enable);
-    $.ajax({
-        type: "PUT",
-        url: odin_data_url + 'histogram',
-        contentType: "application/json",
-        data: JSON.stringify({"enable": histogram_enable})
-    });
-    console.log("histogram: " + histogram_enable);
-};
-
-//// Odin Data Placeholder for now:
-
 var changeHdfWriteEnable = function()
 {
     hdf_write_enable = $("[name='hdf_write_enable']").bootstrapSwitch('state');
+    setHdfWrite(hdf_write_enable);
+};
+
+// setHdfWrite: Helper function to toggle hdf writing on/off
+function setHdfWrite(enable)
+{
+    hdf_write_enable = enable;
     $.ajax({
         type: "PUT",
         url: api_url + 'detector/fp/config/hdf/write',
@@ -1008,7 +891,8 @@ var changeHdfWriteEnable = function()
         data: JSON.stringify(hdf_write_enable),
         success: function(result) {
             $('#hdf-write-enable-warning').html("");
-            // If write Enabled, must disable config files, file path and filename (and vice versa)
+            // If write Enabled, must disable access to config files, 
+            //  file path & name, frames (and vice versa)
             if (hdf_write_enable == true)
             {
                 console.log("writing is true");
@@ -1016,6 +900,7 @@ var changeHdfWriteEnable = function()
                 $('#fp-config-text').prop('disabled', true);
                 $('#hdf-file-path-text').prop('disabled', true);
                 $('#hdf-file-name-text').prop('disabled', true);
+                $('#hdf-frames-text').prop('disabled', true);
             }
             else
             {
@@ -1024,15 +909,16 @@ var changeHdfWriteEnable = function()
                 $('#fp-config-text').prop('disabled', false);
                 $('#hdf-file-path-text').prop('disabled', false);
                 $('#hdf-file-name-text').prop('disabled', false);
+                $('#hdf-frames-text').prop('disabled', false);
             }
         },
         error: function(request, msg, error) {
-            // console.log("request: " + request + " msg: " + msg + " error: " + error);
             $('#hdf-write-enable-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
-};
+}
 
+// format_error_message: Help format Error message before displayed in UI
 function format_error_message(error) {
     // Error messages typically look like: 
     //  "error": "File name must not be empty"
@@ -1079,7 +965,7 @@ function fr_config_changed()
     });
 };
 
-//curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/fp/config/hdf/file/path -d "/tmp"
+//curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/detector/fp/config/hdf/file/path -d "/tmp"
 function hdf_file_path_changed()
 {
     var hdf_file_path = $('#hdf-file-path-text').prop('value');
@@ -1099,7 +985,7 @@ function hdf_file_path_changed()
     });
 };
 
-// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/fp/config/hdf/file/name -d "test"
+// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/detector/fp/config/hdf/file/name -d "test"
 function hdf_file_name_changed()
 {
     var hdf_file_name = $('#hdf-file-name-text').prop('value');
@@ -1119,5 +1005,23 @@ function hdf_file_name_changed()
     });
 };
 
-
+// curl  -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/detector/fp/config/hdf/frames -d "3"
+function hdf_frames_changed()
+{
+    var hdf_frames = $('#hdf-frames-text').prop('value');
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'detector/fp/config/hdf/frames',
+        contentType: "application/json",
+        data: (hdf_frames),
+        success: function(result) {
+            $('#hdf-frames-warning').html("");
+            $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
+        },
+        error: function(request, msg, error) {
+            $('#hdf-frames-warning').html(error + ": " + format_error_message(request.responseText));
+            $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
+        }
+    });
+};
 
