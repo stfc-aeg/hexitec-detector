@@ -66,9 +66,7 @@ namespace FrameProcessor
 		static const std::string CONFIG_MAX_ROWS;
 
     void process_frame(boost::shared_ptr<Frame> frame);
-    void calibrate_pixels(float *in, float *out);
-
-    std::size_t calibrated_image_size();
+    void calibrate_pixels(float *image);
 
     /** Pointer to logger **/
     LoggerPtr logger_;

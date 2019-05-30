@@ -60,9 +60,7 @@ namespace FrameProcessor
 		static const std::string CONFIG_MAX_ROWS;
 
     void process_frame(boost::shared_ptr<Frame> frame);
-    std::size_t reordered_image_size();
-
-    void apply_algorithm(float *in, float *out);
+    void apply_algorithm(float *in);
 
     /** Pointer to logger **/
     LoggerPtr logger_;
@@ -84,7 +82,6 @@ namespace FrameProcessor
     int debugFrameCounter;
     std::ofstream outFile;
     void writeFile(std::string filePrefix, float *frame);
-
 
   };
 

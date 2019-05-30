@@ -152,15 +152,14 @@ namespace FrameProcessor
   {
     LOG4CXX_TRACE(logger_, "Applying ... template algorithm???");
 
-    // Determine the size of the output reordered image
-    const std::size_t output_image_size = reordered_image_size();
-
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data()));
+        static_cast<const char*>(frame->get_data_ptr()));
 
-    // Check dataset; Which set determines how to proceed..
-    const std::string& dataset = frame->get_dataset_name();
+    // Check datasets name
+    FrameMetaData &incoming_frame_meta = frame->meta_data();
+    const std::string& dataset = incoming_frame_meta.get_dataset_name();
+
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
 			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
@@ -169,28 +168,16 @@ namespace FrameProcessor
     }
     else if (dataset.compare(std::string("data")) == 0)
     {
-			// Pointers to reordered image buffer - will be allocated on demand
-			void* reordered_image = NULL;
-
 			try
 			{
-
 				// Check that the pixels are contained within the dimensions of the
 				// specified output image, otherwise throw an error
 				if (fem_total_pixels_ > image_pixels_)
 				{
 					std::stringstream msg;
-					msg << "Pixel count inferred from FEM ("
-							<< fem_total_pixels_
+					msg << "Pixel count inferred from FEM (" << fem_total_pixels_
 							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
 					throw std::runtime_error(msg.str());
-				}
-
-				// Allocate buffer to receive proccessed image
-				reordered_image = (void*)calloc(image_pixels_, sizeof(float));
-				if (reordered_image == NULL)
-				{
-					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
 				}
 
 				// Define pointer to the input image data
@@ -198,34 +185,13 @@ namespace FrameProcessor
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
 				///TODO: This function do not exist; Design it to match requirements
-//	        reorder_pixels(static_cast<float *>(input_ptr),
-//	                             static_cast<float *>(reordered_image));
+//	        some_function(static_cast<float *>(input_ptr));
 
 
-				// Set the frame image to the reordered image buffer if appropriate
-				if (reordered_image)
-				{
-					// Setup the frame dimensions
-					dimensions_t dims(2);
-					dims[0] = image_height_;
-					dims[1] = image_width_;
+				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
+															 " dataset, frame number: " << frame->get_frame_number());
+				this->push(frame);
 
-					boost::shared_ptr<Frame> data_frame;
-					data_frame = boost::shared_ptr<Frame>(new Frame(dataset));
-
-					data_frame->set_data_type(raw_float);
-					data_frame->set_frame_number(frame->get_frame_number());
-
-					data_frame->set_dimensions(dims);
-					data_frame->copy_data(reordered_image, output_image_size);
-
-					LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-		 														 " dataset, frame number: " << frame->get_frame_number());
-					this->push(data_frame);
-
-					free(reordered_image);
-					reordered_image = NULL;
-				}
 			}
 			catch (const std::exception& e)
 			{
@@ -238,16 +204,7 @@ namespace FrameProcessor
     {
     	LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
     }
-  }
 
-  /**
-   * Determine the size of a processed image.
-   *
-   * \return size of the reordered image in bytes
-   */
-  std::size_t HexitecTemplatePlugin::reordered_image_size() {
-
-    return image_width_ * image_height_ * sizeof(float);
   }
 
 } /* namespace FrameProcessor */

@@ -55,7 +55,6 @@ namespace FrameProcessor
 		static const std::string CONFIG_MAX_ROWS;
 
     void process_frame(boost::shared_ptr<Frame> frame);
-    std::size_t reordered_image_size();
 
     /** Pointer to logger **/
     LoggerPtr logger_;

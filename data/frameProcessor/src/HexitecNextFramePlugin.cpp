@@ -161,15 +161,14 @@ namespace FrameProcessor
 
     LOG4CXX_TRACE(logger_, "Applying Next Frame algorithm.");
 
-    // Determine the size of the output image
-    const std::size_t output_image_size = reordered_image_size();
-
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data()));
+        static_cast<const char*>(frame->get_data_ptr()));
 
-    // Check dataset; Which set determines how to proceed..
-    const std::string& dataset = frame->get_dataset_name();
+    // Check datasets name
+    FrameMetaData &incoming_frame_meta = frame->meta_data();
+    const std::string& dataset = incoming_frame_meta.get_dataset_name();
+
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
 			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
@@ -178,9 +177,6 @@ namespace FrameProcessor
     }
     else if (dataset.compare(std::string("data")) == 0)
     {
-			// Pointer to corrected image buffer - will be allocated on demand
-			void* corrected_image = NULL;
-
 			try
 			{
 				// Check that the pixels are contained within the dimensions of the
@@ -188,18 +184,9 @@ namespace FrameProcessor
 				if (fem_total_pixels_ > image_pixels_)
 				{
 					std::stringstream msg;
-					msg << "Pixel count inferred from FEM ("
-							<< fem_total_pixels_
+					msg << "Pixel count inferred from FEM (" << fem_total_pixels_
 							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
 					throw std::runtime_error(msg.str());
-				}
-
-				// Allocate buffer to receive reordered image.
-				// Use calloc as not every pixel may be copied from  input frame to output frame
-				corrected_image = (void *)calloc(image_pixels_, sizeof(float));
-				if (corrected_image == NULL)
-				{
-					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
 				}
 
 				// Define pointer to the input image data
@@ -217,42 +204,21 @@ namespace FrameProcessor
 				{
 					// Compare current frame versus last frame, if same pixel hit in both
 					// 	then clear current pixel
-					apply_algorithm(static_cast<float *>(input_ptr),
-																 static_cast<float *>(corrected_image));
+					apply_algorithm(static_cast<float *>(input_ptr));
 				}
-		    ///
-//				writeFile("All_540_frames_", static_cast<float *>(corrected_image));
-//				debugFrameCounter += 1;
-		    ///
 
-				// Set the frame image to the corrected image buffer if appropriate
-				if (corrected_image)
-				{
-					// Setup the frame dimensions
-					dimensions_t dims(2);
-					dims[0] = image_height_;
-					dims[1] = image_width_;
+				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
+															 " dataset, frame number: " << current_frame_number);
 
-					boost::shared_ptr<Frame> data_frame;
-					data_frame = boost::shared_ptr<Frame>(new Frame(dataset));
+				last_frame_number_ = current_frame_number;
 
-					data_frame->set_data_type(raw_float);
-					data_frame->set_frame_number(current_frame_number);
+				// Copy current frame into last frame's place - regardless of any correection
+				//	taking place, as we'll always need the current frame to compare against
+				// 	the previous frame
+				// 		Will this work (static_cast'ing..) ???
+				memcpy(last_frame_, static_cast<float *>(input_ptr), fem_total_pixels_ * sizeof(float));
 
-					data_frame->set_dimensions(dims);
-					data_frame->copy_data(corrected_image, output_image_size);
-
-					LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-																 " dataset, frame number: " << current_frame_number);
-					this->push(data_frame);
-
-					last_frame_number_ = current_frame_number;
-
-					// Copy current (corrected) frame into last frame's place
-					memcpy(last_frame_, corrected_image, fem_total_pixels_ * sizeof(float));
-					free(corrected_image);
-					corrected_image = NULL;
-				}
+				this->push(frame);
 			}
 			catch (const std::exception& e)
 			{
@@ -265,16 +231,7 @@ namespace FrameProcessor
     {
     	LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
     }
-  }
 
-  /**
-   * Determine the size of a processed image.
-   *
-   * \return size of the reordered image in bytes
-   */
-  std::size_t HexitecNextFramePlugin::reordered_image_size() {
-
-    return image_width_ * image_height_ * sizeof(float);
   }
 
   /**
@@ -285,7 +242,7 @@ namespace FrameProcessor
    * \param[in] out - Pointer to the allocated memory for the corrected image.
    *
    */
-  void HexitecNextFramePlugin::apply_algorithm(float *in, float *out)
+  void HexitecNextFramePlugin::apply_algorithm(float *in)
   {
     for (int i=0; i<fem_total_pixels_; i++)
     {
@@ -293,15 +250,10 @@ namespace FrameProcessor
     	// 	(whether hit or not), otherwise don't clear pixel frame current frame
     	if (last_frame_[i] > 0.0)
     	{
-    		;//out[i] = 0.0;		// Redundant (*out calloc'd..)
-    	}
-    	else
-    	{
-    		out[i] = in[i];
+    		in[i] = 0.0;
     	}
     }
-    // Copy current frame so it can be compared against the following frame
-    memcpy(last_frame_, in, fem_total_pixels_ * sizeof(float));
+
   }
 
   //// Debug function: Takes a file prefix and frame, and writes all nonzero pixels to a file

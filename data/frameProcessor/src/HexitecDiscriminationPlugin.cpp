@@ -169,18 +169,14 @@ namespace FrameProcessor
   {
     LOG4CXX_TRACE(logger_, "Applying CS Discrimination algorithm.");
 
-    // Determine the size of the output processed image
-    const std::size_t output_image_size = processed_image_size();
-
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data()));
+        static_cast<const char*>(frame->get_data_ptr()));
 
-    // Pointers to processed image buffer - will be allocated on demand
-    void* processed_image = NULL;
+    // Check datasets name
+    FrameMetaData &incoming_frame_meta = frame->meta_data();
+    const std::string& dataset = incoming_frame_meta.get_dataset_name();
 
-    // Check dataset; Which set determines how to proceed..
-    const std::string& dataset = frame->get_dataset_name();
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
 			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
@@ -196,17 +192,9 @@ namespace FrameProcessor
 				if (fem_total_pixels_ > image_pixels_)
 				{
 					std::stringstream msg;
-					msg << "Pixel count inferred from FEM ("
-							<< fem_total_pixels_
+					msg << "Pixel count inferred from FEM (" << fem_total_pixels_
 							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
 					throw std::runtime_error(msg.str());
-				}
-
-				// Allocate buffer to receive processed image.
-				processed_image = (void*)malloc(output_image_size);
-				if (processed_image == NULL)
-				{
-					throw std::runtime_error("Failed to allocate temporary buffer for processed image");
 				}
 
 				// Define pointer to the input image data
@@ -215,33 +203,12 @@ namespace FrameProcessor
 
 				// Take Frame object at input_pointer, apply CS Discrimination algorithm and save
 				// 	results to processed_image
-				prepareChargedSharing(static_cast<float *>(input_ptr),
-															static_cast<float *>(processed_image) );
+				prepareChargedSharing(static_cast<float *>(input_ptr));
 
-				// Set the frame image to the processed image buffer if appropriate
-				if (processed_image)
-				{
-					// Setup the frame dimensions
-					dimensions_t dims(2);
-					dims[0] = image_height_;
-					dims[1] = image_width_;
+				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
+															 " dataset, frame number: " << frame->get_frame_number());
+				this->push(frame);
 
-					boost::shared_ptr<Frame> data_frame;
-					data_frame = boost::shared_ptr<Frame>(new Frame(dataset));
-
-					data_frame->set_data_type(raw_float);
-					data_frame->set_frame_number(frame->get_frame_number());
-
-					data_frame->set_dimensions(dims);
-					data_frame->copy_data(processed_image, output_image_size);
-
-					LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-		 														 " dataset, frame number: " << frame->get_frame_number());
-					this->push(data_frame);
-
-					free(processed_image);
-					processed_image = NULL;
-				}
 			}
 			catch (const std::exception& e)
 			{
@@ -257,23 +224,12 @@ namespace FrameProcessor
   }
 
   /**
-   * Determine the size of a processed image.
-   *
-   * \return size of the processed image in bytes
-   */
-  std::size_t HexitecDiscriminationPlugin::processed_image_size() {
-
-    return image_width_ * image_height_ * sizeof(float);
-  }
-
-
-  /**
    * Prepare frame for charged sharing processing
    *
    * \param[in] frame - Pointer to the image data to be processed.
    *
    */
-  void HexitecDiscriminationPlugin::prepareChargedSharing(float *inFrame, float *outFrame)
+  void HexitecDiscriminationPlugin::prepareChargedSharing(float *frame)
   {
      /// extendedFrame contains empty (1-2) pixel(s) on all 4 sides to enable charge
   	/// 	sharing algorithm execution
@@ -290,7 +246,7 @@ namespace FrameProcessor
 		int startPosn = extendedFrameColumns * directional_distance_ + directional_distance_;
 		int endPosn   = extendedFrameSize - (extendedFrameColumns*directional_distance_);
 		int increment = extendedFrameColumns;
-		float *rowPtr = inFrame;
+		float *rowPtr = frame;
 
 		for (int i = startPosn; i < endPosn; )
 		{
@@ -315,8 +271,8 @@ namespace FrameProcessor
 
 		processDiscrimination(extendedFrame, extendedFrameRows, startPosn, endPosn);
 
-		/// Copy CS frame (i.e. 82x82) back into originally sized frame (80x80)
-		rowPtr = outFrame;
+		/// Copy CS frame (i.e. 82x82) back into original (80x80) frame
+		rowPtr = frame;
 		for (int i = startPosn; i < endPosn; )
 		{
 			 memcpy(rowPtr, &(extendedFrame[i]), number_columns_ * sizeof(float));

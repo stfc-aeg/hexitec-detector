@@ -78,8 +78,8 @@ namespace FrameProcessor
     /** Image pixel count **/
     int image_pixels_;
 
-    void process_threshold_value(float *in, float *out);
-    void process_threshold_file(float *in, float *out);
+    void process_threshold_value(float *in);
+    void process_threshold_file(float *in);
     bool get_data(const char *filename, uint16_t default_value);
     bool set_threshold_per_pixel(const char *threshold_filename);
     std::string determineThresholdMode(int mode);

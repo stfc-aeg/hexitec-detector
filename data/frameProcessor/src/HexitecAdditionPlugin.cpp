@@ -172,15 +172,14 @@ namespace FrameProcessor
   {
     LOG4CXX_TRACE(logger_, "Applying CS Addition algorithm.");
 
-    // Determine the size of the output processed image
-    const std::size_t output_image_size = processed_image_size();
-
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data()));
+        static_cast<const char*>(frame->get_data_ptr()));
 
-    // Check dataset; Which set determines how to proceed..
-    const std::string& dataset = frame->get_dataset_name();
+    // Check datasets name
+    FrameMetaData &frame_meta = frame->meta_data();
+    const std::string& dataset = frame_meta.get_dataset_name();
+
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
 			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
@@ -189,9 +188,6 @@ namespace FrameProcessor
     }
     else if (dataset.compare(std::string("data")) == 0)
     {
-			// Pointers to processed image buffer - will be allocated on demand
-			void* processed_image = NULL;
-
 			try
 			{
 				// Check that the pixels are contained within the dimensions of the
@@ -199,17 +195,9 @@ namespace FrameProcessor
 				if (fem_total_pixels_ > image_pixels_)
 				{
 					std::stringstream msg;
-					msg << "Pixel count inferred from FEM ("
-							<< fem_total_pixels_
+					msg << "Pixel count inferred from FEM (" << fem_total_pixels_
 							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
 					throw std::runtime_error(msg.str());
-				}
-
-				// Allocate buffer to receive processed image.
-				processed_image = (void*)calloc(image_pixels_, sizeof(float));
-				if (processed_image == NULL)
-				{
-					throw std::runtime_error("Failed to allocate temporary buffer for processed image");
 				}
 
 				// Define pointer to the input image data
@@ -218,33 +206,11 @@ namespace FrameProcessor
 
 				// Take Frame object at input_ptr, apply CS Addition algorithm and save results to
 				//	processed_image
-				prepare_charged_sharing(static_cast<float *>(input_ptr),
-															static_cast<float *>(processed_image) );
+				prepare_charged_sharing(static_cast<float *>(input_ptr));
 
-				// Set the frame image to the processed image buffer if appropriate
-				if (processed_image)
-				{
-					// Setup the frame dimensions
-					dimensions_t dims(2);
-					dims[0] = image_height_;
-					dims[1] = image_width_;
-
-					boost::shared_ptr<Frame> data_frame;
-					data_frame = boost::shared_ptr<Frame>(new Frame(dataset) );
-
-					data_frame->set_data_type(raw_float);
-					data_frame->set_frame_number(frame->get_frame_number());
-
-					data_frame->set_dimensions(dims);
-					data_frame->copy_data(processed_image, output_image_size);
-
-					LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-		 														 " dataset, frame number: " << frame->get_frame_number());
-					this->push(data_frame);
-
-					free(processed_image);
-					processed_image = NULL;
-				}
+				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
+															 " dataset, frame number: " << frame->get_frame_number());
+				this->push(frame);
 			}
 			catch (const std::exception& e)
 			{
@@ -260,23 +226,13 @@ namespace FrameProcessor
   }
 
   /**
-   * Determine the size of a processed image.
-   *
-   * \return size of the processed image in bytes
-   */
-  std::size_t HexitecAdditionPlugin::processed_image_size() {
-
-    return image_width_ * image_height_ * sizeof(float);
-  }
-
-  /**
    * Prepare frame for charged sharing processing
    *
    * \param[in] input_frame - Pointer to the image data to be processed.
    * \param[in] output_frame - Pointer to the process image data.
    *
    */
-  void HexitecAdditionPlugin::prepare_charged_sharing(float *input_frame, float *output_frame)
+  void HexitecAdditionPlugin::prepare_charged_sharing(float *frame)
   {
      /// extendedFrame contains empty (1-2) pixel(s) on all 4 sides to enable charged
   	/// 	sharing algorithm execution
@@ -293,8 +249,7 @@ namespace FrameProcessor
 		int startPosn = extendedFrameColumns * directional_distance_ + directional_distance_;
 		int endPosn   = extendedFrameSize - (extendedFrameColumns*directional_distance_);
 		int increment = extendedFrameColumns;
-		float *rowPtr = input_frame;
-
+		float *rowPtr = frame;
 
 		// Copy input_frame to extendedFrame (with frame of 0's surrounding all four sides)
 		for (int i = startPosn; i < endPosn; )
@@ -320,13 +275,8 @@ namespace FrameProcessor
 
 		process_addition(extendedFrame, extendedFrameRows, startPosn, endPosn);
 
-    ///
-//		writeFile("All_540_frames_", extendedFrame);
-//    debugFrameCounter += 1;
-    ///
-
-		/// Copy CS frame (i.e. 82x82) back into originally sized frame (80x80)
-		rowPtr = output_frame;
+		/// Copy CS frame (i.e. 82x82) back into original (80x80) frame
+		rowPtr = frame;
 		for (int i = startPosn; i < endPosn; )
 		{
 			 memcpy(rowPtr, &(extendedFrame[i]), number_columns_ * sizeof(float));

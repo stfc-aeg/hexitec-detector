@@ -245,15 +245,14 @@ namespace FrameProcessor
   {
     LOG4CXX_TRACE(logger_, "Applying threshold(s) to frame.");
 
-    // Determine the size of the output thresholded image
-    const std::size_t output_image_size = thresholded_image_size();
-
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data()));
+        static_cast<const char*>(frame->get_data_ptr()));
 
-    // Check dataset; Which set determines how to proceed..
-    const std::string& dataset = frame->get_dataset_name();
+    // Check datasets name
+    FrameMetaData &incoming_frame_meta = frame->meta_data();
+    const std::string& dataset = incoming_frame_meta.get_dataset_name();
+
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
 			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
@@ -262,9 +261,6 @@ namespace FrameProcessor
     }
     else if (dataset.compare(std::string("data")) == 0)
     {
-			// Pointers to thresholded image buffer - will be allocated on demand
-			void* thresholded_image = NULL;
-
 			try
 			{
 				// Check that the pixels are contained within the dimensions of the
@@ -272,17 +268,9 @@ namespace FrameProcessor
 				if (fem_total_pixels_ > image_pixels_)
 				{
 					std::stringstream msg;
-					msg << "Pixel count inferred from FEM ("
-							<< fem_total_pixels_
+					msg << "Pixel count inferred from FEM (" << fem_total_pixels_
 							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
 					throw std::runtime_error(msg.str());
-				}
-
-				// Allocate buffer to receive thresholded image
-				thresholded_image = (void*)malloc(output_image_size);
-				if (thresholded_image == NULL)
-				{
-					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
 				}
 
 				// Define pointer to the input image data
@@ -294,71 +282,25 @@ namespace FrameProcessor
 				{
 					case 0:
 					{
-						// Free thresholded_image and push frame as is
-						free(thresholded_image);
-						thresholded_image = NULL;
-
-						this->push(frame);
+						// No threshold processing
 						break;
 					}
 					case 1:
 					{
-						process_threshold_value(static_cast<float *>(input_ptr),
-																	static_cast<float *>(thresholded_image));
+						process_threshold_value(static_cast<float *>(input_ptr));
 						break;
 					}
 					case 2:
 					{
-						process_threshold_file(static_cast<float *>(input_ptr),
-													 	 	 	 static_cast<float *>(thresholded_image));
+						process_threshold_file(static_cast<float *>(input_ptr));
 						break;
 					}
 				}
 
-//				/* Code for determining which directory src code is run from
-//				 * Hint, it is from /install */
-//#include <stdio.h>  /* defines FILENAME_MAX */
-//#ifdef WINDOWS
-//		#include <direct.h>
-//		#define GetCurrentDir _getcwd
-//#else
-//		#include <unistd.h>
-//		#define GetCurrentDir getcwd
-//#endif
-//
-//				char cCurrentPath[FILENAME_MAX];
-//				if (!GetCurrentDir(cCurrentPath, sizeof(cCurrentPath)))
-//				{
-//					LOG4CXX_TRACE(logger_, "Couldn't get current dir !!");
-//				}
-//				else
-//					cCurrentPath[sizeof(cCurrentPath) - 1] = '\0'; /* not really required */
-//				LOG4CXX_TRACE(logger_, "The current working directory is: " << cCurrentPath);
+				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
+															 " dataset, frame number: " << frame->get_frame_number());
+				this->push(frame);
 
-				// Set the frame image to the thresholded image buffer if appropriate
-				if (thresholded_image)
-				{
-					// Setup the frame dimensions
-					dimensions_t dims(2);
-					dims[0] = image_height_;
-					dims[1] = image_width_;
-
-					boost::shared_ptr<Frame> data_frame;
-					data_frame = boost::shared_ptr<Frame>(new Frame(dataset));
-
-					data_frame->set_data_type(raw_float);
-					data_frame->set_frame_number(frame->get_frame_number());
-
-					data_frame->set_dimensions(dims);
-					data_frame->copy_data(thresholded_image, output_image_size);
-
-					LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-		 														 " dataset, frame number: " << frame->get_frame_number());
-					this->push(data_frame);
-
-					free(thresholded_image);
-					thresholded_image = NULL;
-				}
 			}
 			catch (const std::exception& e)
 			{
@@ -374,35 +316,19 @@ namespace FrameProcessor
   }
 
   /**
-   * Determine the size of a processed image.
-   *
-   * \return size of the reordered image in bytes
-   */
-  std::size_t HexitecThresholdPlugin::thresholded_image_size() {
-
-    return image_width_ * image_height_ * sizeof(float);
-
-  }
-
-  /**
    * Zero all pixels below threshold_value_.
    *
-   * \param[in] in - Pointer to the incoming image data.
-   * \param[in] out - Pointer to memory where the thresholded image is written
+   * \param[in] in - Pointer to the image data.
    *
    */
-  void HexitecThresholdPlugin::process_threshold_value(float *in, float *out)
+  void HexitecThresholdPlugin::process_threshold_value(float *in)
   {
     for (int i=0; i < fem_total_pixels_; i++)
     {
-      // Clear pixel if it doesn't meet in the threshold:
+      // Clear pixel if it doesn't meet the threshold:
 			if (in[i] < threshold_value_)
 			{
-				out[i] = 0;
-			}
-			else
-			{
-				out[i] = in[i];
+				in[i] = 0;
 			}
     }
   }
@@ -410,22 +336,17 @@ namespace FrameProcessor
   /**
    * Zero each pixel not meeting its corresponding pixel threshold.
    *
-   * \param[in] in - Pointer to the incoming image data.
-   * \param[in] out - Pointer to memory where the thresholded image is written
+   * \param[in] in - Pointer to the image data.
    *
    */
-  void HexitecThresholdPlugin::process_threshold_file(float *in, float *out)
+  void HexitecThresholdPlugin::process_threshold_file(float *in)
   {
     for (int i=0; i < fem_total_pixels_; i++)
     {
-      // Clear pixel if it doesn't meet in the threshold:
+      // Clear pixel if it doesn't meet the threshold:
 			if (in[i] < threshold_per_pixel_[i])
 			{
-				out[i] = 0;
-			}
-			else
-			{
-				out[i] = in[i];
+				in[i] = 0;
 			}
     }
   }

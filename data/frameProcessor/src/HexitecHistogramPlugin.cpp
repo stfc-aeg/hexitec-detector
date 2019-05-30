@@ -273,10 +273,12 @@ namespace FrameProcessor
   {
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data()));
+        static_cast<const char*>(frame->get_data_ptr()));
 
-    // Check dataset; Which set determines how to proceed..
-    const std::string& dataset = frame->get_dataset_name();
+    // Check datasets name
+    FrameMetaData &incoming_frame_meta = frame->meta_data();
+    const std::string& dataset = incoming_frame_meta.get_dataset_name();
+
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
 			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
@@ -297,13 +299,14 @@ namespace FrameProcessor
 				add_frame_data_to_histogram_with_sum(static_cast<float *>(input_ptr));
 
 				// Write histograms to disc when maximum number of frames received
-				if (frames_counter_ == max_frames_received_)
-//				if ((frames_counter_ % max_frames_received_) == 0)	// Test pixel_histograms.
+				if ( ((frames_counter_ % max_frames_received_) == 0) &&
+						(frames_counter_ != 0) )	// Fix why empty histograms written to 2nd (third et cetera) HDF5 files? - Not quite..
 				{
-					/// Time to push current histogram data
+					/// Time to push current histogram data to file
 					writeHistogramsToDisk();
 
-//					// Clear histogram values
+					// Clear histogram values - Don't clear them here, that's for
+					// 							::configure() and flush_histograms_ to control
 //			    memset(histogram_per_pixel_, 0, (number_bins_ * image_pixels_) * sizeof(float));
 //			    memset(summed_histogram_, 0, number_bins_ * sizeof(long long));
 //
@@ -351,66 +354,58 @@ namespace FrameProcessor
 
 		// Setup the energy bins
 
-		std::string dataset_name = "energy_bins";
-		boost::shared_ptr<Frame> energy_bins;
-		energy_bins = boost::shared_ptr<Frame>(new Frame(dataset_name));
-
-		energy_bins->set_frame_number(0);
-		energy_bins->set_data_type(raw_float);
-
-		energy_bins->set_dimensions(dims);
-		energy_bins->copy_data(hexitec_bin_, float_size);
-
-		LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
-													 " dataset, frame number: " << 0);
-		this->push(energy_bins);
+		// Modify frame contents now available
+		FrameMetaData energy_meta;
+		energy_meta.set_frame_number(0);
+		energy_meta.set_dimensions(dims);
+		energy_meta.set_data_type(raw_float);
+		energy_meta.set_dataset_name("energy_bins");
+		boost::shared_ptr<int> my_int;
+		my_int = boost::shared_ptr<int>(new int);
+//		boost::shared_ptr<Frame> energy_bins;
+//		energy_bins = boost::shared_ptr<Frame>(new SharedBufferFrame(energy_meta, float_size));
+//
+//		LOG4CXX_TRACE(logger_, "Pushing " << energy_meta.get_dataset_name() << " dataset");
+//		this->push(energy_bins);
 
 		// Setup the summed histograms
 
-		dataset_name = "summed_histograms";
-		boost::shared_ptr<Frame> summed_histograms;
-		summed_histograms = boost::shared_ptr<Frame>(new Frame(dataset_name));
-
-		summed_histograms->set_frame_number(0);
-		summed_histograms->set_data_type(raw_64bit);
-
-		summed_histograms->set_dimensions(dims);
-		summed_histograms->copy_data(summed_histogram_, long_long_size);
-
-		LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
-													 " dataset, frame number: " << 0);
-		this->push(summed_histograms);
+		FrameMetaData summed_meta;
+		summed_meta.set_frame_number(0);
+		summed_meta.set_dimensions(dims);
+		summed_meta.set_data_type(raw_64bit);
+		summed_meta.set_dataset_name("summed_histograms");
+//		boost::shared_ptr<Frame> summed_histograms;
+//		summed_histograms = boost::shared_ptr<Frame>(new DataBlockFrame(summed_meta, long_long_size));
+//
+//		LOG4CXX_TRACE(logger_, "Pushing " << summed.get_dataset_name() << " dataset");
+//		this->push(summed_histograms);
 
 		// Setup the pixels' histograms
 
 		// Setup the dimensions pixel_histograms
-		dimensions_t pxls_dims(2);
-		pxls_dims[0] = image_pixels_;
-		pxls_dims[1] = number_bins_;
+		dimensions_t pixel_dims(2);
+		pixel_dims[0] = image_pixels_;
+		pixel_dims[1] = number_bins_;
 
-		dataset_name = "pixel_histograms";
-
-		boost::shared_ptr<Frame> pixel_histograms;
-		pixel_histograms = boost::shared_ptr<Frame>(new Frame(dataset_name));
-
-		pixel_histograms->set_frame_number(0);
-		pixel_histograms->set_data_type(raw_float);
-
-		pixel_histograms->set_dimensions(pxls_dims);
-		pixel_histograms->copy_data(histogram_per_pixel_, pixel_histograms_size);
-
-		LOG4CXX_TRACE(logger_, "Pushing " << dataset_name <<
-													 " dataset, frame number: " << 0);
-		this->push(pixel_histograms);
+		FrameMetaData pixel_meta;
+		pixel_meta.set_frame_number(0);
+		pixel_meta.set_dimensions(pixel_dims);
+		pixel_meta.set_data_type(raw_float);
+		pixel_meta.set_dataset_name("pixel_histograms");
+//		boost::shared_ptr<Frame> pixel_histograms;
+//		pixel_histograms = boost::shared_ptr<Frame>(new DataBlockFrame(pixel_meta, pixel_histograms_size));
+//
+//		LOG4CXX_TRACE(logger_, "Pushing " << pixel_meta.get_dataset_name() << " dataset");
+//		this->push(pixel_histograms);
 
   }
 
   /**
    * Perform processing on the frame.  Calculate histograms based upon
-   * each frame, writing resulting datasets to file when configured
-	 * maximum number of frames received.
+   * each frame.
    *
-   * \param[frame] frame - Pointer to a Frame object.
+   * \param[frame] frame - Pointer to a frame object.
    */
   void HexitecHistogramPlugin::add_frame_data_to_histogram_with_sum(float *frame)
   {

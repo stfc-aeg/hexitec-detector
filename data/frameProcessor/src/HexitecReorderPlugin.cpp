@@ -210,7 +210,7 @@ namespace FrameProcessor
    */
   void HexitecReorderPlugin::process_lost_packets(boost::shared_ptr<Frame> frame)
   {
-    const Hexitec::FrameHeader* hdr_ptr = static_cast<const Hexitec::FrameHeader*>(frame->get_data());
+    const Hexitec::FrameHeader* hdr_ptr = static_cast<const Hexitec::FrameHeader*>(frame->get_data_ptr());
     LOG4CXX_DEBUG(logger_, "Processing lost packets for frame " << hdr_ptr->frame_number);
     LOG4CXX_DEBUG(logger_, "Packets received: " << hdr_ptr->total_packets_received
                                                 << " out of a maximum "
@@ -236,7 +236,7 @@ namespace FrameProcessor
     this->process_lost_packets(frame);
 
     const Hexitec::FrameHeader* hdr_ptr =
-        static_cast<const Hexitec::FrameHeader*>(frame->get_data());
+        static_cast<const Hexitec::FrameHeader*>(frame->get_data_ptr());
 
     LOG4CXX_TRACE(logger_, "Raw frame number: " << hdr_ptr->frame_number);
     LOG4CXX_TRACE(logger_, "Frame state: " << hdr_ptr->frame_state);
@@ -250,7 +250,7 @@ namespace FrameProcessor
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data()) + sizeof(Hexitec::FrameHeader)
+        static_cast<const char*>(frame->get_data_ptr()) + sizeof(Hexitec::FrameHeader)
     );
 
     // Define pointer to the input image data
@@ -267,8 +267,7 @@ namespace FrameProcessor
       if (fem_total_pixels_ > image_pixels_)
       {
         std::stringstream msg;
-        msg << "Pixel count inferred from FEM ("
-            << fem_total_pixels_
+        msg << "Pixel count inferred from FEM (" << fem_total_pixels_
             << ") will exceed dimensions of output image (" << image_pixels_ << ")";
         throw std::runtime_error(msg.str());
       }
@@ -287,14 +286,10 @@ namespace FrameProcessor
       }
       else
       {
-				// Turn unsigned short raw pixel data into float data type raw pixel data
+				// Turn unsigned short raw pixel data into float data type
 				convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
 																					static_cast<float *>(raw_image));
       }
-      ///
-//      writeFile("All_540_frames_", static_cast<float *>(raw_image));
-//      debugFrameCounter += 1;
-      ///
 
       if (raw_image)
       {
@@ -303,39 +298,48 @@ namespace FrameProcessor
 				dims[0] = image_height_;
 				dims[1] = image_width_;
 
+				// Frame modification now available
+				FrameMetaData raw_frame_meta;
+				raw_frame_meta.set_data_type(raw_float);
+				raw_frame_meta.set_frame_number(hdr_ptr->frame_number);
+				raw_frame_meta.set_dimensions(dims);
+
 				// Only construct raw data frame if configured
       	if(write_raw_data_)
       	{
-					boost::shared_ptr<Frame> raw_frame;
-					raw_frame = boost::shared_ptr<Frame>(new Frame("raw_frames"));
+  				// Set the dataset name
+  				raw_frame_meta.set_dataset_name("raw_frames");
 
-					raw_frame->set_data_type(raw_float);
-					raw_frame->set_frame_number(hdr_ptr->frame_number);
-
-					raw_frame->set_dimensions(dims);
-					raw_frame->copy_data(raw_image, output_image_size);
-
-
-					LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: "
-																 << frame->get_frame_number());
-					this->push(raw_frame);
+//					boost::shared_ptr<Frame> raw_frame;
+//					raw_frame = boost::shared_ptr<Frame>(new DataBlockFrame(raw_frame_meta, output_image_size));
+//
+////					raw_frame->set_data_type(raw_float);
+////					raw_frame->set_frame_number(hdr_ptr->frame_number);
+////
+////					raw_frame->set_dimensions(dims);
+////					raw_frame->copy_data(raw_image, output_image_size);
+//
+//
+//					LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: "
+//																 << frame->get_frame_number());
+//					this->push(raw_frame);
       	}
 
-				boost::shared_ptr<Frame> data_frame;
-				data_frame = boost::shared_ptr<Frame>(new Frame("data"));
+      	// Set the dataset name
+				raw_frame_meta.set_dataset_name("data");
 
-				data_frame->set_data_type(raw_float);
-				data_frame->set_frame_number(hdr_ptr->frame_number);
-
-				data_frame->set_dimensions(dims);
-				data_frame->copy_data(raw_image, output_image_size);
-
-				LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: "
-															 << frame->get_frame_number());
-				this->push(data_frame);
-
-  			free(raw_image);
-        raw_image = NULL;
+//				boost::shared_ptr<Frame> data_frame;
+//				data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(raw_frame_meta, output_image_size));
+//
+////				data_frame->set_data_type(raw_float);
+////				data_frame->set_frame_number(hdr_ptr->frame_number);
+////
+////				data_frame->set_dimensions(dims);
+////				data_frame->copy_data(raw_image, output_image_size);
+////
+//				LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: "
+//															 << frame->get_frame_number());
+//				this->push(data_frame);
 			}
     }
     catch (const std::exception& e)

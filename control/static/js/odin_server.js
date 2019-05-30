@@ -388,10 +388,10 @@ function apply_ui_values() {
     hdf_frames_changed();
 
     // If hdf write already enabled, toggle off and on so hdf settings sent
-    if ( $("[name='hdf_write_enable']").prop('checked') )
+    if ( $("[name='hdf_write_enable']").prop('checked') === true)
     {
-        setHdfWrite(0);
-        setHdfWrite(1);
+        setTimeout(setHdfWrite(false), 400);
+        setTimeout(setHdfWrite(true), 500);
     }
 }
 

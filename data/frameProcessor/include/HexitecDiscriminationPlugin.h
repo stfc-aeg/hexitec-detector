@@ -57,9 +57,8 @@ namespace FrameProcessor
 		static const std::string CONFIG_MAX_ROWS;
 
     void process_frame(boost::shared_ptr<Frame> frame);
-    std::size_t processed_image_size();
 
-    void prepareChargedSharing(float *inFrame, float *outFrame);
+    void prepareChargedSharing(float *inFrame);
     void processDiscrimination(float *extendedFrame, int extendedFrameRows,
                                int startPosn, int endPosn);
 

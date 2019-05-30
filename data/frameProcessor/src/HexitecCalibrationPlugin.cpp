@@ -118,14 +118,12 @@ namespace FrameProcessor
     if (config.has_param(HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE))
 		{
 			gradients_filename_ = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE);
-			LOG4CXX_TRACE(logger_, "Setting gradients from file: " << gradients_filename_);
 			setGradients(gradients_filename_.c_str());
 		}
 
     if (config.has_param(HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE))
 		{
 	    intercepts_filename_ = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE);
-			LOG4CXX_TRACE(logger_, "Setting intercepts from file: " << intercepts_filename_);
 			setIntercepts(intercepts_filename_.c_str());
 		}
 
@@ -193,15 +191,14 @@ namespace FrameProcessor
   {
     LOG4CXX_TRACE(logger_, "Applying Calibration.");
 
-    // Determine the size of the output reordered image
-    const std::size_t output_image_size = calibrated_image_size();
-
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data()));
+        static_cast<const char*>(frame->get_data_ptr()));
 
-    // Check dataset; Which set determines how to proceed..
-    const std::string& dataset = frame->get_dataset_name();
+    // Check datasets name
+    FrameMetaData &incoming_frame_meta = frame->meta_data();
+    const std::string& dataset = incoming_frame_meta.get_dataset_name();
+
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
 			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
@@ -210,9 +207,6 @@ namespace FrameProcessor
     }
     else if (dataset.compare(std::string("data")) == 0)
     {
-			// Pointers to reordered image buffer - will be allocated on demand
-			void* calibrated_image = NULL;
-
 			try
 			{
 				// Check that the pixels are contained within the dimensions of the
@@ -226,47 +220,14 @@ namespace FrameProcessor
 					throw std::runtime_error(msg.str());
 				}
 
-				// Allocate buffer to receive reordered image.
-				calibrated_image = (void*)calloc(image_pixels_, sizeof(float));
-				if (calibrated_image == NULL)
-				{
-					throw std::runtime_error("Failed to allocate temporary buffer for reordered image");
-				}
-
 				// Define pointer to the input image data
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
-				calibrate_pixels(static_cast<float *>(input_ptr),
-														 static_cast<float *>(calibrated_image));
-		    ///
-//				writeFile("All_540_frames_", static_cast<float *>(calibrated_image));
-//		    debugFrameCounter += 1;
-		    ///
+				calibrate_pixels(static_cast<float *>(input_ptr));
 
-				// Set the frame image to the reordered image buffer if appropriate
-				if (calibrated_image)
-				{
-					// Setup the frame dimensions
-					dimensions_t dims(2);
-					dims[0] = image_height_;
-					dims[1] = image_width_;
+				this->push(frame);
 
-					boost::shared_ptr<Frame> data_frame;
-					data_frame = boost::shared_ptr<Frame>(new Frame(dataset));
-
-					data_frame->set_data_type(raw_float);
-					data_frame->set_frame_number(frame->get_frame_number());
-
-					data_frame->set_dimensions(dims);
-					data_frame->copy_data(calibrated_image, output_image_size);
-
-					LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-		 														 " dataset, frame number: " << frame->get_frame_number());
-					this->push(data_frame);
-					free(calibrated_image);
-					calibrated_image = NULL;
-				}
 			}
 			catch (const std::exception& e)
 			{
@@ -282,29 +243,17 @@ namespace FrameProcessor
   }
 
   /**
-   * Determine the size of a processed image.
-   *
-   * \return size of the reordered image in bytes
-   */
-  std::size_t HexitecCalibrationPlugin::calibrated_image_size() {
-
-    return image_width_ * image_height_ * sizeof(float);
-  }
-
-  /**
    * Calibrate an image's pixels.
    *
-   * \param[in] in 	 - Pointer to the incoming image data.
-   * \param[in] out - Pointer to the allocated memory where
-   * 										the calibrated pixels will be stored.
+   * \param[in] image - Pointer to the image data.
    */
-  void HexitecCalibrationPlugin::calibrate_pixels(float *in, float *out)
+  void HexitecCalibrationPlugin::calibrate_pixels(float *image)
   {
     for (int i=0; i<fem_total_pixels_; i++)
     {
-     	if (in[i] > 0)
+     	if (image[i] > 0)
      	{
-     		out[i] = (in[i] * gradient_values_[i])  + intercept_values_[i];
+     		image[i] = (image[i] * gradient_values_[i])  + intercept_values_[i];
      	}
     }
   }
