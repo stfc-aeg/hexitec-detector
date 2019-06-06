@@ -72,10 +72,6 @@ namespace FrameProcessor
     // function copied from HexitecGigE, but not currently in use:
     void addFrameDataToHistogram(float *frame);
 
-    boost::shared_ptr<Frame> energy_bins;
-    boost::shared_ptr<Frame> summed_histograms;
-    boost::shared_ptr<Frame> pixel_histograms;
-
   	void copy_histograms(float *histograms, float *frame_data_ptr,
   											 long long number_bins);
   	void copy_histograms(long long *histograms, long long *frame_data_ptr,
