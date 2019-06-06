@@ -208,13 +208,13 @@ namespace FrameProcessor
    *
    * \param[in] frame - Pointer to a Frame object.
    */
-  void HexitecReorderPlugin::process_lost_packets(boost::shared_ptr<Frame> frame)
+  void HexitecReorderPlugin::process_lost_packets(boost::shared_ptr<Frame>& frame)
   {
     const Hexitec::FrameHeader* hdr_ptr = static_cast<const Hexitec::FrameHeader*>(frame->get_data_ptr());
-    LOG4CXX_DEBUG(logger_, "Processing lost packets for frame " << hdr_ptr->frame_number);
-    LOG4CXX_DEBUG(logger_, "Packets received: " << hdr_ptr->total_packets_received
-                                                << " out of a maximum "
-                                                << Hexitec::num_fem_frame_packets());
+//    LOG4CXX_DEBUG(logger_, "Processing lost packets for frame " << hdr_ptr->frame_number);
+//    LOG4CXX_DEBUG(logger_, "Packets received: " << hdr_ptr->total_packets_received
+//                                                << " out of a maximum "
+//                                                << Hexitec::num_fem_frame_packets());
     if (hdr_ptr->total_packets_received < Hexitec::num_fem_frame_packets()){
       int packets_lost = Hexitec::num_fem_frame_packets() - hdr_ptr->total_packets_received;
       LOG4CXX_ERROR(logger_, "Frame number " << hdr_ptr->frame_number << " has dropped " << packets_lost << " packet(s)");
@@ -233,20 +233,20 @@ namespace FrameProcessor
     LOG4CXX_TRACE(logger_, "Reordering frame.");
     LOG4CXX_TRACE(logger_, "Frame size: " << frame->get_data_size());
 
+    Hexitec::FrameHeader* hdr_ptr =
+        static_cast<Hexitec::FrameHeader*>(frame->get_data_ptr());
+
     this->process_lost_packets(frame);
 
-    const Hexitec::FrameHeader* hdr_ptr =
-        static_cast<const Hexitec::FrameHeader*>(frame->get_data_ptr());
-
     LOG4CXX_TRACE(logger_, "Raw frame number: " << hdr_ptr->frame_number);
-    LOG4CXX_TRACE(logger_, "Frame state: " << hdr_ptr->frame_state);
-    LOG4CXX_TRACE(logger_, "Packets received: " << hdr_ptr->total_packets_received
-        << " SOF markers: "<< (int)hdr_ptr->total_sof_marker_count
-        << " EOF markers: "<< (int)hdr_ptr->total_eof_marker_count);
+//    LOG4CXX_TRACE(logger_, "Frame state: " << hdr_ptr->frame_state);
+//    LOG4CXX_TRACE(logger_, "Packets received: " << hdr_ptr->total_packets_received
+//        << " SOF markers: "<< (int)hdr_ptr->total_sof_marker_count
+//        << " EOF markers: "<< (int)hdr_ptr->total_eof_marker_count);
 
     // Determine the size of the output reordered image
     const std::size_t output_image_size = reordered_image_size();
-    LOG4CXX_TRACE(logger_, "Output image size: " << output_image_size);
+//    LOG4CXX_TRACE(logger_, "Output image size: " << output_image_size);
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
@@ -272,74 +272,87 @@ namespace FrameProcessor
         throw std::runtime_error(msg.str());
       }
 
-      // Allocate buffer for raw data in float data type.
+      // Allocate buffer for raw data
       raw_image = (void*)malloc(output_image_size);
       if (raw_image == NULL)
       {
         throw std::runtime_error("Failed to allocate temporary buffer for raw image");
       }
 
-      if (reorder_pixels_)
-      {
-      	reorder_pixels(static_cast<unsigned short *>(input_ptr),
-						static_cast<float *>(raw_image));
-      }
-      else
-      {
-				// Turn unsigned short raw pixel data into float data type
-				convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
-																					static_cast<float *>(raw_image));
-      }
-
       if (raw_image)
       {
+				// Frame modification now available
+				FrameMetaData frame_meta;
+
 				// Setup of the frame dimensions
 				dimensions_t dims(2);
 				dims[0] = image_height_;
 				dims[1] = image_width_;
+				frame_meta.set_dimensions(dims);
 
-				// Frame modification now available
-				FrameMetaData raw_frame_meta;
-				raw_frame_meta.set_data_type(raw_float);
-				raw_frame_meta.set_frame_number(hdr_ptr->frame_number);
-				raw_frame_meta.set_dimensions(dims);
+				frame_meta.set_compression_type(no_compression);
+
+				frame_meta.set_data_type(raw_float);
+				frame_meta.set_frame_number(hdr_ptr->frame_number);
 
 				// Only construct raw data frame if configured
       	if(write_raw_data_)
       	{
   				// Set the dataset name
-  				raw_frame_meta.set_dataset_name("raw_frames");
+  				frame_meta.set_dataset_name("raw_frames");
 
-//					boost::shared_ptr<Frame> raw_frame;
-//					raw_frame = boost::shared_ptr<Frame>(new DataBlockFrame(raw_frame_meta, output_image_size));
-//
-////					raw_frame->set_data_type(raw_float);
-////					raw_frame->set_frame_number(hdr_ptr->frame_number);
-////
-////					raw_frame->set_dimensions(dims);
-////					raw_frame->copy_data(raw_image, output_image_size);
-//
-//
-//					LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: "
-//																 << frame->get_frame_number());
-//					this->push(raw_frame);
+					boost::shared_ptr<Frame> raw_frame;
+					raw_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
+																																	output_image_size));
+
+					// Get a pointer to the data buffer in the output frame
+					void* output_ptr = raw_frame->get_data_ptr();
+
+//		      if (reorder_pixels_)
+//		      {
+//		      	reorder_pixels(static_cast<unsigned short *>(input_ptr),
+//								static_cast<float *>(output_ptr));
+//		      }
+//		      else
+		      {
+						LOG4CXX_TRACE(logger_, " NOT REORDERING RAW DATA");
+						// Turn unsigned short raw pixel data into float data type
+						convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
+																							static_cast<float *>(output_ptr));
+		      }
+
+					LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: "
+																 << frame->get_frame_number());
+					this->push(raw_frame);
       	}
 
-      	// Set the dataset name
-				raw_frame_meta.set_dataset_name("data");
+      	// For data dataset, reuse existing meta data as only the dataset name will differ
 
-//				boost::shared_ptr<Frame> data_frame;
-//				data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(raw_frame_meta, output_image_size));
-//
-////				data_frame->set_data_type(raw_float);
-////				data_frame->set_frame_number(hdr_ptr->frame_number);
-////
-////				data_frame->set_dimensions(dims);
-////				data_frame->copy_data(raw_image, output_image_size);
-////
-//				LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: "
-//															 << frame->get_frame_number());
-//				this->push(data_frame);
+      	// Set the dataset name
+				frame_meta.set_dataset_name("data");
+
+				boost::shared_ptr<Frame> data_frame;
+				data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
+																																 output_image_size));
+
+				// Get a pointer to the data buffer in the output frame
+				void* output_ptr = data_frame->get_data_ptr();
+
+	      if (reorder_pixels_)
+	      {
+	      	reorder_pixels(static_cast<unsigned short *>(input_ptr),
+							static_cast<float *>(output_ptr));
+	      }
+	      else
+	      {
+					// Turn unsigned short raw pixel data into float data type
+					convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
+																						static_cast<float *>(output_ptr));
+	      }
+
+				LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: "
+															 << frame->get_frame_number());
+				this->push(data_frame);
 			}
     }
     catch (const std::exception& e)

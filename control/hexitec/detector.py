@@ -35,6 +35,7 @@ class IacDetectorAdapter(ApiAdapter):
 
         logging.debug("IAC Detector Adapter Loaded")
 
+    @request_types("application/json", "application/vnd.odin-native")
     @response_types("application/json", default="application/json")
     def get(self, path, request):
         """Handle a HTTP GET Request
@@ -52,6 +53,7 @@ class IacDetectorAdapter(ApiAdapter):
                 relative_path = path.split(key)
                 path = relative_path[1]
                 response[key] = value.get(path=path, request=request).data
+                print key, " => ", response[key]
         logging.debug("Full response: %s", response)
         content_type = "application/json"
         status_code = 200

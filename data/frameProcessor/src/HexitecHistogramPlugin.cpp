@@ -47,6 +47,8 @@ namespace FrameProcessor
     number_bins_ = (int)(((bin_end_ - bin_start_) / bin_width_) + 0.5);
 
     initialiseHistograms();
+    //
+    dCounter = 0;
   }
 
   /**
@@ -56,10 +58,9 @@ namespace FrameProcessor
   {
     LOG4CXX_TRACE(logger_, "HexitecHistogramPlugin destructor.");
 
+    // These will become redundant:
     free(summed_histogram_);
     summed_histogram_ = NULL;
-    free(hexitec_bin_);
-    hexitec_bin_ = NULL;
     // histogram_per_pixel_ points at memory within hexitec_bin_
     histogram_per_pixel_ = NULL;
   }
@@ -95,6 +96,57 @@ namespace FrameProcessor
    */
   void HexitecHistogramPlugin::initialiseHistograms()
   {
+    // Determine the size of the histograms
+    const std::size_t float_size = number_bins_ * sizeof(float);
+    const std::size_t long_long_size = number_bins_ * sizeof(long long);
+    /// Total amount of memory covered by the pixel histograms
+    const std::size_t pixel_histograms_size = image_pixels_ * number_bins_ * sizeof(float);
+
+    // Setup the dimension(s) for energy_bins, summed_histograms
+    dimensions_t dims(1);
+    dims[0] = number_bins_;
+
+    // Setup the energy bins
+
+    FrameMetaData energy_meta;
+
+    energy_meta.set_dimensions(dims);
+    energy_meta.set_compression_type(no_compression);
+    energy_meta.set_data_type(raw_float);
+    energy_meta.set_frame_number(0);
+    energy_meta.set_dataset_name("energy_bins");
+
+    energy_bins = boost::shared_ptr<Frame>(new DataBlockFrame(energy_meta, float_size));
+
+    // Setup the summed histograms
+
+    FrameMetaData summed_meta;
+
+    summed_meta.set_dimensions(dims);
+    summed_meta.set_compression_type(no_compression);
+    summed_meta.set_data_type(raw_64bit);
+    summed_meta.set_frame_number(0);
+    summed_meta.set_dataset_name("summed_histograms");
+
+    summed_histograms = boost::shared_ptr<Frame>(new DataBlockFrame(summed_meta, long_long_size));
+
+    // Setup the pixels' histograms
+
+    // Setup the dimensions pixel_histograms
+    dimensions_t pixel_dims(2);
+    pixel_dims[0] = image_pixels_;
+    pixel_dims[1] = number_bins_;
+
+    FrameMetaData pixel_meta;
+
+    pixel_meta.set_dimensions(pixel_dims);
+    pixel_meta.set_compression_type(no_compression);
+    pixel_meta.set_data_type(raw_float);
+    pixel_meta.set_frame_number(0);
+    pixel_meta.set_dataset_name("pixel_histograms");
+
+    pixel_histograms = boost::shared_ptr<Frame>(new DataBlockFrame(pixel_meta, pixel_histograms_size));
+
 		hexitec_bin_ = (float *) calloc((number_bins_ * image_pixels_) + number_bins_, sizeof(float));
 
     histogram_per_pixel_ = hexitec_bin_ + number_bins_;
@@ -103,7 +155,8 @@ namespace FrameProcessor
 
     // Initialise bins
     float currentBin = bin_start_;
-    float *pHxtBin = hexitec_bin_;
+    float *pHxtBin = hexitec_bin_;	// Old implementation
+//    float *pHxtBin = static_cast<float *>(energy_bins->get_data_ptr());	// New implementation
     for (long i = bin_start_; i < number_bins_; i++, currentBin += bin_width_)
     {
        *pHxtBin = currentBin;
@@ -186,6 +239,11 @@ namespace FrameProcessor
 				writeHistogramsToDisk();
 
 				// Clear histogram values
+//				float *pixels = static_cast<float *>(pixel_histograms->get_data_ptr());
+//				float *summed = static_cast<float *>(summed_histograms->get_data_ptr());
+//		    memset(pixels, 0, (number_bins_ * image_pixels_) * sizeof(float));
+//		    memset(summed, 0, number_bins_ * sizeof(long long));
+		    // Old implementation:
 		    memset(histogram_per_pixel_, 0, (number_bins_ * image_pixels_) * sizeof(float));
 		    memset(summed_histogram_, 0, number_bins_ * sizeof(long long));
 
@@ -206,6 +264,7 @@ namespace FrameProcessor
     hexitec_bin_ = NULL;
     // (Re-)Initialise memory
     initialiseHistograms();
+    dCounter++;
   }
 
   void HexitecHistogramPlugin::requestConfiguration(OdinData::IpcMessage& reply)
@@ -258,6 +317,8 @@ namespace FrameProcessor
     hexitec_bin_ = NULL;
     // (Re-)Initialise memory
     initialiseHistograms();
+    //
+    dCounter++;
 
     return true;
   }
@@ -275,7 +336,7 @@ namespace FrameProcessor
     const void* data_ptr = static_cast<const void*>(
         static_cast<const char*>(frame->get_data_ptr()));
 
-    // Check datasets name
+    // Check dataset's name
     FrameMetaData &incoming_frame_meta = frame->meta_data();
     const std::string& dataset = incoming_frame_meta.get_dataset_name();
 
@@ -294,23 +355,19 @@ namespace FrameProcessor
 				// Define pointer to the input image data
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
-
+//				LOG4CXX_TRACE(logger_, "Before histogram");
 				// Add this frame's contribution onto histograms
 				add_frame_data_to_histogram_with_sum(static_cast<float *>(input_ptr));
 
 				// Write histograms to disc when maximum number of frames received
-				if ( ((frames_counter_ % max_frames_received_) == 0) &&
-						(frames_counter_ != 0) )	// Fix why empty histograms written to 2nd (third et cetera) HDF5 files? - Not quite..
+//				if ( ((frames_counter_ % max_frames_received_) == 0) &&
+//						(frames_counter_ != 0) )	// Fix why empty histograms written to 2nd (third et cetera) HDF5 files? - Not quite..
+				if (frames_counter_ == max_frames_received_)
 				{
+					LOG4CXX_TRACE(logger_, " ----------------------------------------------------------------------------------------------");
+
 					/// Time to push current histogram data to file
 					writeHistogramsToDisk();
-
-					// Clear histogram values - Don't clear them here, that's for
-					// 							::configure() and flush_histograms_ to control
-//			    memset(histogram_per_pixel_, 0, (number_bins_ * image_pixels_) * sizeof(float));
-//			    memset(summed_histogram_, 0, number_bins_ * sizeof(long long));
-//
-//					frames_counter_ = 0;
 				}
 
 				/// Histogram will access data dataset but not change it in any way
@@ -335,6 +392,9 @@ namespace FrameProcessor
     {
     	LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
     }
+//    LOG4CXX_ERROR(logger_, " -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
+//    LOG4CXX_ERROR(logger_, " \t\t\t\t\t initHistos called: " << dCounter << " time(s)");
+//    LOG4CXX_ERROR(logger_, " -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
 	}
 
   /**
@@ -348,38 +408,55 @@ namespace FrameProcessor
     /// Total amount of memory covered by the pixel histograms
     const std::size_t pixel_histograms_size = image_pixels_ * number_bins_ * sizeof(float);
 
-		// Setup the dimension(s) for energy_bins, summed_histograms
+    // Setup the dimension(s) for energy_bins, summed_histograms
 		dimensions_t dims(1);
 		dims[0] = number_bins_;
 
 		// Setup the energy bins
 
-		// Modify frame contents now available
 		FrameMetaData energy_meta;
-		energy_meta.set_frame_number(0);
+
 		energy_meta.set_dimensions(dims);
+		energy_meta.set_compression_type(no_compression);
 		energy_meta.set_data_type(raw_float);
+		energy_meta.set_frame_number(0);
 		energy_meta.set_dataset_name("energy_bins");
-		boost::shared_ptr<int> my_int;
-		my_int = boost::shared_ptr<int>(new int);
-//		boost::shared_ptr<Frame> energy_bins;
-//		energy_bins = boost::shared_ptr<Frame>(new SharedBufferFrame(energy_meta, float_size));
-//
-//		LOG4CXX_TRACE(logger_, "Pushing " << energy_meta.get_dataset_name() << " dataset");
-//		this->push(energy_bins);
+
+//    boost::shared_ptr<Frame> energy_bins;
+		energy_bins = boost::shared_ptr<Frame>(new DataBlockFrame(energy_meta, float_size));
+
+		// Get a pointer to the data buffer in the output frame
+		void* energy_ptr = energy_bins->get_data_ptr();
+
+		// Copy summed_histrogram_ into energy_bins object
+//		memcpy(energy_ptr, hexitec_bin_, number_bins_);	// Old implementation, produces funny results
+		this->copy_histograms(hexitec_bin_, static_cast<float *>(energy_ptr), number_bins_);
+
+		LOG4CXX_TRACE(logger_, "Pushing " << energy_bins->get_meta_data().get_dataset_name() << " dataset");
+		this->push(energy_bins);
 
 		// Setup the summed histograms
 
 		FrameMetaData summed_meta;
-		summed_meta.set_frame_number(0);
+
 		summed_meta.set_dimensions(dims);
+		summed_meta.set_compression_type(no_compression);
 		summed_meta.set_data_type(raw_64bit);
+		summed_meta.set_frame_number(0);
 		summed_meta.set_dataset_name("summed_histograms");
-//		boost::shared_ptr<Frame> summed_histograms;
-//		summed_histograms = boost::shared_ptr<Frame>(new DataBlockFrame(summed_meta, long_long_size));
-//
-//		LOG4CXX_TRACE(logger_, "Pushing " << summed.get_dataset_name() << " dataset");
-//		this->push(summed_histograms);
+
+//    boost::shared_ptr<Frame> summed_histograms;
+		summed_histograms = boost::shared_ptr<Frame>(new DataBlockFrame(summed_meta, long_long_size));
+
+		// Get a pointer to the data buffer in the output frame
+		void* summed_ptr = summed_histograms->get_data_ptr();
+
+		// Copy summed_histrogram_ into summed_histograms object
+//		memcpy(summed_ptr, summed_histogram_, number_bins_);	// Old implementation
+		this->copy_histograms(summed_histogram_, static_cast<long long *>(summed_ptr), number_bins_);
+
+		LOG4CXX_TRACE(logger_, "Pushing " << summed_histograms->get_meta_data().get_dataset_name() << " dataset");
+		this->push(summed_histograms);
 
 		// Setup the pixels' histograms
 
@@ -389,15 +466,25 @@ namespace FrameProcessor
 		pixel_dims[1] = number_bins_;
 
 		FrameMetaData pixel_meta;
-		pixel_meta.set_frame_number(0);
+
 		pixel_meta.set_dimensions(pixel_dims);
+		pixel_meta.set_compression_type(no_compression);
 		pixel_meta.set_data_type(raw_float);
+		pixel_meta.set_frame_number(0);
 		pixel_meta.set_dataset_name("pixel_histograms");
+
 //		boost::shared_ptr<Frame> pixel_histograms;
-//		pixel_histograms = boost::shared_ptr<Frame>(new DataBlockFrame(pixel_meta, pixel_histograms_size));
-//
-//		LOG4CXX_TRACE(logger_, "Pushing " << pixel_meta.get_dataset_name() << " dataset");
-//		this->push(pixel_histograms);
+		pixel_histograms = boost::shared_ptr<Frame>(new DataBlockFrame(pixel_meta, pixel_histograms_size));
+
+		// Get a pointer to the data buffer in the output frame
+		void* pixel_ptr = pixel_histograms->get_data_ptr();
+
+		// Copy summed_histrogram_ into pixel_histograms object
+//		memcpy(pixel_ptr, histogram_per_pixel_, image_pixels_ * number_bins_);	// Old implementation
+		this->copy_histograms(histogram_per_pixel_, static_cast<float *>(pixel_ptr), image_pixels_ * number_bins_);
+
+		LOG4CXX_TRACE(logger_, "Pushing " << pixel_histograms->get_meta_data().get_dataset_name() << " dataset");
+		this->push(pixel_histograms);
 
   }
 
@@ -409,8 +496,28 @@ namespace FrameProcessor
    */
   void HexitecHistogramPlugin::add_frame_data_to_histogram_with_sum(float *frame)
   {
-		float *currentHistogram = &histogram_per_pixel_[0];
-		long long *summed = &summed_histogram_[0];
+////  	LOG4CXX_TRACE(logger_, "1");
+//    const void* pixel_ptr = static_cast<const void*>(
+//        static_cast<const char*>(pixel_histograms->get_data_ptr()));
+//		void* pixel_input_ptr = static_cast<void *>(
+//				static_cast<char *>(const_cast<void *>(pixel_ptr)));
+//
+//    const void* summed_ptr = static_cast<const void*>(
+//        static_cast<const char*>(summed_histograms->get_data_ptr()));
+//		void* summed_input_ptr = static_cast<void *>(
+//				static_cast<char *>(const_cast<void *>(summed_ptr)));
+
+		// Add this frame's contribution onto histograms
+//		add_frame_data_to_histogram_with_sum(static_cast<float *>(pixel_input_ptr));
+
+		float *currentHistogram = &histogram_per_pixel_[0];	// Old Implementation
+//		float *currentHistogram = static_cast<float *>(pixel_histograms->get_data_ptr());	// More spread out histogram
+//		float *currentHistogram = static_cast<float *>(pixel_input_ptr);	// Not quite like before the changes
+
+		long long *summed = &summed_histogram_[0];	// Old implementation
+//		long long *summed = static_cast<long long *>(summed_histograms->get_data_ptr());	// Excessive histogram
+//		long long *summed = static_cast<long long *>(summed_input_ptr);	// Still off :-p
+
 		float thisEnergy;
 		int bin;
 		int pixel;
@@ -438,7 +545,8 @@ namespace FrameProcessor
   // Called when the user NOT selected spectrum option
   void HexitecHistogramPlugin::addFrameDataToHistogram(float *frame)
   {
-      float *currentHistogram = &histogram_per_pixel_[0];
+//      float *currentHistogram = &histogram_per_pixel_[0];
+  		float *currentHistogram = static_cast<float *>(pixel_histograms->get_data_ptr());
       float thisEnergy;
       int bin;
       int pixel;
@@ -461,6 +569,28 @@ namespace FrameProcessor
          }
       }
   }
+
+	void HexitecHistogramPlugin::copy_histograms(float *histograms, float *frame_data_ptr,
+											 long long number_bins)
+	{
+
+		for (int i=0; i < number_bins; i++)
+		{
+			frame_data_ptr[i] = histograms[i];
+//			LOG4CXX_TRACE(logger_, " ----------------- " << i << " histo: " << histograms[i] << " vs " << frame_data_ptr[i] << " frame_ptr ");
+		}
+	}
+
+	void HexitecHistogramPlugin::copy_histograms(long long *histograms, long long *frame_data_ptr,
+											 long long number_bins)
+	{
+
+		for (int i=0; i < number_bins; i++)
+		{
+			frame_data_ptr[i] = histograms[i];
+//			LOG4CXX_TRACE(logger_, " ----------------- " << i << " histo: " << histograms[i] << " vs frame_ptr: " << frame_data_ptr[i]);
+		}
+	}
 
 } /* namespace FrameProcessor */
 

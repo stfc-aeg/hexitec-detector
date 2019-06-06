@@ -19,6 +19,7 @@ using namespace log4cxx::helpers;
 #include "FrameProcessorPlugin.h"
 #include "HexitecDefinitions.h"
 #include "ClassLoader.h"
+#include "DataBlockFrame.h"
 
 namespace FrameProcessor
 {
@@ -71,6 +72,15 @@ namespace FrameProcessor
     // function copied from HexitecGigE, but not currently in use:
     void addFrameDataToHistogram(float *frame);
 
+    boost::shared_ptr<Frame> energy_bins;
+    boost::shared_ptr<Frame> summed_histograms;
+    boost::shared_ptr<Frame> pixel_histograms;
+
+  	void copy_histograms(float *histograms, float *frame_data_ptr,
+  											 long long number_bins);
+  	void copy_histograms(long long *histograms, long long *frame_data_ptr,
+  											 long long number_bins);
+
     /** Pointer to logger **/
     LoggerPtr logger_;
     /** Image width **/
@@ -95,6 +105,9 @@ namespace FrameProcessor
     long long *summed_histogram_;
     void initialiseHistograms();
     void writeHistogramsToDisk();
+
+    // Debug only var:
+    int dCounter;
 
     int fem_pixels_per_rows_;
     int fem_pixels_per_columns_;

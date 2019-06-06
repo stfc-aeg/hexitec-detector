@@ -243,8 +243,6 @@ namespace FrameProcessor
    */
   void HexitecThresholdPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_TRACE(logger_, "Applying threshold(s) to frame.");
-
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
         static_cast<const char*>(frame->get_data_ptr()));
@@ -288,11 +286,13 @@ namespace FrameProcessor
 					case 1:
 					{
 						process_threshold_value(static_cast<float *>(input_ptr));
+				    LOG4CXX_TRACE(logger_, "Applying threshold value to frame.");
 						break;
 					}
 					case 2:
 					{
 						process_threshold_file(static_cast<float *>(input_ptr));
+				    LOG4CXX_TRACE(logger_, "Applying thresholds from file to frame.");
 						break;
 					}
 				}

@@ -19,6 +19,7 @@ using namespace log4cxx::helpers;
 #include "FrameProcessorPlugin.h"
 #include "HexitecDefinitions.h"
 #include "ClassLoader.h"
+#include "DataBlockFrame.h"
 ///
 #include <fstream>
 #include <sstream>
@@ -64,7 +65,7 @@ namespace FrameProcessor
     /** Configuration constant for maximum rows **/
 		static const std::string CONFIG_MAX_ROWS;
 
-    void process_lost_packets(boost::shared_ptr<Frame> frame);
+    void process_lost_packets(boost::shared_ptr<Frame>& frame);
     void process_frame(boost::shared_ptr<Frame> frame);
     // Float type array version currently used:
     void reorder_pixels(unsigned short *in, float *out);
