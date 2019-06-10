@@ -2,7 +2,7 @@
  * HexitecDiscriminationPlugin.h
  *
  *  Created on: 08 Aug 2018
- *      Author: ckd27546
+ *      Author: Christian Angelsen
  */
 
 #ifndef INCLUDE_HEXITECDISCRIMINATIONPLUGIN_H_

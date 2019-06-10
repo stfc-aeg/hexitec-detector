@@ -2,7 +2,7 @@
  * HexitecReorderPlugin.cpp
  *
  *  Created on: 11 Jul 2018
- *      Author: ckd27546
+ *      Author: Christian Angelsen
  */
 
 #include <HexitecReorderPlugin.h>

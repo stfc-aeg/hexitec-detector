@@ -2,7 +2,7 @@
  * HexitecCalibrationPlugin.h
  *
  *  Created on: 24 Sept 2018
- *      Author: ckd27546
+ *      Author: Christian Angelsen
  */
 
 #ifndef INCLUDE_HEXITECCALIBRATIONPLUGIN_H_

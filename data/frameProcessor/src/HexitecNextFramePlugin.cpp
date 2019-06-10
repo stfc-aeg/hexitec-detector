@@ -2,7 +2,7 @@
  * HexitecNextFramePlugin.cpp
  *
  *  Created on: 18 Sept 2018
- *      Author: ckd27546
+ *      Author: Christian Angelsen
  */
 
 #include <HexitecNextFramePlugin.h>
