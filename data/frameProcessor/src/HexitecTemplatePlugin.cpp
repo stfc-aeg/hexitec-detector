@@ -2,7 +2,7 @@
  * HexitecTemplatePlugin.cpp
  *
  *  Created on: 24 Jul 2018
- *      Author: ckd27546
+ *      Author: Christian Angelsen
  */
 
 #include <HexitecTemplatePlugin.h>

@@ -2,7 +2,7 @@
  * HexitecNextFramePlugin.h
  *
  *  Created on: 18 Sept 2018
- *      Author: ckd27546
+ *      Author: Christian Angelsen
  */
 
 #ifndef INCLUDE_HEXITECNEXTFRAMEPLUGIN_H_

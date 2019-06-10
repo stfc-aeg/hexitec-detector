@@ -2,7 +2,7 @@
  * HexitecCalibrationPlugin.cpp
  *
  *  Created on: 24 Sept 2018
- *      Author: ckd27546
+ *      Author: Christian Angelsen
  */
 
 #include <HexitecCalibrationPlugin.h>
