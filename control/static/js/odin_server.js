@@ -392,7 +392,7 @@ function apply_ui_values() {
     {
         console.log("THIS IS VEERY TRUE");
         setTimeout(setHdfWrite(false), 400);
-        setTimeout(setHdfWrite(true), 500);
+        setTimeout(setHdfWrite(true), 800);
     }
     else
     {

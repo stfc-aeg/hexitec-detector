@@ -201,8 +201,7 @@ namespace FrameProcessor
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
-				// Take Frame object at input_pointer, apply CS Discrimination algorithm and save
-				// 	results to processed_image
+				// Take Frame object at input_pointer, apply CS Discrimination algorithm
 				prepareChargedSharing(static_cast<float *>(input_ptr));
 
 				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
