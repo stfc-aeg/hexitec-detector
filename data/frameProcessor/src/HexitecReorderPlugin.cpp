@@ -7,6 +7,7 @@
 
 #include <HexitecReorderPlugin.h>
 #include "version.h"
+#include <boost/algorithm/string.hpp>
 
 namespace FrameProcessor
 {
@@ -18,11 +19,13 @@ namespace FrameProcessor
   const std::string HexitecReorderPlugin::CONFIG_RAW_DATA 			 = "raw_data";
   const std::string HexitecReorderPlugin::CONFIG_MAX_COLS 		 	 = "fem_max_cols";
   const std::string HexitecReorderPlugin::CONFIG_MAX_ROWS      	 = "fem_max_rows";
+  const std::string HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT  = "sensors_layout";
 
   /**
    * The constructor sets up logging used within the class.
    */
   HexitecReorderPlugin::HexitecReorderPlugin() :
+  		sensors_config_(Hexitec::sensorConfigOne),
       image_width_(80),
       image_height_(80),
       image_pixels_(image_width_ * image_height_),
@@ -120,6 +123,21 @@ namespace FrameProcessor
    */
   void HexitecReorderPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
+//  	LOG4CXX_DEBUG(logger_, " !!!  ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
+//  	if (config.has_param(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT))
+//		{
+//  		sensors_layout_str_= config.get_param<std::string>(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT);
+//  		//
+//      LOG4CXX_DEBUG(logger_, "Parsing number of sensors entry found in config: ");
+//		}
+//    else
+//    {
+//			LOG4CXX_DEBUG(logger_, "No number of sensors entry found in config, using default: ");
+//			sensors_layout_str_ = default_sensors_layout_map;
+//    }
+//    parse_sensors_layout_map(sensors_layout_str_);
+
+
     if (config.has_param(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS))
     {
       packets_lost_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS);
@@ -164,6 +182,7 @@ namespace FrameProcessor
   {
   	// Return the configuration of the reorder plugin
   	std::string base_str = get_name() + "/";
+//    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_DROPPED_PACKETS, packets_lost_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_IMAGE_WIDTH, image_width_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
@@ -182,6 +201,7 @@ namespace FrameProcessor
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecReorderPlugin");
+//    status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/packets_lost", packets_lost_);
     status.set_param(get_name() + "/image_width", image_width_);
     status.set_param(get_name() + "/image_height", image_height_);
@@ -211,12 +231,13 @@ namespace FrameProcessor
   void HexitecReorderPlugin::process_lost_packets(boost::shared_ptr<Frame>& frame)
   {
     const Hexitec::FrameHeader* hdr_ptr = static_cast<const Hexitec::FrameHeader*>(frame->get_data_ptr());
+    Hexitec::SensorConfigNumber sensors_config = static_cast<Hexitec::SensorConfigNumber>(sensors_config_);
 //    LOG4CXX_DEBUG(logger_, "Processing lost packets for frame " << hdr_ptr->frame_number);
 //    LOG4CXX_DEBUG(logger_, "Packets received: " << hdr_ptr->total_packets_received
 //                                                << " out of a maximum "
-//                                                << Hexitec::num_fem_frame_packets());
-    if (hdr_ptr->total_packets_received < Hexitec::num_fem_frame_packets()){
-      int packets_lost = Hexitec::num_fem_frame_packets() - hdr_ptr->total_packets_received;
+//                                                << Hexitec::num_fem_frame_packets(sensors_config));
+    if (hdr_ptr->total_packets_received < Hexitec::num_fem_frame_packets(sensors_config)){
+      int packets_lost = Hexitec::num_fem_frame_packets(sensors_config) - hdr_ptr->total_packets_received;
       LOG4CXX_ERROR(logger_, "Frame number " << hdr_ptr->frame_number << " has dropped " << packets_lost << " packet(s)");
       packets_lost_ += packets_lost;
       LOG4CXX_ERROR(logger_, "Total packets lost since startup " << packets_lost_);
@@ -246,7 +267,7 @@ namespace FrameProcessor
 
     // Determine the size of the output reordered image
     const std::size_t output_image_size = reordered_image_size();
-//    LOG4CXX_TRACE(logger_, "Output image size: " << output_image_size);
+    LOG4CXX_TRACE(logger_, "Output image size: " << output_image_size);
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
@@ -276,6 +297,7 @@ namespace FrameProcessor
       raw_image = (void*)malloc(output_image_size);
       if (raw_image == NULL)
       {
+        this->set_error("Failed to allocate temporary buffer for reordered image");
         throw std::runtime_error("Failed to allocate temporary buffer for raw image");
       }
 
@@ -428,6 +450,43 @@ namespace FrameProcessor
 		outFile.open(fname.c_str(), std::ofstream::app);
 		outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
 		outFile.close();
+	}
+
+	//! Parse the number of sensors map configuration string.
+	//!
+	//! This method parses a configuration string containing number of sensors mapping information,
+	//! which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
+	//! variable.
+	//!
+	//! \param[in] sensors_layout_str - string of number of sensors configured
+	//! \return number of valid map entries parsed from string
+	//!
+	std::size_t HexitecReorderPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
+	{
+	    // Clear the current map
+	    sensors_layout_.clear();
+
+	    // Define entry and port:idx delimiters
+	    const std::string entry_delimiter("x");
+
+	    // Vector to hold entries split from map
+	    std::vector<std::string> map_entries;
+
+	    // Split into entries
+	    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
+
+	    // If a valid entry is found, save into the map
+	    if (map_entries.size() == 2) {
+	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
+	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
+	        sensors_layout_[0] = HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+
+	        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T !  sensor_rows: " << sensor_rows << " sensor_columns: " << sensor_columns);
+	        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T  ! sensor_rows: " << sensors_layout_[0].sensor_rows_ << " sensor_columns: " << sensors_layout_[0].sensor_columns_);
+	    }
+
+	    // Return the number of valid entries parsed
+	    return sensors_layout_.size();
 	}
 
 } /* namespace FrameProcessor */

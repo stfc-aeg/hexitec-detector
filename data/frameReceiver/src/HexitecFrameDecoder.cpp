@@ -20,6 +20,7 @@
 using namespace FrameReceiver;
 
 const std::string HexitecFrameDecoder::CONFIG_FEM_PORT_MAP = "fem_port_map";
+const std::string HexitecFrameDecoder::CONFIG_SENSORS_LAYOUT = "sensors_layout";
 
 #define MAX_IGNORED_PACKET_REPORTS 10
 
@@ -30,7 +31,8 @@ const std::string HexitecFrameDecoder::CONFIG_FEM_PORT_MAP = "fem_port_map";
 //!
 HexitecFrameDecoder::HexitecFrameDecoder() :
     FrameDecoderUDP(),
-    current_frame_seen_(Hexitec::default_frame_number),
+		sensors_config_(Hexitec::sensorConfigOne),
+		current_frame_seen_(Hexitec::default_frame_number),
     current_frame_buffer_id_(Hexitec::default_frame_number),
     current_frame_buffer_(0),
     current_frame_header_(0),
@@ -42,7 +44,7 @@ HexitecFrameDecoder::HexitecFrameDecoder() :
 
   // Allocate buffers for packet header, dropped frames and scratched packets
   current_packet_header_.reset(new uint8_t[sizeof(Hexitec::PacketHeader)]);
-  dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size()]);
+  dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size(sensors_config_)]);
   ignored_packet_buffer_.reset(new uint8_t[Hexitec::primary_packet_size]);
 
 }
@@ -114,6 +116,22 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
 
   parse_fem_port_map(fem_port_map_str_);
 
+  // Determine how many sensors to configure for
+  if (config_msg.has_param(CONFIG_SENSORS_LAYOUT))
+  {
+      sensors_layout_str_ = config_msg.get_param<std::string>(CONFIG_SENSORS_LAYOUT);
+      LOG4CXX_DEBUG_LEVEL(1, logger_, "Parsing number of sensors entry found in config: "
+                          << sensors_layout_str_);
+  }
+  else
+  {
+      LOG4CXX_DEBUG_LEVEL(1,logger_, "No number of sensors entry found in config, using default: "
+                          << default_sensors_layout_map);
+      sensors_layout_str_ = default_sensors_layout_map;
+  }
+
+  parse_sensors_layout_map(sensors_layout_str_);
+
   // Print a packet logger header to the appropriate logger if enabled
   if (enable_packet_logging_)
   {
@@ -142,6 +160,7 @@ void HexitecFrameDecoder::request_configuration(const std::string param_prefix,
 
   // Add current configuration parameters to reply
   config_reply.set_param(param_prefix + CONFIG_FEM_PORT_MAP, fem_port_map_str_);
+  config_reply.set_param(param_prefix + CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
 //  config_reply.set_param(param_prefix + CONFIG_BITDEPTH, asic_bit_depth_str_[asic_counter_bit_depth_]);
 
 }
@@ -156,7 +175,7 @@ void HexitecFrameDecoder::request_configuration(const std::string param_prefix,
 const size_t HexitecFrameDecoder::get_frame_buffer_size(void) const
 {
   size_t frame_buffer_size = get_frame_header_size() +
-      Hexitec::frame_size();
+      Hexitec::frame_size(sensors_config_);
   return frame_buffer_size;
 }
 
@@ -385,7 +404,7 @@ void* HexitecFrameDecoder::get_next_payload_buffer(void) const
 
   if (current_packet_fem_map_.fem_idx_ != ILLEGAL_FEM_IDX)
   {
-    std::size_t frame_size = Hexitec::frame_size();
+    std::size_t frame_size = Hexitec::frame_size(sensors_config_);
 
     next_receive_location = reinterpret_cast<uint8_t*>(current_frame_buffer_)
           + get_frame_header_size ()
@@ -414,13 +433,13 @@ size_t HexitecFrameDecoder::get_next_payload_size(void) const
 {
   size_t next_receive_size = 0;
 
-  if (get_packet_number() < Hexitec::num_primary_packets)
+  if (get_packet_number() < Hexitec::num_primary_packets[sensors_config_])
   {
     next_receive_size = Hexitec::primary_packet_size;
   }
   else
   {
-    next_receive_size = Hexitec::tail_packet_size;
+    next_receive_size = Hexitec::tail_packet_size[sensors_config_];
   }
 
   return next_receive_size;
@@ -456,7 +475,7 @@ FrameDecoder::FrameReceiveState HexitecFrameDecoder::process_packet(size_t bytes
 
     // If we have received the expected number of packets, perform end of frame processing
     // and hand off the frame for downstream processing.
-    if (current_frame_header_->total_packets_received == Hexitec::num_fem_frame_packets())
+    if (current_frame_header_->total_packets_received == Hexitec::num_fem_frame_packets(sensors_config_))
     {
 
       // Check that the appropriate number of SOF and EOF markers (one each per frame) have
@@ -522,7 +541,7 @@ void HexitecFrameDecoder::monitor_buffers(void)
     {
 
       const std::size_t num_fem_frame_packets =
-          Hexitec::num_fem_frame_packets();
+          Hexitec::num_fem_frame_packets(sensors_config_);
 
       // Calculate packets lost on this frame and add to total
       uint32_t packets_lost = num_fem_frame_packets -
@@ -580,7 +599,7 @@ void HexitecFrameDecoder::get_status(const std::string param_prefix,
     OdinData::IpcMessage& status_msg)
 {
   status_msg.set_param(param_prefix + "name", std::string("HexitecFrameDecoder"));
-  status_msg.set_param(param_prefix + "packets_lost", packets_lost_);
+  status_msg.set_param(param_prefix + "pack!!!ets_lost", packets_lost_);
 
   // Workaround for lack of array setters in IpcMessage
   rapidjson::Value fem_packets_lost_array(rapidjson::kArrayType);
@@ -703,10 +722,48 @@ std::size_t HexitecFrameDecoder::parse_fem_port_map(const std::string fem_port_m
             int fem_idx = static_cast<int>(strtol(entry_elems[1].c_str(), NULL, 10));
             fem_port_map_[port] = HexitecDecoderFemMapEntry(fem_idx, buf_idx);
             buf_idx++;
+//            LOG4CXX_ERROR(logger_, " T H I S  I S  A  T E S T !! port: " << port << " fem_idx: " << fem_idx);
         }
     }
 
     // Return the number of valid entries parsed
     return fem_port_map_.size();
+}
+
+//! Parse the number of sensors map configuration string.
+//!
+//! This method parses a configuration string containing number of sensors mapping information,
+//! which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
+//! variable.
+//!
+//! \param[in] sensors_layout_str - string of number of sensors configured
+//! \return number of valid map entries parsed from string
+//!
+std::size_t HexitecFrameDecoder::parse_sensors_layout_map(const std::string sensors_layout_str)
+{
+    // Clear the current map
+    sensors_layout_.clear();
+
+    // Define entry and port:idx delimiters
+    const std::string entry_delimiter("x");
+
+    // Vector to hold entries split from map
+    std::vector<std::string> map_entries;
+
+    // Split into entries
+    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
+
+    // If a valid entry is found, save into the map
+    if (map_entries.size() == 2) {
+        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
+        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
+        sensors_layout_[0] = HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+
+        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T !  sensor_rows: " << sensor_rows << " sensor_columns: " << sensor_columns);
+        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T  ! sensor_rows: " << sensors_layout_[0].sensor_rows_ << " sensor_columns: " << sensors_layout_[0].sensor_columns_);
+    }
+
+    // Return the number of valid entries parsed
+    return sensors_layout_.size();
 }
 

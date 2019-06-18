@@ -18,6 +18,7 @@
 #define ILLEGAL_FEM_IDX -1
 
 const std::string default_fem_port_map = "61651:0";
+const std::string default_sensors_layout_map = "1x1";
 
 namespace FrameReceiver
 {
@@ -33,6 +34,19 @@ namespace FrameReceiver
   } HexitecDecoderFemMapEntry;
 
   typedef std::map<int, HexitecDecoderFemMapEntry> HexitecDecoderFemMap;
+
+  typedef struct HexitecSensorLayoutMapEntry
+  {
+    unsigned int sensor_rows_;
+    unsigned int sensor_columns_;
+
+    HexitecSensorLayoutMapEntry(int sensor_rows=ILLEGAL_FEM_IDX, int sensor_columns=ILLEGAL_FEM_IDX) :
+      sensor_rows_(sensor_rows),
+      sensor_columns_(sensor_columns)
+    {};
+  } HexitecSensorLayoutMapEntry;
+
+  typedef std::map<int, HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
   class HexitecFrameDecoder : public FrameDecoderUDP
   {
@@ -82,12 +96,16 @@ namespace FrameReceiver
     void initialise_frame_header(Hexitec::FrameHeader* header_ptr);
     unsigned int elapsed_ms(struct timespec& start, struct timespec& end);
     std::size_t parse_fem_port_map(const std::string fem_port_map_str);
+    std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
 
+    Hexitec::SensorConfigNumber sensors_config_;
     std::string fem_port_map_str_;
     HexitecDecoderFemMap fem_port_map_;
     boost::shared_ptr<void> current_packet_header_;
     boost::shared_ptr<void> dropped_frame_buffer_;
     boost::shared_ptr<void> ignored_packet_buffer_;
+    std::string sensors_layout_str_;
+    HexitecSensorLayoutMap sensors_layout_;
 
     int current_frame_seen_;
     int current_frame_buffer_id_;
@@ -101,6 +119,7 @@ namespace FrameReceiver
     uint32_t fem_packets_lost_;
 
     static const std::string CONFIG_FEM_PORT_MAP;
+    static const std::string CONFIG_SENSORS_LAYOUT;
 
   };
 

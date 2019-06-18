@@ -23,9 +23,41 @@ using namespace log4cxx::helpers;
 ///
 #include <fstream>
 #include <sstream>
+#include <map>
+
+#define ILLEGAL_FEM_IDX -1
+
+const std::string default_fem_port_map = "61651:0";
+const std::string default_sensors_layout_map = "1x1";
 
 namespace FrameProcessor
 {
+
+  typedef struct HexitecSensorLayoutMapEntry
+  {
+    int sensor_rows_;
+    int sensor_columns_;
+
+    HexitecSensorLayoutMapEntry(int sensor_rows=ILLEGAL_FEM_IDX, int sensor_columns=ILLEGAL_FEM_IDX) :
+      sensor_rows_(sensor_rows),
+      sensor_columns_(sensor_columns)
+    {};
+  } HexitecSensorLayoutMapEntry;
+
+  typedef std::map<int, HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
+//
+//  typedef struct HexitecReorderSensorMapEntry
+//  {
+//    unsigned int sensor_rows_;
+//    unsigned int sensor_columns_;
+//
+//    HexitecReorderSensorMapEntry(int sensor_rows=ILLEGAL_FEM_IDX, int sensor_columns=ILLEGAL_FEM_IDX) :
+//      sensor_rows_(sensor_rows),
+//      sensor_columns_(sensor_columns)
+//    {};
+//  } HexitecReorderSensorMapEntry;
+//
+//  typedef std::map<int, HexitecReorderSensorMapEntry> HexitecReorderSensorMap;
 
   /** Reorder pixels within Hexitec Frame objects.
    *
@@ -64,6 +96,8 @@ namespace FrameProcessor
     static const std::string CONFIG_MAX_COLS;
     /** Configuration constant for maximum rows **/
 		static const std::string CONFIG_MAX_ROWS;
+		/** Configuration constant for Hardware sensors **/
+		static const std::string CONFIG_SENSORS_LAYOUT;
 
     void process_lost_packets(boost::shared_ptr<Frame>& frame);
     void process_frame(boost::shared_ptr<Frame> frame);
@@ -74,6 +108,9 @@ namespace FrameProcessor
 														 							 float *out);
 
     std::size_t reordered_image_size();
+    std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
+    std::string sensors_layout_str_;
+    HexitecSensorLayoutMap sensors_layout_;
 
     void initialisePixelMap();
     uint16_t pixelMap[6400];
@@ -83,6 +120,8 @@ namespace FrameProcessor
 
     /** Pointer to logger **/
     LoggerPtr logger_;
+    /** Config of sensor(s) **/
+    int sensors_config_;
     /** Image width **/
     int image_width_;
     /** Image height **/
