@@ -96,7 +96,7 @@ namespace FrameReceiver
     void initialise_frame_header(Hexitec::FrameHeader* header_ptr);
     unsigned int elapsed_ms(struct timespec& start, struct timespec& end);
     std::size_t parse_fem_port_map(const std::string fem_port_map_str);
-    std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
+    void parse_sensors_layout_map(const std::string sensors_layout_str);
 
     Hexitec::SensorConfigNumber sensors_config_;
     std::string fem_port_map_str_;

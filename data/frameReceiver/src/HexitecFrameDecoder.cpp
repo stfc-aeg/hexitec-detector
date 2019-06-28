@@ -122,6 +122,9 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
       sensors_layout_str_ = config_msg.get_param<std::string>(CONFIG_SENSORS_LAYOUT);
       LOG4CXX_DEBUG_LEVEL(1, logger_, "Parsing number of sensors entry found in config: "
                           << sensors_layout_str_);
+      // Because the image dimensions have been updated, the frame size, ergo buffer size too,
+      //  has changed and must be updated:
+      dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size(sensors_config_)]);
   }
   else
   {
@@ -722,7 +725,6 @@ std::size_t HexitecFrameDecoder::parse_fem_port_map(const std::string fem_port_m
             int fem_idx = static_cast<int>(strtol(entry_elems[1].c_str(), NULL, 10));
             fem_port_map_[port] = HexitecDecoderFemMapEntry(fem_idx, buf_idx);
             buf_idx++;
-//            LOG4CXX_ERROR(logger_, " T H I S  I S  A  T E S T !! port: " << port << " fem_idx: " << fem_idx);
         }
     }
 
@@ -737,9 +739,8 @@ std::size_t HexitecFrameDecoder::parse_fem_port_map(const std::string fem_port_m
 //! variable.
 //!
 //! \param[in] sensors_layout_str - string of number of sensors configured
-//! \return number of valid map entries parsed from string
 //!
-std::size_t HexitecFrameDecoder::parse_sensors_layout_map(const std::string sensors_layout_str)
+void HexitecFrameDecoder::parse_sensors_layout_map(const std::string sensors_layout_str)
 {
     // Clear the current map
     sensors_layout_.clear();
@@ -758,12 +759,17 @@ std::size_t HexitecFrameDecoder::parse_sensors_layout_map(const std::string sens
         int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
         int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
         sensors_layout_[0] = HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
-
-        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T !  sensor_rows: " << sensor_rows << " sensor_columns: " << sensor_columns);
-        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T  ! sensor_rows: " << sensors_layout_[0].sensor_rows_ << " sensor_columns: " << sensors_layout_[0].sensor_columns_);
     }
 
-    // Return the number of valid entries parsed
-    return sensors_layout_.size();
+    // Find a more elegant solution.. !
+    
+    if ((sensors_layout_[0].sensor_rows_ == 1) && (sensors_layout_[0].sensor_columns_ == 1))
+    {
+      sensors_config_ = Hexitec::sensorConfigOne;			// 1 x 1 sensors
+    }
+    else if ((sensors_layout_[0].sensor_rows_ == 2) && (sensors_layout_[0].sensor_columns_ == 2))
+    {
+      sensors_config_ = Hexitec::sensorConfigTwo;     // 2 x 2 sensors
+    }
 }
 

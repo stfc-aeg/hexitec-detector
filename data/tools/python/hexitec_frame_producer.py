@@ -246,7 +246,6 @@ class HexitecFrameProducer(object):
         """
         Load frame packets from a packet capture file.
         """
-        print ("SOF: ", HexitecFrame.SOF_MARKER, " EOF: ", HexitecFrame.EOF_MARKER)
         # Set up packet capture counters
         total_packets = 0
         total_bytes = 0
@@ -275,9 +274,6 @@ class HexitecFrameProducer(object):
             else:
                 # Header, then pixel data
                 (frame_ctr, pkt_ctr) = struct.unpack('<II', udp_layer.data[:8])
-                print (frame_ctr, pkt_ctr)
-                # if frame_ctr > 300:
-                #     raise Exception
 
             # If there is a SOF marker in the packet header, 
             # handle content, starting a new frame as necessary

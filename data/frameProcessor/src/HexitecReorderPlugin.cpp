@@ -123,19 +123,18 @@ namespace FrameProcessor
    */
   void HexitecReorderPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
-//  	LOG4CXX_DEBUG(logger_, " !!!  ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
-//  	if (config.has_param(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT))
-//		{
-//  		sensors_layout_str_= config.get_param<std::string>(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT);
-//  		//
-//      LOG4CXX_DEBUG(logger_, "Parsing number of sensors entry found in config: ");
-//		}
-//    else
-//    {
-//			LOG4CXX_DEBUG(logger_, "No number of sensors entry found in config, using default: ");
-//			sensors_layout_str_ = default_sensors_layout_map;
-//    }
-//    parse_sensors_layout_map(sensors_layout_str_);
+ 	  if (config.has_param(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT))
+		{
+ 		  sensors_layout_str_= config.get_param<std::string>(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT);
+      //
+      LOG4CXX_DEBUG(logger_, "Parsing number of sensors entry found in config: ");
+		}
+    else
+    {
+      LOG4CXX_DEBUG(logger_, "No number of sensors entry found in config, using default: ");
+      sensors_layout_str_ = default_sensors_layout_map;
+    }
+    parse_sensors_layout_map(sensors_layout_str_);
 
 
     if (config.has_param(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS))
@@ -182,7 +181,7 @@ namespace FrameProcessor
   {
   	// Return the configuration of the reorder plugin
   	std::string base_str = get_name() + "/";
-//    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
+    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_DROPPED_PACKETS, packets_lost_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_IMAGE_WIDTH, image_width_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
@@ -201,7 +200,7 @@ namespace FrameProcessor
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecReorderPlugin");
-//    status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
+    status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/packets_lost", packets_lost_);
     status.set_param(get_name() + "/image_width", image_width_);
     status.set_param(get_name() + "/image_height", image_height_);
