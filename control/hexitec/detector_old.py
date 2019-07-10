@@ -46,7 +46,9 @@ class IacDetectorAdapter(ApiAdapter):
         logging.debug("IAC Hexitec Get")
         response = {}
         request = ApiAdapterRequest(None, accept="application/json")
+        print "IAC, path: ", path
         for key, value in self.adapters.items():
+            print "loop, key, value: ", key, value
             if path.startswith(key):
                 # Lose 'key/' from the start of the path
                 # (E.g. 'fp/' from 'fp/config/reorder/width')
@@ -103,3 +105,4 @@ class IacDetectorAdapter(ApiAdapter):
         for k, v in adapters.items():
             logging.debug("Adapter loaded: %s", k)
         #logging.debug("Received following dict of Adapters: %s", self.adapters)
+        print "detector_old has ", len(self.adapter), " adapters.."

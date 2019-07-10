@@ -74,7 +74,7 @@
           <input type="button" class="btn btn-primary" id='executeButton' name="store_enable" data-size="small" value="execute">
           Adding Apply button:&nbsp;
           <input type="button" class="btn btn-primary" id='applyButton' name="store_enable" data-size="small" value="apply">
-          
+          <-- These three buttons configure Odin data
         </tr>
       </tbody>
     </table>
@@ -85,8 +85,8 @@
         <thead></thead>
         <tbody>
 
-          <tr>  
-            <td>  
+          <tr> 
+            <td>
               <th>hdf/write&nbsp;</th>
             </td>
             <td>&nbsp;</td>
@@ -108,7 +108,7 @@
             </td>
             <td>
               <div class="text-rows">
-                <input type="text" id="fr-config-text" onChange='fr_config_changed()' placeholder="fr_config.json" value="">
+                <input type="text" id="fr-config-text" onChange='fr_config_changed()' placeholder="fr_config.json" value="/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/hexitec_fr.json">
               </div>
             </td>
             <td>
@@ -169,7 +169,52 @@
             </td>
           </tr>
 
-        </tbody>
+          <!-- Implements selecting detector geometry for both FP, FR -->
+          <tr>
+            <!-- Blank Line -->
+            <td>
+              &nbsp;
+            </td>
+          </tr>
+          <tr>
+            <td>
+              Sensors Layout:&nbsp;
+            </td>
+            <td>
+              <select onchange="selectChange(this.value)">
+                <option value="1x1">1x1 (80x80)</option>
+                <option value="2x2">2x2 (160x160)</option>
+                <!-- <option value="NxM">NxM (AAAxBBB)</option> -->
+              </select>
+            </td>
+            <td>
+              &nbsp;<td><span id="sensors-layout-warning">&nbsp;</span></td>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              Odin Control:&nbsp;
+            </td>
+            <td>
+              <input type="button" class="btn btn-primary" id='connectButton' name="dc_connect" data-size="small" value="Connect">
+              <input type="button" class="btn btn-primary" id='initialiseButton' name="dc_initialise" data-size="small" value="Initialise">
+              <input type="button" class="btn btn-primary" id='acquireButton' name="dc_acquire" data-size="small" value="Acquire">
+              <input type="button" class="btn btn-primary" id='disconnectButton' name="dc_disconnect" data-size="small" value="Disconnect">
+
+            </td>
+          </tr>
+
+          <tr>
+              <td>
+                Odin Error(s):&nbsp;
+              </td>
+              &nbsp;<td><span id="odin-control-warning">&nbsp;</span></td>
+              <td>
+                  
+              </td>
+            </tr>
+
+          </tbody>
       </table>
 
     </div> <!-- well sidebar-nav-fixed -->

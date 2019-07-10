@@ -111,6 +111,8 @@ namespace FrameProcessor
    * Configure the Hexitec plugin.  This receives an IpcMessage which should be processed
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
+   * 
+   * - sensors_layout_str_      <=> sensors_layout
    * - image_width_ 						<=> width
    * - image_height_						<=> height
    * - reorder_pixels_ 					<=> reorder

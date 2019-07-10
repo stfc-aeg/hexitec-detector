@@ -8,6 +8,7 @@ import logging
 import tornado
 import time
 from concurrent import futures
+from .HexitecFem import HexitecFem
 
 # Making checking for integer type Python2/3 independent
 import sys
@@ -22,8 +23,13 @@ from tornado.ioloop import IOLoop
 from tornado.concurrent import run_on_executor
 from tornado.escape import json_decode
 
-from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
+from odin.adapters.adapter import (ApiAdapter, ApiAdapterRequest,
+                                   ApiAdapterResponse, request_types, response_types)
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_data.live_view_adapter import LiveViewAdapter
+from odin_data.frame_processor_adapter import FrameProcessorAdapter
+from odin_data.frame_receiver_adapter import FrameReceiverAdapter
+from odin.adapters.proxy import ProxyAdapter
 from odin._version import get_versions
 
 
@@ -48,6 +54,8 @@ class HexitecAdapter(ApiAdapter):
                 
         self.hexitec = Hexitec()
 
+        self.adapters = {}
+
         logging.debug('HexitecAdapter loaded')
 
     @response_types('application/json', default='application/json')
@@ -60,14 +68,32 @@ class HexitecAdapter(ApiAdapter):
         :param request: HTTP request object
         :return: an ApiAdapterResponse object containing the appropriate response
         """
+        content_type = "application/json"
+        status_code = 200
+        response = {}
+        request = ApiAdapterRequest(None, accept="application/json")
+        # Check adapters if path isn't empty
+        #   e.g. If asking for /api/0.1/hexitec/fp/, path = "fp/"
+        #        Compare:      /api/0.1/hexitec/, path = ""
+        checkAdapters = True if len(path) > 0 else False
+        print "get? my arse; path: ", path, "checkAdapters: ", checkAdapters
         try:
+            if checkAdapters:
+                for name, adapter in self.adapters.items():
+                    if path.startswith(name):
+                        # print "Adapter: ", name, " Let's ask it"
+                        relative_path = path.split(name)
+                        path = relative_path[1]
+                        response = adapter.get(path=path, request=request).data
+                        # print name, " => ", response
+                        logging.debug(response)
+                        return ApiAdapterResponse(response, content_type=content_type, status_code=status_code)
+
+            # No matching adapter found, try Hexitec member:
             response = self.hexitec.get(path)
-            status_code = 200
         except ParameterTreeError as e:
             response = {'error': str(e)}
             status_code = 400
-
-        content_type = 'application/json'
 
         return ApiAdapterResponse(response, content_type=content_type,
                                   status_code=status_code)
@@ -84,12 +110,31 @@ class HexitecAdapter(ApiAdapter):
         :return: an ApiAdapterResponse object containing the appropriate response
         """
         content_type = 'application/json'
+        status_code = 200
+        response = {}
+        checkAdapters = True if len(path) > 0 else False
+        requestSent = False
         try:
-            data = json_decode(request.body)
-            data = self.convert_to_string(data)
-            self.hexitec.set(path, data)
-            response = self.hexitec.get(path)
-            status_code = 200
+            if checkAdapters:
+                for name, adapter in self.adapters.items():
+                    if path.startswith(name):
+
+                        relative_path = path.split(name + '/')
+                        reply = adapter.put(path=relative_path[1], request=request)
+                        requestSent = True
+                        if reply.status_code != 200:
+                            status_code = reply.status_code
+                            response = reply.data
+                            logging.debug(response)
+                            return ApiAdapterResponse(response, content_type=content_type,
+                                  status_code=status_code)
+
+            # Only pass request to Hexitec member if no matching adapter found
+            if requestSent == False:
+                data = json_decode(request.body)
+                data = self.convert_to_string(data)
+                self.hexitec.set(path, data)
+                response = self.hexitec.get(path)
         except HexitecError as e:
             response = {'error': str(e)}
             status_code = 400
@@ -136,6 +181,52 @@ class HexitecAdapter(ApiAdapter):
 
         return obj
 
+    def initialize(self, adapters):
+        """Get references to required adapters and pass those references to the classes that need
+            to use them
+        """
+        self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
+        # Pass adapter list to Hexitec class:
+        self.hexitec.initialize(self.adapters)
+
+        # for name, adapter in adapters.items():
+        #     if isinstance(adapter, ProxyAdapter):
+        #         logging.debug("%s is Proxy Adapter", name)
+        #         self.adapters["proxy"] = adapter
+        #         print "adding: ", adapter
+
+        #     elif isinstance(adapter, FrameProcessorAdapter):
+        #         logging.debug("%s is FP Adapter", name)
+        #         self.adapters["fp"] = adapter
+        #         print "adding: ", adapter
+
+        #     elif isinstance(adapter, FrameReceiverAdapter):
+        #         logging.debug("%s is FR Adapter", name)
+        #         self.adapters["fr"] = adapter
+        #         print "adding: ", adapter
+
+        #     elif isinstance(adapter, LiveViewAdapter):
+        #         logging.debug("%s is Live View Adapter", name)
+
+        #     else:
+        #         logging.debug("%s: Wat dis?", name)
+        #         print adapter, " adapter is not self: ", adapter is not self
+
+        #         if adapter is not self:
+        #             print name, adapter, "   ", type(name)
+        #             self.adapters[name] = adapter
+        #             print "adding: ", adapter
+
+            #     if isinstance(adapter, HexitecAdapter):
+            #         print name, "It's me"
+            #     else:
+            #         print name, "it's not me"
+
+        # print "How many loaded adapters?", len(self.adapters)
+        # print self.adapters
+
+        # self.adapters["liveview"] = adapter
+
 class HexitecError(Exception):
     """Simple exception class for Hexitec to wrap lower-level exceptions."""
 
@@ -157,6 +248,10 @@ class Hexitec():
         # Save arguments
         # self.background_task_enable = background_task_enable
         # self.background_task_interval = background_task_interval
+
+        self.adapters = {}
+
+        self.fem = HexitecFem()
 
         # Store initialisation time
         self.init_time = time.time()
@@ -228,6 +323,14 @@ class Hexitec():
             'bin_width': (self._get_bin_width, self._set_bin_width)
         })
 
+        ### POPULATE REPLACEMENT parameter tree ###
+        self.sensors_layout = "1x1"
+        adapter_settings = ParameterTree({
+            'hexitec_fem': self.fem.param_tree,
+            'sensors_layout': (self._get_sensors_layout, self._set_sensors_layout),
+            'enable': False
+        })
+
         # Build odin_data (vars) area here
         odin_data = ParameterTree({
             'reorder': reorder,
@@ -236,7 +339,8 @@ class Hexitec():
             'calibration': calibration,
             'addition': addition,
             'discrimination': discrimination,
-            'histogram': histogram
+            'histogram': histogram,
+            'adapter_settings': adapter_settings
         })
 
         # Store all information in a parameter tree
@@ -246,7 +350,9 @@ class Hexitec():
             'server_uptime': (self.get_server_uptime, None),
             # 'background_task': bg_task,
             'test_area': test_area,
-            'odin_data': odin_data
+            'odin_data': odin_data#,
+            # This is the future:
+            # 'adapter_settings': adapter_settings
         })
 
         # # Set the background task counter to zero
@@ -258,6 +364,27 @@ class Hexitec():
         #         "Launching background task with interval %.2f secs", background_task_interval
         #     )
         #     self.background_task()
+
+    def _get_sensors_layout(self):
+
+        return self.sensors_layout
+
+    def _set_sensors_layout(self, layout):
+
+        self.sensors_layout = layout
+
+        # send command to FP,FR adapters 
+
+        command = "config/reorder/sensors_layout"
+        request = ApiAdapterRequest(self.sensors_layout, content_type="application/json")
+        self.adapters["fp"].put(command, request)
+
+        command = "config/decoder_config/sensors_layout"
+        request = ApiAdapterRequest(self.sensors_layout, content_type="application/json")
+        self.adapters["fr"].put(command, request)
+
+# curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/reorder/ -d '{"sensors_layout": "5x8"}'
+# curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fr/config/decoder_config -d '{"sensors_layout": "500x895"}'
 
     def _get_height(self):
 
@@ -427,6 +554,12 @@ class Hexitec():
             self.param_tree.set(path, data)
         except ParameterTreeError as e:
             raise HexitecError(e)
+
+    def initialize(self, adapters):
+        """Get references to required adapters and pass those references to the classes that need
+            to use them
+        """
+        self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
 
     # def set_task_interval(self, interval):
 

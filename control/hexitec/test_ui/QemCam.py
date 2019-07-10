@@ -62,13 +62,11 @@ class QemCam(object):
         self.x10g_stream.close()
         
     def connect(self):
-        self.x10g_rdma = RdmaUDP(self.server_ctrl_ip_addr, 61650, self.server_ctrl_ip_addr, 61651,
-                                 self.camera_ctrl_ip_addr, 61650, self.camera_ctrl_ip_addr, 61651, 2000000, 9000, 20)
+        self.x10g_rdma = RdmaUDP(self.server_ctrl_ip_addr, 61650, self.server_ctrl_ip_addr,61651, self.camera_ctrl_ip_addr, 61650, self.camera_ctrl_ip_addr,61651,2000000,9000,20)
         self.x10g_rdma.setDebug(False)
         self.x10g_rdma.ack = True
         
-        self.x10g_stream = ImageStreamUDP(self.server_data_ip_addr, 61650, self.server_data_ip_addr, 61651,
-                                          self.camera_data_ip_addr, 61650, self.camera_data_ip_addr, 61651, 1000000000, 9000, 20)
+        self.x10g_stream = ImageStreamUDP(self.server_data_ip_addr, 61650, self.server_data_ip_addr,61651, self.camera_data_ip_addr, 61650, self.camera_data_ip_addr,61651,1000000000,9000,20)
         #self.x10g_stream.setDebug(False)
         #self.x10g_stream.ack = False
 

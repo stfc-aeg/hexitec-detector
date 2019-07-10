@@ -20,9 +20,9 @@ class ImageStreamUDP(object):
 
         self.rxsocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, RxUDPBuf)
 
-        print "ISUDP Binding rx to receive UDP image data; IP, Port: ", MasterRxUDPIPAddress, MasterRxUDPIPPort
+        print "Rx: ", MasterRxUDPIPAddress, MasterRxUDPIPPort
         self.rxsocket.bind((MasterRxUDPIPAddress, MasterRxUDPIPPort))
-        print "ISUDP Binding tx to receive UDP image data; IP, Port: ", MasterTxUDPIPAddress, MasterTxUDPIPPort
+        print "Tx: ", MasterTxUDPIPAddress, MasterTxUDPIPPort
         self.txsocket.bind((MasterTxUDPIPAddress, MasterTxUDPIPPort))
 
         #self.rxsocket.settimeout(None)

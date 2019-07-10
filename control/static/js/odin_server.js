@@ -83,7 +83,7 @@ $( document ).ready(function()
             // plugin param
             $.ajax({
                 type: "PUT",
-                url: api_url + 'detector/fp/config',
+                url: api_url + 'hexitec/fp/config',
                 contentType: "application/json",
                 data: JSON.stringify(addition_payload),
                 success: function(result) {
@@ -97,7 +97,7 @@ $( document ).ready(function()
             // plugin param
             $.ajax({
                 type: "PUT",
-                url: api_url + 'detector/fp/config',
+                url: api_url + 'hexitec/fp/config',
                 contentType: "application/json",
                 data: JSON.stringify(discrimination_payload),
                 success: function(result) {
@@ -179,7 +179,7 @@ $( document ).ready(function()
         var execute_file_1 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_1.json";
         $.ajax({
             type: "PUT",
-            url: api_url + 'detector/fp/config/config_file',
+            url: api_url + 'hexitec/fp/config/config_file',
             contentType: "application/json",
             data: execute_file_1,
             success: function(result) {
@@ -192,7 +192,104 @@ $( document ).ready(function()
             }
         });
     });
+
+    // Odin Control
+
+    $('#connectButton').on('click', function(event) {
+        // Connect with hardware
+        // function_to_be_created();
+        console.log("Clicked on connect button");
+        connect_hardware();
+    });
+
+    $('#initialiseButton').on('click', function(event) {
+        // Initialise hardware
+        // function_to_be_created();
+        console.log("Clicked on initialise");
+        initialise_hardware();
+    });
+
+    $('#acquireButton').on('click', function(event) {
+        // Acquire data from camera
+        // function_to_be_created();
+        console.log("Click on acquire button");
+        collect_data();
+    });
+
+    $('#disconnectButton').on('click', function(event) {
+        // Disconnect with hardware
+        // function_to_be_created();
+        console.log("Clicked on disconnect button");
+        disconnect_hardware();
+    });
+
 });
+
+// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/odin_data/adapter_settings/hexitec_fem/
+// -d '{"connect_hardware": ""}' | python -m json.tool
+function connect_hardware() {
+
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/odin_data/adapter_settings/hexitec_fem/',
+        contentType: "application/json",
+        data: JSON.stringify({"connect_hardware": ""}),
+        success: function(result) {
+            $('#odin-control-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#odin-control-warning').html(error + ": " + format_error_message(request.responseText));
+        }
+    });
+}
+
+function initialise_hardware() {
+
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/odin_data/adapter_settings/hexitec_fem/',
+        contentType: "application/json",
+        data: JSON.stringify({"initialise_hardware": ""}),
+        success: function(result) {
+            $('#odin-control-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#odin-control-warning').html(error + ": " + format_error_message(request.responseText));
+        }
+    });
+}
+
+function collect_data() {
+
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/odin_data/adapter_settings/hexitec_fem/',
+        contentType: "application/json",
+        data: JSON.stringify({"collect_data": ""}),
+        success: function(result) {
+            $('#odin-control-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#odin-control-warning').html(error + ": " + format_error_message(request.responseText));
+        }
+    });
+}
+
+function disconnect_hardware() {
+
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/odin_data/adapter_settings/hexitec_fem/',
+        contentType: "application/json",
+        data: JSON.stringify({"disconnect_hardware": ""}),
+        success: function(result) {
+            $('#odin-control-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#odin-control-warning').html(error + ": " + format_error_message(request.responseText));
+        }
+    });
+}
 
 function store_sequence_files() {
 
@@ -210,18 +307,18 @@ function store_sequence_files() {
     var sequence_file_11 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_11.json";
     var sequence_file_12 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_12.json";
 
-    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_1);
-    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_2);
-    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_3);
-    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_4);
-    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_5);
-    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_6);
-    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_7);
-    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_8);
-    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_9);
-    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_10);
-    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_11);
-    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_12);
+    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_1);
+    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_2);
+    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_3);
+    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_4);
+    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_5);
+    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_6);
+    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_7);
+    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_8);
+    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_9);
+    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_10);
+    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_11);
+    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_12);
 
 }
 
@@ -274,17 +371,17 @@ function apply_ui_values() {
                 // Is CS Addition or Discrimination?
                 if (addition_enable == true)
                 {
-                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_8);
+                    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_8);
                 }
                 if (discrimination_enable == true)
                 {
-                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_12);
+                    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_12);
                 }
             }
             else
             {
                 // next = true, calibration = true CS = false
-                send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_4);
+                send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_4);
             }
         }
         else
@@ -296,17 +393,17 @@ function apply_ui_values() {
                 // Is CS Addition or Discrimination?
                 if (addition_enable == true)
                 {
-                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_6);
+                    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_6);
                 }
                 if (discrimination_enable == true)
                 {
-                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_10);
+                    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_10);
                 }
             }
             else
             {
                 // next = true, calib = false, cs = false
-                send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_2);
+                send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_2);
             }
         }
     }
@@ -321,17 +418,17 @@ function apply_ui_values() {
                 // Is CS Addition or Discrimination?
                 if (addition_enable == true)
                 {
-                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_7);
+                    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_7);
                 }
                 if (discrimination_enable == true)
                 {
-                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_11);
+                    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_11);
                 }
             }
             else
             {
                 // next = false calibration = true, CS = false
-                send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_3);
+                send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_3);
             }
         }
         else    // next_frame, calibration not selected
@@ -342,17 +439,17 @@ function apply_ui_values() {
                 // CS is Addition or Discrimination?
                 if (addition_enable == true)
                 {
-                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_5);
+                    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_5);
                 }
                 if (discrimination_enable == true)
                 {
-                    send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_9);
+                    send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_9);
                 }
             }
             else
             {
                 // next = False, calibration = False, charged_sharing = False
-                send_sequence_file(api_url + 'detector/fp/config/config_file', sequence_file_1);
+                send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_1);
             }
         }
     }
@@ -488,7 +585,7 @@ function update_plugin_value(plugin, key, value)
 {
     $.ajax({
         type: "PUT",
-        url: api_url + 'detector/fp/config/' + plugin + '/' + key,
+        url: api_url + 'hexitec/fp/config/' + plugin + '/' + key,
         contentType: "application/json",
         data: value,
     });
@@ -507,7 +604,7 @@ function threshold_filename_changed()
             $('#threshold-filename-warning').html("");
             $.ajax({
                 type: "PUT",
-                url: api_url + 'detector/fp/config/threshold/threshold_filename',
+                url: api_url + 'hexitec/fp/config/threshold/threshold_filename',
                 contentType: "application/json",
                 data: threshold_filename,
                 success: function(result) {
@@ -539,7 +636,7 @@ function threshold_value_changed()
             $('#threshold-value-warning').html("");
             $.ajax({
                 type: "PUT",
-                url: api_url + 'detector/fp/config/threshold/threshold_value',
+                url: api_url + 'hexitec/fp/config/threshold/threshold_value',
                 contentType: "application/json",
                 data: threshold_value,
             });
@@ -563,7 +660,7 @@ function threshold_mode_changed()
             $('#threshold-mode-warning').html("");
             $.ajax({
                 type: "PUT",
-                url: api_url + 'detector/fp/config/threshold/threshold_mode',
+                url: api_url + 'hexitec/fp/config/threshold/threshold_mode',
                 contentType: "application/json",
                 data: threshold_mode,
             });
@@ -587,7 +684,7 @@ function gradients_filename_changed()
             $('#gradients-warning').html("");
             $.ajax({
                 type: "PUT",
-                url: api_url + 'detector/fp/config/calibration/gradients_filename',
+                url: api_url + 'hexitec/fp/config/calibration/gradients_filename',
                 contentType: "application/json",
                 data: gradients_filename,
                 success: function(result) {
@@ -617,7 +714,7 @@ function intercepts_filename_changed()
             $('#intercepts-warning').html("");
             $.ajax({
                 type: "PUT",
-                url: api_url + 'detector/fp/config/calibration/intercepts_filename',
+                url: api_url + 'hexitec/fp/config/calibration/intercepts_filename',
                 contentType: "application/json",
                 data: intercepts_filename,
                 success: function(result) {
@@ -650,7 +747,7 @@ function pixel_grid_size_changed()
             $('#pixel-warning').html("");
             $.ajax({
                 type: "PUT",
-                url: api_url + 'detector/fp/config/addition/pixel_grid_size',
+                url: api_url + 'hexitec/fp/config/addition/pixel_grid_size',
                 contentType: "application/json",
                 data: pixel_grid_size,
             });
@@ -669,7 +766,7 @@ function pixel_grid_size_changed()
             $('#pixel-warning').html("");
             $.ajax({
                 type: "PUT",
-                url: api_url + 'detector/fp/config/discrimination/pixel_grid_size',
+                url: api_url + 'hexitec/fp/config/discrimination/pixel_grid_size',
                 contentType: "application/json",
                 data: pixel_grid_size,
             });
@@ -694,7 +791,7 @@ function max_frames_received_changed()
             $('#frames-warning').html("");
             $.ajax({
                 type: "PUT",
-                url: api_url + 'detector/fp/config/histogram/max_frames_received',
+                url: api_url + 'hexitec/fp/config/histogram/max_frames_received',
                 contentType: "application/json",
                 data: max_frames_received,
             });
@@ -718,7 +815,7 @@ function bin_start_changed()
             $('#bin-start-warning').html("");
             $.ajax({
                 type: "PUT",
-                url: api_url + 'detector/fp/config/histogram/bin_start',
+                url: api_url + 'hexitec/fp/config/histogram/bin_start',
                 contentType: "application/json",
                 data: bin_start,
             });
@@ -742,7 +839,7 @@ function bin_end_changed()
             $('#bin-end-warning').html("");
             $.ajax({
                 type: "PUT",
-                url: api_url + 'detector/fp/config/histogram/bin_end',
+                url: api_url + 'hexitec/fp/config/histogram/bin_end',
                 contentType: "application/json",
                 data: bin_end,
             });
@@ -766,7 +863,7 @@ function bin_width_changed()
             $('#bin-width-warning').html("");
             $.ajax({
                 type: "PUT",
-                url: api_url + 'detector/fp/config/histogram/bin_width',
+                url: api_url + 'hexitec/fp/config/histogram/bin_width',
                 contentType: "application/json",
                 data: bin_width,
             });
@@ -783,7 +880,7 @@ var changeReorderEnable = function()
     // Write straight into HexitecReorderPlugin's variable
     $.ajax({
         type: "PUT",
-        url: api_url + 'detector/fp/config/reorder/reorder',
+        url: api_url + 'hexitec/fp/config/reorder/reorder',
         contentType: "application/json",
         data: JSON.stringify(reorder_enable),
         success: function(result) {
@@ -801,7 +898,7 @@ var changeRawDataEnable = function ()
     // Write straight into HexitecReorderPlugin's variable
     $.ajax({
         type: "PUT",
-        url: api_url + 'detector/fp/config/reorder/raw_data',
+        url: api_url + 'hexitec/fp/config/reorder/raw_data',
         contentType: "application/json",
         data: JSON.stringify(raw_data_enable),
         success: function(result) {
@@ -885,13 +982,31 @@ var changeHdfWriteEnable = function()
     setHdfWrite(hdf_write_enable);
 };
 
+var selectChange = function(selected)
+{
+    // curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/odin_data/adapter_settings -d '{"sensors_layout": "5x5"}' | python -m json.tool
+
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/odin_data/adapter_settings',
+        contentType: "application/json",
+        data: JSON.stringify({"sensors_layout": selected}),
+        success: function(result) {
+            $('#sensors-layout-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#sensors-layout-warning').html(error + ": " + format_error_message(request.responseText));
+        }
+    });
+}
+
 // setHdfWrite: Helper function to toggle hdf writing on/off
 function setHdfWrite(enable)
 {
     hdf_write_enable = enable;
     $.ajax({
         type: "PUT",
-        url: api_url + 'detector/fp/config/hdf/write',
+        url: api_url + 'hexitec/fp/config/hdf/write',
         contentType: "application/json",
         data: JSON.stringify(hdf_write_enable),
         success: function(result) {
@@ -937,7 +1052,7 @@ function fp_config_changed()
     var fp_config_file = $('#fp-config-text').prop('value');
     $.ajax({
         type: "PUT",
-        url: api_url + 'detector/fp/config/config_file',
+        url: api_url + 'hexitec/fp/config/config_file',
         contentType: "application/json",
         data: fp_config_file,
         success: function(result) {
@@ -970,13 +1085,13 @@ function fr_config_changed()
     });
 };
 
-//curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/detector/fp/config/hdf/file/path -d "/tmp"
+//curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/hdf/file/path -d "/tmp"
 function hdf_file_path_changed()
 {
     var hdf_file_path = $('#hdf-file-path-text').prop('value');
     $.ajax({
         type: "PUT",
-        url: api_url + 'detector/fp/config/hdf/file/path',
+        url: api_url + 'hexitec/fp/config/hdf/file/path',
         contentType: "application/json",
         data: (hdf_file_path),
         success: function(result) {
@@ -990,13 +1105,13 @@ function hdf_file_path_changed()
     });
 };
 
-// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/detector/fp/config/hdf/file/name -d "test"
+// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/hdf/file/name -d "test"
 function hdf_file_name_changed()
 {
     var hdf_file_name = $('#hdf-file-name-text').prop('value');
     $.ajax({
         type: "PUT",
-        url: api_url + 'detector/fp/config/hdf/file/name',
+        url: api_url + 'hexitec/fp/config/hdf/file/name',
         contentType: "application/json",
         data: (hdf_file_name),
         success: function(result) {
@@ -1010,13 +1125,13 @@ function hdf_file_name_changed()
     });
 };
 
-// curl  -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/detector/fp/config/hdf/frames -d "3"
+// curl  -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/hdf/frames -d "3"
 function hdf_frames_changed()
 {
     var hdf_frames = $('#hdf-frames-text').prop('value');
     $.ajax({
         type: "PUT",
-        url: api_url + 'detector/fp/config/hdf/frames',
+        url: api_url + 'hexitec/fp/config/hdf/frames',
         contentType: "application/json",
         data: (hdf_frames),
         success: function(result) {

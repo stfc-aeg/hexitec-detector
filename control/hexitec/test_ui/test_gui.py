@@ -133,13 +133,20 @@ def display_2():
 
 #  This function sends a command string to the microcontroller
 def send_cmd( cmd ):
-    print "Length of command - " , len(cmd)
-    for i in range ( 0 , len(cmd) ):
-        qemcamera.x10g_rdma.write(0xE0000100, cmd[i], 'Write Byte')
-        #print cmd[i]
-    qemcamera.x10g_rdma.write(0xE0000000, 0x2, 'Send')
-    time.sleep(0.5)
-    qemcamera.x10g_rdma.write(0xE0000000, 0x0, 'Toggle lo')
+
+    while len(cmd)%4 != 0:
+        cmd.append(13)
+    print "Length of command - " , len(cmd) , len(cmd)%4      
+    #print cmd
+    for i in range ( 0 , len(cmd)/4 ):
+        
+        #print format(cmd[(i*4)+3], '02x') , format(cmd[(i*4)+2], '02x') , format(cmd[(i*4)+1], '02x') , format(cmd[(i*4)], '02x') 
+        #reg_value = 256*256*256*cmd[(i*4)+3] + 256*256*cmd[(i*4)+2] + 256*cmd[(i*4)+1] + cmd[(i*4)] 
+        reg_value = 256*256*256*cmd[(i*4)] + 256*256*cmd[(i*4)+1] + 256*cmd[(i*4)+2] + cmd[(i*4)+3] 
+        #print reg_value
+        #print format(reg_value, '08x')
+        qemcamera.x10g_rdma.write(0xE0000100, reg_value, 'Write 4 Bytes')
+        time.sleep(0.25)
 
 #  This function will display the returned voltages returned by the 0x50 instruction    
 def display_voltages( f ):   
@@ -165,31 +172,64 @@ def get_dec( a ):
     
 # Displays the returned response from the microcontroller    
 def read_response():
-    dat = qemcamera.x10g_rdma.read(0xE0000200, 'Data')
-    #print "Start is :- " , dat 
-    dat = qemcamera.x10g_rdma.read(0xE0000200, 'Data')
-    #print "Module is :- " , dat 
-    data_counter = 1   
+    data_counter = 0   
     f = []
-    f.append(dat)
-    while dat != 13:
+    #f.append(dat)
+    ABORT_VALUE = 10000
+    RETURN_START_CHR = 42
+    CARRIAGE_RTN = 13
+    FIFO_EMPTY_FLAG = 1
+    empty_count = 0
+    daty = RETURN_START_CHR
+    
+    while daty != CARRIAGE_RTN :
+      fifo_empty = FIFO_EMPTY_FLAG
+
+      while fifo_empty == FIFO_EMPTY_FLAG and empty_count < ABORT_VALUE:
+          #time.sleep(0.5)
+          fifo_empty = qemcamera.x10g_rdma.read(0xE0000011, 'FIFO EMPTY FLAG')
+          #fifo_empty = 0
+          #rint "FIFO Empty" , fifo_empty , empty_count
+          empty_count = empty_count + 1
+      print "Got data:- " 
       dat = qemcamera.x10g_rdma.read(0xE0000200, 'Data')
-      #print "Byte is " , dat
-      f.append(dat)
+      print "Bytes are:- " 
+      daty = dat/256/256/256%256
+      f.append(daty)
+      print format(daty, '02x')
+      daty = dat/256/256%256
+      f.append(daty)
+      print format(daty, '02x')
+      daty = dat/256%256
+      f.append(daty)
+      print format(daty, '02x')
+      daty = dat%256
+      f.append(daty)
+      print format(daty, '02x')
       data_counter = data_counter + 1
+      if empty_count == ABORT_VALUE:
+          print "Abort"
+          daty = CARRIAGE_RTN
+      empty_count = 0          
+
 
     print "Counter is :- " , data_counter 
     print "Length is:-" , len(f)
+#    dat = qemcamera.x10g_rdma.read(0xE0000200, 'Data')
+#    print "FIFO should be empty " , dat
+    fifo_empty = qemcamera.x10g_rdma.read(0xE0000011, 'Data')
+    print "FIFO should be empty " , fifo_empty    
     s = ''
-    for i in range( 1 , data_counter):
+    for i in range( 1 , data_counter*4):
+        print i
         s = s + chr(f[i])
     
     print "String :- " , s
     print f[0] 
     print f[1]
     
-    if len(f) == 50:
-        display_voltages(f)        
+#    if len(f) == 50:
+#        display_voltages(f)        
     return(s)
     
 def cam_connect():
@@ -198,6 +238,7 @@ def cam_connect():
     qemcamera.connect()  
     print ("Camera is connected")
     send_cmd ([ 0x23 , 0x90 , 0xE3 , 0x0D ] )
+    time.sleep(1)
     send_cmd ([ 0x23 , 0x91 , 0xE3 , 0x0D ] )
     print "Enable modules"
 
@@ -263,7 +304,6 @@ def initialise_sensor():
     # Send this command to Enable Test Pattern in my VSR design
     print "Setting Number of Frames to " , number_of_frames
     print "Enable Test Pattern in my VSR design"
-    send_cmd( [ 0x23 , 0x92, 0x01 , 0x0D] )
     # Use Sync clock from DAQ board
     print "Use Sync clock from DAQ board"
     send_cmd ([ 0x23 , tk.vsr_addr , 0x42 , 0x30 , 0x31 , 0x31 , 0x30 , 0x0D ] )
