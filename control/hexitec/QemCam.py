@@ -11,6 +11,7 @@ import sys
 import numpy as np
 from RdmaUDP import *
 from ImageStreamUDP import *
+from socket import error as socket_error
 import time
 import numpy as np
 import cv2
@@ -56,21 +57,30 @@ class QemCam(object):
         self.rdma_mtu = 8000
         #
         self.frame_time = 1
+        ### DEBUGGING ###
+        self.udp_connection = True
 
     def __del__(self):
         self.x10g_rdma.close()
-        self.x10g_stream.close()
+        #TODO: Redundant: ?
+        if self.udp_connection: self.x10g_stream.close()
         
     def connect(self):
-        self.x10g_rdma = RdmaUDP(self.server_ctrl_ip_addr, 61650, self.server_ctrl_ip_addr, 61651,
-                                 self.camera_ctrl_ip_addr, 61650, self.camera_ctrl_ip_addr, 61651, 2000000, 9000, 20)
-        self.x10g_rdma.setDebug(False)
-        self.x10g_rdma.ack = True
-        
-        self.x10g_stream = ImageStreamUDP(self.server_data_ip_addr, 61650, self.server_data_ip_addr, 61651,
-                                          self.camera_data_ip_addr, 61650, self.camera_data_ip_addr, 61651, 1000000000, 9000, 20)
-        #self.x10g_stream.setDebug(False)
-        #self.x10g_stream.ack = False
+        try:
+            self.x10g_rdma = RdmaUDP(self.server_ctrl_ip_addr, 61650, self.server_ctrl_ip_addr, 61651,
+                                    self.camera_ctrl_ip_addr, 61650, self.camera_ctrl_ip_addr, 61651, 2000000, 9000, 20)
+            self.x10g_rdma.setDebug(False)
+            self.x10g_rdma.ack = True
+        except socket_error as e:
+            raise socket_error("Failed to setup Control connection: %s" % e)
+
+        try:
+            #TODO: Redundant: ?
+            if self.udp_connection:
+                self.x10g_stream = ImageStreamUDP(self.server_data_ip_addr, 61650, self.server_data_ip_addr, 61651,
+                                                self.camera_data_ip_addr, 61650, self.camera_data_ip_addr, 61651, 1000000000, 9000, 20)
+        except socket_error as e:
+            raise socket_error("Failed to setup Data connection: %s" % e)
 
         return
     
@@ -164,6 +174,7 @@ class QemCam(object):
             self.x10g_rdma.write(address, data, 'pixel count max')
         return
     
+    #TODO: Redundant: ?
     def set_image_size(self, x_size, y_size, p_size, f_size):
         # set image size globals
         self.image_size_x = x_size
@@ -199,7 +210,8 @@ class QemCam(object):
             self.x10g_rdma.write(address, data, 'pixel count max')
             self.x10g_rdma.write(self.receiver+4, 0x3, 'pixel bit size => 16 bit')
             
-        self.x10g_stream.set_image_size(x_size, y_size, f_size)    
+        #TODO: Redundant: ?
+        if self.udp_connection: self.x10g_stream.set_image_size(x_size, y_size, f_size)    # MAYBE, sets vars used elsewhere in ISUDP..?
 
         return
     
@@ -310,59 +322,68 @@ class QemCam(object):
         self.x10g_rdma.write(self.frm_gate+0,0x1,          'frame gate trigger on')
         self.x10g_rdma.write(self.frm_gate+0,0x0,          'frame gate trigger off')
         return
+        
     def frame_gate_settings(self, frame_number, frame_gap):
         #self.x10g_rdma.write(self.frm_gate+1,frame_number, 'frame gate frame number')
         self.x10g_rdma.write(self.frm_gate+1,frame_number, 'frame gate frame number')
         self.x10g_rdma.write(self.frm_gate+2,frame_gap,    'frame gate frame gap')
         return
-    
+
+    #TODO: Redundant ?
     def display_image_stream(self, num_images):
-        self.frame_gate_settings(0, 0)
-        #self.frame_gate_settings(num_images-1, 0)
-        image_count = 1
-        while image_count <= num_images :  
-            self.frame_gate_trigger()    
-            print "Triggering"
-            sensor_image = self.x10g_stream.get_image()
-            cv2.imshow('image',sensor_image)
-            cv2.waitKey(self.frame_time)
-            image_count = image_count+1                
+        if self.udp_connection: 
+            self.frame_gate_settings(0, 0)
+            self.frame_gate_settings(num_images-1, 0)
+            image_count = 1
+            if self.udp_connection:
+                print "UDP streaming disabled, aborting.."
+                return
+            while image_count <= num_images :  
+                self.frame_gate_trigger()    
+                print "Triggering"
+                sensor_image = self.x10g_stream.get_image()
+                cv2.imshow('image',sensor_image)
+                cv2.waitKey(self.frame_time)
+                image_count = image_count+1                
         return
-    
+
     def log_image_stream(self, file_name, num_images):
         self.frame_gate_settings(num_images-1, 0)
         self.frame_gate_trigger()
-        #get the image set
-        image_set = self.x10g_stream.get_image_set(num_images)
-        #write to hdf5 file
-        file_name = file_name + '.h5'
-        h5f = h5py.File(file_name,'w')
-        h5f.create_dataset('dataset_1', data=image_set)
-        h5f.close()
+        # Redundant: ?
+        if self.udp_connection: 
+            #get the image set
+            print "\t\t log_image_stream() 4"
+            image_set = self.x10g_stream.get_image_set(num_images)
+            print "\t\t log_image_stream() 5"
+            #write to hdf5 file
+            file_name = file_name + '.h5'
+            h5f = h5py.File(file_name,'w')
+            h5f.create_dataset('dataset_1', data=image_set)
+            h5f.close()
         
         #print image_set
-        
         return
 
     def data_stream(self, num_images):
         self.frame_gate_settings(num_images-1, 0)
         self.frame_gate_trigger()
         return
-   
+
+    #TODO: Redundant ?
     def log_image_stream_bin(self, file_name, num_images):
-        self.frame_gate_settings(num_images-1, 0)
-        self.frame_gate_trigger()
-        #get the image set
-        image_set = self.x10g_stream.get_image_set(num_images)
-        #write to binary file n * x * y uint16
-        file_name = file_name + '.bin'
-        
-        f=open(file_name,"wb")
-        f.write(image_set)
-        f.close()
-        
-        print "written array:", image_set.shape, image_set.dtype,"->", file_name
-        
+        if self.udp_connection:
+            self.frame_gate_settings(num_images-1, 0)
+            self.frame_gate_trigger()
+            #get the image set
+            image_set = self.x10g_stream.get_image_set(num_images)
+            #write to binary file n * x * y uint16
+            file_name = file_name + '.bin'
+            f=open(file_name,"wb")
+            f.write(image_set)
+            f.close()
+            
+            print "written array:", image_set.shape, image_set.dtype,"->", file_name
         return
 
     
@@ -417,5 +438,5 @@ class QemCam(object):
         
     def disconnect(self):
         self.x10g_rdma.close()
-        self.x10g_stream.close()
+        if self.udp_connection: self.x10g_stream.close()
         return

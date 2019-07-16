@@ -125,9 +125,9 @@ class HexitecFem():
 
         self.vsr_addr = 0x90
 
-        self.number_of_frames = 20
+        self.number_of_frames = 10
 
-        self.hardware_connection = 0
+        self.hardware_connected = False
 
         self.debug = False
 
@@ -166,21 +166,42 @@ class HexitecFem():
         return self.port
 
     def connect_hardware(self, msg):
-        self.cam_connect()
-        print "DONE connecting hardware"
+        if self.hardware_connected:
+            raise ParameterTreeError("Connection already established")
+        try:
+            self.cam_connect()
+            self.hardware_connected = True
+        except Exception as e:
+            raise ParameterTreeError("Failed to connect with camera: %s" % e)
 
     def initialise_hardware(self, msg):
-        self.initialise_system()
-        print "DONE initialising system"
+        if self.hardware_connected != True:
+            raise ParameterTreeError("No connection established")
+        try:
+            self.initialise_system()
+        except HexitecFemError as e:
+            raise ParameterTreeError("Failed to initialise camera: %s" % e)
+        except Exception:
+            raise ParameterTreeError("Failed to initialise Camera")
 
     def collect_data(self, msg):
-        self.acquire_data()
-        print "DONE collecting data"
-
+        if self.hardware_connected != True:
+            raise ParameterTreeError("No connection established")
+        try:
+            self.acquire_data()
+        except Exception:
+            raise ParameterTreeError("Failed to collect data")
+        
     def disconnect_hardware(self, msg):
-        self.cam_disconnect()
-        print "DONE disconnecting hardware"
-
+        if self.hardware_connected == False:
+            raise ParameterTreeError("No connection to disconnect")
+        try:
+            self.cam_disconnect()
+            self.hardware_connected = False
+        except Exception:
+            raise ParameterTreeError("Disconnection failed")
+        
+ 
     def set_debug(self, debug):
         self.debug = debug
 
@@ -195,7 +216,7 @@ class HexitecFem():
         if self.debug: print "Length of command - " , len(cmd) , len(cmd)%4      
         #print cmd
         for i in range ( 0 , len(cmd)/4 ):
-            
+
             #print format(cmd[(i*4)+3], '02x') , format(cmd[(i*4)+2], '02x') , format(cmd[(i*4)+1], '02x') , format(cmd[(i*4)], '02x') 
             #reg_value = 256*256*256*cmd[(i*4)+3] + 256*256*cmd[(i*4)+2] + 256*cmd[(i*4)+1] + cmd[(i*4)] 
             reg_value = 256*256*256*cmd[(i*4)] + 256*256*cmd[(i*4)+1] + 256*cmd[(i*4)+2] + cmd[(i*4)+3] 
@@ -230,7 +251,7 @@ class HexitecFem():
     
     # Displays the returned response from the microcontroller    
     def read_response(self):
-        data_counter = 0   
+        data_counter = 0
         f = []
         #f.append(dat)
         ABORT_VALUE = 10000
@@ -268,8 +289,8 @@ class HexitecFem():
             if empty_count == ABORT_VALUE:
                 print "Abort"
                 daty = CARRIAGE_RTN
+                raise HexitecFemError("read_response aborted")
             empty_count = 0          
-
 
         if self.debug: print "Counter is :- " , data_counter 
         if self.debug: print "Length is:-" , len(f)
@@ -280,12 +301,11 @@ class HexitecFem():
             if self.debug: print i
             s = s + chr(f[i])
         
-        if self.debug: print "String :- " , s
-        if self.debug: print f[0] 
-        if self.debug: print f[1]
+        if self.debug: 
+            print "String :- " , s
+            print f[0] 
+            print f[1]
         
-    #    if len(f) == 50:
-    #        display_voltages(f)        
         return(s)
 
     def cam_connect(self):
@@ -299,8 +319,10 @@ class HexitecFem():
             self.send_cmd([0x23, 0x91, 0xE3, 0x0D])
             print "Enable modules"
         except socket_error as e:
-            logging.error("Unable to Connect to camera: %s", e)
+            logging.error("%s", e)
             # logging.error("Attemped on ")
+        except Exception as e:
+            raise Exception(e)
 
 
     def cam_disconnect(self):
@@ -349,13 +371,8 @@ class HexitecFem():
             print "Enable synchronisation SM start via trigger 1"
             self.send_cmd([0x23, self.vsr_addr, 0x42, 0x30, 0x41, 0x30, 0x31, 0x0D])
             self.read_response()
-            # Enable synchronisation SM start on rising or falling edge of ADC clock
-            # Experiment with this bit
-    #        self.send_cmd([0x23, self.vsr_addr, 0x43, 0x31, 0x34, 0x30, 0x31, 0x0D])
-    #        self.read_response()        
             print ("Reading out 2x2 sensors")
         print self.selected_sensor    
-
 
         print "Communicating with - ", self.vsr_addr
         # Set Frame Gen Mux Frame Gate
@@ -396,7 +413,6 @@ class HexitecFem():
         print "Check EMPTY Signals", full_empty
         full_empty = self.qemcamera.x10g_rdma.read(0x60000012,  'Check FULL Signals')
         print "Check FULL Signals", full_empty
-
     
     def calibrate_sensor(self):
         logging.debug("! calibrate_sensor() ! LINKS NOT LOCKED")
@@ -460,6 +476,7 @@ class HexitecFem():
         full_empty = self.qemcamera.x10g_rdma.read(0x60000012,  'Check FULL FULL Signals')
         print "Check FULL Signals", full_empty
         
+        # Check whether the currently selected VSR has synchronised or not
         if synced == 15:
             print "All Links on VSR's 1 and 2 synchronised"
             logging.debug("! calibrate_sensor() ! ALL LINKS ON VSR'S 1 AND 2 SYNCHRONISED")
@@ -520,6 +537,8 @@ class HexitecFem():
 
         full_empty = self.qemcamera.x10g_rdma.read(0x60000012,  'Check FULL FULL Signals')
         print "Check FULL Signals", full_empty
+
+        return synced
  
     def acquire_data(self):
         
@@ -578,7 +597,7 @@ class HexitecFem():
             self.qemcamera.log_image_stream_bin(file_string, self.number_of_frames)  
         if self.output_format == HexitecFem.IMAGE[2]:
             #  Stream image 
-            print "Streaming Image"
+            print "Streaming Image - THIS OPTION HAS BEEN DISABLED;\n\t\t use the /test_ui/ scripts instead"
             self.qemcamera.display_image_stream(self.number_of_frames)
         if self.output_format == HexitecFem.IMAGE[3]:
             #  Data Capture only
@@ -1198,6 +1217,7 @@ class HexitecFem():
     def initialise_system(self):
         # Does init, load, set up, write, enable, calibrate all in one fell swoooop
         #  for VSR2 followed by VSR1
+        # try:
         print(" -=-=-=-=-=-=-=-=-  Setup System to config VSR 2.. -=-=-=-=-=-=-=-=- ")
         self.selected_sensor = HexitecFem.OPTIONS[2]
         print "selected_sensor: ", self.selected_sensor
@@ -1211,8 +1231,13 @@ class HexitecFem():
         print(" -=-=-=-=- dac values written! -=-=-=-=- ")
         self.enable_adc()
         print(" -=-=-=-=- adc enabled! -=-=-=-=- ")
-        self.calibrate_sensor()
-        print(" -=-=-=-=- VSR 2 all Done -=-=-=-=-")
+        synced_status = self.calibrate_sensor()
+        print " !!  synchronised: ", synced_status  # == 15..
+        # if self.selected_sensor == HexitecFem.OPTIONS[2] and synced_status == 12:
+        #     pass
+        # else:
+        #     raise Exception("VSR 2 Links didn't sync, aborting initialisation")
+        # print(" -=-=-=-=- VSR 2 all Done -=-=-=-=-")
 
         time.sleep(1)
 
@@ -1229,10 +1254,21 @@ class HexitecFem():
         print(" -=-=-=-=- dac values written! -=-=-=-=- ")
         self.enable_adc()
         print(" -=-=-=-=- adc enabled! -=-=-=-=- ")
-        self.calibrate_sensor()
-        print(" -=-=-=-=- VSR 1 all Done -=-=-=-=-")
+        synced_status = self.calibrate_sensor()
+        print " !!  synchronised: ", synced_status  # Saying it's 15..
+        # if self.selected_sensor == HexitecFem.OPTIONS[0] and synced_status == 15:
+        #     pass
+        # else:
+        #     raise Exception("VSR 1 Links didn't sync, aborting initialisation")
+        # print(" -=-=-=-=- VSR 1 all Done -=-=-=-=-")
+        # except HexitecFemError as e:
+        #     logging.error("Error initialising system: %s", "Abort during read response")
 
-    
+
+class HexitecFemError(Exception):
+    """Simple exception class for HexitecFem to wrap lower-level exceptions."""
+
+    pass
     
     
 # root = tk.Tk()
