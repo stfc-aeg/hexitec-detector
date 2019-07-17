@@ -45,11 +45,6 @@ class HexitecFem():
     "IMAGE 4"
     ]
 
-    SETCLR = [
-    "SET",
-    "CLEAR"
-    ] #etc
-
     DARKCORRECTION = [
     "DARK CORRECTION OFF",
     "DARK CORRECTION ON"]
@@ -97,14 +92,10 @@ class HexitecFem():
 
         self.param_tree = ParameterTree(param_tree_dict)
         
-        self.selected_sensor = HexitecFem.OPTIONS[2]        # "Sensor_2_1"; Replaces variable1
-        self.sensors_layout     = HexitecFem.READOUTMODE[1]    # "2x2";        Replaces variable8
-        self.set_clear          = HexitecFem.SETCLR[0]      # "SET";            Replaces variable3
-        self.dark_correction    = HexitecFem.DARKCORRECTION[0]  # "DARK CORRECTION OFF";    Replaces variable7
-        self.test_mode_image    = HexitecFem.TESTMODEIMAGE[3]   # "IMAGE 4";               Replaces variable9
-
-        #TODO: Sort out filename properly
-        self.filename = '/tmp/Hexitec'+ datetime.datetime.now().strftime("%b_%d_%H%M%S_")
+        self.selected_sensor    = HexitecFem.OPTIONS[2]         # "Sensor_2_1"
+        self.sensors_layout     = HexitecFem.READOUTMODE[1]     # "2x2"
+        self.dark_correction    = HexitecFem.DARKCORRECTION[0]  # "DARK CORRECTION OFF"
+        self.test_mode_image    = HexitecFem.TESTMODEIMAGE[3]   # "IMAGE 4"
 
     ''' Accessor functions '''
 
@@ -149,8 +140,7 @@ class HexitecFem():
             self.hardware_connected = False
         except Exception:
             raise ParameterTreeError("Disconnection failed")
-        
- 
+
     def set_debug(self, debug):
         self.debug = debug
 
@@ -163,14 +153,10 @@ class HexitecFem():
         while len(cmd)%4 != 0:
             cmd.append(13)
         if self.debug: print "Length of command - " , len(cmd) , len(cmd)%4      
-        #print cmd
+
         for i in range ( 0 , len(cmd)/4 ):
 
-            #print format(cmd[(i*4)+3], '02x') , format(cmd[(i*4)+2], '02x') , format(cmd[(i*4)+1], '02x') , format(cmd[(i*4)], '02x') 
-            #reg_value = 256*256*256*cmd[(i*4)+3] + 256*256*cmd[(i*4)+2] + 256*cmd[(i*4)+1] + cmd[(i*4)] 
             reg_value = 256*256*256*cmd[(i*4)] + 256*256*cmd[(i*4)+1] + 256*cmd[(i*4)+2] + cmd[(i*4)+3] 
-            #print reg_value
-            #print format(reg_value, '08x')
             self.qemcamera.x10g_rdma.write(0xE0000100, reg_value, 'Write 4 Bytes')
             time.sleep(0.25)
 
@@ -190,10 +176,7 @@ class HexitecFem():
             fifo_empty = FIFO_EMPTY_FLAG
 
             while fifo_empty == FIFO_EMPTY_FLAG and empty_count < ABORT_VALUE:
-                #time.sleep(0.5)
                 fifo_empty = self.qemcamera.x10g_rdma.read(0xE0000011, 'FIFO EMPTY FLAG')
-                #fifo_empty = 0
-                #rint "FIFO Empty" , fifo_empty , empty_count
                 empty_count = empty_count + 1
             if self.debug: print "Got data:- " 
             dat = self.qemcamera.x10g_rdma.read(0xE0000200, 'Data')
@@ -212,8 +195,6 @@ class HexitecFem():
             if self.debug: print format(daty, '02x')
             data_counter = data_counter + 1
             if empty_count == ABORT_VALUE:
-                print "Abort"
-                daty = CARRIAGE_RTN
                 raise HexitecFemError("read_response aborted")
             empty_count = 0          
 
@@ -226,24 +207,24 @@ class HexitecFem():
         for i in range( 1 , data_counter*4):
             if self.debug: print i
             s = s + chr(f[i])
-        
+
         if self.debug: 
             print "String :- " , s
             print f[0] 
             print f[1]
-        
+
         return(s)
 
     def cam_connect(self):
         
-        logging.debug("! cam_connect() ! LINKS NOT LOCKED")
+        logging.debug("Connect camera")
         try:
             self.qemcamera.connect()
-            print ("Camera is connected")
+            logging.debug("Camera is connected")
             self.send_cmd([0x23, 0x90, 0xE3, 0x0D])
             time.sleep(1)
             self.send_cmd([0x23, 0x91, 0xE3, 0x0D])
-            print "Enable modules"
+            logging.debug("Modules Enabled")
         except socket_error as e:
             logging.error("%s", e)
             # logging.error("Attemped on ")
@@ -254,27 +235,26 @@ class HexitecFem():
         try:
             self.send_cmd([0x23, 0x90, 0xE2, 0x0D])
             self.send_cmd([0x23, 0x91, 0xE2, 0x0D])
-            print "Modules Disabled"
+            logging.debug("Modules Disabled")
             self.qemcamera.disconnect()
-            print ("Camera is Disconnected")
+            logging.debug("Camera is Disconnected")
         except socket_error as e:
-            logging.error("Unable to disconnect camer: %s", e)
+            logging.error("Unable to disconnect camera: %s", e)
         except AttributeError as e:
             logging.error("Unable to disconnect camera: %s", "No active connection")
 
     def initialise_sensor(self):
-        logging.debug("! initialise_sensor() ! LINKS NOT LOCKED")
 
         self.qemcamera.x10g_rdma.write(0x60000002, 0, 'Disable State Machine Trigger')
         print "Disable State Machine Enabling signal"
             
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
             self.qemcamera.x10g_rdma.write(0x60000004, 0, 'Set bit 0 to 1 to generate test pattern in FEMII, bits [2:1] select which of the 4 sensors is read - data 1_1')
-            print ("VSR_1")
+            logging.debug("Initialising sensors on board VSR_1")
             self.vsr_addr = 0x90
         if self.selected_sensor == HexitecFem.OPTIONS[2]:
             self.qemcamera.x10g_rdma.write(0x60000004, 4, 'Set bit 0 to 1 to generate test pattern in FEMII, bits [2:1] select which of the 4 sensors is read - data 2_1')
-            print ("VSR 2")
+            logging.debug("Initialising sensors on board VSR 2")
             self.vsr_addr = 0x91  
 
         if self.sensors_layout == HexitecFem.READOUTMODE[0]:
