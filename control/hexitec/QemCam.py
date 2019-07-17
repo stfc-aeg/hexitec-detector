@@ -328,63 +328,11 @@ class QemCam(object):
         self.x10g_rdma.write(self.frm_gate+2,frame_gap,    'frame gate frame gap')
         return
 
-    #TODO: Redundant ?
-    def display_image_stream(self, num_images):
-        if self.udp_connection: 
-            self.frame_gate_settings(0, 0)
-            #self.frame_gate_settings(num_images-1, 0)
-            image_count = 1
-            if self.udp_connection:
-                print "UDP streaming disabled, aborting.."
-                return
-            while image_count <= num_images :  
-                self.frame_gate_trigger()    
-                print "Triggering"
-                sensor_image = self.x10g_stream.get_image()
-                cv2.imshow('image',sensor_image)
-                cv2.waitKey(self.frame_time)
-                image_count = image_count+1                
-        return
-
-    def log_image_stream(self, file_name, num_images):
-        self.frame_gate_settings(num_images-1, 0)
-        self.frame_gate_trigger()
-        # Redundant: ?
-        if self.udp_connection: 
-            #get the image set
-            print "\t\t log_image_stream() 4"
-            image_set = self.x10g_stream.get_image_set(num_images)
-            print "\t\t log_image_stream() 5"
-            #write to hdf5 file
-            file_name = file_name + '.h5'
-            h5f = h5py.File(file_name,'w')
-            h5f.create_dataset('dataset_1', data=image_set)
-            h5f.close()
-        
-        #print image_set
-        return
-
+    # Utilised to trigger data output by HexitecFem
     def data_stream(self, num_images):
         self.frame_gate_settings(num_images-1, 0)
         self.frame_gate_trigger()
         return
-
-    #TODO: Redundant ?
-    def log_image_stream_bin(self, file_name, num_images):
-        if self.udp_connection:
-            self.frame_gate_settings(num_images-1, 0)
-            self.frame_gate_trigger()
-            #get the image set
-            image_set = self.x10g_stream.get_image_set(num_images)
-            #write to binary file n * x * y uint16
-            file_name = file_name + '.bin'
-            f=open(file_name,"wb")
-            f.write(image_set)
-            f.close()
-            
-            print "written array:", image_set.shape, image_set.dtype,"->", file_name
-        return
-
     
     def frame_stats(self):
         
