@@ -26,7 +26,7 @@ class ImageStreamUDP(object):
         print "ISUDP Binding rx to receive UDP image data; IP, Port: ", MasterRxUDPIPAddress, MasterRxUDPIPPort
         self.rxsocket.bind((MasterRxUDPIPAddress, MasterRxUDPIPPort))
         print "ISUDP Binding tx to receive UDP image data; IP, Port: ", MasterTxUDPIPAddress, MasterTxUDPIPPort
-        self.txsocket.bind((MasterTxUDPIPAddress, MasterTxUDPIPPort+10))
+        self.txsocket.bind((MasterTxUDPIPAddress, MasterTxUDPIPPort))
 
         #self.rxsocket.settimeout(None)
         #self.txsocket.settimeout(None)
@@ -126,9 +126,7 @@ class ImageStreamUDP(object):
         return self.sensor_image
     
     def get_image_set(self, num_images):
-        print "1"
         image_array =np.zeros((num_images,self.image_size_x,self.image_size_y), dtype=np.uint16)
-        print "2"
         img_num = 0
         print "No UDP capture here!"
         # while img_num <= num_images-1:

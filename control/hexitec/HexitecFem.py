@@ -146,13 +146,13 @@ class HexitecFem():
         
         self.selected_sensor = HexitecFem.OPTIONS[2]        # "Sensor_2_1"; Replaces variable1
         self.sensors_layout     = HexitecFem.READOUTMODE[1]    # "2x2";        Replaces variable8
-        self.output_format      = HexitecFem.IMAGE[0]       # "LOG HDF5 File";  Replaces variable2
+        self.output_format      = HexitecFem.IMAGE[3]       # "WireShark"
         self.set_clear          = HexitecFem.SETCLR[0]      # "SET";            Replaces variable3
         self.register_address_msb   = HexitecFem.REGADDRMSB[2]  # "0x2";            Replaces variable4
         self.register_address_lsb   = HexitecFem.REGADDRLSB[4]  # "0x4";            Replaces variable5
         self.bit_value          = HexitecFem.BITVALUE[0]    # "Bit0";           Replaces variable6
         self.dark_correction    = HexitecFem.DARKCORRECTION[0]  # "DARK CORRECTION OFF";    Replaces variable7
-        self.test_mode_image    = HexitecFem.TESTMODEIMAGE[3]   # "IMAGE  4";               Replaces variable9
+        self.test_mode_image    = HexitecFem.TESTMODEIMAGE[3]   # "IMAGE 4";               Replaces variable9
 
         #TODO: Sort out filename properly
         self.filename = '/tmp/Hexitec'+ datetime.datetime.now().strftime("%b_%d_%H%M%S_")
@@ -297,6 +297,7 @@ class HexitecFem():
         fifo_empty = self.qemcamera.x10g_rdma.read(0xE0000011, 'Data')
         if self.debug: print "FIFO should be empty " , fifo_empty    
         s = ''
+
         for i in range( 1 , data_counter*4):
             if self.debug: print i
             s = s + chr(f[i])

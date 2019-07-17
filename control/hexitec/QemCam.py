@@ -13,7 +13,6 @@ from RdmaUDP import *
 from ImageStreamUDP import *
 from socket import error as socket_error
 import time
-import numpy as np
 import cv2
 import h5py
 
@@ -58,7 +57,7 @@ class QemCam(object):
         #
         self.frame_time = 1
         ### DEBUGGING ###
-        self.udp_connection = True
+        self.udp_connection = False
 
     def __del__(self):
         self.x10g_rdma.close()
@@ -333,7 +332,7 @@ class QemCam(object):
     def display_image_stream(self, num_images):
         if self.udp_connection: 
             self.frame_gate_settings(0, 0)
-            self.frame_gate_settings(num_images-1, 0)
+            #self.frame_gate_settings(num_images-1, 0)
             image_count = 1
             if self.udp_connection:
                 print "UDP streaming disabled, aborting.."
