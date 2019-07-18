@@ -163,8 +163,7 @@ class HexitecFem():
     # Displays the returned response from the microcontroller
     def read_response(self):
         data_counter = 0
-        f = []
-        #f.append(dat)
+        if self.debug: f = []
         ABORT_VALUE = 10000
         RETURN_START_CHR = 42
         CARRIAGE_RTN = 13
@@ -198,8 +197,9 @@ class HexitecFem():
                 raise HexitecFemError("read_response aborted")
             empty_count = 0          
 
-        if self.debug: print "Counter is :- " , data_counter 
-        if self.debug: print "Length is:-" , len(f)
+        if self.debug: 
+            print "Counter is :- " , data_counter 
+            print "Length is:-" , len(f)
         fifo_empty = self.qemcamera.x10g_rdma.read(0xE0000011, 'Data')
         if self.debug: print "FIFO should be empty " , fifo_empty    
         s = ''
@@ -269,7 +269,6 @@ class HexitecFem():
             self.send_cmd([0x23, self.vsr_addr, 0x42, 0x30, 0x41, 0x30, 0x31, 0x0D])
             self.read_response()
             print ("Reading out 2x2 sensors")
-        print self.selected_sensor    
 
         print "Communicating with - ", self.vsr_addr
         # Set Frame Gen Mux Frame Gate
