@@ -22,9 +22,14 @@ using namespace log4cxx::helpers;
 
 #include <iostream>
 #include <fstream>
+///
+#include <boost/algorithm/string.hpp>
+#include <map>
 
 namespace FrameProcessor
 {
+
+  typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
 	enum ThresholdMode {NONE, SINGLE_VALUE, THRESHOLD_FILE};
 
@@ -65,9 +70,15 @@ namespace FrameProcessor
     static const std::string CONFIG_MAX_COLS;
     /** Configuration constant for maximum rows **/
 		static const std::string CONFIG_MAX_ROWS;
+		/** Configuration constant for Hardware sensors **/
+		static const std::string CONFIG_SENSORS_LAYOUT;
 
     void process_frame(boost::shared_ptr<Frame> frame);
     std::size_t thresholded_image_size();
+
+    std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
+    std::string sensors_layout_str_;
+    HexitecSensorLayoutMap sensors_layout_;
 
     /** Pointer to logger **/
     LoggerPtr logger_;
@@ -84,6 +95,8 @@ namespace FrameProcessor
     bool set_threshold_per_pixel(const char *threshold_filename);
     std::string determineThresholdMode(int mode);
 
+    void reset_threshold_values();
+    
     // Member variables:
     unsigned int threshold_value_;
     uint16_t *threshold_per_pixel_;

@@ -19,9 +19,13 @@ using namespace log4cxx::helpers;
 #include "FrameProcessorPlugin.h"
 #include "HexitecDefinitions.h"
 #include "ClassLoader.h"
+#include <boost/algorithm/string.hpp>
+#include <map>
 
 namespace FrameProcessor
 {
+
+  typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
   /** Template for future Hexitec Frame objects.
    *
@@ -53,6 +57,12 @@ namespace FrameProcessor
     static const std::string CONFIG_MAX_COLS;
     /** Configuration constant for maximum rows **/
 		static const std::string CONFIG_MAX_ROWS;
+		/** Configuration constant for Hardware sensors **/
+		static const std::string CONFIG_SENSORS_LAYOUT;
+
+    std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
+    std::string sensors_layout_str_;
+    HexitecSensorLayoutMap sensors_layout_;
 
     void process_frame(boost::shared_ptr<Frame> frame);
 

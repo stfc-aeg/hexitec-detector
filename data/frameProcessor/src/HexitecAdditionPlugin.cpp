@@ -13,21 +13,21 @@ namespace FrameProcessor
 
   const std::string HexitecAdditionPlugin::CONFIG_IMAGE_WIDTH 		= "width";
   const std::string HexitecAdditionPlugin::CONFIG_IMAGE_HEIGHT 		= "height";
-  const std::string HexitecAdditionPlugin::CONFIG_PIXEL_GRID_SIZE = "pixel_grid_size";
-  const std::string HexitecAdditionPlugin::CONFIG_MAX_COLS 				= "fem_max_cols";
-  const std::string HexitecAdditionPlugin::CONFIG_MAX_ROWS 				= "fem_max_rows";
+  const std::string HexitecAdditionPlugin::CONFIG_PIXEL_GRID_SIZE	= "pixel_grid_size";
+  const std::string HexitecAdditionPlugin::CONFIG_MAX_COLS 			= "fem_max_cols";
+  const std::string HexitecAdditionPlugin::CONFIG_MAX_ROWS 			= "fem_max_rows";
+  const std::string HexitecAdditionPlugin::CONFIG_SENSORS_LAYOUT	= "sensors_layout";
 
   /**
    * The constructor sets up logging used within the class.
    */
   HexitecAdditionPlugin::HexitecAdditionPlugin() :
-      image_width_(80),
-      image_height_(80),
-      image_pixels_(image_width_ * image_height_),
-			pixel_grid_size_(3),
-	    fem_pixels_per_rows_(80),
-	    fem_pixels_per_columns_(80),
-	    fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
+      image_width_(Hexitec::pixel_columns_per_sensor),
+      image_height_(Hexitec::pixel_rows_per_sensor),
+	  pixel_grid_size_(3),
+	  fem_pixels_per_rows_(80),
+	  fem_pixels_per_columns_(80),
+	  fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecAdditionPlugin");
@@ -38,6 +38,9 @@ namespace FrameProcessor
     directional_distance_ = (int)pixel_grid_size_/2;  // Set to 1 for 3x3: 2 for 5x5 pixel grid
     number_rows_ = image_height_;
     number_columns_ = image_width_;
+
+	sensors_layout_str_ = Hexitec::default_sensors_layout_map;
+    parse_sensors_layout_map(sensors_layout_str_);
     ///
     debugFrameCounter = 0;
 
@@ -81,17 +84,25 @@ namespace FrameProcessor
    * Configure the Hexitec plugin.  This receives an IpcMessage which should be processed
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
-   * - image_width_ 						<=> width
- 	 * - image_height_	 					<=> height
- 	 * - pixel_grid_size_ 				<=> pixel_grid_size
-	 * - fem_pixels_per_columns_	<=> fem_max_cols
-	 * - fem_pixels_per_rows_ 		<=> fem_max_rows
+   * 
+   * - sensors_layout_str_      <=> sensors_layout
+   * - image_width_ 			<=> width
+   * - image_height_	 		<=> height
+   * - pixel_grid_size_ 		<=> pixel_grid_size
+   * - fem_pixels_per_columns_	<=> fem_max_cols
+   * - fem_pixels_per_rows_ 	<=> fem_max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
    */
   void HexitecAdditionPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
+	if (config.has_param(HexitecAdditionPlugin::CONFIG_SENSORS_LAYOUT))
+	{
+	  sensors_layout_str_= config.get_param<std::string>(HexitecAdditionPlugin::CONFIG_SENSORS_LAYOUT);
+      parse_sensors_layout_map(sensors_layout_str_);
+	}
+
     if (config.has_param(HexitecAdditionPlugin::CONFIG_IMAGE_WIDTH))
     {
       image_width_ = config.get_param<int>(HexitecAdditionPlugin::CONFIG_IMAGE_WIDTH);
@@ -102,7 +113,10 @@ namespace FrameProcessor
       image_height_ = config.get_param<int>(HexitecAdditionPlugin::CONFIG_IMAGE_HEIGHT);
     }
 
+    image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
     image_pixels_ = image_width_ * image_height_;
+
     number_rows_ = image_height_;
     number_columns_ = image_width_;
 
@@ -130,7 +144,8 @@ namespace FrameProcessor
   {
   	// Return the configuration of the process plugin
   	std::string base_str = get_name() + "/";
-  	reply.set_param(base_str + HexitecAdditionPlugin::CONFIG_IMAGE_WIDTH, image_width_);
+    reply.set_param(base_str + HexitecAdditionPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
+   	reply.set_param(base_str + HexitecAdditionPlugin::CONFIG_IMAGE_WIDTH, image_width_);
     reply.set_param(base_str + HexitecAdditionPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
     reply.set_param(base_str + HexitecAdditionPlugin::CONFIG_PIXEL_GRID_SIZE, pixel_grid_size_);
     reply.set_param(base_str + HexitecAdditionPlugin::CONFIG_MAX_COLS, fem_pixels_per_columns_);
@@ -146,6 +161,7 @@ namespace FrameProcessor
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecAdditionPlugin");
+    status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/image_width", image_width_);
     status.set_param(get_name() + "/image_height", image_height_);
     status.set_param(get_name() + "/pixel_grid_size", pixel_grid_size_);
@@ -342,6 +358,43 @@ namespace FrameProcessor
 		}
 	}
 
+	//! Parse the number of sensors map configuration string.
+	//!
+	//! This method parses a configuration string containing number of sensors mapping information,
+	//! which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
+	//! variable.
+	//!
+	//! \param[in] sensors_layout_str - string of number of sensors configured
+	//! \return number of valid map entries parsed from string
+	//!
+	std::size_t HexitecAdditionPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
+	{
+	    // Clear the current map
+	    sensors_layout_.clear();
+
+	    // Define entry and port:idx delimiters
+	    const std::string entry_delimiter("x");
+
+	    // Vector to hold entries split from map
+	    std::vector<std::string> map_entries;
+
+	    // Split into entries
+	    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
+
+	    // If a valid entry is found, save into the map
+	    if (map_entries.size() == 2) {
+	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
+	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
+	        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+
+	        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T  ! sensor_rows: " << sensors_layout_[0].sensor_rows_ 
+                              << " sensor_columns: " << sensors_layout_[0].sensor_columns_);
+	    }
+
+	    // Return the number of valid entries parsed
+	    return sensors_layout_.size();
+	}
+	
 	// 		DEBUGGING FUNCTIONS:
 	void  HexitecAdditionPlugin::print_nonzero_pixels(float *in, int numberRows, int numberCols)
 	{

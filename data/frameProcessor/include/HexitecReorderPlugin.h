@@ -21,43 +21,16 @@ using namespace log4cxx::helpers;
 #include "ClassLoader.h"
 #include "DataBlockFrame.h"
 ///
+#include <boost/algorithm/string.hpp>
 #include <fstream>
-#include <sstream>
 #include <map>
 
-#define ILLEGAL_FEM_IDX -1
-
 const std::string default_fem_port_map = "61651:0";
-const std::string default_sensors_layout_map = "1x1";
 
 namespace FrameProcessor
 {
 
-  typedef struct HexitecSensorLayoutMapEntry
-  {
-    int sensor_rows_;
-    int sensor_columns_;
-
-    HexitecSensorLayoutMapEntry(int sensor_rows=ILLEGAL_FEM_IDX, int sensor_columns=ILLEGAL_FEM_IDX) :
-      sensor_rows_(sensor_rows),
-      sensor_columns_(sensor_columns)
-    {};
-  } HexitecSensorLayoutMapEntry;
-
-  typedef std::map<int, HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
-//
-//  typedef struct HexitecReorderSensorMapEntry
-//  {
-//    unsigned int sensor_rows_;
-//    unsigned int sensor_columns_;
-//
-//    HexitecReorderSensorMapEntry(int sensor_rows=ILLEGAL_FEM_IDX, int sensor_columns=ILLEGAL_FEM_IDX) :
-//      sensor_rows_(sensor_rows),
-//      sensor_columns_(sensor_columns)
-//    {};
-//  } HexitecReorderSensorMapEntry;
-//
-//  typedef std::map<int, HexitecReorderSensorMapEntry> HexitecReorderSensorMap;
+  typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
   /** Reorder pixels within Hexitec Frame objects.
    *

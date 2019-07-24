@@ -20,9 +20,14 @@ using namespace log4cxx::helpers;
 #include "HexitecDefinitions.h"
 #include "ClassLoader.h"
 #include "DataBlockFrame.h"
+//
+#include <boost/algorithm/string.hpp>
+#include <map>
 
 namespace FrameProcessor
 {
+
+  typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
   /** Histogram for Hexitec Frame objects.
    *
@@ -65,6 +70,12 @@ namespace FrameProcessor
 		static const std::string CONFIG_MAX_ROWS;
     /** Configuration constant for flush_histograms **/
 		static const std::string CONFIG_FLUSH_HISTOS;
+		/** Configuration constant for Hardware sensors **/
+		static const std::string CONFIG_SENSORS_LAYOUT;
+
+    std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
+    std::string sensors_layout_str_;
+    HexitecSensorLayoutMap sensors_layout_;
 
     void process_frame(boost::shared_ptr<Frame> frame);
 

@@ -8,6 +8,8 @@
 #ifndef INCLUDE_HEXITECDEFINITIONS_H_
 #define INCLUDE_HEXITECDEFINITIONS_H_
 
+#define ILLEGAL_FEM_IDX -1
+
 namespace Hexitec {
 
 		static const size_t num_sensors = 2;
@@ -16,6 +18,23 @@ namespace Hexitec {
 			sensorConfigOne = 0,			// 1 x 1 sensors
 			sensorConfigTwo = 1				// 2 x 2 sensors
 		} SensorConfigNumber;
+
+    typedef struct HexitecSensorLayoutMapEntry
+    {
+      int sensor_rows_;
+      int sensor_columns_;
+
+      HexitecSensorLayoutMapEntry(int sensor_rows=ILLEGAL_FEM_IDX, int sensor_columns=ILLEGAL_FEM_IDX) :
+        sensor_rows_(sensor_rows),
+        sensor_columns_(sensor_columns)
+      {};
+    } HexitecSensorLayoutMapEntry;
+
+    const std::string default_sensors_layout_map = "1x1";
+
+    // A Hexitec sensor is 80x80 pixels large
+    static const uint16_t pixel_columns_per_sensor = 80;
+    static const uint16_t pixel_rows_per_sensor =  80;
 
     static const size_t primary_packet_size = 8000;
     static const size_t num_primary_packets[num_sensors] = {1, 6};

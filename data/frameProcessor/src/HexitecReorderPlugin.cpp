@@ -7,7 +7,6 @@
 
 #include <HexitecReorderPlugin.h>
 #include "version.h"
-#include <boost/algorithm/string.hpp>
 
 namespace FrameProcessor
 {
@@ -26,8 +25,8 @@ namespace FrameProcessor
    */
   HexitecReorderPlugin::HexitecReorderPlugin() :
   		sensors_config_(Hexitec::sensorConfigOne),
-      image_width_(80),
-      image_height_(80),
+      image_width_(Hexitec::pixel_columns_per_sensor),
+      image_height_(Hexitec::pixel_rows_per_sensor),
       image_pixels_(image_width_ * image_height_),
       packets_lost_(0),
 			reorder_pixels_(true),
@@ -52,6 +51,8 @@ namespace FrameProcessor
     ///
     debugFrameCounter = 0;
 
+    sensors_layout_str_ = Hexitec::default_sensors_layout_map;
+    parse_sensors_layout_map(sensors_layout_str_);
   }
 
   /**
@@ -128,16 +129,8 @@ namespace FrameProcessor
  	  if (config.has_param(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT))
 		{
  		  sensors_layout_str_= config.get_param<std::string>(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT);
-      //
-      LOG4CXX_DEBUG(logger_, "Parsing number of sensors entry found in config: ");
+      parse_sensors_layout_map(sensors_layout_str_);
 		}
-    else
-    {
-      LOG4CXX_DEBUG(logger_, "No number of sensors entry found in config, using default: ");
-      sensors_layout_str_ = default_sensors_layout_map;
-    }
-    parse_sensors_layout_map(sensors_layout_str_);
-
 
     if (config.has_param(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS))
     {
@@ -154,6 +147,8 @@ namespace FrameProcessor
       image_height_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT);
     }
 
+    image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
     image_pixels_ = image_width_ * image_height_;
 
     if (config.has_param(HexitecReorderPlugin::CONFIG_ENABLE_REORDER))
@@ -261,10 +256,6 @@ namespace FrameProcessor
     this->process_lost_packets(frame);
 
     LOG4CXX_TRACE(logger_, "Raw frame number: " << hdr_ptr->frame_number);
-//    LOG4CXX_TRACE(logger_, "Frame state: " << hdr_ptr->frame_state);
-//    LOG4CXX_TRACE(logger_, "Packets received: " << hdr_ptr->total_packets_received
-//        << " SOF markers: "<< (int)hdr_ptr->total_sof_marker_count
-//        << " EOF markers: "<< (int)hdr_ptr->total_eof_marker_count);
 
     // Determine the size of the output reordered image
     const std::size_t output_image_size = reordered_image_size();
@@ -331,18 +322,9 @@ namespace FrameProcessor
 					// Get a pointer to the data buffer in the output frame
 					void* output_ptr = raw_frame->get_data_ptr();
 
-//		      if (reorder_pixels_)
-//		      {
-//		      	reorder_pixels(static_cast<unsigned short *>(input_ptr),
-//								static_cast<float *>(output_ptr));
-//		      }
-//		      else
-		      {
-						LOG4CXX_TRACE(logger_, " NOT REORDERING RAW DATA");
-						// Turn unsigned short raw pixel data into float data type
-						convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
-																							static_cast<float *>(output_ptr));
-		      }
+          // Turn unsigned short raw pixel data into float data type
+          convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
+                                            static_cast<float *>(output_ptr));
 
 					LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: "
 																 << frame->get_frame_number());
@@ -435,24 +417,6 @@ namespace FrameProcessor
     }
   }
 
-  //// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
-	void HexitecReorderPlugin::writeFile(std::string filePrefix, float *frame)
-	{
-    std::ostringstream hitPixelsStream;
-    hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-		for (int i = 0; i < fem_total_pixels_; i++ )
-		{
-			if(frame[i] > 0)
-				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
-		}
-		std::string hitPixelsString  = hitPixelsStream.str();
-		std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
-			 + std::string("_ODIN_Reorder_detailed.txt");
-		outFile.open(fname.c_str(), std::ofstream::app);
-		outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
-		outFile.close();
-	}
-
 	//! Parse the number of sensors map configuration string.
 	//!
 	//! This method parses a configuration string containing number of sensors mapping information,
@@ -480,14 +444,32 @@ namespace FrameProcessor
 	    if (map_entries.size() == 2) {
 	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
 	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
-	        sensors_layout_[0] = HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+	        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
 
-	        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T !  sensor_rows: " << sensor_rows << " sensor_columns: " << sensor_columns);
-	        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T  ! sensor_rows: " << sensors_layout_[0].sensor_rows_ << " sensor_columns: " << sensors_layout_[0].sensor_columns_);
+	        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T  ! sensor_rows: " << sensors_layout_[0].sensor_rows_ 
+                              << " sensor_columns: " << sensors_layout_[0].sensor_columns_);
 	    }
 
 	    // Return the number of valid entries parsed
 	    return sensors_layout_.size();
+	}
+
+  //// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
+	void HexitecReorderPlugin::writeFile(std::string filePrefix, float *frame)
+	{
+    std::ostringstream hitPixelsStream;
+    hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
+		for (int i = 0; i < fem_total_pixels_; i++ )
+		{
+			if(frame[i] > 0)
+				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
+		}
+		std::string hitPixelsString  = hitPixelsStream.str();
+		std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
+			 + std::string("_ODIN_Reorder_detailed.txt");
+		outFile.open(fname.c_str(), std::ofstream::app);
+		outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
+		outFile.close();
 	}
 
 } /* namespace FrameProcessor */

@@ -17,13 +17,14 @@ namespace FrameProcessor
   const std::string HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE = "intercepts_filename";
   const std::string HexitecCalibrationPlugin::CONFIG_MAX_COLS 			 = "fem_max_cols";
   const std::string HexitecCalibrationPlugin::CONFIG_MAX_ROWS 			 = "fem_max_rows";
+  const std::string HexitecCalibrationPlugin::CONFIG_SENSORS_LAYOUT  = "sensors_layout";
 
   /**
    * The constructor sets up logging used within the class.
    */
   HexitecCalibrationPlugin::HexitecCalibrationPlugin() :
-      image_width_(80),
-      image_height_(80),
+      image_width_(Hexitec::pixel_columns_per_sensor),
+      image_height_(Hexitec::pixel_rows_per_sensor),
       image_pixels_(image_width_ * image_height_),
 			gradients_status_(false),
 			intercepts_status_(false),
@@ -46,6 +47,9 @@ namespace FrameProcessor
 
 		*gradient_values_ = 1;
 		*intercept_values_ = 0;
+
+    sensors_layout_str_ = Hexitec::default_sensors_layout_map;
+    parse_sensors_layout_map(sensors_layout_str_);
     ///
     debugFrameCounter = 0;
 
@@ -58,8 +62,8 @@ namespace FrameProcessor
   {
     LOG4CXX_TRACE(logger_, "HexitecCalibrationPlugin destructor.");
 
-	 free(gradient_values_);
-	 free(intercept_values_);
+    free(gradient_values_);
+    free(intercept_values_);
   }
 
   int HexitecCalibrationPlugin::get_version_major()
@@ -91,6 +95,8 @@ namespace FrameProcessor
    * Configure the Hexitec plugin.  This receives an IpcMessage which should be processed
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
+   * 
+   * - sensors_layout_str_      <=> sensors_layout
    * - image_width_ 						<=> width
  	 * - image_height_	 					<=> height
  	 * - gradients_filename 			<=> gradients_file
@@ -103,6 +109,12 @@ namespace FrameProcessor
    */
   void HexitecCalibrationPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
+ 	  if (config.has_param(HexitecCalibrationPlugin::CONFIG_SENSORS_LAYOUT))
+		{
+ 		  sensors_layout_str_= config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_SENSORS_LAYOUT);
+      parse_sensors_layout_map(sensors_layout_str_);
+		}
+
     if (config.has_param(HexitecCalibrationPlugin::CONFIG_IMAGE_WIDTH))
     {
       image_width_ = config.get_param<int>(HexitecCalibrationPlugin::CONFIG_IMAGE_WIDTH);
@@ -113,7 +125,13 @@ namespace FrameProcessor
       image_height_ = config.get_param<int>(HexitecCalibrationPlugin::CONFIG_IMAGE_HEIGHT);
     }
 
-    image_pixels_ = image_width_ * image_height_;
+    image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+    if (image_width_ * image_height_ != image_pixels_)
+    {
+      image_pixels_ = image_width_ * image_height_;
+      reset_calibration_values();
+    }
 
     if (config.has_param(HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE))
 		{
@@ -145,6 +163,7 @@ namespace FrameProcessor
   {
     // Return the configuration of the calibration plugin
     std::string base_str = get_name() + "/";
+    reply.set_param(base_str + HexitecCalibrationPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
     reply.set_param(base_str + HexitecCalibrationPlugin::CONFIG_IMAGE_WIDTH, image_width_);
     reply.set_param(base_str + HexitecCalibrationPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
     reply.set_param(base_str + HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE, gradients_filename_);
@@ -163,6 +182,7 @@ namespace FrameProcessor
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecCalibrationPlugin");
+    status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/image_width", image_width_);
     status.set_param(get_name() + "/image_height", image_height_);
     status.set_param(get_name() + "/gradients_filename", gradients_filename_);
@@ -273,7 +293,7 @@ namespace FrameProcessor
     }
     else
     {
-    	LOG4CXX_ERROR(logger_, "setGradients() Failed (using default value instead), used file: " << gradientFilename);
+    	LOG4CXX_ERROR(logger_, "setGradients() Failed (using default value instead)");
     }
   }
 
@@ -292,7 +312,7 @@ namespace FrameProcessor
     }
     else
     {
-    	LOG4CXX_ERROR(logger_, "setIntercepts() Failed (using default value instead), used file: " << interceptFilename);
+    	LOG4CXX_ERROR(logger_, "setIntercepts() Failed (using default value instead)");
     }
   }
 
@@ -312,44 +332,89 @@ namespace FrameProcessor
   	int i = 0;
 		std::ifstream inFile;
 		bool success = false;
+    
+    /// Count number of floats in file:
+    std::ifstream   file(filename);
+    int file_values = std::distance(std::istream_iterator<double>(file),
+                                std::istream_iterator<double>());
+    file.close();
 
-		inFile.open(filename);
+    if (image_pixels_ != file_values)
+    {
+      LOG4CXX_ERROR(logger_, "Expected " << image_pixels_ << " values but read " << file_values
+                          << " values from file: " << filename);
 
-		if (!inFile)
-		{
-			LOG4CXX_TRACE(logger_, "Couldn't open file, using default values");
-
+			LOG4CXX_WARN(logger_, "Using default values instead");
 			for (int val = 0; val < image_pixels_; val ++)
 			{
 				dataValue[val] = defaultValue;
 			}
-		}
+
+      return success;
+    }
+
+    inFile.open(filename);
 
 		while (inFile >> dataValue[i])
 		{
 			i++;
 		}
-
-		if (i < image_pixels_)
-		{
-			for (int val = i; val < image_pixels_; val ++)
-			{
-				dataValue[val] = defaultValue;
-				if (i == val)
-					LOG4CXX_TRACE(logger_, "Only found " << i << " values in " << filename
-							<< " (Expected: " << image_pixels_ << "); Padding with default value: "
-							<< defaultValue);
-			}
-		}
-		else
-		{
-			success = true;
-		}
 		inFile.close();
+    success = true;
 
 		return success;
   }
 
+	//! Parse the number of sensors map configuration string.
+	//!
+	//! This method parses a configuration string containing number of sensors mapping information,
+	//! which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
+	//! variable.
+	//!
+	//! \param[in] sensors_layout_str - string of number of sensors configured
+	//! \return number of valid map entries parsed from string
+	//!
+	std::size_t HexitecCalibrationPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
+	{
+	    // Clear the current map
+	    sensors_layout_.clear();
+
+	    // Define entry and port:idx delimiters
+	    const std::string entry_delimiter("x");
+
+	    // Vector to hold entries split from map
+	    std::vector<std::string> map_entries;
+
+	    // Split into entries
+	    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
+
+	    // If a valid entry is found, save into the map
+	    if (map_entries.size() == 2) {
+	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
+	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
+	        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+
+	        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T  ! sensor_rows: " << sensors_layout_[0].sensor_rows_ 
+                              << " sensor_columns: " << sensors_layout_[0].sensor_columns_);
+	    }
+
+	    // Return the number of valid entries parsed
+	    return sensors_layout_.size();
+	}
+
+	//! Reset arrays used to store calibration values.
+	//!
+	//! This method is called when the number of sensors is changed,
+	//! to prevent accessing unassigned memory
+	//!
+  void HexitecCalibrationPlugin::reset_calibration_values()
+  {
+    free(gradient_values_);
+    free(intercept_values_);
+		gradient_values_ = (float *) calloc(image_pixels_, sizeof(float));
+		intercept_values_ = (float *) calloc(image_pixels_, sizeof(float));
+  }
+  
   //// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
 	void HexitecCalibrationPlugin::writeFile(std::string filePrefix, float *frame)
 	{
