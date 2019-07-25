@@ -163,7 +163,7 @@ class HexitecFem():
     # Displays the returned response from the microcontroller
     def read_response(self):
         data_counter = 0
-        if self.debug: f = []
+        f = []
         ABORT_VALUE = 10000
         RETURN_START_CHR = 42
         CARRIAGE_RTN = 13
