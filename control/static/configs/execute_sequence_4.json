@@ -1,0 +1,14 @@
+[
+    {
+        "plugin": 
+        {
+            "disconnect": "all"
+        }
+    },
+    {
+        "execute": 
+        {
+            "index": "four"
+        }
+    }
+]

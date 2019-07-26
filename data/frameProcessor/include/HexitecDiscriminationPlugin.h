@@ -25,7 +25,6 @@ using namespace log4cxx::helpers;
 
 namespace FrameProcessor
 {
-
   typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
   /** Implements Discrimination algorithm on Hexitec Frame objects.
@@ -50,16 +49,8 @@ namespace FrameProcessor
     bool reset_statistics(void);
 
   private:
-    /** Configuration constant for image width **/
-    static const std::string CONFIG_IMAGE_WIDTH;
-    /** Configuration constant for image height **/
-    static const std::string CONFIG_IMAGE_HEIGHT;
     /** Configuration constant for pixel grid size **/
     static const std::string CONFIG_PIXEL_GRID_SIZE;
-    /** Configuration constant for maximum columns **/
-    static const std::string CONFIG_MAX_COLS;
-    /** Configuration constant for maximum rows **/
-		static const std::string CONFIG_MAX_ROWS;
 		/** Configuration constant for Hardware sensors **/
 		static const std::string CONFIG_SENSORS_LAYOUT;
 
@@ -87,9 +78,6 @@ namespace FrameProcessor
     int image_pixels_;
 
     int pixel_grid_size_;
-    int fem_pixels_per_rows_;
-    int fem_pixels_per_columns_;
-    int fem_total_pixels_;
   };
 
   /**

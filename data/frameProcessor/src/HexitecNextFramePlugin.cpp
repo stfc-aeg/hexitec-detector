@@ -10,11 +10,6 @@
 
 namespace FrameProcessor
 {
-
-  const std::string HexitecNextFramePlugin::CONFIG_IMAGE_WIDTH    = "width";
-  const std::string HexitecNextFramePlugin::CONFIG_IMAGE_HEIGHT   = "height";
-  const std::string HexitecNextFramePlugin::CONFIG_MAX_COLS       = "fem_max_cols";
-  const std::string HexitecNextFramePlugin::CONFIG_MAX_ROWS       = "fem_max_rows";
   const std::string HexitecNextFramePlugin::CONFIG_SENSORS_LAYOUT = "sensors_layout";
 
   /**
@@ -24,10 +19,7 @@ namespace FrameProcessor
       image_width_(Hexitec::pixel_columns_per_sensor),
       image_height_(Hexitec::pixel_rows_per_sensor),
       image_pixels_(image_width_ * image_height_),
-			last_frame_number_(-1),
-			fem_pixels_per_rows_(80),
-			fem_pixels_per_columns_(80),
-			fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
+			last_frame_number_(-1)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecNextFramePlugin");
@@ -35,7 +27,7 @@ namespace FrameProcessor
     LOG4CXX_TRACE(logger_, "HexitecNextFramePlugin version " <<
     												this->get_version_long() << " loaded.");
 
-    last_frame_ = (float *) calloc(fem_total_pixels_, sizeof(float));
+    last_frame_ = (float *) calloc(image_pixels_, sizeof(float));
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
     ///
@@ -83,10 +75,6 @@ namespace FrameProcessor
    * plugin supports the following configuration parameters:
    * 
    * - sensors_layout_str_      <=> sensors_layout
-   * - image_width_ 						<=> width
- 	 * - image_height_	 					<=> height
-	 * - fem_pixels_per_columns_	<=> fem_max_cols
-	 * - fem_pixels_per_rows_ 		<=> fem_max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -99,31 +87,12 @@ namespace FrameProcessor
       parse_sensors_layout_map(sensors_layout_str_);
 		}
 
-    if (config.has_param(HexitecNextFramePlugin::CONFIG_IMAGE_WIDTH))
+    // Parsing sensors above may update width, height members
+    if (image_pixels_ != image_width_ * image_height_)
     {
-      image_width_ = config.get_param<int>(HexitecNextFramePlugin::CONFIG_IMAGE_WIDTH);
+      image_pixels_ = image_width_ * image_height_;
+      reset_last_frame_values();
     }
-
-    if (config.has_param(HexitecNextFramePlugin::CONFIG_IMAGE_HEIGHT))
-    {
-      image_height_ = config.get_param<int>(HexitecNextFramePlugin::CONFIG_IMAGE_HEIGHT);
-    }
-
-    image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
-    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
-    image_pixels_ = image_width_ * image_height_;
-
-    if (config.has_param(HexitecNextFramePlugin::CONFIG_MAX_COLS))
-    {
-      fem_pixels_per_columns_ = config.get_param<int>(HexitecNextFramePlugin::CONFIG_MAX_COLS);
-    }
-
-    if (config.has_param(HexitecNextFramePlugin::CONFIG_MAX_ROWS))
-    {
-      fem_pixels_per_rows_ = config.get_param<int>(HexitecNextFramePlugin::CONFIG_MAX_ROWS);
-    }
-
-    fem_total_pixels_ = fem_pixels_per_columns_ * fem_pixels_per_rows_;
   }
 
   void HexitecNextFramePlugin::requestConfiguration(OdinData::IpcMessage& reply)
@@ -131,10 +100,6 @@ namespace FrameProcessor
     // Return the configuration of the process plugin
     std::string base_str = get_name() + "/";
     reply.set_param(base_str + HexitecNextFramePlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
-    reply.set_param(base_str + HexitecNextFramePlugin::CONFIG_IMAGE_WIDTH, image_width_);
-    reply.set_param(base_str + HexitecNextFramePlugin::CONFIG_IMAGE_HEIGHT, image_height_);
-    reply.set_param(base_str + HexitecNextFramePlugin::CONFIG_MAX_COLS, fem_pixels_per_columns_);
-    reply.set_param(base_str + HexitecNextFramePlugin::CONFIG_MAX_ROWS, fem_pixels_per_rows_);
   }
 
   /**
@@ -147,10 +112,6 @@ namespace FrameProcessor
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecNextFramePlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
-    status.set_param(get_name() + "/image_width", image_width_);
-    status.set_param(get_name() + "/image_height", image_height_);
-    status.set_param(get_name() + "/fem_max_rows", fem_pixels_per_rows_);
-    status.set_param(get_name() + "/fem_max_cols", fem_pixels_per_columns_);
   }
 
   /**
@@ -193,16 +154,6 @@ namespace FrameProcessor
     {
 			try
 			{
-				// Check that the pixels are contained within the dimensions of the
-				// specified output image, otherwise throw an error
-				if (fem_total_pixels_ > image_pixels_)
-				{
-					std::stringstream msg;
-					msg << "Pixel count inferred from FEM (" << fem_total_pixels_
-							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
-					throw std::runtime_error(msg.str());
-				}
-
 				// Define pointer to the input image data
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
@@ -230,7 +181,7 @@ namespace FrameProcessor
 				//	taking place, as we'll always need the current frame to compare against
 				// 	the previous frame
 				// 		Will this work (static_cast'ing..) ???
-				memcpy(last_frame_, static_cast<float *>(input_ptr), fem_total_pixels_ * sizeof(float));
+				memcpy(last_frame_, static_cast<float *>(input_ptr), image_pixels_ * sizeof(float));
 
 				this->push(frame);
 			}
@@ -257,7 +208,7 @@ namespace FrameProcessor
    */
   void HexitecNextFramePlugin::apply_algorithm(float *in)
   {
-    for (int i=0; i<fem_total_pixels_; i++)
+    for (int i=0; i<image_pixels_; i++)
     {
     	// If pixel in last frame is nonzero, clear it from current frame
     	// 	(whether hit or not), otherwise don't clear pixel frame current frame
@@ -297,21 +248,32 @@ namespace FrameProcessor
 	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
 	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
 	        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
-
-	        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T  ! sensor_rows: " << sensors_layout_[0].sensor_rows_ 
-                              << " sensor_columns: " << sensors_layout_[0].sensor_columns_);
 	    }
+
+      image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+      image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
 
 	    // Return the number of valid entries parsed
 	    return sensors_layout_.size();
 	}
+
+	//! Reset array used to store last_frame values.
+	//!
+	//! This method is called when the number of sensors is changed,
+	//! to prevent accessing unassigned memory
+	//!
+  void HexitecNextFramePlugin::reset_last_frame_values()
+  {
+    free(last_frame_);
+    last_frame_ = (float *) calloc(image_pixels_, sizeof(float));
+  }
 
   //// Debug function: Takes a file prefix and frame, and writes all nonzero pixels to a file
 	void HexitecNextFramePlugin::writeFile(std::string filePrefix, float *frame)
 	{
     std::ostringstream hitPixelsStream;
     hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-		for (int i = 0; i < fem_total_pixels_; i++ )
+		for (int i = 0; i < image_pixels_; i++ )
 		{
 			if(frame[i] > 0)
 				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
@@ -325,4 +287,3 @@ namespace FrameProcessor
 	}
 
 } /* namespace FrameProcessor */
-

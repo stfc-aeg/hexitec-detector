@@ -121,16 +121,16 @@ class HexitecFem():
             self.initialise_system()
         except HexitecFemError as e:
             raise ParameterTreeError("Failed to initialise camera: %s" % e)
-        except Exception:
-            raise ParameterTreeError("Failed to initialise Camera")
+        except Exception as e:
+            raise ParameterTreeError("Failed to initialise Camera: %s" % e)
 
     def collect_data(self, msg):
         if self.hardware_connected != True:
             raise ParameterTreeError("No connection established")
         try:
             self.acquire_data()
-        except Exception:
-            raise ParameterTreeError("Failed to collect data")
+        except Exception as e:
+            raise ParameterTreeError("Failed to collect data: %s" % e)
         
     def disconnect_hardware(self, msg):
         if self.hardware_connected == False:
@@ -138,8 +138,8 @@ class HexitecFem():
         try:
             self.cam_disconnect()
             self.hardware_connected = False
-        except Exception:
-            raise ParameterTreeError("Disconnection failed")
+        except Exception as e:
+            raise ParameterTreeError("Disconnection failed: %s" % e)
 
     def set_debug(self, debug):
         self.debug = debug
@@ -470,10 +470,17 @@ class HexitecFem():
 
         print "Data Capture on Wireshark only - no image"
         self.qemcamera.data_stream(self.number_of_frames)  
-        print "Wait 5 seconds"
-        time.sleep(5)
-        print "Waited 5 seconds"
-            
+        #
+        waited = 0.0
+        delay = 0.10
+        resp = 0
+        while resp < 1:
+            resp = self.qemcamera.x10g_rdma.read(0x60000014, 'Check data transfer completed?')
+            time.sleep(delay)
+            waited += delay
+        print("Waited " + str(waited) + " seconds")
+        #
+
         # Stop the state machine
         self.qemcamera.x10g_rdma.write(0x60000002, 0, 'Dis-Enable State Machine')
         

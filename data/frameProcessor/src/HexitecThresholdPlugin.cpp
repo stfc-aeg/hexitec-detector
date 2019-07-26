@@ -10,14 +10,9 @@
 
 namespace FrameProcessor
 {
-
-  const std::string HexitecThresholdPlugin::CONFIG_IMAGE_WIDTH 		 = "width";
-  const std::string HexitecThresholdPlugin::CONFIG_IMAGE_HEIGHT 	 = "height";
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE  = "threshold_mode";
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE = "threshold_value";
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE  = "threshold_filename";
-  const std::string HexitecThresholdPlugin::CONFIG_MAX_COLS 			 = "fem_max_cols";
-  const std::string HexitecThresholdPlugin::CONFIG_MAX_ROWS 			 = "fem_max_rows";
   const std::string HexitecThresholdPlugin::CONFIG_SENSORS_LAYOUT  = "sensors_layout";
 
   /**
@@ -27,9 +22,6 @@ namespace FrameProcessor
       image_width_(Hexitec::pixel_columns_per_sensor),
       image_height_(Hexitec::pixel_rows_per_sensor),
       image_pixels_(image_width_ * image_height_),
-	    fem_pixels_per_columns_(80),
-	    fem_pixels_per_rows_(80),
-	    fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_),
 			threshold_filename_("")
   {
     // Setup logging for the class
@@ -47,7 +39,6 @@ namespace FrameProcessor
 
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
-
   }
 
   /**
@@ -91,14 +82,10 @@ namespace FrameProcessor
    * plugin supports the following configuration parameters:
    * 
    * - sensors_layout_str_      <=> sensors_layout
-   * - image_width_ 						<=> width
- 	 * - image_height_	 					<=> height
    * - max_frames_received_			<=> max_frames_received
    * - threshold_mode_					<=> threshold_mode
    * - threshold_value_					<=> threshold_value
    * - threshold_filename_			<=> threshold_file
-	 * - fem_pixels_per_columns_	<=> fem_max_cols
-	 * - fem_pixels_per_rows_ 		<=> fem_max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -111,19 +98,7 @@ namespace FrameProcessor
       parse_sensors_layout_map(sensors_layout_str_);
 		}
 
-    if (config.has_param(HexitecThresholdPlugin::CONFIG_IMAGE_WIDTH))
-    {
-      image_width_ = config.get_param<int>(HexitecThresholdPlugin::CONFIG_IMAGE_WIDTH);
-    }
-
-    if (config.has_param(HexitecThresholdPlugin::CONFIG_IMAGE_HEIGHT))
-    {
-      image_height_ = config.get_param<int>(HexitecThresholdPlugin::CONFIG_IMAGE_HEIGHT);
-    }
-
-    image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
-    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
-
+    // Parsing sensors may update width, height
     if (image_width_ * image_height_ != image_pixels_)
     {
       image_pixels_ = image_width_ * image_height_;
@@ -174,35 +149,18 @@ namespace FrameProcessor
 				LOG4CXX_ERROR(logger_, "Failed to read thresholds from file")
 			}
 		}
-
-    if (config.has_param(HexitecThresholdPlugin::CONFIG_MAX_COLS))
-    {
-      fem_pixels_per_columns_ = config.get_param<int>(HexitecThresholdPlugin::CONFIG_MAX_COLS);
-    }
-
-    if (config.has_param(HexitecThresholdPlugin::CONFIG_MAX_ROWS))
-    {
-      fem_pixels_per_rows_ = config.get_param<int>(HexitecThresholdPlugin::CONFIG_MAX_ROWS);
-    }
-
-    fem_total_pixels_ = fem_pixels_per_columns_ * fem_pixels_per_rows_;
   }
-
 
   void HexitecThresholdPlugin::requestConfiguration(OdinData::IpcMessage& reply)
   {
     // Return the configuration of the process plugin
     std::string base_str = get_name() + "/";
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
-    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_IMAGE_WIDTH, image_width_);
-    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
     int mode = int(threshold_mode_);
     std::string mode_str = determineThresholdMode(mode);
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE , mode_str);
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE, threshold_value_);
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE , threshold_filename_);
-    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_MAX_COLS, fem_pixels_per_columns_);
-    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_MAX_ROWS, fem_pixels_per_rows_);
   }
 
   /**
@@ -215,16 +173,11 @@ namespace FrameProcessor
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecThresholdPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
-    status.set_param(get_name() + "/image_width", image_width_);
-    status.set_param(get_name() + "/image_height", image_height_);
     int mode = int(threshold_mode_);
     std::string mode_str = determineThresholdMode(mode);
     status.set_param(get_name() + "/threshold_mode", mode_str);
     status.set_param(get_name() + "/threshold_value", threshold_value_);
     status.set_param(get_name() + "/threshold_filename", threshold_filename_);
-    status.set_param(get_name() + "/fem_max_rows", fem_pixels_per_rows_);
-    status.set_param(get_name() + "/fem_max_cols", fem_pixels_per_columns_);
-
   }
 
   /**
@@ -283,16 +236,6 @@ namespace FrameProcessor
     {
 			try
 			{
-				// Check that the pixels are contained within the dimensions of the
-				// specified output image, otherwise throw an error
-				if (fem_total_pixels_ > image_pixels_)
-				{
-					std::stringstream msg;
-					msg << "Pixel count inferred from FEM (" << fem_total_pixels_
-							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
-					throw std::runtime_error(msg.str());
-				}
-
 				// Define pointer to the input image data
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
@@ -318,7 +261,6 @@ namespace FrameProcessor
 						break;
 					}
 				}
-
 				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
 															 " dataset, frame number: " << frame->get_frame_number());
 				this->push(frame);
@@ -344,7 +286,7 @@ namespace FrameProcessor
    */
   void HexitecThresholdPlugin::process_threshold_value(float *in)
   {
-    for (int i=0; i < fem_total_pixels_; i++)
+    for (int i=0; i < image_pixels_; i++)
     {
       // Clear pixel if it doesn't meet the threshold:
 			if (in[i] < threshold_value_)
@@ -362,7 +304,7 @@ namespace FrameProcessor
    */
   void HexitecThresholdPlugin::process_threshold_file(float *in)
   {
-    for (int i=0; i < fem_total_pixels_; i++)
+    for (int i=0; i < image_pixels_; i++)
     {
       // Clear pixel if it doesn't meet the threshold:
 			if (in[i] < threshold_per_pixel_[i])
@@ -467,10 +409,10 @@ namespace FrameProcessor
         int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
         int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
         sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
-
-        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T  ! sensor_rows: " << sensors_layout_[0].sensor_rows_ 
-                            << " sensor_columns: " << sensors_layout_[0].sensor_columns_);
     }
+
+    image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
 
     // Return the number of valid entries parsed
     return sensors_layout_.size();

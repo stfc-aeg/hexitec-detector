@@ -183,7 +183,7 @@
             <td>
               <select onchange="selectChange(this.value)">
                 <option value="1x1">1x1 (80x80)</option>
-                <option value="2x2">2x2 (160x160)</option>
+                <option selected="selected" value="2x2">2x2 (160x160)</option>
                 <!-- <option value="NxM">NxM (AAAxBBB)</option> -->
               </select>
             </td>
@@ -231,12 +231,7 @@
             </td>
             <td>&nbsp;</td>
             <td>
-              <div class="row sidebar-row vertical-align">
-                <div class="col-xs-7">
-                  <input type="checkbox" id='reorderButton' name="reorder_enable" data-size="small">
 
-                </div>
-              </div>
             </td>
           </tr>
 
@@ -252,31 +247,6 @@
 
                 </div>
               </div>
-            </td>
-          </tr>
-
-          <tr>  
-            <td>  
-              Rows:&nbsp;
-            </td>
-            <td>
-              <div class="text-rows">
-                <input type="text" id="rows-text" onChange='reorder_rows_changed()' value="80">
-              </div>
-            </td>
-            <td>
-              &nbsp;<span id="rows-warning">&nbsp;</span>
-            </td>
-            <td>
-              &nbsp;Columns:&nbsp;
-            </td>
-            <td>
-              <div class="text-columns">
-                <input type="text" id="columns-text" onChange='reorder_columns_changed()' value="80">
-              </div>
-            </td>
-            <td>
-              &nbsp;<span id="columns-warning">&nbsp;</span>
             </td>
           </tr>
 
@@ -300,7 +270,7 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="threshold-filename-text" onChange='threshold_filename_changed()' value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/t_threshold_file.txt">
+                <input type="text" id="threshold-filename-text" onChange='threshold_filename_changed()' value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/thresh_2018_01_001_400V_20C.txt">
               </div>
             </td>
           </tr>
@@ -374,7 +344,7 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="gradients-filename-text" onChange='gradients_filename_changed()' value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/m_Cold_500V.txt">
+                <input type="text" id="gradients-filename-text" onChange='gradients_filename_changed()' value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/m_2018_01_001_400V_20C.txt">
               </div>
             </td>
           </tr>
@@ -389,7 +359,7 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="intercepts-filename-text" onChange='intercepts_filename_changed()' value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/c_Cold_500V.txt">
+                <input type="text" id="intercepts-filename-text" onChange='intercepts_filename_changed()' value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/c_2018_01_001_400V_20C.txt">
               </div>
             </td>
             <td>

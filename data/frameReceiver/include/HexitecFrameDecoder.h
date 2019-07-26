@@ -18,7 +18,7 @@
 #define ILLEGAL_FEM_IDX -1
 
 const std::string default_fem_port_map = "61651:0";
-const std::string default_sensors_layout_map = "1x1";
+const std::string default_sensors_layout_map = Hexitec::default_sensors_layout_map;
 
 namespace FrameReceiver
 {

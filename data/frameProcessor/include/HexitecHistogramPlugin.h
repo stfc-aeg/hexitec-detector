@@ -26,7 +26,6 @@ using namespace log4cxx::helpers;
 
 namespace FrameProcessor
 {
-
   typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
   /** Histogram for Hexitec Frame objects.
@@ -52,10 +51,6 @@ namespace FrameProcessor
     bool reset_statistics(void);
 
   private:
-    /** Configuration constant for image width **/
-    static const std::string CONFIG_IMAGE_WIDTH;
-    /** Configuration constant for image height **/
-    static const std::string CONFIG_IMAGE_HEIGHT;
     /** Configuration constant for number of frame per acquisition **/
     static const std::string CONFIG_MAX_FRAMES;
     /** Configuration constant for bin start **/
@@ -64,10 +59,6 @@ namespace FrameProcessor
     static const std::string CONFIG_BIN_END;
     /** Configuration constant for bin width **/
     static const std::string CONFIG_BIN_WIDTH;
-    /** Configuration constant for maximum columns **/
-    static const std::string CONFIG_MAX_COLS;
-    /** Configuration constant for maximum rows **/
-		static const std::string CONFIG_MAX_ROWS;
     /** Configuration constant for flush_histograms **/
 		static const std::string CONFIG_FLUSH_HISTOS;
 		/** Configuration constant for Hardware sensors **/
@@ -111,11 +102,6 @@ namespace FrameProcessor
     long long *summed_histogram_;
     void initialiseHistograms();
     void writeHistogramsToDisk();
-
-    int fem_pixels_per_rows_;
-    int fem_pixels_per_columns_;
-    int fem_total_pixels_;
-
   };
 
   /**

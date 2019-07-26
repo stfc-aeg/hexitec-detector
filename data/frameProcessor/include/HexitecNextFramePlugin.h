@@ -29,7 +29,6 @@ using namespace log4cxx::helpers;
 
 namespace FrameProcessor
 {
-
   typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
   /** NextFrame Corrector for future Hexitec Frame objects.
@@ -54,14 +53,6 @@ namespace FrameProcessor
     bool reset_statistics(void);
 
   private:
-    /** Configuration constant for image width **/
-    static const std::string CONFIG_IMAGE_WIDTH;
-    /** Configuration constant for image height **/
-    static const std::string CONFIG_IMAGE_HEIGHT;
-    /** Configuration constant for maximum columns **/
-    static const std::string CONFIG_MAX_COLS;
-    /** Configuration constant for maximum rows **/
-		static const std::string CONFIG_MAX_ROWS;
 		/** Configuration constant for Hardware sensors **/
 		static const std::string CONFIG_SENSORS_LAYOUT;
 
@@ -84,15 +75,13 @@ namespace FrameProcessor
     float *last_frame_;
 
     long long last_frame_number_;
-    int fem_pixels_per_rows_;
-    int fem_pixels_per_columns_;
-    int fem_total_pixels_;
 
     // DEBUGGING functions:
     int debugFrameCounter;
     std::ofstream outFile;
     void writeFile(std::string filePrefix, float *frame);
 
+    void reset_last_frame_values();
   };
 
   /**

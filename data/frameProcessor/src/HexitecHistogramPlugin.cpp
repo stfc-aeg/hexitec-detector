@@ -10,15 +10,10 @@
 
 namespace FrameProcessor
 {
-
-  const std::string HexitecHistogramPlugin::CONFIG_IMAGE_WIDTH    = "width";
-  const std::string HexitecHistogramPlugin::CONFIG_IMAGE_HEIGHT   = "height";
   const std::string HexitecHistogramPlugin::CONFIG_MAX_FRAMES     = "max_frames_received";
   const std::string HexitecHistogramPlugin::CONFIG_BIN_START      = "bin_start";
   const std::string HexitecHistogramPlugin::CONFIG_BIN_END 		    = "bin_end";
   const std::string HexitecHistogramPlugin::CONFIG_BIN_WIDTH 		  = "bin_width";
-  const std::string HexitecHistogramPlugin::CONFIG_MAX_COLS 		  = "fem_max_cols";
-  const std::string HexitecHistogramPlugin::CONFIG_MAX_ROWS 		  = "fem_max_rows";
   const std::string HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS   = "flush_histograms";
   const std::string HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT = "sensors_layout";
 
@@ -31,9 +26,6 @@ namespace FrameProcessor
       image_pixels_(image_width_ * image_height_),
 			max_frames_received_(0),
 			frames_counter_(0),
-	    fem_pixels_per_rows_(80),
-	    fem_pixels_per_columns_(80),
-	    fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_),
 			flush_histograms_(false)
   {
     // Setup logging for the class
@@ -160,14 +152,10 @@ namespace FrameProcessor
    * plugin supports the following configuration parameters:
    * 
    * - sensors_layout_str_      <=> sensors_layout
-   * - image_width_ 						<=> width
- 	 * - image_height_	 					<=> height
    * - max_frames_received_			<=> max_frames_received
    * - bin_start_								<=> bin_start
    * - bin_end_									<=> bin_end
    * - bin_width_								<=> bin_width
-   * - fem_pixels_per_columns_	<=> fem_max_cols
-   * - fem_pixels_per_rows_			<=> fem_max_rows
    * - flush_histograms_				<=> flush_histograms
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
@@ -180,20 +168,6 @@ namespace FrameProcessor
  		  sensors_layout_str_= config.get_param<std::string>(HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
 		}
-
-    if (config.has_param(HexitecHistogramPlugin::CONFIG_IMAGE_WIDTH))
-    {
-      image_width_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_IMAGE_WIDTH);
-    }
-
-    if (config.has_param(HexitecHistogramPlugin::CONFIG_IMAGE_HEIGHT))
-    {
-      image_height_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_IMAGE_HEIGHT);
-    }
-
-    image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
-    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
-    image_pixels_ = image_width_ * image_height_;
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_MAX_FRAMES))
     {
@@ -216,18 +190,6 @@ namespace FrameProcessor
 		}
 
     number_bins_  = (int)(((bin_end_ - bin_start_) / bin_width_) + 0.5);
-
-    if (config.has_param(HexitecHistogramPlugin::CONFIG_MAX_COLS))
-    {
-      fem_pixels_per_columns_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_MAX_COLS);
-    }
-
-    if (config.has_param(HexitecHistogramPlugin::CONFIG_MAX_ROWS))
-    {
-      fem_pixels_per_rows_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_MAX_ROWS);
-    }
-
-    fem_total_pixels_ = fem_pixels_per_columns_ * fem_pixels_per_rows_;
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS))
     {
@@ -260,14 +222,10 @@ namespace FrameProcessor
   	// Return the configuration of the histogram plugin
   	std::string base_str = get_name() + "/";
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
-		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_IMAGE_WIDTH, image_width_);
-		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
 		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_MAX_FRAMES , max_frames_received_);
 		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_START, bin_start_);
 		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_END , bin_end_);
 		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_WIDTH, bin_width_);
-		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_MAX_COLS, fem_pixels_per_columns_);
-		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_MAX_ROWS, fem_pixels_per_rows_);
 		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS, flush_histograms_);
   }
 
@@ -281,14 +239,10 @@ namespace FrameProcessor
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecHistogramPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
-    status.set_param(get_name() + "/image_width", image_width_);
-    status.set_param(get_name() + "/image_height", image_height_);
     status.set_param(get_name() + "/max_frames_received", max_frames_received_);
     status.set_param(get_name() + "/bin_start", bin_start_);
     status.set_param(get_name() + "/bin_end", bin_end_);
     status.set_param(get_name() + "/bin_width", bin_width_);
-    status.set_param(get_name() + "/fem_max_rows", fem_pixels_per_rows_);
-    status.set_param(get_name() + "/fem_max_cols", fem_pixels_per_columns_);
     status.set_param(get_name() + "/flush_histograms", flush_histograms_);
   }
 
@@ -360,7 +314,6 @@ namespace FrameProcessor
 				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
 	 														 " dataset, frame number: " << frame->get_frame_number());
 				this->push(frame);
-
 			}
 			catch (const std::exception& e)
 			{
@@ -481,14 +434,14 @@ namespace FrameProcessor
 	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
 	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
 	        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
-
-	        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T  ! sensor_rows: " << sensors_layout_[0].sensor_rows_ 
-                              << " sensor_columns: " << sensors_layout_[0].sensor_columns_);
 	    }
+
+      image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+      image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+      image_pixels_ = image_width_ * image_height_;
 
 	    // Return the number of valid entries parsed
 	    return sensors_layout_.size();
 	}
 
 } /* namespace FrameProcessor */
-

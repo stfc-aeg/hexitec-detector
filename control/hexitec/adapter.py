@@ -324,7 +324,7 @@ class Hexitec():
         })
 
         ### POPULATE REPLACEMENT parameter tree ###
-        self.sensors_layout = "1x1"
+        self.sensors_layout = "2x2"
         adapter_settings = ParameterTree({
             'hexitec_fem': self.fem.param_tree,
             'sensors_layout': (self._get_sensors_layout, self._set_sensors_layout),
@@ -373,11 +373,13 @@ class Hexitec():
 
         self.sensors_layout = layout
 
-        # send command to FP,FR adapters 
+        # send command to all FP plugins, then FR
+        plugins =  ['addition', 'calibration', 'discrimination', 'histogram', 'reorder', 'next_frame', 'threshold']
 
-        command = "config/reorder/sensors_layout"
-        request = ApiAdapterRequest(self.sensors_layout, content_type="application/json")
-        self.adapters["fp"].put(command, request)
+        for plugin in plugins:
+            command = "config/" + plugin + "/sensors_layout"
+            request = ApiAdapterRequest(self.sensors_layout, content_type="application/json")
+            self.adapters["fp"].put(command, request)
 
         command = "config/decoder_config/sensors_layout"
         request = ApiAdapterRequest(self.sensors_layout, content_type="application/json")

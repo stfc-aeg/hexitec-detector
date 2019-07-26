@@ -30,7 +30,7 @@ namespace Hexitec {
       {};
     } HexitecSensorLayoutMapEntry;
 
-    const std::string default_sensors_layout_map = "1x1";
+    const std::string default_sensors_layout_map = "2x2";
 
     // A Hexitec sensor is 80x80 pixels large
     static const uint16_t pixel_columns_per_sensor = 80;

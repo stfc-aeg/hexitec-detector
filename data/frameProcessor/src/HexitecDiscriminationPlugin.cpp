@@ -10,12 +10,7 @@
 
 namespace FrameProcessor
 {
-
-  const std::string HexitecDiscriminationPlugin::CONFIG_IMAGE_WIDTH 		= "width";
-  const std::string HexitecDiscriminationPlugin::CONFIG_IMAGE_HEIGHT 		= "height";
   const std::string HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE = "pixel_grid_size";
-  const std::string HexitecDiscriminationPlugin::CONFIG_MAX_COLS 				= "fem_max_cols";
-  const std::string HexitecDiscriminationPlugin::CONFIG_MAX_ROWS 				= "fem_max_rows";
   const std::string HexitecDiscriminationPlugin::CONFIG_SENSORS_LAYOUT  = "sensors_layout";
 
   /**
@@ -25,10 +20,7 @@ namespace FrameProcessor
       image_width_(Hexitec::pixel_columns_per_sensor),
       image_height_(Hexitec::pixel_rows_per_sensor),
       image_pixels_(image_width_ * image_height_),
-			pixel_grid_size_(3),
-	    fem_pixels_per_rows_(80),
-	    fem_pixels_per_columns_(80),
-	    fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
+			pixel_grid_size_(3)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecDiscriminationPlugin");
@@ -42,7 +34,6 @@ namespace FrameProcessor
 
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
-
   }
 
   /**
@@ -84,11 +75,7 @@ namespace FrameProcessor
    * plugin supports the following configuration parameters:
    * 
    * - sensors_layout_str_      <=> sensors_layout
-   * - image_width_ 						<=> width
- 	 * - image_height_	 					<=> height
  	 * - pixel_grid_size__ 				<=> pixel_grid_size
-	 * - fem_pixels_per_columns_	<=> fem_max_cols
-	 * - fem_pixels_per_rows_ 		<=> fem_max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -101,41 +88,12 @@ namespace FrameProcessor
       parse_sensors_layout_map(sensors_layout_str_);
 		}
 
-    if (config.has_param(HexitecDiscriminationPlugin::CONFIG_IMAGE_WIDTH))
-    {
-      image_width_ = config.get_param<int>(HexitecDiscriminationPlugin::CONFIG_IMAGE_WIDTH);
-    }
-
-    if (config.has_param(HexitecDiscriminationPlugin::CONFIG_IMAGE_HEIGHT))
-    {
-      image_height_ = config.get_param<int>(HexitecDiscriminationPlugin::CONFIG_IMAGE_HEIGHT);
-    }
-
-    image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
-    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
-    image_pixels_ = image_width_ * image_height_;
-
-    number_rows_ = image_height_;
-    number_columns_ = image_width_;
-
     if (config.has_param(HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE))
     {
       pixel_grid_size_ = config.get_param<int>(HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE);
     }
 
     directional_distance_ = (int)pixel_grid_size_/2;  // Set to 1 for 3x3: 2 for 5x5 pixel grid
-
-    if (config.has_param(HexitecDiscriminationPlugin::CONFIG_MAX_COLS))
-    {
-      fem_pixels_per_columns_ = config.get_param<int>(HexitecDiscriminationPlugin::CONFIG_MAX_COLS);
-    }
-
-    if (config.has_param(HexitecDiscriminationPlugin::CONFIG_MAX_ROWS))
-    {
-      fem_pixels_per_rows_ = config.get_param<int>(HexitecDiscriminationPlugin::CONFIG_MAX_ROWS);
-    }
-
-    fem_total_pixels_ = fem_pixels_per_columns_ * fem_pixels_per_rows_;
   }
 
   void HexitecDiscriminationPlugin::requestConfiguration(OdinData::IpcMessage& reply)
@@ -143,11 +101,7 @@ namespace FrameProcessor
     // Return the configuration of the process plugin
     std::string base_str = get_name() + "/";
     reply.set_param(base_str + HexitecDiscriminationPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
-    reply.set_param(base_str + HexitecDiscriminationPlugin::CONFIG_IMAGE_WIDTH, image_width_);
-    reply.set_param(base_str + HexitecDiscriminationPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
     reply.set_param(base_str + HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE, pixel_grid_size_);
-    reply.set_param(base_str + HexitecDiscriminationPlugin::CONFIG_MAX_COLS, fem_pixels_per_columns_);
-    reply.set_param(base_str + HexitecDiscriminationPlugin::CONFIG_MAX_ROWS, fem_pixels_per_rows_);
   }
 
   /**
@@ -160,11 +114,7 @@ namespace FrameProcessor
     // Record the plugin's status items
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecDiscriminationPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
-    status.set_param(get_name() + "/image_width", image_width_);
-    status.set_param(get_name() + "/image_height", image_height_);
     status.set_param(get_name() + "/pixel_grid_size", pixel_grid_size_);
-    status.set_param(get_name() + "/fem_max_rows", fem_pixels_per_rows_);
-    status.set_param(get_name() + "/fem_max_cols", fem_pixels_per_columns_);
   }
 
   /**
@@ -204,16 +154,6 @@ namespace FrameProcessor
     {
 			try
 			{
-				// Check that the pixels are contained within the dimensions of the
-				// specified output image, otherwise throw an error
-				if (fem_total_pixels_ > image_pixels_)
-				{
-					std::stringstream msg;
-					msg << "Pixel count inferred from FEM (" << fem_total_pixels_
-							<< ") will exceed dimensions of output image (" << image_pixels_ << ")";
-					throw std::runtime_error(msg.str());
-				}
-
 				// Define pointer to the input image data
 				void* input_ptr = static_cast<void *>(
 						static_cast<char *>(const_cast<void *>(data_ptr)));
@@ -224,7 +164,6 @@ namespace FrameProcessor
 				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
 															 " dataset, frame number: " << frame->get_frame_number());
 				this->push(frame);
-
 			}
 			catch (const std::exception& e)
 			{
@@ -387,14 +326,17 @@ namespace FrameProcessor
 	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
 	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
 	        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
-
-	        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T  ! sensor_rows: " << sensors_layout_[0].sensor_rows_ 
-                              << " sensor_columns: " << sensors_layout_[0].sensor_columns_);
 	    }
+
+      image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+      image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+      image_pixels_ = image_width_ * image_height_;
+
+      number_rows_ = image_height_;
+      number_columns_ = image_width_;
 
 	    // Return the number of valid entries parsed
 	    return sensors_layout_.size();
 	}
 
 } /* namespace FrameProcessor */
-

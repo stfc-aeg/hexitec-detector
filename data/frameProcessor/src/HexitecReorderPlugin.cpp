@@ -10,31 +10,20 @@
 
 namespace FrameProcessor
 {
-
   const std::string HexitecReorderPlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
-  const std::string HexitecReorderPlugin::CONFIG_IMAGE_WIDTH 		 = "width";
-  const std::string HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT 	 = "height";
-  const std::string HexitecReorderPlugin::CONFIG_ENABLE_REORDER  = "reorder";
   const std::string HexitecReorderPlugin::CONFIG_RAW_DATA 			 = "raw_data";
-  const std::string HexitecReorderPlugin::CONFIG_MAX_COLS 		 	 = "fem_max_cols";
-  const std::string HexitecReorderPlugin::CONFIG_MAX_ROWS      	 = "fem_max_rows";
   const std::string HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT  = "sensors_layout";
 
   /**
    * The constructor sets up logging used within the class.
    */
   HexitecReorderPlugin::HexitecReorderPlugin() :
-  		sensors_config_(Hexitec::sensorConfigOne),
+  		sensors_config_(Hexitec::sensorConfigTwo),
       image_width_(Hexitec::pixel_columns_per_sensor),
       image_height_(Hexitec::pixel_rows_per_sensor),
       image_pixels_(image_width_ * image_height_),
       packets_lost_(0),
-			reorder_pixels_(true),
-			write_raw_data_(true),
-			pixelMapInitialised(false),
-			fem_pixels_per_columns_(80),
-			fem_pixels_per_rows_(80),
-			fem_total_pixels_(fem_pixels_per_rows_ * fem_pixels_per_columns_)
+			write_raw_data_(true)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecReorderPlugin");
@@ -42,37 +31,10 @@ namespace FrameProcessor
     LOG4CXX_TRACE(logger_, "HexitecReorderPlugin version " <<
     												this->get_version_long() << " loaded.");
 
-    // Setup Pixel order lookup table
-    if (!pixelMapInitialised)
-    {
-       initialisePixelMap();
-       pixelMapInitialised = true;
-    }
-    ///
-    debugFrameCounter = 0;
-
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
-  }
-
-  /**
-   * Setup pixel look up table
-   */
-  void HexitecReorderPlugin::initialisePixelMap()
-  {
-     int pmIndex = 0;
-
-     for (int row = 0; row < 80; row++)
-     {
-        for (int col = 0; col < 20; col++)
-        {
-           for (int pix = 0; pix < 80; pix+=20)
-           {
-              pixelMap[pmIndex] = pix + col +(row * 80);
-              pmIndex++;
-           }
-        }
-     }
+    ///
+    debugFrameCounter = 0;
   }
 
   /**
@@ -114,12 +76,7 @@ namespace FrameProcessor
    * plugin supports the following configuration parameters:
    * 
    * - sensors_layout_str_      <=> sensors_layout
-   * - image_width_ 						<=> width
-   * - image_height_						<=> height
-   * - reorder_pixels_ 					<=> reorder
    * - write_raw_data_ 					<=> raw_data
-   * - fem_pixels_per_columns_	<=> fem_max_cols
-   * - fem_pixels_per_rows_			<=> fem_max_rows
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -137,41 +94,10 @@ namespace FrameProcessor
       packets_lost_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS);
     }
 
-    if (config.has_param(HexitecReorderPlugin::CONFIG_IMAGE_WIDTH))
-    {
-      image_width_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_IMAGE_WIDTH);
-    }
-
-    if (config.has_param(HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT))
-    {
-      image_height_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT);
-    }
-
-    image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
-    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
-    image_pixels_ = image_width_ * image_height_;
-
-    if (config.has_param(HexitecReorderPlugin::CONFIG_ENABLE_REORDER))
-    {
-      reorder_pixels_ = config.get_param<bool>(HexitecReorderPlugin::CONFIG_ENABLE_REORDER);
-    }
-
     if (config.has_param(HexitecReorderPlugin::CONFIG_RAW_DATA))
     {
       write_raw_data_ = config.get_param<bool>(HexitecReorderPlugin::CONFIG_RAW_DATA);
     }
-
-    if (config.has_param(HexitecReorderPlugin::CONFIG_MAX_ROWS))
-    {
-      fem_pixels_per_rows_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_MAX_ROWS);
-    }
-
-    if (config.has_param(HexitecReorderPlugin::CONFIG_MAX_COLS))
-    {
-      fem_pixels_per_columns_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_MAX_COLS);
-    }
-
-    fem_total_pixels_ = fem_pixels_per_rows_ * fem_pixels_per_columns_;
   }
 
   void HexitecReorderPlugin::requestConfiguration(OdinData::IpcMessage& reply)
@@ -180,12 +106,7 @@ namespace FrameProcessor
   	std::string base_str = get_name() + "/";
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_DROPPED_PACKETS, packets_lost_);
-    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_IMAGE_WIDTH, image_width_);
-    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_IMAGE_HEIGHT, image_height_);
-    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_ENABLE_REORDER, reorder_pixels_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_RAW_DATA, write_raw_data_);
-    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_MAX_ROWS, fem_pixels_per_rows_);
-    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_MAX_COLS, fem_pixels_per_columns_);
   }
 
   /**
@@ -199,13 +120,7 @@ namespace FrameProcessor
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecReorderPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/packets_lost", packets_lost_);
-    status.set_param(get_name() + "/image_width", image_width_);
-    status.set_param(get_name() + "/image_height", image_height_);
-    status.set_param(get_name() + "/reorder", reorder_pixels_);
     status.set_param(get_name() + "/raw_data", write_raw_data_);
-    status.set_param(get_name() + "/fem_max_rows", fem_pixels_per_rows_);
-    status.set_param(get_name() + "/fem_max_cols", fem_pixels_per_columns_);
-
   }
 
   /**
@@ -275,16 +190,6 @@ namespace FrameProcessor
 
     try
     {
-      // Check that the pixels are contained within the dimensions of the
-      // specified output image, otherwise throw an error
-      if (fem_total_pixels_ > image_pixels_)
-      {
-        std::stringstream msg;
-        msg << "Pixel count inferred from FEM (" << fem_total_pixels_
-            << ") will exceed dimensions of output image (" << image_pixels_ << ")";
-        throw std::runtime_error(msg.str());
-      }
-
       // Allocate buffer for raw data
       raw_image = (void*)malloc(output_image_size);
       if (raw_image == NULL)
@@ -310,7 +215,7 @@ namespace FrameProcessor
 				frame_meta.set_frame_number(hdr_ptr->frame_number);
 
 				// Only construct raw data frame if configured
-      	if(write_raw_data_)
+      	if (write_raw_data_)
       	{
   				// Set the dataset name
   				frame_meta.set_dataset_name("raw_frames");
@@ -343,17 +248,9 @@ namespace FrameProcessor
 				// Get a pointer to the data buffer in the output frame
 				void* output_ptr = data_frame->get_data_ptr();
 
-	      if (reorder_pixels_)
-	      {
-	      	reorder_pixels(static_cast<unsigned short *>(input_ptr),
-							static_cast<float *>(output_ptr));
-	      }
-	      else
-	      {
-					// Turn unsigned short raw pixel data into float data type
-					convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
-																						static_cast<float *>(output_ptr));
-	      }
+        // Turn unsigned short raw pixel data into float data type
+        convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
+                                          static_cast<float *>(output_ptr));
 
 				LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: "
 															 << frame->get_frame_number());
@@ -366,7 +263,6 @@ namespace FrameProcessor
       ss << "HEXITEC frame decode failed: " << e.what();
       LOG4CXX_ERROR(logger_, ss.str());
     }
-
   }
 
   /**
@@ -381,25 +277,6 @@ namespace FrameProcessor
   }
 
   /**
-   * Reorder an image's pixels into geographical order.
-   *
-   * \param[in] in - Pointer to the incoming image data.
-   * \param[in] out - Pointer to the allocated memory where the reordered image is written.
-   *
-   */
-  void HexitecReorderPlugin::reorder_pixels(unsigned short *in, float *out)
-  {
-    int index = 0;
-
-    for (int i=0; i<fem_total_pixels_; i++)
-    {
-        // Re-order pixels:
-      	index = pixelMap[i];
-				out[index] = (float)in[i];
-    }
-  }
-
-  /**
    * Convert an image's pixels from unsigned short to float data type, and reorder.
    *
    * \param[in] in - Pointer to the incoming image data.
@@ -410,7 +287,7 @@ namespace FrameProcessor
   {
     int index = 0;
 
-    for (int i=0; i<fem_total_pixels_; i++)
+    for (int i=0; i<image_pixels_; i++)
     {
 				// Do not reorder pixels:
 				out[i] = (float)in[i];
@@ -445,10 +322,11 @@ namespace FrameProcessor
 	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
 	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
 	        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
-
-	        LOG4CXX_INFO(logger_, " T H I S  I S  A  T E S T  ! sensor_rows: " << sensors_layout_[0].sensor_rows_ 
-                              << " sensor_columns: " << sensors_layout_[0].sensor_columns_);
 	    }
+
+      image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+      image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+      image_pixels_ = image_width_ * image_height_;
 
 	    // Return the number of valid entries parsed
 	    return sensors_layout_.size();
@@ -459,7 +337,7 @@ namespace FrameProcessor
 	{
     std::ostringstream hitPixelsStream;
     hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-		for (int i = 0; i < fem_total_pixels_; i++ )
+		for (int i = 0; i < image_pixels_; i++ )
 		{
 			if(frame[i] > 0)
 				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";

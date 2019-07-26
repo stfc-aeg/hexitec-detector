@@ -3,7 +3,6 @@ api_version = '0.1';
 var api_url = '/api/' + api_version + '/';
 var odin_data_url = api_url + 'hexitec/odin_data/';
 // Vars added for Odin-Data
-var reorder_enable = false;
 var raw_data_enable = false;
 var addition_enable = false;
 var discrimination_enable = false;
@@ -11,6 +10,11 @@ var charged_sharing_enable = false; // Track state to ease logic inside apply_ui
 var next_frame_enable = false;
 var calibration_enable = false;
 var hdf_write_enable = false;
+
+var base_path = "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/control/static/configs/";
+var store_filename = "store_sequence_";
+var execute_filename = "execute_sequence_";
+var sensors_layout   = "2x2";
 
 $( document ).ready(function()
 {
@@ -112,13 +116,6 @@ $( document ).ready(function()
 
 
     /// Style checkbox(es) into a ON/OFF slider
-
-    // Configure Reorder switch
-    $("[name='reorder_enable']").bootstrapSwitch();
-    $("[name='reorder_enable']").bootstrapSwitch('state', reorder_enable, true);
-    $('input[name="reorder_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
-        changeReorderEnable();
-    });
 
     // Configure Raw Data switch
     $("[name='raw_data_enable']").bootstrapSwitch();
@@ -293,19 +290,19 @@ function disconnect_hardware() {
 
 function store_sequence_files() {
 
-    // Hardcoded paths are bad but no way around it here: (Move this away from the install folder !)
-    var sequence_file_1 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_1.json";
-    var sequence_file_2 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_2.json";
-    var sequence_file_3 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_3.json";
-    var sequence_file_4 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_4.json";
-    var sequence_file_5 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_5.json";
-    var sequence_file_6 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_6.json";
-    var sequence_file_7 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_7.json";
-    var sequence_file_8 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_8.json";
-    var sequence_file_9 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_9.json";
-    var sequence_file_10 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_10.json";
-    var sequence_file_11 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_11.json";
-    var sequence_file_12 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/store_sequence_12.json";
+    // Hardcoded paths are bad but no way around it here:
+    var sequence_file_1 =  base_path + store_filename + "1_" + sensors_layout + ".json";
+    var sequence_file_2 =  base_path + store_filename + "2_" + sensors_layout + ".json";
+    var sequence_file_3 =  base_path + store_filename + "3_" + sensors_layout + ".json";
+    var sequence_file_4 =  base_path + store_filename + "4_" + sensors_layout + ".json";
+    var sequence_file_5 =  base_path + store_filename + "5_" + sensors_layout + ".json";
+    var sequence_file_6 =  base_path + store_filename + "6_" + sensors_layout + ".json";
+    var sequence_file_7 =  base_path + store_filename + "7_" + sensors_layout + ".json";
+    var sequence_file_8 =  base_path + store_filename + "8_" + sensors_layout + ".json";
+    var sequence_file_9 =  base_path + store_filename + "9_" + sensors_layout + ".json";
+    var sequence_file_10 =  base_path + store_filename + "10_" + sensors_layout + ".json";
+    var sequence_file_11 =  base_path + store_filename + "11_" + sensors_layout + ".json";
+    var sequence_file_12 =  base_path + store_filename + "12_" + sensors_layout + ".json";
 
     send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_1);
     send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_2);
@@ -319,7 +316,6 @@ function store_sequence_files() {
     send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_10);
     send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_11);
     send_sequence_file(api_url + 'hexitec/fp/config/config_file', sequence_file_12);
-
 }
 
 // send_sequence_file: Used to store or execute the sequence of plugin(s)
@@ -332,7 +328,7 @@ function send_sequence_file(path, file) {
         contentType: "application/json",
         data: file,
         success: function(result) {
-            console.log("Successfully loaded configuration file: " + file);
+            ;
         },
         error: function(request, msg, error) {
             console.log("Failed to load configuration file: " + file);
@@ -344,19 +340,19 @@ function send_sequence_file(path, file) {
 //  load the sequence of plugins corresponding to UI settings
 function apply_ui_values() {
 
-    // Hardcoded paths are bad but no way around it here: (Move this away from the install folder ?!)
-    var sequence_file_1 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_1.json";
-    var sequence_file_2 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_2.json";
-    var sequence_file_3 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_3.json";
-    var sequence_file_4 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_4.json";
-    var sequence_file_5 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_5.json";
-    var sequence_file_6 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_6.json";
-    var sequence_file_7 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_7.json";
-    var sequence_file_8 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_8.json";
-    var sequence_file_9 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_9.json";
-    var sequence_file_10 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_10.json";
-    var sequence_file_11 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_11.json";
-    var sequence_file_12 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_12.json";
+    // Hardcoded paths are bad but no way around it here:
+    var sequence_file_1 =  base_path + execute_filename + "1.json";
+    var sequence_file_2 =  base_path + execute_filename + "2.json";
+    var sequence_file_3 =  base_path + execute_filename + "3.json";
+    var sequence_file_4 =  base_path + execute_filename + "4.json";
+    var sequence_file_5 =  base_path + execute_filename + "5.json";
+    var sequence_file_6 =  base_path + execute_filename + "6.json";
+    var sequence_file_7 =  base_path + execute_filename + "7.json";
+    var sequence_file_8 =  base_path + execute_filename + "8.json";
+    var sequence_file_9 =  base_path + execute_filename + "9.json";
+    var sequence_file_10 =  base_path + execute_filename + "10.json";
+    var sequence_file_11 =  base_path + execute_filename + "11.json";
+    var sequence_file_12 =  base_path + execute_filename + "12.json";
     
     // Start by loading (executing) the corresponding JSON config file
     //   (disconnects currently connected plugins, connects up selected plugins)
@@ -455,10 +451,7 @@ function apply_ui_values() {
     }
 
     // Load all UI settings into corresponding plugins
-    changeReorderEnable();
     changeRawDataEnable();
-    reorder_rows_changed();
-    reorder_columns_changed();
 
     var threshold_mode = $('#threshold-mode-text').prop('value');
     // Check whether threshold filename mode requested
@@ -528,68 +521,6 @@ function poll_update() {
 //         $('#task-enable').prop('checked', task_enabled);
 //     });
 // }
-
-function reorder_rows_changed()
-{
-    var reorder_rows = $('#rows-text').prop('value');
-    reorder_rows = JSON.stringify(parseInt(reorder_rows));
-    // Each plugin has a height parameter, must update all seven
-    $.ajax(api_url + `hexitec/odin_data/reorder/height`, {
-        method: "PUT",
-        contentType: "application/json",
-        data: reorder_rows,
-        success: function(result) {
-            $('#rows-warning').html("");
-            update_plugin_value("addition", "height", reorder_rows);
-            update_plugin_value("calibration", "height", reorder_rows);
-            update_plugin_value("discrimination", "height", reorder_rows);
-            update_plugin_value("histogram", "height", reorder_rows);
-            update_plugin_value("next_frame", "height", reorder_rows);
-            update_plugin_value("reorder", "height", reorder_rows);
-            update_plugin_value("threshold", "height", reorder_rows);
-        },
-        error: function(request, msg, error) {
-            $('#rows-warning').html(error + ": " + format_error_message(request.responseText));
-        }
-    });
-}
-
-function reorder_columns_changed()
-{
-    var reorder_columns = $('#columns-text').prop('value');
-    reorder_columns = JSON.stringify(parseInt(reorder_columns));
-    // Each plugin has a width parameter, must update all seven
-    $.ajax(api_url + `hexitec/odin_data/reorder/width`, {
-        method: "PUT",
-        contentType: "application/json",
-        data: reorder_columns,
-        success: function(result) {
-            $('#columns-warning').html("");
-            update_plugin_value("addition", "width", reorder_columns);
-            update_plugin_value("calibration", "width", reorder_columns);
-            update_plugin_value("discrimination", "width", reorder_columns);
-            update_plugin_value("histogram", "width", reorder_columns);
-            update_plugin_value("next_frame", "width", reorder_columns);
-            update_plugin_value("reorder", "width", reorder_columns);
-            update_plugin_value("threshold", "width", reorder_columns);
-        },
-        error: function(request, msg, error) {
-            $('#columns-warning').html(error + ": " + format_error_message(request.responseText));
-        }
-    });
-}
-
-// update_plugin_value: Helps reorder_rows_changed(),
-//  reorder_columns_changed() to set a plugin's key's value
-function update_plugin_value(plugin, key, value)
-{
-    $.ajax({
-        type: "PUT",
-        url: api_url + 'hexitec/fp/config/' + plugin + '/' + key,
-        contentType: "application/json",
-        data: value,
-    });
-}
 
 function threshold_filename_changed()
 {
@@ -874,24 +805,6 @@ function bin_width_changed()
     });
 }
 
-var changeReorderEnable = function()
-{
-    reorder_enable = $("[name='reorder_enable']").bootstrapSwitch('state');
-    // Write straight into HexitecReorderPlugin's variable
-    $.ajax({
-        type: "PUT",
-        url: api_url + 'hexitec/fp/config/reorder/reorder',
-        contentType: "application/json",
-        data: JSON.stringify(reorder_enable),
-        success: function(result) {
-            console.log("Reorder successfully changed");
-        },
-        error: function(request, msg, error) {
-            console.log("Reorder couldn't be changed");
-        }
-    });
-};
-
 var changeRawDataEnable = function ()
 {
     raw_data_enable = $("[name='raw_data_enable']").bootstrapSwitch('state');
@@ -984,7 +897,7 @@ var changeHdfWriteEnable = function()
 
 var selectChange = function(selected)
 {
-    // curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/odin_data/adapter_settings -d '{"sensors_layout": "5x5"}' | python -m json.tool
+    //curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/odin_data/adapter_settings -d '{"sensors_layout": "5x5"}' | python -m json.tool
 
     $.ajax({
         type: "PUT",

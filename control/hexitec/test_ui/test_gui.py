@@ -174,7 +174,6 @@ def get_dec( a ):
     
 # Displays the returned response from the microcontroller    
 def read_response():
-    abort_count = 0
     data_counter = 0   
     f = []
     #f.append(dat)
@@ -211,9 +210,8 @@ def read_response():
       if debug: print format(daty, '02x')
       data_counter = data_counter + 1
       if empty_count == ABORT_VALUE:
-          print "Abort -------------------------------------------- ", abort_count
+          raise Exception("Abort in read_response()")
           daty = CARRIAGE_RTN
-          abort_count += 1
       empty_count = 0          
 
     if debug: 
@@ -1154,39 +1152,47 @@ def load_image():
 
 def life_saver():
     # Does init, load, set up, write, enable, calibrate all in one fell swoooop
-    print(" -=-=-=-=-=-=-=-=-  Setup System to config VSR 2.. -=-=-=-=-=-=-=-=- ")
-    variable1.set(OPTIONS[2])
-    print "variable1: ", variable1.get()
-    initialise_sensor()
-    print(" -=-=-=-=- sensors initialised! -=-=-=-=- ")
-    load_pwr_cal_read_enables()
-    print(" -=-=-=-=- load power / calibrate / read / whatever / done! -=-=-=-=- ")
-    set_up_state_machine()
-    print(" -=-=-=-=- state machine set up! -=-=-=-=- ")
-    write_dac_values()
-    print(" -=-=-=-=- dac values written! -=-=-=-=- ")
-    enable_adc()
-    print(" -=-=-=-=- adc enabled! -=-=-=-=- ")
-    calibrate_sensor()
-    print(" -=-=-=-=- VSR 2 all Done -=-=-=-=-")
+    try:
+        print(" -=-=-=-=-=-=-=-=-  Setup System to config VSR 2.. -=-=-=-=-=-=-=-=- ")
+        variable1.set(OPTIONS[2])
+        print "variable1: ", variable1.get()
+        initialise_sensor()
+        print(" -=-=-=-=- sensors initialised! -=-=-=-=- ")
+        load_pwr_cal_read_enables()
+        print(" -=-=-=-=- load power / calibrate / read / whatever / done! -=-=-=-=- ")
+        set_up_state_machine()
+        print(" -=-=-=-=- state machine set up! -=-=-=-=- ")
+        write_dac_values()
+        print(" -=-=-=-=- dac values written! -=-=-=-=- ")
+        enable_adc()
+        print(" -=-=-=-=- adc enabled! -=-=-=-=- ")
+        calibrate_sensor()
+        print(" -=-=-=-=- VSR 2 all Done -=-=-=-=-")
+    except Exception as e:
+        print("Failed to initialise VSR2: %s" % e)
+        return
 
     time.sleep(1)
 
-    print(" -=-=-=-=-=-=-=-=-  Setup System to config VSR 1.. -=-=-=-=-=-=-=-=- ")
-    variable1.set(OPTIONS[0])
-    print "variable1: ", variable1.get()
-    initialise_sensor()
-    print(" -=-=-=-=- sensors initialised! -=-=-=-=- ")
-    load_pwr_cal_read_enables()
-    print(" -=-=-=-=- load power / calibrate / read / whatever / done! -=-=-=-=- ")
-    set_up_state_machine()
-    print(" -=-=-=-=- state machine set up! -=-=-=-=- ")
-    write_dac_values()
-    print(" -=-=-=-=- dac values written! -=-=-=-=- ")
-    enable_adc()
-    print(" -=-=-=-=- adc enabled! -=-=-=-=- ")
-    calibrate_sensor()
-    print(" -=-=-=-=- VSR 1 all Done -=-=-=-=-")
+    try:
+        print(" -=-=-=-=-=-=-=-=-  Setup System to config VSR 1.. -=-=-=-=-=-=-=-=- ")
+        variable1.set(OPTIONS[0])
+        print "variable1: ", variable1.get()
+        initialise_sensor()
+        print(" -=-=-=-=- sensors initialised! -=-=-=-=- ")
+        load_pwr_cal_read_enables()
+        print(" -=-=-=-=- load power / calibrate / read / whatever / done! -=-=-=-=- ")
+        set_up_state_machine()
+        print(" -=-=-=-=- state machine set up! -=-=-=-=- ")
+        write_dac_values()
+        print(" -=-=-=-=- dac values written! -=-=-=-=- ")
+        enable_adc()
+        print(" -=-=-=-=- adc enabled! -=-=-=-=- ")
+        calibrate_sensor()
+        print(" -=-=-=-=- VSR 1 all Done -=-=-=-=-")
+    except Exception as e:
+        print("Failed to initialise VSR1: %s" % e)
+        return
 
     
     

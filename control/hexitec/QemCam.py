@@ -10,7 +10,6 @@ Created on Mon Jan  8 16:58:52 2018
 import sys
 import numpy as np
 from RdmaUDP import *
-from ImageStreamUDP import *
 from socket import error as socket_error
 import time
 import cv2
@@ -56,13 +55,9 @@ class QemCam(object):
         self.rdma_mtu = 8000
         #
         self.frame_time = 1
-        ### DEBUGGING ###
-        self.udp_connection = False
 
     def __del__(self):
         self.x10g_rdma.close()
-        #TODO: Redundant: ?
-        if self.udp_connection: self.x10g_stream.close()
         
     def connect(self):
         try:
@@ -72,14 +67,6 @@ class QemCam(object):
             self.x10g_rdma.ack = True
         except socket_error as e:
             raise socket_error("Failed to setup Control connection: %s" % e)
-
-        try:
-            #TODO: Redundant: ?
-            if self.udp_connection:
-                self.x10g_stream = ImageStreamUDP(self.server_data_ip_addr, 61650, self.server_data_ip_addr, 61651,
-                                                self.camera_data_ip_addr, 61650, self.camera_data_ip_addr, 61651, 1000000000, 9000, 20)
-        except socket_error as e:
-            raise socket_error("Failed to setup Data connection: %s" % e)
 
         return
     
@@ -209,9 +196,6 @@ class QemCam(object):
             self.x10g_rdma.write(address, data, 'pixel count max')
             self.x10g_rdma.write(self.receiver+4, 0x3, 'pixel bit size => 16 bit')
             
-        #TODO: Redundant: ?
-        if self.udp_connection: self.x10g_stream.set_image_size(x_size, y_size, f_size)    # MAYBE, sets vars used elsewhere in ISUDP..?
-
         return
     
     def set_sub_image_merge_factor(self, merger_factor):
@@ -385,5 +369,4 @@ class QemCam(object):
         
     def disconnect(self):
         self.x10g_rdma.close()
-        if self.udp_connection: self.x10g_stream.close()
         return

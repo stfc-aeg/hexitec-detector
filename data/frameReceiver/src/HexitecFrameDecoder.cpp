@@ -31,7 +31,7 @@ const std::string HexitecFrameDecoder::CONFIG_SENSORS_LAYOUT = "sensors_layout";
 //!
 HexitecFrameDecoder::HexitecFrameDecoder() :
     FrameDecoderUDP(),
-		sensors_config_(Hexitec::sensorConfigOne),
+		sensors_config_(Hexitec::sensorConfigTwo),
 		current_frame_seen_(Hexitec::default_frame_number),
     current_frame_buffer_id_(Hexitec::default_frame_number),
     current_frame_buffer_(0),
@@ -602,7 +602,7 @@ void HexitecFrameDecoder::get_status(const std::string param_prefix,
     OdinData::IpcMessage& status_msg)
 {
   status_msg.set_param(param_prefix + "name", std::string("HexitecFrameDecoder"));
-  status_msg.set_param(param_prefix + "pack!!!ets_lost", packets_lost_);
+  status_msg.set_param(param_prefix + "packets_lost", packets_lost_);
 
   // Workaround for lack of array setters in IpcMessage
   rapidjson::Value fem_packets_lost_array(rapidjson::kArrayType);

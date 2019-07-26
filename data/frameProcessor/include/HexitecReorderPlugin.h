@@ -57,18 +57,8 @@ namespace FrameProcessor
   private:
     /** Configuration constant for clearing out dropped packet counters **/
     static const std::string CONFIG_DROPPED_PACKETS;
-    /** Configuration constant for image width **/
-    static const std::string CONFIG_IMAGE_WIDTH;
-    /** Configuration constant for image height **/
-    static const std::string CONFIG_IMAGE_HEIGHT;
-    /** Configuration constant for enable reorder(ing) **/
-		static const std::string CONFIG_ENABLE_REORDER;
     /** Configuration constant for writing raw data (or not) **/
 		static const std::string CONFIG_RAW_DATA;
-    /** Configuration constant for maximum columns **/
-    static const std::string CONFIG_MAX_COLS;
-    /** Configuration constant for maximum rows **/
-		static const std::string CONFIG_MAX_ROWS;
 		/** Configuration constant for Hardware sensors **/
 		static const std::string CONFIG_SENSORS_LAYOUT;
 
@@ -85,10 +75,6 @@ namespace FrameProcessor
     std::string sensors_layout_str_;
     HexitecSensorLayoutMap sensors_layout_;
 
-    void initialisePixelMap();
-    uint16_t pixelMap[6400];
-    bool pixelMapInitialised;
-    bool reorder_pixels_;
     bool write_raw_data_;
 
     /** Pointer to logger **/

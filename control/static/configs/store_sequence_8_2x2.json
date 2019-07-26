@@ -1,0 +1,288 @@
+[
+    {
+        "store": 
+        {
+            "index": "eight",
+            "value":
+            [
+                {
+                    "fr_setup": {
+                        "fr_ready_cnxn": "tcp://127.0.0.1:5001",
+                        "fr_release_cnxn": "tcp://127.0.0.1:5002"
+                    }
+                },
+                {
+                    "plugin": {
+                        "load": {
+                            "index": "reorder",
+                            "name": "HexitecReorderPlugin",
+                            "library": "/u/ckd27546/develop/projects/odin-demo/install/lib/libHexitecReorderPlugin.so"
+                        }
+                    }
+                },
+                {
+                    "plugin": {
+                        "load": {
+                            "index": "threshold",
+                            "name": "HexitecThresholdPlugin",
+                            "library": "/u/ckd27546/develop/projects/odin-demo/install/Lib/libHexitecThresholdPlugin.so"
+                        }
+                    }
+                },
+		{
+		    "plugin": {
+			"load": {
+			    "index": "next_frame",
+			    "name": "HexitecNextFramePlugin",
+			    "library": "/u/ckd27546/develop/projects/odin-demo/install/Lib/libHexitecNextFramePlugin.so"
+			}
+		    }
+		},
+                {
+                    "plugin": {
+                        "load": {
+                            "index": "calibration",
+                            "name": "HexitecCalibrationPlugin",
+                            "library": "/u/ckd27546/develop/projects/odin-demo/install/Lib/libHexitecCalibrationPlugin.so"
+                        }
+                    }
+                },
+                {
+                    "plugin": {
+                        "load": {
+                            "index": "addition",
+                            "name": "HexitecAdditionPlugin",
+                            "library": "/u/ckd27546/develop/projects/odin-demo/install/Lib/libHexitecAdditionPlugin.so"
+                        }
+                    }
+                },
+                {
+                    "plugin": {
+                        "load": {
+                            "index": "histogram",
+                            "name": "HexitecHistogramPlugin",
+                            "library": "/u/ckd27546/develop/projects/odin-demo/install/Lib/libHexitecHistogramPlugin.so"
+                        }
+                    }
+                },
+		{
+		    "plugin": {
+			"load": {
+			    "index": "live_view",
+			    "name": "LiveViewPlugin",
+			    "library": "/u/ckd27546/develop/projects/odin-demo/install/lib/libLiveViewPlugin.so"
+			}
+		    }
+		},
+                {
+                    "plugin": {
+                        "load": {
+                            "index": "hdf",
+                            "name": "FileWriterPlugin",
+                            "library": "/u/ckd27546/develop/projects/odin-demo/install/lib/libHdf5Plugin.so"
+                        }
+                    }
+                },
+                {
+                    "plugin": {
+                        "connect": {
+                            "index": "reorder",
+                            "connection": "frame_receiver"
+                        }
+                    }
+                },
+                {
+                    "plugin": {
+                        "connect": {
+                            "index": "threshold",
+                            "connection": "reorder"
+                        }
+                    }
+                },
+                {
+                    "plugin": {
+                        "connect": {
+                            "index": "next_frame",
+                            "connection": "threshold"
+                        }
+                    }
+                },
+                {
+                    "plugin": {
+                        "connect": {
+                            "index": "calibration",
+                            "connection": "next_frame"
+                        }
+                    }
+                },
+                {
+                    "plugin": {
+                        "connect": {
+                            "index": "addition",
+                            "connection": "calibration"
+                        }
+                    }
+                },
+                {
+                    "plugin": {
+                        "connect": {
+                            "index": "histogram",
+                            "connection": "addition"
+                        }
+                    }
+                },
+		{
+		    "plugin": {
+			"connect": {
+			    "index": "live_view",
+			    "connection": "histogram"
+			}
+		    }
+		},
+                {
+                    "plugin": {
+                        "connect": {
+                            "index": "hdf",
+                            "connection": "histogram"
+                        }
+                    }
+                },
+                {
+                    "reorder": {
+                        "width": 160,
+                        "height": 160,
+                        "fem_max_cols": 160,
+                        "fem_max_rows": 160,
+                        "reorder": false,
+                        "raw_data": false,
+			"sensors_layout": "2x2"
+                    }
+                },
+                {
+                    "threshold":
+                    {
+                        "width": 160,
+                        "height": 160,
+                        "fem_max_cols": 160,
+                        "fem_max_rows": 160,
+                        "threshold_file": "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/t_threshold_file.txt",
+                        "threshold_value": 100,
+                        "threshold_mode": "value",
+			"sensors_layout": "2x2"
+                    }
+                },
+                {
+                    "calibration": {
+                        "width": 160,
+                        "height": 160,
+                        "fem_max_cols": 160,
+                        "fem_max_rows": 160,
+			"gradients_file": "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/m_Cold_500V.txt",
+			"intercepts_file": "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/c_Cold_500V.txt",
+			"sensors_layout": "2x2"
+                    }
+                },
+                {
+                    "next_frame": {
+                        "width": 160,
+                        "height": 160,
+                        "fem_max_cols": 160,
+                        "fem_max_rows": 160,
+			"sensors_layout": "2x2"
+                    }
+                },
+                {
+                    "addition": {
+                        "width": 160,
+                        "height": 160,
+                        "fem_max_cols": 160,
+                        "fem_max_rows": 160,
+			"pixel_grid_size": 3,
+			"sensors_layout": "2x2"
+                    }
+                },
+                {
+                    "histogram":
+                    {
+                        "width": 160,
+                        "height": 160,
+                        "max_frames_received": 540,
+                        "bin_start": 0,
+                        "bin_end": 8000,
+                        "bin_width": 10,
+                        "fem_max_cols": 160,
+                        "fem_max_rows": 160,
+			"sensors_layout": "2x2"
+                    }
+                },
+		{
+		    "live_view": 
+		    {
+			"frame_frequency": 50,
+			"per_second": 0,
+			"live_view_socket_addr": "tcp://127.0.0.1:5020",
+			"dataset_name": "raw_frames"
+		    }
+		},
+                {
+                    "hdf": 
+                    {
+                        "frames": 540,
+                        "master": "data",
+                        "dataset": 
+                        {
+                            "data" : 
+                            {
+                                "cmd": "create",
+                                "datatype": "float",
+                                "dims": [160, 160],
+				"chunks": [1, 160, 160],
+				"compression": "none"
+                            },
+                            "raw_frames" : 
+                            {
+                                "cmd": "create",
+                                "datatype": "float",
+                                "dims": [160, 160],
+				"chunks": [1, 160, 160],
+				"compression": "none"
+                            },
+                            "energy_bins" :
+                            {
+                                "cmd": "create",
+                                "datatype": "float",
+                                "dims": [800],
+				"chunks": [1, 800],
+				"compression": "none"
+                            },
+                            "pixel_histograms" :
+                            {
+                                "cmd": "create",
+                                "datatype": "float",
+                                "dims": [25600, 800],
+				"chunks": [1, 25600, 800],
+				"compression": "none"
+                            },
+                            "summed_histograms" :
+                            {
+                                "cmd": "create",
+                                "datatype": "uint64",
+                                "dims": [800],
+				"chunks": [1, 800],
+				"compression": "none"
+                            }
+                        }
+                    }
+                },                
+                {
+                    "hdf": {
+                        "file": {
+                        "name": "Sequence_eight_file_",
+                        "path": "/tmp"
+                        }
+                    }
+                }
+            ]
+        }
+    }
+]

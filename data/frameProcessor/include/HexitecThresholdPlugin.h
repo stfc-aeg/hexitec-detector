@@ -28,7 +28,6 @@ using namespace log4cxx::helpers;
 
 namespace FrameProcessor
 {
-
   typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
 	enum ThresholdMode {NONE, SINGLE_VALUE, THRESHOLD_FILE};
@@ -56,20 +55,12 @@ namespace FrameProcessor
     bool reset_statistics(void);
 
   private:
-    /** Configuration constant for image width **/
-    static const std::string CONFIG_IMAGE_WIDTH;
-    /** Configuration constant for image height **/
-    static const std::string CONFIG_IMAGE_HEIGHT;
     /** Configuration constant for threshold mode **/
     static const std::string CONFIG_THRESHOLD_MODE;
     /** Configuration constant for threshold value **/
     static const std::string CONFIG_THRESHOLD_VALUE;
     /** Configuration constant for threshold file **/
     static const std::string CONFIG_THRESHOLD_FILE;
-    /** Configuration constant for maximum columns **/
-    static const std::string CONFIG_MAX_COLS;
-    /** Configuration constant for maximum rows **/
-		static const std::string CONFIG_MAX_ROWS;
 		/** Configuration constant for Hardware sensors **/
 		static const std::string CONFIG_SENSORS_LAYOUT;
 
@@ -96,18 +87,13 @@ namespace FrameProcessor
     std::string determineThresholdMode(int mode);
 
     void reset_threshold_values();
-    
+
     // Member variables:
     unsigned int threshold_value_;
     uint16_t *threshold_per_pixel_;
     bool thresholds_status_;
     ThresholdMode threshold_mode_;
     std::string threshold_filename_;
-
-    int fem_pixels_per_rows_;
-    int fem_pixels_per_columns_;
-    int fem_total_pixels_;
-
   };
 
   /**
