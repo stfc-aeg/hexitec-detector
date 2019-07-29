@@ -16,6 +16,9 @@ from concurrent import futures
 from socket import error as socket_error
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
+from tornado.ioloop import IOLoop
+from tornado.concurrent import run_on_executor
+from tornado.escape import json_decode
 
 class HexitecFem():
     """ Hexitec Fem class. Represents a single FEM-II module.
@@ -61,21 +64,22 @@ class HexitecFem():
         self.ip_address = ip_address
         self.port = port
         self.id = int(fem_id)
-        self.qemcamera = QemCam()
+        self.hexitec_camera = QemCam()
 
         # 10G RDMA IP addresses      
-        self.qemcamera.server_ctrl_ip_addr = server_ctrl_ip_addr    #'10.0.2.2'
-        self.qemcamera.camera_ctrl_ip_addr = camera_ctrl_ip_addr    #'10.0.2.1'
+        self.hexitec_camera.server_ctrl_ip_addr = server_ctrl_ip_addr    #'10.0.2.2'
+        self.hexitec_camera.camera_ctrl_ip_addr = camera_ctrl_ip_addr    #'10.0.2.1'
 
         # 10G image stream Ip addresses
-        self.qemcamera.server_data_ip_addr = server_data_ip_addr    #"10.0.4.2"
-        self.qemcamera.camera_data_ip_addr = camera_data_ip_addr    #"10.0.4.1"
+        self.hexitec_camera.server_data_ip_addr = server_data_ip_addr    #"10.0.4.2"
+        self.hexitec_camera.camera_data_ip_addr = camera_data_ip_addr    #"10.0.4.1"
 
         self.vsr_addr = 0x90
 
         self.number_of_frames = 10
 
         self.hardware_connected = False
+        self.hardware_initialising = False
 
         self.debug = False
 
@@ -96,7 +100,20 @@ class HexitecFem():
         self.sensors_layout     = HexitecFem.READOUTMODE[1]     # "2x2"
         self.dark_correction    = HexitecFem.DARKCORRECTION[0]  # "DARK CORRECTION OFF"
         self.test_mode_image    = HexitecFem.TESTMODEIMAGE[3]   # "IMAGE 4"
+        
+        # self.poll_histograms()
 
+    ''' Testing polling '''
+    @run_on_executor(executor='thread_executor')
+    def start_polling(self):
+        print "start_polling()"
+        IOLoop.instance().add_callback(self.poll_histograms)
+
+    def poll_histograms(self):
+        print "poll_histograms"
+        time.sleep(1)
+        IOLoop.instance().call_later(0.5, self.poll_histograms)
+    
     ''' Accessor functions '''
 
     def get_address(self):
@@ -105,18 +122,33 @@ class HexitecFem():
     def get_port(self):
         return self.port
 
+    @run_on_executor(executor='thread_executor')
     def connect_hardware(self, msg):
         if self.hardware_connected:
             raise ParameterTreeError("Connection already established")
         try:
             self.cam_connect()
             self.hardware_connected = True
+            # Must wait 10 seconds for sensors to initialise
+            self.hardware_initialising = True
+            start = time.time()
+            delay = 0.0
+            print("Yo")
+            while (delay < 10.0):
+                time.sleep(1.0)
+                delay = time.time() - start
+                print("delay: %s" % delay)
+            self.hardware_initialising = False
         except Exception as e:
             raise ParameterTreeError("Failed to connect with camera: %s" % e)
 
+    @run_on_executor(executor='thread_executor')
     def initialise_hardware(self, msg):
+        
         if self.hardware_connected != True:
             raise ParameterTreeError("No connection established")
+        if self.hardware_initialising:
+            raise Exception("Hardware sensors busy initialising")
         try:
             self.initialise_system()
         except HexitecFemError as e:
@@ -157,7 +189,7 @@ class HexitecFem():
         for i in range ( 0 , len(cmd)/4 ):
 
             reg_value = 256*256*256*cmd[(i*4)] + 256*256*cmd[(i*4)+1] + 256*cmd[(i*4)+2] + cmd[(i*4)+3] 
-            self.qemcamera.x10g_rdma.write(0xE0000100, reg_value, 'Write 4 Bytes')
+            self.hexitec_camera.x10g_rdma.write(0xE0000100, reg_value, 'Write 4 Bytes')
             time.sleep(0.25)
 
     # Displays the returned response from the microcontroller
@@ -175,10 +207,10 @@ class HexitecFem():
             fifo_empty = FIFO_EMPTY_FLAG
 
             while fifo_empty == FIFO_EMPTY_FLAG and empty_count < ABORT_VALUE:
-                fifo_empty = self.qemcamera.x10g_rdma.read(0xE0000011, 'FIFO EMPTY FLAG')
+                fifo_empty = self.hexitec_camera.x10g_rdma.read(0xE0000011, 'FIFO EMPTY FLAG')
                 empty_count = empty_count + 1
             if self.debug: print "Got data:- " 
-            dat = self.qemcamera.x10g_rdma.read(0xE0000200, 'Data')
+            dat = self.hexitec_camera.x10g_rdma.read(0xE0000200, 'Data')
             if self.debug: print "Bytes are:- " 
             daty = dat/256/256/256%256
             f.append(daty)
@@ -200,7 +232,7 @@ class HexitecFem():
         if self.debug: 
             print "Counter is :- " , data_counter 
             print "Length is:-" , len(f)
-        fifo_empty = self.qemcamera.x10g_rdma.read(0xE0000011, 'Data')
+        fifo_empty = self.hexitec_camera.x10g_rdma.read(0xE0000011, 'Data')
         if self.debug: print "FIFO should be empty " , fifo_empty    
         s = ''
 
@@ -219,7 +251,7 @@ class HexitecFem():
         
         logging.debug("Connect camera")
         try:
-            self.qemcamera.connect()
+            self.hexitec_camera.connect()
             logging.debug("Camera is connected")
             self.send_cmd([0x23, 0x90, 0xE3, 0x0D])
             time.sleep(1)
@@ -236,7 +268,7 @@ class HexitecFem():
             self.send_cmd([0x23, 0x90, 0xE2, 0x0D])
             self.send_cmd([0x23, 0x91, 0xE2, 0x0D])
             logging.debug("Modules Disabled")
-            self.qemcamera.disconnect()
+            self.hexitec_camera.disconnect()
             logging.debug("Camera is Disconnected")
         except socket_error as e:
             logging.error("Unable to disconnect camera: %s", e)
@@ -245,15 +277,15 @@ class HexitecFem():
 
     def initialise_sensor(self):
 
-        self.qemcamera.x10g_rdma.write(0x60000002, 0, 'Disable State Machine Trigger')
+        self.hexitec_camera.x10g_rdma.write(0x60000002, 0, 'Disable State Machine Trigger')
         print "Disable State Machine Enabling signal"
             
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
-            self.qemcamera.x10g_rdma.write(0x60000004, 0, 'Set bit 0 to 1 to generate test pattern in FEMII, bits [2:1] select which of the 4 sensors is read - data 1_1')
+            self.hexitec_camera.x10g_rdma.write(0x60000004, 0, 'Set bit 0 to 1 to generate test pattern in FEMII, bits [2:1] select which of the 4 sensors is read - data 1_1')
             logging.debug("Initialising sensors on board VSR_1")
             self.vsr_addr = 0x90
         if self.selected_sensor == HexitecFem.OPTIONS[2]:
-            self.qemcamera.x10g_rdma.write(0x60000004, 4, 'Set bit 0 to 1 to generate test pattern in FEMII, bits [2:1] select which of the 4 sensors is read - data 2_1')
+            self.hexitec_camera.x10g_rdma.write(0x60000004, 4, 'Set bit 0 to 1 to generate test pattern in FEMII, bits [2:1] select which of the 4 sensors is read - data 2_1')
             logging.debug("Initialising sensors on board VSR 2")
             self.vsr_addr = 0x91  
 
@@ -272,9 +304,9 @@ class HexitecFem():
 
         print "Communicating with - ", self.vsr_addr
         # Set Frame Gen Mux Frame Gate
-        self.qemcamera.x10g_rdma.write(0x60000001, 2, 'Set Frame Gen Mux Frame Gate - works set to 2')
+        self.hexitec_camera.x10g_rdma.write(0x60000001, 2, 'Set Frame Gen Mux Frame Gate - works set to 2')
         #Followinbg line is important
-        self.qemcamera.x10g_rdma.write(0xD0000001, self.number_of_frames-1, 'Frame Gate set to self.number_of_frames')
+        self.hexitec_camera.x10g_rdma.write(0xD0000001, self.number_of_frames-1, 'Frame Gate set to self.number_of_frames')
         
         # Send this command to Enable Test Pattern in my VSR design
         print "Setting Number of Frames to ", self.number_of_frames
@@ -305,25 +337,25 @@ class HexitecFem():
         self.send_cmd([0x23, self.vsr_addr, 0x42, 0x30, 0x31, 0x38, 0x30, 0x0D])
         self.read_response()
         
-        full_empty = self.qemcamera.x10g_rdma.read(0x60000011,  'Check EMPTY Signals')
+        full_empty = self.hexitec_camera.x10g_rdma.read(0x60000011,  'Check EMPTY Signals')
         print "Check EMPTY Signals", full_empty
-        full_empty = self.qemcamera.x10g_rdma.read(0x60000012,  'Check FULL Signals')
+        full_empty = self.hexitec_camera.x10g_rdma.read(0x60000012,  'Check FULL Signals')
         print "Check FULL Signals", full_empty
     
     def calibrate_sensor(self):
         logging.debug("! calibrate_sensor() ! LINKS NOT LOCKED")
         print "setting image size"
         # 80x80 pixels 14 bits
-        #self.qemcamera.set_image_size(80,80,14,16)
+        #self.hexitec_camera.set_image_size(80,80,14,16)
 
         if self.sensors_layout == HexitecFem.READOUTMODE[0]:
             print ("Reading out single sensor")
-            self.qemcamera.set_image_size(80,80,14,16)
+            self.hexitec_camera.set_image_size(80,80,14,16)
             mux_mode = 0
         elif self.sensors_layout == HexitecFem.READOUTMODE[1]:
-            #self.qemcamera.x10g_rdma.write(0x60000002, 4, 'Enable State Machine')
+            #self.hexitec_camera.x10g_rdma.write(0x60000002, 4, 'Enable State Machine')
             mux_mode = 8
-            self.qemcamera.set_image_size(160,160,14,16)
+            self.hexitec_camera.set_image_size(160,160,14,16)
             print ("Reading out 2x2 sensors")
 
         # Set VCAL
@@ -346,31 +378,31 @@ class HexitecFem():
         self.read_response()
 
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
-            self.qemcamera.x10g_rdma.write(0x60000002, 1, 'Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
+            self.hexitec_camera.x10g_rdma.write(0x60000002, 1, 'Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
             print ("CALIBRATING VSR_1")    
         if self.selected_sensor == HexitecFem.OPTIONS[2]:
-            self.qemcamera.x10g_rdma.write(0x60000002, 2, 'Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
+            self.hexitec_camera.x10g_rdma.write(0x60000002, 2, 'Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
             print ("CALIBRATING VSR_2")  
             
         # Send command on CMD channel to FEMII
-        #self.qemcamera.x10g_rdma.write(0x60000002, 3, 'Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
-        self.qemcamera.x10g_rdma.write(0x60000002, 0, 'Un-Trigger Cal process')
+        #self.hexitec_camera.x10g_rdma.write(0x60000002, 3, 'Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
+        self.hexitec_camera.x10g_rdma.write(0x60000002, 0, 'Un-Trigger Cal process')
 
         # Reading back Sync register
-        synced = self.qemcamera.x10g_rdma.read(0x60000010,  'Check LVDS has synced')
+        synced = self.hexitec_camera.x10g_rdma.read(0x60000010,  'Check LVDS has synced')
         print "Sync Register value"
 
-        full_empty = self.qemcamera.x10g_rdma.read(0x60000011,  'Check FULL EMPTY Signals')
+        full_empty = self.hexitec_camera.x10g_rdma.read(0x60000011,  'Check FULL EMPTY Signals')
         print "Check EMPTY Signals", full_empty
 
-        full_empty = self.qemcamera.x10g_rdma.read(0x60000012,  'Check FULL FULL Signals')
+        full_empty = self.hexitec_camera.x10g_rdma.read(0x60000012,  'Check FULL FULL Signals')
         print "Check FULL Signals", full_empty
         
         # Check whether the currently selected VSR has synchronised or not
         if synced == 15:
             print "All Links on VSR's 1 and 2 synchronised"
             logging.debug("! calibrate_sensor() ! ALL LINKS ON VSR'S 1 AND 2 SYNCHRONISED")
-            #self.qemcamera.x10g_rdma.write(0x60000002, 4, 'Enable state machines in VSRs ')
+            #self.hexitec_camera.x10g_rdma.write(0x60000002, 4, 'Enable state machines in VSRs ')
             print ("Starting State Machine in VSR's")  
         elif synced == 12:
             print "Both Links on VSR 2 synchronised"
@@ -422,156 +454,156 @@ class HexitecFem():
         self.send_cmd([0x23, self.vsr_addr, 0x41, 0x30, 0x31,  0x0D])
         self.read_response()
 
-        full_empty = self.qemcamera.x10g_rdma.read(0x60000011,  'Check FULL EMPTY Signals')
+        full_empty = self.hexitec_camera.x10g_rdma.read(0x60000011,  'Check FULL EMPTY Signals')
         print "Check EMPTY Signals", full_empty
 
-        full_empty = self.qemcamera.x10g_rdma.read(0x60000012,  'Check FULL FULL Signals')
+        full_empty = self.hexitec_camera.x10g_rdma.read(0x60000012,  'Check FULL FULL Signals')
         print "Check FULL Signals", full_empty
 
         return synced
  
     def acquire_data(self):
         
-        full_empty = self.qemcamera.x10g_rdma.read(0x60000011,  'Check FULL EMPTY Signals')
+        full_empty = self.hexitec_camera.x10g_rdma.read(0x60000011,  'Check FULL EMPTY Signals')
         print "Check EMPTY Signals", full_empty
 
-        full_empty = self.qemcamera.x10g_rdma.read(0x60000012,  'Check FULL FULL Signals')
+        full_empty = self.hexitec_camera.x10g_rdma.read(0x60000012,  'Check FULL FULL Signals')
         print "Check FULL Signals", full_empty
         
         if self.sensors_layout == HexitecFem.READOUTMODE[0]:
             print ("Reading out single sensor")
             mux_mode = 0
         elif self.sensors_layout == HexitecFem.READOUTMODE[1]:
-            #self.qemcamera.x10g_rdma.write(0x60000002, 4, 'Enable State Machine')
+            #self.hexitec_camera.x10g_rdma.write(0x60000002, 4, 'Enable State Machine')
             mux_mode = 8
             print ("Reading out 2x2 sensors")
 
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
-            self.qemcamera.x10g_rdma.write(0x60000004, 0 + mux_mode, 'Sensor 1 1')
+            self.hexitec_camera.x10g_rdma.write(0x60000004, 0 + mux_mode, 'Sensor 1 1')
             print ("Sensor 1 1")
         if self.selected_sensor == HexitecFem.OPTIONS[2]:
-            self.qemcamera.x10g_rdma.write(0x60000004, 4 + mux_mode, 'Sensor 2 1')
+            self.hexitec_camera.x10g_rdma.write(0x60000004, 4 + mux_mode, 'Sensor 2 1')
             print ("Sensor 2 1") 
             
         # Flush the input FIFO buffers
-        self.qemcamera.x10g_rdma.write(0x60000002, 32, 'Clear Input Buffers')
-        self.qemcamera.x10g_rdma.write(0x60000002, 0, 'Clear Input Buffers')
+        self.hexitec_camera.x10g_rdma.write(0x60000002, 32, 'Clear Input Buffers')
+        self.hexitec_camera.x10g_rdma.write(0x60000002, 0, 'Clear Input Buffers')
         time.sleep(1)
-        full_empty = self.qemcamera.x10g_rdma.read(0x60000011,  'Check EMPTY Signals')
+        full_empty = self.hexitec_camera.x10g_rdma.read(0x60000011,  'Check EMPTY Signals')
         print "Check EMPTY Signals", full_empty
-        full_empty = self.qemcamera.x10g_rdma.read(0x60000012,  'Check FULL Signals')
+        full_empty = self.hexitec_camera.x10g_rdma.read(0x60000012,  'Check FULL Signals')
         print "Check FULL Signals", full_empty
         
         if self.sensors_layout == HexitecFem.READOUTMODE[1]:
-            self.qemcamera.x10g_rdma.write(0x60000002, 4, 'Enable State Machine')
+            self.hexitec_camera.x10g_rdma.write(0x60000002, 4, 'Enable State Machine')
             
         if self.debug:
             print "number of Frames :=", self.number_of_frames
 
         print "Data Capture on Wireshark only - no image"
-        self.qemcamera.data_stream(self.number_of_frames)  
+        self.hexitec_camera.data_stream(self.number_of_frames)  
         #
         waited = 0.0
         delay = 0.10
         resp = 0
         while resp < 1:
-            resp = self.qemcamera.x10g_rdma.read(0x60000014, 'Check data transfer completed?')
+            resp = self.hexitec_camera.x10g_rdma.read(0x60000014, 'Check data transfer completed?')
             time.sleep(delay)
             waited += delay
         print("Waited " + str(waited) + " seconds")
         #
 
         # Stop the state machine
-        self.qemcamera.x10g_rdma.write(0x60000002, 0, 'Dis-Enable State Machine')
+        self.hexitec_camera.x10g_rdma.write(0x60000002, 0, 'Dis-Enable State Machine')
         
         print "Acquisition Complete, clear enable signal"    
-        self.qemcamera.x10g_rdma.write(0xD0000000, 2, 'Clear enable signal')
-        self.qemcamera.x10g_rdma.write(0xD0000000, 0, 'Clear enable signal')
+        self.hexitec_camera.x10g_rdma.write(0xD0000000, 2, 'Clear enable signal')
+        self.hexitec_camera.x10g_rdma.write(0xD0000000, 0, 'Clear enable signal')
         
         # Clear the Mux Mode bit
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
-            self.qemcamera.x10g_rdma.write(0x60000004, 0, 'Sensor 1 1')
+            self.hexitec_camera.x10g_rdma.write(0x60000004, 0, 'Sensor 1 1')
             print ("Sensor 1 1")
         if self.selected_sensor == HexitecFem.OPTIONS[2]:
-            self.qemcamera.x10g_rdma.write(0x60000004, 4, 'Sensor 2 1')
+            self.hexitec_camera.x10g_rdma.write(0x60000004, 4, 'Sensor 2 1')
             print ("Sensor 2 1") 
-        full_empty = self.qemcamera.x10g_rdma.read(0x60000011,  'Check EMPTY Signals')
+        full_empty = self.hexitec_camera.x10g_rdma.read(0x60000011,  'Check EMPTY Signals')
         print "Check EMPTY Signals", full_empty
-        full_empty = self.qemcamera.x10g_rdma.read(0x60000012,  'Check FULL Signals')
+        full_empty = self.hexitec_camera.x10g_rdma.read(0x60000012,  'Check FULL Signals')
         print "Check FULL Signals", full_empty
-        no_frames = self.qemcamera.x10g_rdma.read(0xD0000001,  'Check Number of Frames setting') + 1
+        no_frames = self.hexitec_camera.x10g_rdma.read(0xD0000001,  'Check Number of Frames setting') + 1
         print "Number of Frames", no_frames
 
         print "Output from Sensor" 
-        m0 = self.qemcamera.x10g_rdma.read(0x70000010, 'frame last length')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x70000010, 'frame last length')
         print "frame last length", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x70000011, 'frame max length')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x70000011, 'frame max length')
         print "frame max length", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x70000012, 'frame min length')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x70000012, 'frame min length')
         print "frame min length", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x70000013, 'frame number')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x70000013, 'frame number')
         print "frame number", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x70000014, 'frame last clock cycles')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x70000014, 'frame last clock cycles')
         print "frame last clock cycles", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x70000015, 'frame max clock cycles')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x70000015, 'frame max clock cycles')
         print "frame max clock cycles", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x70000016, 'frame min clock cycles')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x70000016, 'frame min clock cycles')
         print "frame min clock cycles", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x70000017, 'frame data total')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x70000017, 'frame data total')
         print "frame data total", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x70000018, 'frame data total clock cycles')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x70000018, 'frame data total clock cycles')
         print "frame data total clock cycles", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x70000019, 'frame trigger count')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x70000019, 'frame trigger count')
         print "frame trigger count", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x7000001A, 'frame in progress flag')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x7000001A, 'frame in progress flag')
         print "frame in progress flag", m0
 
         print "Output from Frame Gate" 
-        m0 = self.qemcamera.x10g_rdma.read(0x80000010, 'frame last length')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x80000010, 'frame last length')
         print "frame last length", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x80000011, 'frame max length')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x80000011, 'frame max length')
         print "frame max length", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x80000012, 'frame min length')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x80000012, 'frame min length')
         print "frame min length", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x80000013, 'frame number')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x80000013, 'frame number')
         print "frame number", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x80000014, 'frame last clock cycles')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x80000014, 'frame last clock cycles')
         print "frame last clock cycles", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x80000015, 'frame max clock cycles')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x80000015, 'frame max clock cycles')
         print "frame max clock cycles", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x80000016, 'frame min clock cycles')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x80000016, 'frame min clock cycles')
         print "frame min clock cycles", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x80000017, 'frame data total')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x80000017, 'frame data total')
         print "frame data total", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x80000018, 'frame data total clock cycles')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x80000018, 'frame data total clock cycles')
         print "frame data total clock cycles", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x80000019, 'frame trigger count')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x80000019, 'frame trigger count')
         print "frame trigger count", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x8000001A, 'frame in progress flag')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x8000001A, 'frame in progress flag')
         print "frame in progress flag", m0    
         
         print "Input to XAUI" 
-        m0 = self.qemcamera.x10g_rdma.read(0x90000010, 'frame last length')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x90000010, 'frame last length')
         print "frame last length", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x90000011, 'frame max length')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x90000011, 'frame max length')
         print "frame max length", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x90000012, 'frame min length')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x90000012, 'frame min length')
         print "frame min length", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x90000013, 'frame number')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x90000013, 'frame number')
         print "frame number", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x90000014, 'frame last clock cycles')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x90000014, 'frame last clock cycles')
         print "frame last clock cycles", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x90000015, 'frame max clock cycles')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x90000015, 'frame max clock cycles')
         print "frame max clock cycles", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x90000016, 'frame min clock cycles')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x90000016, 'frame min clock cycles')
         print "frame min clock cycles", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x90000017, 'frame data total')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x90000017, 'frame data total')
         print "frame data total", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x90000018, 'frame data total clock cycles')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x90000018, 'frame data total clock cycles')
         print "frame data total clock cycles", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x90000019, 'frame trigger count')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x90000019, 'frame trigger count')
         print "frame trigger count", m0
-        m0 = self.qemcamera.x10g_rdma.read(0x9000001A, 'frame in progress flag')
+        m0 = self.hexitec_camera.x10g_rdma.read(0x9000001A, 'frame in progress flag')
         print "frame in progress flag", m0    
 
     def set_up_state_machine(self):

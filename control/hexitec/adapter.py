@@ -7,8 +7,7 @@ Christian Angelsen, STFC Application Engineering
 import logging
 import tornado
 import time
-from concurrent import futures
-from .HexitecFem import HexitecFem
+import os
 
 # Making checking for integer type Python2/3 independent
 import sys
@@ -19,9 +18,8 @@ else:
     integer_types = (int,)
     float_types = (float,)
 
-from tornado.ioloop import IOLoop
-from tornado.concurrent import run_on_executor
 from tornado.escape import json_decode
+from concurrent import futures
 
 from odin.adapters.adapter import (ApiAdapter, ApiAdapterRequest,
                                    ApiAdapterResponse, request_types, response_types)
@@ -32,6 +30,8 @@ from odin_data.frame_receiver_adapter import FrameReceiverAdapter
 from odin.adapters.proxy import ProxyAdapter
 from odin._version import get_versions
 
+from .HexitecFem import HexitecFem
+from .HexitecDAQ import HexitecDAQ
 
 class HexitecAdapter(ApiAdapter):
     """Hexitec adapter class for the ODIN server.
@@ -52,7 +52,7 @@ class HexitecAdapter(ApiAdapter):
         # Parse options
         # background_task_enable = bool(self.options.get('background_task_enable', False))
                 
-        self.hexitec = Hexitec()
+        self.hexitec = Hexitec(self.options)
 
         self.adapters = {}
 
@@ -76,7 +76,6 @@ class HexitecAdapter(ApiAdapter):
         #   e.g. If asking for /api/0.1/hexitec/fp/, path = "fp/"
         #        Compare:      /api/0.1/hexitec/, path = ""
         checkAdapters = True if len(path) > 0 else False
-        print "get? my arse; path: ", path, "checkAdapters: ", checkAdapters
         try:
             if checkAdapters:
                 for name, adapter in self.adapters.items():
@@ -189,42 +188,6 @@ class HexitecAdapter(ApiAdapter):
         # Pass adapter list to Hexitec class:
         self.hexitec.initialize(self.adapters)
 
-        # for name, adapter in adapters.items():
-        #     if isinstance(adapter, ProxyAdapter):
-        #         logging.debug("%s is Proxy Adapter", name)
-        #         self.adapters["proxy"] = adapter
-        #         print "adding: ", adapter
-
-        #     elif isinstance(adapter, FrameProcessorAdapter):
-        #         logging.debug("%s is FP Adapter", name)
-        #         self.adapters["fp"] = adapter
-        #         print "adding: ", adapter
-
-        #     elif isinstance(adapter, FrameReceiverAdapter):
-        #         logging.debug("%s is FR Adapter", name)
-        #         self.adapters["fr"] = adapter
-        #         print "adding: ", adapter
-
-        #     elif isinstance(adapter, LiveViewAdapter):
-        #         logging.debug("%s is Live View Adapter", name)
-
-        #     else:
-        #         logging.debug("%s: Wat dis?", name)
-        #         print adapter, " adapter is not self: ", adapter is not self
-
-        #         if adapter is not self:
-        #             print name, adapter, "   ", type(name)
-        #             self.adapters[name] = adapter
-        #             print "adding: ", adapter
-
-            #     if isinstance(adapter, HexitecAdapter):
-            #         print name, "It's me"
-            #     else:
-            #         print name, "it's not me"
-
-        # print "How many loaded adapters?", len(self.adapters)
-        # print self.adapters
-
         # self.adapters["liveview"] = adapter
 
 class HexitecError(Exception):
@@ -239,7 +202,7 @@ class Hexitec():
     # Thread executor used for background tasks
     executor = futures.ThreadPoolExecutor(max_workers=1)
 
-    def __init__(self):
+    def __init__(self, options):
         """Initialise the Hexitec object.
 
         This constructor initlialises the Hexitec object, building a parameter tree and
@@ -248,6 +211,21 @@ class Hexitec():
         # Save arguments
         # self.background_task_enable = background_task_enable
         # self.background_task_interval = background_task_interval
+
+        # Begin implementing DAQ code..
+        defaults = HexitecDetectorDefaults()
+        self.file_dir = options.get("save_dir", defaults.save_dir)
+        self.file_name = options.get("save_file", defaults.save_file)
+        # self.vector_file_dir = options.get("vector_file_dir", defaults.vector_file_dir)
+        # self.vector_file = options.get("vector_file_name", defaults.vector_file)
+        # self.acq_num = options.get("acquisition_num_frames", defaults.acq_num)
+        # self.acq_gap = options.get("acquisition_frame_gap", defaults.acq_gap)
+        odin_data_dir = options.get("odin_data_dir", defaults.odin_data_dir)
+        odin_data_dir = os.path.expanduser(odin_data_dir)
+
+        self.daq = HexitecDAQ(self.file_dir, self.file_name, odin_data_dir=odin_data_dir)
+
+        # -------
 
         self.adapters = {}
 
@@ -266,31 +244,6 @@ class Hexitec():
         #     'interval': (lambda: self.background_task_interval, self.set_task_interval),
         # })
 
-        # Test area for checking things in the UI
-        test_area = ParameterTree({
-            'target_text': "(blank)"
-        })
-
-        self.height = 80
-        self.width = 80
-        # Reorder
-        reorder = ParameterTree({
-            'height': (self._get_height, self._set_height),   # UI's rows = .config's height
-            'width': (self._get_width, self._set_width),    # columns = width
-            'reorder': False,
-            'raw_data': False
-        })
-
-        self.threshold_value = 100
-        self.threshold_mode = "None"
-        # Threshold
-        threshold = ParameterTree({
-            'threshold_filename': "",
-            'threshold_value': (self._get_threshold_value, self._set_threshold_value),
-            'threshold_mode': (self._get_threshold_mode, self._set_threshold_mode),
-            'enable': False
-        })
-
         # Calibration
         calibration = ParameterTree({
             'gradients_filename': "",
@@ -298,49 +251,20 @@ class Hexitec():
             'enable': False
         })
 
-        self.pixel_grid_size = 3
-        # Addition (Charged Sharing)
-        addition = ParameterTree({
-            'enable': False,
-            'pixel_grid_size': (self._get_pixel_grid_size, self._set_pixel_grid_size)
-        })
-        # Discrimination (Charged Sharing)
-        discrimination = ParameterTree({
-            'enable': False,
-            'pixel_grid_size': (self._get_pixel_grid_size, self._set_pixel_grid_size)
-        })
-
-        self.max_frames_received = 540
-        self.bin_start = 0
-        self.bin_end = 8000
-        self.bin_width = 10.0
-        # Histogram
-        histogram = ParameterTree({
-            'enable': False,
-            'max_frames_received': (self._get_max_frames_received, self._set_max_frames_received),
-            'bin_start': (self._get_bin_start, self._set_bin_start),
-            'bin_end': (self._get_bin_end, self._set_bin_end),
-            'bin_width': (self._get_bin_width, self._set_bin_width)
-        })
-
         ### POPULATE REPLACEMENT parameter tree ###
         self.sensors_layout = "2x2"
-        adapter_settings = ParameterTree({
+        odin_control = ParameterTree({
             'hexitec_fem': self.fem.param_tree,
+            # sensors_layout belong to Odin Data..
             'sensors_layout': (self._get_sensors_layout, self._set_sensors_layout),
-            'enable': False
+            'daq': self.daq.param_tree
         })
 
         # Build odin_data (vars) area here
         odin_data = ParameterTree({
-            'reorder': reorder,
-            'threshold': threshold,
             'next_frame': False,
             'calibration': calibration,
-            'addition': addition,
-            'discrimination': discrimination,
-            'histogram': histogram,
-            'adapter_settings': adapter_settings
+            'odin_control': odin_control
         })
 
         # Store all information in a parameter tree
@@ -349,10 +273,7 @@ class Hexitec():
             'tornado_version': tornado.version,
             'server_uptime': (self.get_server_uptime, None),
             # 'background_task': bg_task,
-            'test_area': test_area,
-            'odin_data': odin_data#,
-            # This is the future:
-            # 'adapter_settings': adapter_settings
+            'odin_data': odin_data
         })
 
         # # Set the background task counter to zero
@@ -364,6 +285,17 @@ class Hexitec():
         #         "Launching background task with interval %.2f secs", background_task_interval
         #     )
         #     self.background_task()
+
+    def initialize(self, adapters):
+        """Get references to required adapters and pass those references to the classes that need
+            to use them
+        """
+        self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
+
+        self.daq.initialize(self.adapters)
+
+    def cleanup(self):
+        self.daq.cleanup()
 
     def _get_sensors_layout(self):
 
@@ -387,145 +319,6 @@ class Hexitec():
 
 # curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/reorder/ -d '{"sensors_layout": "5x8"}'
 # curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fr/config/decoder_config -d '{"sensors_layout": "500x895"}'
-
-    def _get_height(self):
-
-        return self.height
-        
-    def _set_height(self, rows):
-        """Check that rows is an integer, above zero
-        """
-        if (isinstance(rows, integer_types)):
-            if (rows > 0):
-                self.height = rows
-            else:
-                raise HexitecError("Must be > 0")
-        else:
-            raise HexitecError("Must be an integer")
-
-    def _get_width(self):
-
-        return self.width
-        
-    def _set_width(self, columns):
-        """Check that columns is an integer, above zero
-        """
-        if (isinstance(columns, integer_types)):
-            if (columns > 0):
-                self.width = columns
-            else:
-                raise HexitecError("Must be > 0")
-        else:
-            raise HexitecError("Must be an integer")
-
-    def _get_threshold_value(self):
-
-        return self.threshold_value
-        
-    def _set_threshold_value(self, value):
-        """Check that (threshold) value is an integer, zero or above
-        """
-        if (isinstance(value, integer_types)):
-            if (value >= 0):
-                self.threshold_value = value
-            else:
-                raise HexitecError("Must be >= 0")
-        else:
-            raise HexitecError("Must be an integer")
-
-    def _get_pixel_grid_size(self):
-
-        return self.pixel_grid_size
-
-    def _set_pixel_grid_size(self, pixel_grid_size):
-        """Check that pixel grid size is an integer, either 3 or 5
-        """
-        if (isinstance(pixel_grid_size, integer_types)):
-            if (pixel_grid_size == 3 or pixel_grid_size == 5):
-                self.pixel_grid_size = pixel_grid_size
-            else:
-                raise HexitecError("Must be 3 or 5")
-        else:
-            raise HexitecError("Must be an integer")
-
-    def _get_max_frames_received(self):
-
-        return self.max_frames_received
-
-    def _set_max_frames_received(self, max_frames_received):
-        """Check that max_frames_received is an integer, above zero
-        """
-        if (isinstance(max_frames_received, integer_types)):
-            if (max_frames_received > 0):
-                self.max_frames_received = max_frames_received
-            else:
-                raise HexitecError("Must be above zero")
-        else:
-            raise HexitecError("Must be an integer")
-
-    def _get_bin_start(self):
-
-        return self.bin_start
-
-    def _set_bin_start(self, bin_start):
-        """Check that bin_start is an integer, zero or above
-        """
-        if (isinstance(bin_start, integer_types)):
-            if (bin_start >= 0):
-                self.bin_start = bin_start
-            else:
-                raise HexitecError("Must be zero or above")
-        else:
-            raise HexitecError("Must be an integer")
-
-    def _get_bin_end(self):
-
-        return self.bin_end
-
-    def _set_bin_end(self, bin_end):
-        """Check that bin_end is an integer, above zero
-        """
-        if (isinstance(bin_end, integer_types)):
-            if (bin_end > 0):
-                self.bin_end = bin_end
-            else:
-                raise HexitecError("Must be above zero")
-        else:
-            raise HexitecError("Must be an integer")
-
-    def _get_bin_width(self):
-
-        return self.bin_width
-
-    def _set_bin_width(self, bin_width):
-        """Check that bin_width is a float, above zero
-        """
-        # JavaScript converts zero fractionals into integers
-        #   (I.e. 10.0 -> 10); Force integers to be floats:
-        if (isinstance(bin_width, integer_types)):
-            bin_width = float(bin_width)
-
-        if (isinstance(bin_width, float_types)):
-            if (bin_width >= 0):
-                self.bin_width = bin_width
-            else:
-                raise HexitecError("Must be above zero")
-        else:
-            raise HexitecError("Must be a float")
-
-    def _get_threshold_mode(self):
-
-        return self.threshold_mode
-
-    def _set_threshold_mode(self, mode):
-        """Check that the threshold mode is either of
-            none, value or filename
-            """
-        validChoices = ("none", "value", "filename")
-        if (mode in validChoices):
-            self.threshold_mode = mode
-        else:
-            raise HexitecError("Must be either of: none, value or filename")
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.
@@ -556,12 +349,6 @@ class Hexitec():
             self.param_tree.set(path, data)
         except ParameterTreeError as e:
             raise HexitecError(e)
-
-    def initialize(self, adapters):
-        """Get references to required adapters and pass those references to the classes that need
-            to use them
-        """
-        self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
 
     # def set_task_interval(self, interval):
 
@@ -598,3 +385,23 @@ class Hexitec():
     #         IOLoop.instance().add_callback(self.background_task)
     #     else:
     #         logging.debug("Background task no longer enabled, stopping")
+
+class HexitecDetectorDefaults():
+
+    def __init__(self):
+        self.save_dir = "/tmp/"
+        self.save_file = "default_file"
+        # self.vector_file_dir = "/aeg_sw/work/projects/qem/python/03052018/"
+        # self.vector_file = "QEM_D4_198_ADC_10_icbias30_ifbias24.txt"
+        self.odin_data_dir = "~/develop/projects/odin-demo/install/"
+        self.acq_num = 4096
+        self.acq_gap = 1
+        self.fem = {
+            "ip_addr": "192.168.0.122",
+            "port": "8070",
+            "id": 0,
+            "server_ctrl_ip": "10.0.1.2",
+            "camera_ctrl_ip": "10.0.1.102",
+            "server_data_ip": "10.0.2.2",
+            "camera_data_ip": "10.0.2.102"
+        }

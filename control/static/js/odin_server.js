@@ -56,34 +56,6 @@ $( document ).ready(function()
                                 {"enable": discrimination_enable, 
                                 "pixel_grid_size": parseInt(pixel_grid_size)} };
 
-            // ODIN paramTree
-            $.ajax({
-                type: "PUT",
-                url: '/api/' + api_version + '/hexitec/odin_data',
-                contentType: "application/json",
-                data: JSON.stringify(addition_payload),
-                success: function(result) {
-                    console.log("Successfully updated Addition settings in odin_data");
-                },
-                error: function(request, msg, error) {
-                    console.log("FAILED to update Addition settings in odin_data: " + error);
-                }
-            });
-
-            // ODIN paramTree
-            $.ajax({
-                type: "PUT",
-                url: '/api/' + api_version + '/hexitec/odin_data',
-                contentType: "application/json",
-                data: JSON.stringify(discrimination_payload),
-                success: function(result) {
-                    console.log("Successfully updated Discrimination settings in odin_data");
-                },
-                error: function(request, msg, error) {
-                    console.log("FAILED to update Discrimination settings in odin_data: " + error);
-                }
-            });
-
             // plugin param
             $.ajax({
                 type: "PUT",
@@ -480,13 +452,8 @@ function apply_ui_values() {
     // If hdf write already enabled, toggle off and on so hdf settings sent
     if ( $("[name='hdf_write_enable']").prop('checked') == true)
     {
-        console.log("THIS IS VEERY TRUE");
         setTimeout(setHdfWrite(false), 400);
         setTimeout(setHdfWrite(true), 800);
-    }
-    else
-    {
-        console.log("THIS IS VERY FALSE");
     }
 }
 
@@ -527,28 +494,17 @@ function threshold_filename_changed()
     var threshold_filename = $('#threshold-filename-text').prop('value');
     threshold_filename = JSON.stringify(threshold_filename);
 
-    $.ajax(api_url + `hexitec/odin_data/threshold/threshold_filename`, {
-        method: "PUT",
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/fp/config/threshold/threshold_filename',
         contentType: "application/json",
         data: threshold_filename,
         success: function(result) {
+            console.log("threshold_filename  ACCEPTED");
             $('#threshold-filename-warning').html("");
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'hexitec/fp/config/threshold/threshold_filename',
-                contentType: "application/json",
-                data: threshold_filename,
-                success: function(result) {
-                    console.log("threshold_filename  ACCEPTED");
-                    $('#threshold-filename-warning').html("");
-                },
-                error: function(request, msg, error) {
-                    console.log("threshold_filename REJECTED");
-                    $('#threshold-filename-warning').html(error + ": " + format_error_message(request.responseText));
-                }
-            });
         },
         error: function(request, msg, error) {
+            console.log("threshold_filename REJECTED");
             $('#threshold-filename-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
@@ -559,22 +515,11 @@ function threshold_value_changed()
     var threshold_value = $('#threshold-value-text').prop('value');
     threshold_value = JSON.stringify(parseInt(threshold_value));
 
-    $.ajax(api_url + `hexitec/odin_data/threshold/threshold_value`, {
-        method: "PUT",
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/fp/config/threshold/threshold_value',
         contentType: "application/json",
         data: threshold_value,
-        success: function(result) {
-            $('#threshold-value-warning').html("");
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'hexitec/fp/config/threshold/threshold_value',
-                contentType: "application/json",
-                data: threshold_value,
-            });
-        },
-        error: function(request, msg, error) {
-            $('#threshold-value-warning').html(error + ": " + format_error_message(request.responseText));
-        }
     });
 }
 
@@ -583,22 +528,11 @@ function threshold_mode_changed()
     var threshold_mode = $('#threshold-mode-text').prop('value');
     threshold_mode = JSON.stringify(threshold_mode);
 
-    $.ajax(api_url + `hexitec/odin_data/threshold/threshold_mode`, {
-        method: "PUT",
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/fp/config/threshold/threshold_mode',
         contentType: "application/json",
         data: threshold_mode,
-        success: function(result) {
-            $('#threshold-mode-warning').html("");
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'hexitec/fp/config/threshold/threshold_mode',
-                contentType: "application/json",
-                data: threshold_mode,
-            });
-        },
-        error: function(request, msg, error) {
-            $('#threshold-mode-warning').html(error + ": " + format_error_message(request.responseText));
-        }
     });
 }
 
@@ -607,27 +541,16 @@ function gradients_filename_changed()
     var gradients_filename = $('#gradients-filename-text').prop('value');
     gradients_filename = JSON.stringify(gradients_filename);
 
-    $.ajax(api_url + `hexitec/odin_data/calibration/gradients_filename`, {
-        method: "PUT",
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/fp/config/calibration/gradients_filename',
         contentType: "application/json",
         data: gradients_filename,
         success: function(result) {
-            $('#gradients-warning').html("");
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'hexitec/fp/config/calibration/gradients_filename',
-                contentType: "application/json",
-                data: gradients_filename,
-                success: function(result) {
-                    $('#gradients-filename-warning').html("");
-                },
-                error: function(request, msg, error) {
-                    $('#gradients-filename-warning').html(error + ": " + format_error_message(request.responseText));
-                }
-            });
+            $('#gradients-filename-warning').html("");
         },
         error: function(request, msg, error) {
-            $('#gradients-warning').html(error + ": " + format_error_message(request.responseText));
+            $('#gradients-filename-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
@@ -637,27 +560,16 @@ function intercepts_filename_changed()
     var intercepts_filename = $('#intercepts-filename-text').prop('value');
     intercepts_filename = JSON.stringify(intercepts_filename);
 
-    $.ajax(api_url + `hexitec/odin_data/calibration/intercepts_filename`, {
-        method: "PUT",
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/fp/config/calibration/intercepts_filename',
         contentType: "application/json",
         data: intercepts_filename,
         success: function(result) {
-            $('#intercepts-warning').html("");
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'hexitec/fp/config/calibration/intercepts_filename',
-                contentType: "application/json",
-                data: intercepts_filename,
-                success: function(result) {
-                    $('#intercepts-filename-warning').html("");
-                },
-                error: function(request, msg, error) {
-                    $('#intercepts-filename-warning').html(error + ": " + format_error_message(request.responseText));
-                }
-            });
+            $('#intercepts-filename-warning').html("");
         },
         error: function(request, msg, error) {
-            $('#intercepts-warning').html(error + ": " + format_error_message(request.responseText));
+            $('#intercepts-filename-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }
@@ -669,42 +581,18 @@ function pixel_grid_size_changed()
     var pixel_grid_size = $('#pixel-grid-size-text').prop('value');
     pixel_grid_size = JSON.stringify(parseInt( pixel_grid_size));
 
-    // Targeting HexitecAdditionPlugin
-    $.ajax(api_url + `hexitec/odin_data/addition/pixel_grid_size`, {
-        method: "PUT",
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/fp/config/addition/pixel_grid_size',
         contentType: "application/json",
         data: pixel_grid_size,
-        success: function(result) {
-            $('#pixel-warning').html("");
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'hexitec/fp/config/addition/pixel_grid_size',
-                contentType: "application/json",
-                data: pixel_grid_size,
-            });
-        },
-        error: function(request, msg, error) {
-            $('#pixel-warning').html(error + ": " + format_error_message(request.responseText));
-        }
     });
 
-    // Targeting HexitecDiscriminationPlugin
-    $.ajax(api_url + `hexitec/odin_data/discrimination/pixel_grid_size`, {
-        method: "PUT",
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/fp/config/discrimination/pixel_grid_size',
         contentType: "application/json",
         data: pixel_grid_size,
-        success: function(result) {
-            $('#pixel-warning').html("");
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'hexitec/fp/config/discrimination/pixel_grid_size',
-                contentType: "application/json",
-                data: pixel_grid_size,
-            });
-        },
-        error: function(request, msg, error) {
-            $('#pixel-warning').html(error + ": " + format_error_message(request.responseText));
-        }
     });
 }
 
@@ -714,22 +602,11 @@ function max_frames_received_changed()
     var max_frames_received = $('#max-frames-received-text').prop('value');
     max_frames_received = JSON.stringify(parseInt(max_frames_received));
 
-    $.ajax(api_url + `hexitec/odin_data/histogram/max_frames_received`, {
-        method: "PUT",
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/fp/config/histogram/max_frames_received',
         contentType: "application/json",
         data: max_frames_received,
-        success: function(result) {
-            $('#frames-warning').html("");
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'hexitec/fp/config/histogram/max_frames_received',
-                contentType: "application/json",
-                data: max_frames_received,
-            });
-        },
-        error: function(request, msg, error) {
-            $('#frames-warning').html(error + ": " + format_error_message(request.responseText));
-        }
     });
 }
 
@@ -738,22 +615,11 @@ function bin_start_changed()
     var bin_start = $('#bin-start-text').prop('value');
     bin_start = JSON.stringify(parseInt(bin_start));
 
-    $.ajax(api_url + `hexitec/odin_data/histogram/bin_start`, {
-        method: "PUT",
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/fp/config/histogram/bin_start',
         contentType: "application/json",
         data: bin_start,
-        success: function(result) {
-            $('#bin-start-warning').html("");
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'hexitec/fp/config/histogram/bin_start',
-                contentType: "application/json",
-                data: bin_start,
-            });
-        },
-        error: function(request, msg, error) {
-            $('#bin-start-warning').html(error + ": " + format_error_message(request.responseText));
-        }
     });
 }
 
@@ -762,22 +628,11 @@ function bin_end_changed()
     var bin_end = $('#bin-end-text').prop('value');
     bin_end = JSON.stringify(parseInt(bin_end));
 
-    $.ajax(api_url + `hexitec/odin_data/histogram/bin_end`, {
-        method: "PUT",
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/fp/config/histogram/bin_end',
         contentType: "application/json",
         data: bin_end,
-        success: function(result) {
-            $('#bin-end-warning').html("");
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'hexitec/fp/config/histogram/bin_end',
-                contentType: "application/json",
-                data: bin_end,
-            });
-        },
-        error: function(request, msg, error) {
-            $('#bin-end-warning').html(error + ": " + format_error_message(request.responseText));
-        }
     });
 }
 
@@ -786,22 +641,11 @@ function bin_width_changed()
     var bin_width = $('#bin-width-text').prop('value');
     bin_width = JSON.stringify(parseFloat(bin_width));
 
-    $.ajax(api_url + `hexitec/odin_data/histogram/bin_width`, {
-        method: "PUT",
+    $.ajax({
+        type: "PUT",
+        url: api_url + 'hexitec/fp/config/histogram/bin_width',
         contentType: "application/json",
         data: bin_width,
-        success: function(result) {
-            $('#bin-width-warning').html("");
-            $.ajax({
-                type: "PUT",
-                url: api_url + 'hexitec/fp/config/histogram/bin_width',
-                contentType: "application/json",
-                data: bin_width,
-            });
-        },
-        error: function(request, msg, error) {
-            $('#bin-width-warning').html(error + ": " + format_error_message(request.responseText));
-        }
     });
 }
 
@@ -825,24 +669,27 @@ var changeRawDataEnable = function ()
 
 var changeNextFrameEnable = function()
 {
-    next_frame_enable = $("[name='next_frame_enable']").bootstrapSwitch('state');
-    $.ajax({
-        type: "PUT",
-        url: odin_data_url + 'next_frame',
-        contentType: "application/json",
-        data: JSON.stringify(next_frame_enable)
-    });
+    ;   // NOT USED
+    // next_frame_enable = $("[name='next_frame_enable']").bootstrapSwitch('state');
+    // $.ajax({
+    //     type: "PUT",
+    //     url: odin_data_url + 'next_frame',
+    //     contentType: "application/json",
+    //     data: JSON.stringify(next_frame_enable)
+    // });
 };
 
 var changeCalibrationEnable = function()
 {
-    calibration_enable = $("[name='calibration_enable']").bootstrapSwitch('state');
-    $.ajax({
-        type: "PUT",
-        url: odin_data_url + 'calibration',
-        contentType: "application/json",
-        data: JSON.stringify({"enable": calibration_enable})
-    });
+    ;   // NOT USED
+    // console.log(" CHANGE CALIB WON'T YOU??");
+    // calibration_enable = $("[name='calibration_enable']").bootstrapSwitch('state');
+    // $.ajax({
+    //     type: "PUT",
+    //     url: odin_data_url + 'calibration',
+    //     contentType: "application/json",
+    //     data: JSON.stringify({"enable": calibration_enable})
+    // });
 };
 
 var changeNextFrameEnable = function()
@@ -869,24 +716,26 @@ var changeCalibrationEnable = function()
 
 var changeAdditionEnable = function()
 {
-    addition_enable = $("[name='addition_enable']").bootstrapSwitch('state');
-    $.ajax({
-        type: "PUT",
-        url: odin_data_url + 'charged_sharing',
-        contentType: "application/json",
-        data: JSON.stringify({"addition": addition_enable})
-    });
+    ;   // Function never called
+    // addition_enable = $("[name='addition_enable']").bootstrapSwitch('state');
+    // $.ajax({
+    //     type: "PUT",
+    //     url: odin_data_url + 'charged_sharing',
+    //     contentType: "application/json",
+    //     data: JSON.stringify({"addition": addition_enable})
+    // });
 };
 
 var changeDiscriminationEnable = function()
 {
-    console.log("changeDiscrm called");
-    $.ajax({
-        type: "PUT",
-        url: odin_data_url + 'charged_sharing',
-        contentType: "application/json",
-        data: JSON.stringify({"discrimination": discrimination_enable})
-    });
+    ;   // Function never called
+    // console.log("changeDiscrm called");
+    // $.ajax({
+    //     type: "PUT",
+    //     url: odin_data_url + 'charged_sharing',
+    //     contentType: "application/json",
+    //     data: JSON.stringify({"discrimination": discrimination_enable})
+    // });
 };
 
 var changeHdfWriteEnable = function()

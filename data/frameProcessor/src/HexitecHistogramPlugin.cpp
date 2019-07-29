@@ -195,26 +195,28 @@ namespace FrameProcessor
     {
     	flush_histograms_ = config.get_param<bool>(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS);
 
+      LOG4CXX_TRACE(logger_, " ***** GOING TO PUSH THE HISTOGRAMS NOW! assuming:" << flush_histograms_);
+
     	if (flush_histograms_)
     	{
 				/// Time to push current histogram data
 				writeHistogramsToDisk();
 
-				// Clear histogram values
-				float *pixels = static_cast<float *>(pixel_histograms_->get_data_ptr());
-				float *summed = static_cast<float *>(summed_histograms_->get_data_ptr());
-		    memset(pixels, 0, (number_bins_ * image_pixels_) * sizeof(float));
-		    memset(summed, 0, number_bins_ * sizeof(uint64_t));
+				// // Clear histogram values - Not needed, initialiseHistograms() does this
+				// float *pixels = static_cast<float *>(pixel_histograms_->get_data_ptr());
+				// float *summed = static_cast<float *>(summed_histograms_->get_data_ptr());
+		    // memset(pixels, 0, (number_bins_ * image_pixels_) * sizeof(float));
+		    // memset(summed, 0, number_bins_ * sizeof(uint64_t));
 
 				frames_counter_ = 0;
 
     		// Clear flush_histograms_
     		flush_histograms_ = false;
+        // (Re-)Initialise memory
+        initialiseHistograms();
     	}
     }
 
-    // (Re-)Initialise memory
-    initialiseHistograms();
   }
 
   void HexitecHistogramPlugin::requestConfiguration(OdinData::IpcMessage& reply)
@@ -251,11 +253,7 @@ namespace FrameProcessor
    */
   bool HexitecHistogramPlugin::reset_statistics(void)
   {
-  	// Reset These parameters or not..??!
-    image_pixels_ = image_width_ * image_height_;
-    number_bins_  = (int)(((bin_end_ - bin_start_) / bin_width_) + 0.5);
-    // (Re-)Initialise memory
-    initialiseHistograms();
+  	// Nothing to reset??
 
     return true;
   }
@@ -297,9 +295,9 @@ namespace FrameProcessor
 				add_frame_data_to_histogram_with_sum(static_cast<float *>(input_ptr));
 
 				// Write histograms to disc when maximum number of frames received
-//				if ( ((frames_counter_ % max_frames_received_) == 0) &&
-//						(frames_counter_ != 0) )	// Fix why empty histograms written to 2nd (third et cetera) HDF5 files? - Not quite..
-				if (frames_counter_ == max_frames_received_)
+				if ( ((frames_counter_ % max_frames_received_) == 0) &&
+						(frames_counter_ != 0) )	// Fix why empty histograms written to 2nd (third et cetera) HDF5 files? - Not quite..
+				// if (frames_counter_ == max_frames_received_)
 				{
 					/// Time to push current histogram data to file
 					writeHistogramsToDisk();
