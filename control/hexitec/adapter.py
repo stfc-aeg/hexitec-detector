@@ -49,9 +49,6 @@ class HexitecAdapter(ApiAdapter):
         # Intialise superclass
         super(HexitecAdapter, self).__init__(**kwargs)
 
-        # Parse options
-        # background_task_enable = bool(self.options.get('background_task_enable', False))
-                
         self.hexitec = Hexitec(self.options)
 
         self.adapters = {}
@@ -208,10 +205,6 @@ class Hexitec():
         This constructor initlialises the Hexitec object, building a parameter tree and
         launching a background task if enabled
         """
-        # Save arguments
-        # self.background_task_enable = background_task_enable
-        # self.background_task_interval = background_task_interval
-
         # Begin implementing DAQ code..
         defaults = HexitecDetectorDefaults()
         self.file_dir = options.get("save_dir", defaults.save_dir)
@@ -237,54 +230,26 @@ class Hexitec():
         # Get package version information
         version_info = get_versions()
 
-        # Build a parameter tree for the background task
-        # bg_task = ParameterTree({
-        #     'count': (lambda: self.background_task_counter, None),
-        #     'enable': (lambda: self.background_task_enable, self.set_task_enable),
-        #     'interval': (lambda: self.background_task_interval, self.set_task_interval),
-        # })
-
-        # Calibration
-        calibration = ParameterTree({
-            'gradients_filename': "",
-            'intercepts_filename': "",
-            'enable': False
-        })
-
-        ### POPULATE REPLACEMENT parameter tree ###
         self.sensors_layout = "2x2"
-        odin_control = ParameterTree({
-            'hexitec_fem': self.fem.param_tree,
-            # sensors_layout belong to Odin Data..
-            'sensors_layout': (self._get_sensors_layout, self._set_sensors_layout),
-            'daq': self.daq.param_tree
+        detector = ParameterTree({
+            'fem': self.fem.param_tree,
+            'daq': self.daq.param_tree,
+            # Move sensors_layout into own subtree?
+            'sensors_layout': (self._get_sensors_layout, self._set_sensors_layout)
         })
 
-        # Build odin_data (vars) area here
-        odin_data = ParameterTree({
-            'next_frame': False,
-            'calibration': calibration,
-            'odin_control': odin_control
-        })
+        # # Build detector (vars) area here
+        # detector = ParameterTree({
+        #     'odin_control': odin_control
+        # })
 
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
             'odin_version': version_info['version'],
             'tornado_version': tornado.version,
             'server_uptime': (self.get_server_uptime, None),
-            # 'background_task': bg_task,
-            'odin_data': odin_data
+            'detector': detector
         })
-
-        # # Set the background task counter to zero
-        # self.background_task_counter = 0
-
-        # # Launch the background task if enabled in options
-        # if self.background_task_enable:
-        #     logging.debug(
-        #         "Launching background task with interval %.2f secs", background_task_interval
-        #     )
-        #     self.background_task()
 
     def initialize(self, adapters):
         """Get references to required adapters and pass those references to the classes that need
@@ -349,42 +314,6 @@ class Hexitec():
             self.param_tree.set(path, data)
         except ParameterTreeError as e:
             raise HexitecError(e)
-
-    # def set_task_interval(self, interval):
-
-    #     logging.debug("Setting background task interval to %f", interval)
-    #     self.background_task_interval = float(interval)
-        
-    # def set_task_enable(self, enable):
-
-    #     logging.debug("Setting background task enable to %s", enable)
-
-    #     current_enable = self.background_task_enable
-    #     self.background_task_enable = bool(enable)
-
-    #     if not current_enable:
-    #         logging.debug("Restarting background task")
-    #         self.background_task()
-
-
-    # @run_on_executor
-    # def background_task(self):
-    #     """Run the adapter background task.
-
-    #     This simply increments the background counter and sleeps for the specified interval,
-    #     before adding itself as a callback to the IOLoop instance to be called again.
-
-    #     """
-    #     if self.background_task_counter < 10 or self.background_task_counter % 20 == 0:
-    #         logging.debug("Background task running, count = %d", self.background_task_counter)
-
-    #     self.background_task_counter += 1
-    #     time.sleep(self.background_task_interval)
-
-    #     if self.background_task_enable:
-    #         IOLoop.instance().add_callback(self.background_task)
-    #     else:
-    #         logging.debug("Background task no longer enabled, stopping")
 
 class HexitecDetectorDefaults():
 

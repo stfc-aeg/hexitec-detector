@@ -43,6 +43,8 @@ namespace FrameProcessor
 
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
+    ///
+    debugCounter = 0;
   }
 
   /**
@@ -212,11 +214,11 @@ namespace FrameProcessor
 
     		// Clear flush_histograms_
     		flush_histograms_ = false;
-        // (Re-)Initialise memory
-        initialiseHistograms();
     	}
     }
 
+    // (Re-)Initialise memory
+    initialiseHistograms();
   }
 
   void HexitecHistogramPlugin::requestConfiguration(OdinData::IpcMessage& reply)

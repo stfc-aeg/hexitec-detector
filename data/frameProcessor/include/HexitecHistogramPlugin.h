@@ -102,6 +102,8 @@ namespace FrameProcessor
     long long *summed_histogram_;
     void initialiseHistograms();
     void writeHistogramsToDisk();
+    /// Debug only:
+    int debugCounter;
   };
 
   /**
