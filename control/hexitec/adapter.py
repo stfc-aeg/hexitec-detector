@@ -20,6 +20,8 @@ else:
 
 from tornado.escape import json_decode
 from concurrent import futures
+from tornado.ioloop import IOLoop
+from tornado.concurrent import run_on_executor
 
 from odin.adapters.adapter import (ApiAdapter, ApiAdapterRequest,
                                    ApiAdapterResponse, request_types, response_types)
@@ -197,7 +199,8 @@ class Hexitec():
     """Hexitec - class that extracts and stores information about system-level parameters."""
 
     # Thread executor used for background tasks
-    executor = futures.ThreadPoolExecutor(max_workers=1)
+    # executor = futures.ThreadPoolExecutor(max_workers=1)
+    thread_executor = futures.ThreadPoolExecutor(max_workers=1)
 
     def __init__(self, options):
         """Initialise the Hexitec object.
@@ -230,18 +233,15 @@ class Hexitec():
         # Get package version information
         version_info = get_versions()
 
+        self.dbgCount = 0
         self.sensors_layout = "2x2"
         detector = ParameterTree({
             'fem': self.fem.param_tree,
             'daq': self.daq.param_tree,
             # Move sensors_layout into own subtree?
-            'sensors_layout': (self._get_sensors_layout, self._set_sensors_layout)
+            'sensors_layout': (self._get_sensors_layout, self._set_sensors_layout),
+            'debug_count': (self._get_debug_count, self._set_debug_count)
         })
-
-        # # Build detector (vars) area here
-        # detector = ParameterTree({
-        #     'odin_control': odin_control
-        # })
 
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
@@ -250,6 +250,69 @@ class Hexitec():
             'server_uptime': (self.get_server_uptime, None),
             'detector': detector
         })
+
+        self.start_polling()
+
+    ''' Testing polling '''
+    @run_on_executor(executor='thread_executor')
+    def start_polling(self):
+        print "start_polling()"
+        # IOLoop.instance().add_callback(self.poll_histograms)  # Polling Histogram status
+        # IOLoop.instance().add_callback(self.poll_fem)         # Polling fem status
+        # IOLoop.instance().add_callback(self.poll_dummy)       # Polling dummy status
+
+    def poll_dummy(self):
+        if self.dbgCount == 100:
+            self.dbgCount = 0
+        else:
+            self.dbgCount += 1
+        IOLoop.instance().call_later(1.0, self.poll_dummy)
+
+    def poll_fem(self):
+        try:
+            # request = ApiAdapterRequest(None, content_type="application/json")
+            # response = self.adapters["hexitec"].get("detector", request)
+            response = self.fem._get_status_message()
+            print "response: ", response
+            # print "response.data[value]: ", response.data["value"]
+        except KeyError:
+            print "Adapter not found, polling screwed up?"
+            print self.adapters
+        time.sleep(5)
+        IOLoop.instance().call_later(0.5, self.poll_fem)
+
+    def poll_histograms(self):
+
+        print "self.dbgCount: ", self.dbgCount
+        if self.dbgCount == 5:
+            # Issue reset to histogram
+            command = "config/histogram/flush_histograms"
+            request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+            request.body = "{}".format(True)
+            self.adapters["fp"].put(command, request)
+            self.dbgCount = 0
+        self.dbgCount += 1
+            
+        # if (self.fem.acquisition_completed):
+        #     print " -=-=- mODS TO WORK NOw? -=-=-"
+        #     timeout = time.time() - self.fem.acquisition_timestamp
+        #     if (timeout > 1.0):
+        #         # Issue reset to histogram
+        #         command = "config/histogram/flush_histograms"
+        #         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+        #         request.body = "{}".format(True)
+        #         self.adapters["fp"].put(command, request)
+        #         # Clear fem's Boolean
+        #         self.fem.acquisition_completed = False
+
+        time.sleep(0.5)
+        IOLoop.instance().call_later(0.5, self.poll_histograms)
+
+    def _get_debug_count(self):
+        return self.dbgCount
+
+    def _set_debug_count(self, count):
+        self.dbgCount = count
 
     def initialize(self, adapters):
         """Get references to required adapters and pass those references to the classes that need

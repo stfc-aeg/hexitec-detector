@@ -142,40 +142,25 @@ $( document ).ready(function()
         apply_ui_values();
     });
 
-
+    // curl -s http://localhost:8888/api/0.1/hexitec/detector/debug_count | python -m json.tool
     // Test button:
     $('#executeButton').on('click', function(event) {
-        var execute_file_1 =  "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/execute_sequence_1.json";
-        $.ajax({
-            type: "PUT",
-            url: hexitec_url + 'fp/config/config_file',
-            contentType: "application/json",
-            data: execute_file_1,
-            success: function(result) {
-                $('#fp-config-warning').html("");
-                $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
-            },
-            error: function(request, msg, error) {
-                $('#fp-config-warning').html(error + ": " + format_error_message(request.responseText));
-                $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
-            }
-        });
+
+        check_debug_count();
     });
 
     // Odin Control
 
     $('#connectButton').on('click', function(event) {
         // Connect with hardware
-        // function_to_be_created();
-        console.log("Clicked on connect button");
         connect_hardware();
+        poll_connect_progress();
     });
 
     $('#initialiseButton').on('click', function(event) {
         // Initialise hardware
-        // function_to_be_created();
-        console.log("Clicked on initialise");
         initialise_hardware();
+        poll_initialise_progress();
     });
 
     $('#acquireButton').on('click', function(event) {
@@ -191,8 +176,72 @@ $( document ).ready(function()
         console.log("Clicked on disconnect button");
         disconnect_hardware();
     });
-
 });
+
+// Functions supporting polling..
+
+function poll_initialise_progress() {
+
+    $.getJSON(hexitec_url + 'detector/fem', function(response) {
+
+        var initialise_progress = response.fem.initialise_progress;
+        // HexitecFem.send_cmd() called 108 times
+        var initialise_percent = (initialise_progress * 100) / 109;
+        
+        var status_message = response.fem.status_message;
+        $('#odin-control-message').html(status_message);
+
+        // console.log("Initialise_percent: " + initialise_percent + " initialise_progress: " + initialise_progress + " stat_msg: " + status_message);
+
+        var progress_element = document.getElementById("progress-odin");
+        progress_element.value = initialise_progress;
+        if (initialise_percent < 100) 
+        {
+            window.setTimeout(poll_initialise_progress, 500);
+        }
+    });
+}
+
+function poll_connect_progress() {
+//http://localhost:8888/api/0.1/hexitec/detector/fem/connect_progress
+
+    $.getJSON(hexitec_url + 'detector/fem', function(response) {
+
+        var connect_progress = response.fem.connect_progress;
+        // console.log("resp.fem: " + response.fem + " connect_progress: " + connect_progress + " status_message: " + status_message);
+
+        var status_message = response.fem.status_message;
+        $('#odin-control-message').html(status_message);
+        
+        var progress_element = document.getElementById("progress-odin");
+        progress_element.value = connect_progress;
+        if (connect_progress < 100) 
+        {
+            window.setTimeout(poll_connect_progress, 500);
+        }
+    });
+}
+
+function check_debug_count() {
+
+    $.getJSON(hexitec_url + 'detector/debug_count', function(response) {
+
+        var current_value = response.debug_count;
+
+        document.getElementById("hdf-frames-text").value = response.debug_count;
+        var progress_element = document.getElementById("progress-odin");
+        progress_element.value = current_value;
+        if (current_value < 100 && current_value != 0) 
+        {
+            window.setTimeout(check_debug_count, 750);
+        }
+        else
+        {
+            console.log("Debug counting completed");
+        }
+    });
+}
+
 
 // curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/fem/ -d '{"connect_hardware": ""}' | python -m json.tool
 function connect_hardware() {

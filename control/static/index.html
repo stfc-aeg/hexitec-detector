@@ -69,9 +69,10 @@
             </div>
           </td>
         </tr>
+
         <tr>
           <input type="button" class="btn btn-primary" id='storeButton' name="store_enable" data-size="small" value="store">
-          <input type="button" class="btn btn-primary" id='executeButton' name="store_enable" data-size="small" value="execute">
+          <input type="button" class="btn btn-primary" id='executeButton' name="store_enable" data-size="small" value="test_stuff">
           Adding Apply button:&nbsp;
           <input type="button" class="btn btn-primary" id='applyButton' name="store_enable" data-size="small" value="apply">
           <-- These three buttons configure Odin data
@@ -206,10 +207,18 @@
 
           <tr>
               <td>
+                Odin Progress:&nbsp;
+              </td>
+              <td>
+                <progress id="progress-odin" style="width: 100%" value="0" max="100"> </progress>
+              </td>
+          <tr>
+
+          <tr>
+              <td>
                 Odin Messages:&nbsp;
               </td>
-              &nbsp;<td><span id="odin-control-messages">&nbsp;</span></td>
-              <td>
+              &nbsp;<td><span id="odin-control-message">&nbsp;</span></td>
           <tr>
 
           </tr>

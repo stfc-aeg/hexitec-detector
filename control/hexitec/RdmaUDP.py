@@ -13,9 +13,7 @@ class RdmaUDP(object):
 
         self.rxsocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, RxUDPBuf)
 
-        print "RDMA Binding rx for IP, port: ", MasterRxUDPIPAddress, MasterRxUDPIPPort
         self.rxsocket.bind((MasterRxUDPIPAddress, MasterRxUDPIPPort))
-        print "RDMA Binding tx IP, port: ", MasterTxUDPIPAddress, MasterTxUDPIPPort
         self.txsocket.bind((MasterTxUDPIPAddress, MasterTxUDPIPPort))
 
         #self.rxsocket.settimeout(None)

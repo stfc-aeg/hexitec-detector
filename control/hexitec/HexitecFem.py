@@ -81,7 +81,16 @@ class HexitecFem():
         self.hardware_connected = False
         self.hardware_initialising = False
 
+        # Acquisition completed, note completion
+        self.acquisition_completed = False
+        self.acquisition_timestamp = 0.0
+
         self.debug = False
+
+        self.status_message = ""
+        self.status_error = ""
+        self.connect_progress = 0
+        self.initialise_progress = 0
 
         param_tree_dict = {
             "ip_addr": (self.get_address, None),    # Replicated, not needed going forwards?
@@ -91,7 +100,12 @@ class HexitecFem():
             "initialise_hardware": (None, self.initialise_hardware),
             "collect_data": (None, self.collect_data),
             "disconnect_hardware": (None, self.disconnect_hardware),
-            "debug": (self.get_debug, self.set_debug)
+            "debug": (self.get_debug, self.set_debug),
+            "status_message": (self._get_status_message, None),
+            "status_error": (self._get_status_error, None),
+            "connect_progress": (self._get_connect_progress, None),
+            "initialise_progress": (self._get_initialise_progress, None)
+            
         }
 
         self.param_tree = ParameterTree(param_tree_dict)
@@ -111,10 +125,23 @@ class HexitecFem():
 
     def poll_histograms(self):
         print "poll_histograms"
+        if (self.acquisition_completed):
+            timeout = time.time() - self.acquisition_timestamp
+            if (timeout > 1.0):
+                # Issue reset to histogram
+                
+                # Clear Boolean
+                self.acquisition_completed = False
         time.sleep(1)
         IOLoop.instance().call_later(0.5, self.poll_histograms)
     
     ''' Accessor functions '''
+
+    def _get_connect_progress(self):
+        return self.connect_progress
+
+    def _get_initialise_progress(self):
+        return self.initialise_progress
 
     def get_address(self):
         return self.ip_address
@@ -122,24 +149,42 @@ class HexitecFem():
     def get_port(self):
         return self.port
 
+    def _get_status_message(self):
+        return self.status_message
+
+    def _set_status_message(self, message):
+        self.status_message = message
+
+    def _get_status_error(self):
+        return self.status_error
+
+    def _set_status_error(self, error):
+        self.status_error = error
+
     @run_on_executor(executor='thread_executor')
     def connect_hardware(self, msg):
         if self.hardware_connected:
             raise ParameterTreeError("Connection already established")
         try:
+            self._set_status_message("Connecting to camera..")
             self.cam_connect()
+            self._set_status_message("Camera connected. Waiting for sensors to initialise..")
             self.hardware_connected = True
-            # Must wait 10 seconds for sensors to initialise
             self.hardware_initialising = True
             start = time.time()
+            progress_step = 10  # 10 second delay, each second = 10%
             delay = 0.0
-            print("Yo")
-            while (delay < 10.0):
+            while (delay < 10):
                 time.sleep(1.0)
+                self.connect_progress += progress_step
                 delay = time.time() - start
-                print("delay: %s" % delay)
-            self.hardware_initialising = False
+                self.hardware_initialising = False
+            self._set_status_message("Camera connected. Sensors initialised.")
+            # Sleep 1 second then reset connect_progress
+            time.sleep(1.0)
+            self.connect_progress = 0
         except Exception as e:
+            self._set_status_error(e)
             raise ParameterTreeError("Failed to connect with camera: %s" % e)
 
     @run_on_executor(executor='thread_executor')
@@ -150,17 +195,27 @@ class HexitecFem():
         if self.hardware_initialising:
             raise Exception("Hardware sensors busy initialising")
         try:
+            self.initialise_progress = 0
             self.initialise_system()
+            # Sleep 1.5 seconds then reset initialise_progress
+            time.sleep(1.5)
+            self.initialise_progress = 0            
         except HexitecFemError as e:
             raise ParameterTreeError("Failed to initialise camera: %s" % e)
         except Exception as e:
             raise ParameterTreeError("Failed to initialise Camera: %s" % e)
 
     def collect_data(self, msg):
+
         if self.hardware_connected != True:
             raise ParameterTreeError("No connection established")
+        if self.hardware_initialising:
+            raise Exception("Hardware sensors busy initialising")
         try:
             self.acquire_data()
+            # Acquisition completed, note completion
+            self.acquisition_completed = True
+            self.acquisition_timestamp = time.time()
         except Exception as e:
             raise ParameterTreeError("Failed to collect data: %s" % e)
         
@@ -182,6 +237,9 @@ class HexitecFem():
     #  This function sends a command string to the microcontroller
     def send_cmd(self, cmd):
 
+        self.initialise_progress += 1
+        print "Muttah FOokah, init prog:", self.initialise_progress
+        
         while len(cmd)%4 != 0:
             cmd.append(13)
         if self.debug: print "Length of command - " , len(cmd) , len(cmd)%4      
@@ -258,8 +316,8 @@ class HexitecFem():
             self.send_cmd([0x23, 0x91, 0xE3, 0x0D])
             logging.debug("Modules Enabled")
         except socket_error as e:
-            logging.error("%s", e)
-            # logging.error("Attemped on ")
+            logging.error("%s" % e)
+            raise Exception("Error connecting camera: %s" % e)
         except Exception as e:
             raise Exception(e)
 
@@ -271,9 +329,9 @@ class HexitecFem():
             self.hexitec_camera.disconnect()
             logging.debug("Camera is Disconnected")
         except socket_error as e:
-            logging.error("Unable to disconnect camera: %s", e)
+            logging.error("Unable to disconnect camera: %s" % e)
         except AttributeError as e:
-            logging.error("Unable to disconnect camera: %s", "No active connection")
+            logging.error("Unable to disconnect camera: %s" % "No active connection")
 
     def initialise_sensor(self):
 
@@ -843,53 +901,55 @@ class HexitecFem():
     def initialise_system(self):
         # Does init, load, set up, write, enable, calibrate all in one fell swoooop
         #  for VSR2 followed by VSR1
-        # try:
-        print(" -=-=-=-=-=-=-=-=-  Setup System to config VSR 2.. -=-=-=-=-=-=-=-=- ")
+
+        self._set_status_message("Configuring VSR2");
         self.selected_sensor = HexitecFem.OPTIONS[2]
-        print "selected_sensor: ", self.selected_sensor
         self.initialise_sensor()
-        print(" -=-=-=-=- sensors initialised! -=-=-=-=- ")
+        
+        self._set_status_message("VSR2: Sensors initialised.")
         self.load_pwr_cal_read_enables()
-        print(" -=-=-=-=- load power / calibrate / read / whatever / done! -=-=-=-=- ")
+
+        self._set_status_message("VSR2: Loaded Power, Calibrate, Read Enables")
         self.set_up_state_machine()
-        print(" -=-=-=-=- state machine set up! -=-=-=-=- ")
+        
+        self._set_status_message("VSR2: State Machine setup")
         self.write_dac_values()
-        print(" -=-=-=-=- dac values written! -=-=-=-=- ")
+
+        self._set_status_message("VSR2: DAC values written")
         self.enable_adc()
-        print(" -=-=-=-=- adc enabled! -=-=-=-=- ")
+
+        self._set_status_message("VSR2: ADC enabled")
         synced_status = self.calibrate_sensor()
-        print " !!  synchronised: ", synced_status  # == 15..
-        # if self.selected_sensor == HexitecFem.OPTIONS[2] and synced_status == 12:
-        #     pass
-        # else:
-        #     raise Exception("VSR 2 Links didn't sync, aborting initialisation")
-        # print(" -=-=-=-=- VSR 2 all Done -=-=-=-=-")
+        print "Synchronised: ", synced_status  # == 15..
 
         time.sleep(1)
 
-        print(" -=-=-=-=-=-=-=-=-  Setup System to config VSR 1.. -=-=-=-=-=-=-=-=- ")
+        self._set_status_message("Configuring VSR1");
         self.selected_sensor = HexitecFem.OPTIONS[0]
-        print "selected_sensor: ", self.selected_sensor
+        
         self.initialise_sensor()
-        print(" -=-=-=-=- sensors initialised! -=-=-=-=- ")
+        
+        self._set_status_message("VSR1: Sensors initialised")
         self.load_pwr_cal_read_enables()
-        print(" -=-=-=-=- load power / calibrate / read / whatever / done! -=-=-=-=- ")
-        self.set_up_state_machine()
-        print(" -=-=-=-=- state machine set up! -=-=-=-=- ")
-        self.write_dac_values()
-        print(" -=-=-=-=- dac values written! -=-=-=-=- ")
-        self.enable_adc()
-        print(" -=-=-=-=- adc enabled! -=-=-=-=- ")
-        synced_status = self.calibrate_sensor()
-        print " !!  synchronised: ", synced_status  # Saying it's 15..
-        # if self.selected_sensor == HexitecFem.OPTIONS[0] and synced_status == 15:
-        #     pass
-        # else:
-        #     raise Exception("VSR 1 Links didn't sync, aborting initialisation")
-        # print(" -=-=-=-=- VSR 1 all Done -=-=-=-=-")
-        # except HexitecFemError as e:
-        #     logging.error("Error initialising system: %s", "Abort during read response")
 
+        self._set_status_message("VSR1: Loaded Power, Calibrate, Read Enables")
+        self.set_up_state_machine()
+        
+        self._set_status_message("VSR1: State Machine setup")
+        self.write_dac_values()
+
+        self._set_status_message("VSR1: DAC values written")
+        self.enable_adc()
+        
+        self._set_status_message("VSR1: ADC enabled")
+        synced_status = self.calibrate_sensor()
+        print "Synchronised: ", synced_status  # Saying it's 15..
+
+        self._set_status_message("Initialisation completed. VSR2 and VS1 configured.");
+        # Introduce small artificial delay to allow above status message to be read by polling mechanism
+        time.sleep(0.8)
+        self.initialise_progress += 1
+        
 
 class HexitecFemError(Exception):
     """Simple exception class for HexitecFem to wrap lower-level exceptions."""
