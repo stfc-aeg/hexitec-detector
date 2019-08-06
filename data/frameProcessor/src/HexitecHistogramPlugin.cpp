@@ -26,7 +26,7 @@ namespace FrameProcessor
       image_pixels_(image_width_ * image_height_),
 			max_frames_received_(0),
 			frames_counter_(0),
-			flush_histograms_(false)
+			flush_histograms_(0)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecHistogramPlugin");
@@ -195,11 +195,11 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS))
     {
-    	flush_histograms_ = config.get_param<bool>(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS);
+    	flush_histograms_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS);
 
       LOG4CXX_TRACE(logger_, " ***** GOING TO PUSH THE HISTOGRAMS NOW! assuming:" << flush_histograms_);
 
-    	if (flush_histograms_)
+    	if (flush_histograms_ == 1)
     	{
 				/// Time to push current histogram data
 				writeHistogramsToDisk();
@@ -213,7 +213,7 @@ namespace FrameProcessor
 				frames_counter_ = 0;
 
     		// Clear flush_histograms_
-    		flush_histograms_ = false;
+    		flush_histograms_ = 0;
     	}
     }
 

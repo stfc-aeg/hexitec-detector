@@ -16,6 +16,8 @@ var store_filename = "store_sequence_";
 var execute_filename = "execute_sequence_";
 var sensors_layout   = "2x2";
 
+var polling_thread_running = false;
+
 $( document ).ready(function()
 {
     $('.dec-number').on('change', function () {
@@ -152,76 +154,65 @@ $( document ).ready(function()
     // Odin Control
 
     $('#connectButton').on('click', function(event) {
-        // Connect with hardware
+ 
         connect_hardware();
-        poll_connect_progress();
+        if (polling_thread_running == false)
+        {
+            polling_thread_running = true;
+            start_polling_thread();
+        }
     });
 
     $('#initialiseButton').on('click', function(event) {
-        // Initialise hardware
+ 
         initialise_hardware();
-        poll_initialise_progress();
     });
 
     $('#acquireButton').on('click', function(event) {
-        // Acquire data from camera
-        // function_to_be_created();
-        console.log("Click on acquire button");
+ 
         collect_data();
     });
 
     $('#disconnectButton').on('click', function(event) {
-        // Disconnect with hardware
-        // function_to_be_created();
-        console.log("Clicked on disconnect button");
+ 
         disconnect_hardware();
     });
 });
 
 // Functions supporting polling..
+function start_polling_thread() {
 
-function poll_initialise_progress() {
+    poll_fem();
+}
+
+function poll_fem() {
+//http://localhost:8888/api/0.1/hexitec/detector/fem
 
     $.getJSON(hexitec_url + 'detector/fem', function(response) {
 
-        var initialise_progress = response.fem.initialise_progress;
-        // HexitecFem.send_cmd() called 108 times
-        var initialise_percent = (initialise_progress * 100) / 109;
-        
-        var status_message = response.fem.status_message;
-        $('#odin-control-message').html(status_message);
-
-        // console.log("Initialise_percent: " + initialise_percent + " initialise_progress: " + initialise_progress + " stat_msg: " + status_message);
-
-        var progress_element = document.getElementById("progress-odin");
-        progress_element.value = initialise_progress;
-        if (initialise_percent < 100) 
-        {
-            window.setTimeout(poll_initialise_progress, 500);
-        }
-    });
-}
-
-function poll_connect_progress() {
-//http://localhost:8888/api/0.1/hexitec/detector/fem/connect_progress
-
-    $.getJSON(hexitec_url + 'detector/fem', function(response) {
-
-        var connect_progress = response.fem.connect_progress;
-        // console.log("resp.fem: " + response.fem + " connect_progress: " + connect_progress + " status_message: " + status_message);
+        var percentage_complete = response.fem.operation_percentage_complete;
+        // console.log("percentage_complete: " + response.fem.operation_percentage_complete);
 
         var status_message = response.fem.status_message;
         $('#odin-control-message').html(status_message);
-        
+        var status_error = response.fem.status_error;
+        $('#odin-control-error').html(status_error);
+
+        console.log(" status_message: " + status_message + " status_error: " + status_error);
+
         var progress_element = document.getElementById("progress-odin");
-        progress_element.value = connect_progress;
-        if (connect_progress < 100) 
-        {
-            window.setTimeout(poll_connect_progress, 500);
-        }
+        progress_element.value = percentage_complete;
+        // Keep running this function - Need an exit strategy???
+        window.setTimeout(poll_fem, 500);
+
+        // if (connect_progress < 100)
+        // {
+        //     window.setTimeout(poll_fem, 500);
+        // }
     });
 }
 
+// Debugging:
 function check_debug_count() {
 
     $.getJSON(hexitec_url + 'detector/debug_count', function(response) {

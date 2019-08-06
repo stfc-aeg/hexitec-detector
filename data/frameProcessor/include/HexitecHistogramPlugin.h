@@ -91,7 +91,8 @@ namespace FrameProcessor
     /** Count number of frames **/
     int frames_counter_;
     /** Flush (remaining data to) histograms **/
-    bool flush_histograms_;
+    // bool flush_histograms_;
+    int flush_histograms_;
 
     int bin_start_;
     int bin_end_;

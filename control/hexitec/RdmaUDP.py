@@ -12,12 +12,12 @@ class RdmaUDP(object):
         self.rxsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         self.rxsocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, RxUDPBuf)
+        # Set socket timeout
+        timeval = struct.pack('ll', 5, 100)
+        self.rxsocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, timeval)
 
         self.rxsocket.bind((MasterRxUDPIPAddress, MasterRxUDPIPPort))
         self.txsocket.bind((MasterTxUDPIPAddress, MasterTxUDPIPPort))
-
-        #self.rxsocket.settimeout(None)
-        #self.txsocket.settimeout(None)
 
         self.rxsocket.setblocking(1)
         #self.txsocket.setblocking(1)

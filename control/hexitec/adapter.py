@@ -256,54 +256,19 @@ class Hexitec():
     ''' Testing polling '''
     @run_on_executor(executor='thread_executor')
     def start_polling(self):
-        print "start_polling()"
-        # IOLoop.instance().add_callback(self.poll_histograms)  # Polling Histogram status
-        # IOLoop.instance().add_callback(self.poll_fem)         # Polling fem status
-        # IOLoop.instance().add_callback(self.poll_dummy)       # Polling dummy status
-
-    def poll_dummy(self):
-        if self.dbgCount == 100:
-            self.dbgCount = 0
-        else:
-            self.dbgCount += 1
-        IOLoop.instance().call_later(1.0, self.poll_dummy)
-
-    def poll_fem(self):
-        try:
-            # request = ApiAdapterRequest(None, content_type="application/json")
-            # response = self.adapters["hexitec"].get("detector", request)
-            response = self.fem._get_status_message()
-            print "response: ", response
-            # print "response.data[value]: ", response.data["value"]
-        except KeyError:
-            print "Adapter not found, polling screwed up?"
-            print self.adapters
-        time.sleep(5)
-        IOLoop.instance().call_later(0.5, self.poll_fem)
+        IOLoop.instance().add_callback(self.poll_histograms)  # Polling Histogram status
 
     def poll_histograms(self):
-
-        print "self.dbgCount: ", self.dbgCount
-        if self.dbgCount == 5:
-            # Issue reset to histogram
-            command = "config/histogram/flush_histograms"
-            request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-            request.body = "{}".format(True)
-            self.adapters["fp"].put(command, request)
-            self.dbgCount = 0
-        self.dbgCount += 1
-            
-        # if (self.fem.acquisition_completed):
-        #     print " -=-=- mODS TO WORK NOw? -=-=-"
-        #     timeout = time.time() - self.fem.acquisition_timestamp
-        #     if (timeout > 1.0):
-        #         # Issue reset to histogram
-        #         command = "config/histogram/flush_histograms"
-        #         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-        #         request.body = "{}".format(True)
-        #         self.adapters["fp"].put(command, request)
-        #         # Clear fem's Boolean
-        #         self.fem.acquisition_completed = False
+        if (self.fem.acquisition_completed):
+            timeout = time.time() - self.fem.acquisition_timestamp
+            if (timeout > 1.0):
+                # Issue reset to histogram
+                command = "config/histogram/flush_histograms"
+                request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+                request.body = "{}".format(1)
+                self.adapters["fp"].put(command, request)
+                # Clear fem's Boolean
+                self.fem.acquisition_completed = False
 
         time.sleep(0.5)
         IOLoop.instance().call_later(0.5, self.poll_histograms)

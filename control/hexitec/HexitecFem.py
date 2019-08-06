@@ -25,7 +25,7 @@ class HexitecFem():
     
     Controls and configures each FEM-II module ready for a DAQ via UDP.
     """
-    thread_executor = futures.ThreadPoolExecutor(max_workers=1)
+    thread_executor = futures.ThreadPoolExecutor(max_workers=2)
 
     OPTIONS = [
     "Sensor_1_1",
@@ -89,8 +89,10 @@ class HexitecFem():
 
         self.status_message = ""
         self.status_error = ""
-        self.connect_progress = 0
-        self.initialise_progress = 0
+        self.stop_acquisition = False
+        # 
+        self.initialise_progress = 0                # Used by initialise_system()
+        self.operation_percentage_complete = 0
 
         param_tree_dict = {
             "ip_addr": (self.get_address, None),    # Replicated, not needed going forwards?
@@ -103,9 +105,9 @@ class HexitecFem():
             "debug": (self.get_debug, self.set_debug),
             "status_message": (self._get_status_message, None),
             "status_error": (self._get_status_error, None),
-            "connect_progress": (self._get_connect_progress, None),
-            "initialise_progress": (self._get_initialise_progress, None)
-            
+            "initialise_progress": (self._get_initialise_progress, None),
+            "operation_percentage_complete": (self._get_operation_percentage_complete, None),
+            "stop_acquisition": (None, self._set_stop_acquisition)
         }
 
         self.param_tree = ParameterTree(param_tree_dict)
@@ -114,31 +116,11 @@ class HexitecFem():
         self.sensors_layout     = HexitecFem.READOUTMODE[1]     # "2x2"
         self.dark_correction    = HexitecFem.DARKCORRECTION[0]  # "DARK CORRECTION OFF"
         self.test_mode_image    = HexitecFem.TESTMODEIMAGE[3]   # "IMAGE 4"
-        
-        # self.poll_histograms()
 
-    ''' Testing polling '''
-    @run_on_executor(executor='thread_executor')
-    def start_polling(self):
-        print "start_polling()"
-        IOLoop.instance().add_callback(self.poll_histograms)
-
-    def poll_histograms(self):
-        print "poll_histograms"
-        if (self.acquisition_completed):
-            timeout = time.time() - self.acquisition_timestamp
-            if (timeout > 1.0):
-                # Issue reset to histogram
-                
-                # Clear Boolean
-                self.acquisition_completed = False
-        time.sleep(1)
-        IOLoop.instance().call_later(0.5, self.poll_histograms)
-    
     ''' Accessor functions '''
 
-    def _get_connect_progress(self):
-        return self.connect_progress
+    def _get_operation_percentage_complete(self):
+        return self.operation_percentage_complete
 
     def _get_initialise_progress(self):
         return self.initialise_progress
@@ -159,74 +141,100 @@ class HexitecFem():
         return self.status_error
 
     def _set_status_error(self, error):
-        self.status_error = error
+        self.status_error = str(error)
+
+    def _set_stop_acquisition(self, stop):
+        self.stop_acquisition = stop
 
     @run_on_executor(executor='thread_executor')
     def connect_hardware(self, msg):
-        if self.hardware_connected:
-            raise ParameterTreeError("Connection already established")
         try:
+            if self.hardware_connected:
+                raise ParameterTreeError("Connection already established")
+            else:
+                self._set_status_error("")
             self._set_status_message("Connecting to camera..")
             self.cam_connect()
             self._set_status_message("Camera connected. Waiting for sensors to initialise..")
             self.hardware_connected = True
             self.hardware_initialising = True
             start = time.time()
-            progress_step = 10  # 10 second delay, each second = 10%
+            percent_step = 10
+            self.operation_percentage_complete = 0
             delay = 0.0
             while (delay < 10):
                 time.sleep(1.0)
-                self.connect_progress += progress_step
+                self.operation_percentage_complete += percent_step
                 delay = time.time() - start
-                self.hardware_initialising = False
+            self.hardware_initialising = False
             self._set_status_message("Camera connected. Sensors initialised.")
-            # Sleep 1 second then reset connect_progress
-            time.sleep(1.0)
-            self.connect_progress = 0
+        except (HexitecFemError, ParameterTreeError) as e:
+            self._set_status_error("Failed to connect with camera: %s" % str(e))
+            self._set_status_message("Is camera powered?")
         except Exception as e:
-            self._set_status_error(e)
-            raise ParameterTreeError("Failed to connect with camera: %s" % e)
+            self._set_status_error("Uncaught Exception; Failed to establish camera connection: %s" % str(e))
+            # Cannot raise error beyond this thread
 
     @run_on_executor(executor='thread_executor')
     def initialise_hardware(self, msg):
-        
-        if self.hardware_connected != True:
-            raise ParameterTreeError("No connection established")
-        if self.hardware_initialising:
-            raise Exception("Hardware sensors busy initialising")
         try:
-            self.initialise_progress = 0
+            if self.hardware_connected != True:
+                raise ParameterTreeError("No connection established")
+            if self.hardware_initialising:
+                raise HexitecFemError("Hardware sensors busy initialising")
+            else:
+                self._set_status_error("")
+            self.operation_percentage_complete = 0
             self.initialise_system()
-            # Sleep 1.5 seconds then reset initialise_progress
-            time.sleep(1.5)
-            self.initialise_progress = 0            
-        except HexitecFemError as e:
-            raise ParameterTreeError("Failed to initialise camera: %s" % e)
+            self.initialise_progress = 0
+        except (HexitecFemError, ParameterTreeError) as e:
+            self._set_status_error("Failed to initialise camera: %s" % str(e))
         except Exception as e:
-            raise ParameterTreeError("Failed to initialise Camera: %s" % e)
+            self._set_status_error("Uncaught Exception; Camera initialisation failed: %s" % str(e))
 
+    @run_on_executor(executor='thread_executor')
     def collect_data(self, msg):
-
-        if self.hardware_connected != True:
-            raise ParameterTreeError("No connection established")
-        if self.hardware_initialising:
-            raise Exception("Hardware sensors busy initialising")
         try:
+            if self.hardware_connected != True:
+                raise ParameterTreeError("No connection established")
+            if self.hardware_initialising:
+                raise HexitecFemError("Hardware sensors busy initialising")
+            else:
+                self._set_status_error("")
+            self.operation_percentage_complete = 0
+            self._set_status_message("Acquiring data..")
             self.acquire_data()
+            self._set_status_message("Data acquisition completed")
+            self.operation_percentage_complete = 100
             # Acquisition completed, note completion
             self.acquisition_completed = True
             self.acquisition_timestamp = time.time()
+        except (HexitecFemError, ParameterTreeError) as e:
+            self._set_status_error("Failed to collect data: %s" % str(e))
         except Exception as e:
-            raise ParameterTreeError("Failed to collect data: %s" % e)
-        
+            self._set_status_error("Uncaught Exception; Data collection failed: %s" % str(e))
+
+    @run_on_executor(executor='thread_executor')
     def disconnect_hardware(self, msg):
-        if self.hardware_connected == False:
-            raise ParameterTreeError("No connection to disconnect")
         try:
+            if self.hardware_connected == False:
+                raise ParameterTreeError("No connection to disconnect")
+            else:
+                self._set_status_error("")
+            # Stop acquisition if it's hung
+            if self.operation_percentage_complete < 100:
+                self.stop_acquisition = True
+            #
+            self.operation_percentage_complete = 0
+            self._set_status_message("Disconnecting camera..")
             self.cam_disconnect()
+            self._set_status_message("Camera disconnected")
+            self.operation_percentage_complete = 100
             self.hardware_connected = False
+        except (HexitecFemError, ParameterTreeError) as e:
+            self._set_status_error("Failed to disconnect: %s" % str(e))
         except Exception as e:
-            raise ParameterTreeError("Disconnection failed: %s" % e)
+            self._set_status_error("Uncaught Exception; Disconnection failed: %s" % str(e))
 
     def set_debug(self, debug):
         self.debug = debug
@@ -238,7 +246,7 @@ class HexitecFem():
     def send_cmd(self, cmd):
 
         self.initialise_progress += 1
-        print "Muttah FOokah, init prog:", self.initialise_progress
+        self.operation_percentage_complete = (self.initialise_progress * 100)  / 108;
         
         while len(cmd)%4 != 0:
             cmd.append(13)
@@ -307,19 +315,17 @@ class HexitecFem():
 
     def cam_connect(self):
         
-        logging.debug("Connect camera")
+        logging.debug("Connecting camera")
         try:
             self.hexitec_camera.connect()
-            logging.debug("Camera is connected")
+            logging.debug("Connecting camera")
             self.send_cmd([0x23, 0x90, 0xE3, 0x0D])
             time.sleep(1)
             self.send_cmd([0x23, 0x91, 0xE3, 0x0D])
             logging.debug("Modules Enabled")
         except socket_error as e:
-            logging.error("%s" % e)
-            raise Exception("Error connecting camera: %s" % e)
-        except Exception as e:
-            raise Exception(e)
+            logging.error("%s" % str(e))
+            raise HexitecFemError(e)
 
     def cam_disconnect(self):
         try:
@@ -329,9 +335,11 @@ class HexitecFem():
             self.hexitec_camera.disconnect()
             logging.debug("Camera is Disconnected")
         except socket_error as e:
-            logging.error("Unable to disconnect camera: %s" % e)
+            logging.error("Unable to disconnect camera: %s" % str(e))
+            raise HexitecFemError(e)
         except AttributeError as e:
             logging.error("Unable to disconnect camera: %s" % "No active connection")
+            raise HexitecFemError("%s; %s" % (e, "No active connection"))
 
     def initialise_sensor(self):
 
@@ -559,7 +567,7 @@ class HexitecFem():
             print "number of Frames :=", self.number_of_frames
 
         print "Data Capture on Wireshark only - no image"
-        self.hexitec_camera.data_stream(self.number_of_frames)  
+        self.hexitec_camera.data_stream(self.number_of_frames)
         #
         waited = 0.0
         delay = 0.10
@@ -568,15 +576,24 @@ class HexitecFem():
             resp = self.hexitec_camera.x10g_rdma.read(0x60000014, 'Check data transfer completed?')
             time.sleep(delay)
             waited += delay
+            if (self.stop_acquisition):
+                break
         print("Waited " + str(waited) + " seconds")
-        #
 
         # Stop the state machine
         self.hexitec_camera.x10g_rdma.write(0x60000002, 0, 'Dis-Enable State Machine')
-        
-        print "Acquisition Complete, clear enable signal"    
+
+        # Clear enable signal
         self.hexitec_camera.x10g_rdma.write(0xD0000000, 2, 'Clear enable signal')
         self.hexitec_camera.x10g_rdma.write(0xD0000000, 0, 'Clear enable signal')
+
+        if (self.stop_acquisition):
+            logging.error("Acquisition interrupted by User")
+            self._set_status_message("User interrupted acquisition")
+            self.stop_acquisition = False
+            raise HexitecFemError("User interrupted")
+
+        print "Acquisition Completed, enable signal cleared"
         
         # Clear the Mux Mode bit
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
@@ -946,9 +963,6 @@ class HexitecFem():
         print "Synchronised: ", synced_status  # Saying it's 15..
 
         self._set_status_message("Initialisation completed. VSR2 and VS1 configured.");
-        # Introduce small artificial delay to allow above status message to be read by polling mechanism
-        time.sleep(0.8)
-        self.initialise_progress += 1
         
 
 class HexitecFemError(Exception):
