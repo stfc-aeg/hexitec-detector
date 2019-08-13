@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
@@ -49,8 +50,8 @@ class HexitecFem():
     ]
 
     DARKCORRECTION = [
-    "DARK CORRECTION OFF",
-    "DARK CORRECTION ON"]
+    0,
+    1]
 
     READOUTMODE = [
     "SINGLE",
@@ -94,6 +95,11 @@ class HexitecFem():
         self.initialise_progress = 0                # Used by initialise_system()
         self.operation_percentage_complete = 0
 
+        self.selected_sensor    = HexitecFem.OPTIONS[2]         # "Sensor_2_1"
+        self.sensors_layout     = HexitecFem.READOUTMODE[1]     # "2x2"
+        self.dark_correction    = HexitecFem.DARKCORRECTION[0]  # "DARK CORRECTION OFF" = 0
+        self.test_mode_image    = HexitecFem.TESTMODEIMAGE[3]   # "IMAGE 4"
+
         param_tree_dict = {
             "ip_addr": (self.get_address, None),    # Replicated, not needed going forwards?
             "port": (self.get_port, None),          # Replicated, not needed going forwards?
@@ -107,16 +113,13 @@ class HexitecFem():
             "status_error": (self._get_status_error, None),
             "initialise_progress": (self._get_initialise_progress, None),
             "operation_percentage_complete": (self._get_operation_percentage_complete, None),
-            "stop_acquisition": (None, self._set_stop_acquisition)
+            "stop_acquisition": (None, self._set_stop_acquisition),
+            "dark_correction": (self._get_dark_correction, self._set_dark_correction),
+            "number_frames": (self._get_number_frames, self._set_number_frames)
         }
 
         self.param_tree = ParameterTree(param_tree_dict)
         
-        self.selected_sensor    = HexitecFem.OPTIONS[2]         # "Sensor_2_1"
-        self.sensors_layout     = HexitecFem.READOUTMODE[1]     # "2x2"
-        self.dark_correction    = HexitecFem.DARKCORRECTION[0]  # "DARK CORRECTION OFF"
-        self.test_mode_image    = HexitecFem.TESTMODEIMAGE[3]   # "IMAGE 4"
-
     ''' Accessor functions '''
 
     def _get_operation_percentage_complete(self):
@@ -146,6 +149,18 @@ class HexitecFem():
     def _set_stop_acquisition(self, stop):
         self.stop_acquisition = stop
 
+    def _get_dark_correction(self):
+        return self.dark_correction
+
+    def _set_dark_correction(self, correction):
+        self.dark_correction = correction
+    
+    def _get_number_frames(self):
+        return self.number_of_frames
+    
+    def _set_number_frames(self, frames):
+        self.number_of_frames = frames
+
     @run_on_executor(executor='thread_executor')
     def connect_hardware(self, msg):
         try:
@@ -171,8 +186,10 @@ class HexitecFem():
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to connect with camera: %s" % str(e))
             self._set_status_message("Is camera powered?")
+            logging.error("%s" % str(e))
         except Exception as e:
             self._set_status_error("Uncaught Exception; Failed to establish camera connection: %s" % str(e))
+            logging.error("%s" % str(e))
             # Cannot raise error beyond this thread
 
     @run_on_executor(executor='thread_executor')
@@ -189,8 +206,10 @@ class HexitecFem():
             self.initialise_progress = 0
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to initialise camera: %s" % str(e))
+            logging.error("%s" % str(e))
         except Exception as e:
             self._set_status_error("Uncaught Exception; Camera initialisation failed: %s" % str(e))
+            logging.error("%s" % str(e))
 
     @run_on_executor(executor='thread_executor')
     def collect_data(self, msg):
@@ -204,15 +223,16 @@ class HexitecFem():
             self.operation_percentage_complete = 0
             self._set_status_message("Acquiring data..")
             self.acquire_data()
-            self._set_status_message("Data acquisition completed")
             self.operation_percentage_complete = 100
             # Acquisition completed, note completion
             self.acquisition_completed = True
             self.acquisition_timestamp = time.time()
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to collect data: %s" % str(e))
+            logging.error("%s" % str(e))
         except Exception as e:
             self._set_status_error("Uncaught Exception; Data collection failed: %s" % str(e))
+            logging.error("%s" % str(e))
 
     @run_on_executor(executor='thread_executor')
     def disconnect_hardware(self, msg):
@@ -233,8 +253,10 @@ class HexitecFem():
             self.hardware_connected = False
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to disconnect: %s" % str(e))
+            logging.error("%s" % str(e))
         except Exception as e:
             self._set_status_error("Uncaught Exception; Disconnection failed: %s" % str(e))
+            logging.error("%s" % str(e))
 
     def set_debug(self, debug):
         self.debug = debug
@@ -247,10 +269,10 @@ class HexitecFem():
 
         self.initialise_progress += 1
         self.operation_percentage_complete = (self.initialise_progress * 100)  / 108;
-        
+
         while len(cmd)%4 != 0:
             cmd.append(13)
-        if self.debug: print "Length of command - " , len(cmd) , len(cmd)%4      
+        if self.debug: logging.debug("Length of command - %s %s" % (len(cmd), len(cmd)%4))
 
         for i in range ( 0 , len(cmd)/4 ):
 
@@ -275,41 +297,42 @@ class HexitecFem():
             while fifo_empty == FIFO_EMPTY_FLAG and empty_count < ABORT_VALUE:
                 fifo_empty = self.hexitec_camera.x10g_rdma.read(0xE0000011, 'FIFO EMPTY FLAG')
                 empty_count = empty_count + 1
-            if self.debug: print "Got data:- " 
+            if self.debug: logging.debug("Got data:- ")
             dat = self.hexitec_camera.x10g_rdma.read(0xE0000200, 'Data')
-            if self.debug: print "Bytes are:- " 
+            if self.debug: logging.debug("Bytes are:- ")
             daty = dat/256/256/256%256
             f.append(daty)
-            if self.debug: print format(daty, '02x')
+            if self.debug: logging.debug(format(daty, '02x'))
             daty = dat/256/256%256
             f.append(daty)
-            if self.debug: print format(daty, '02x')
+            if self.debug: logging.debug(format(daty, '02x'))
             daty = dat/256%256
             f.append(daty)
-            if self.debug: print format(daty, '02x')
+            if self.debug: logging.debug(format(daty, '02x'))
             daty = dat%256
             f.append(daty)
-            if self.debug: print format(daty, '02x')
+            if self.debug: logging.debug(format(daty, '02x'))
             data_counter = data_counter + 1
             if empty_count == ABORT_VALUE:
+                logging.error("Error: read_respomse from FEM aborted")
                 raise HexitecFemError("read_response aborted")
             empty_count = 0          
 
         if self.debug: 
-            print "Counter is :- " , data_counter 
-            print "Length is:-" , len(f)
+            logging.debug("Counter is :- %s" % data_counter)
+            logging.debug("Length is:- %s" % len(f))
         fifo_empty = self.hexitec_camera.x10g_rdma.read(0xE0000011, 'Data')
-        if self.debug: print "FIFO should be empty " , fifo_empty    
+        if self.debug: logging.debug("FIFO should be empty: %s" % fifo_empty)
         s = ''
 
         for i in range( 1 , data_counter*4):
-            if self.debug: print i
+            # if self.debug: logging.debug(i)
             s = s + chr(f[i])
 
         if self.debug: 
-            print "String :- " , s
-            print f[0] 
-            print f[1]
+            logging.debug("String :- %s" % s)
+            logging.debug(f[0])
+            logging.debug(f[1])
 
         return(s)
 
@@ -318,13 +341,12 @@ class HexitecFem():
         logging.debug("Connecting camera")
         try:
             self.hexitec_camera.connect()
-            logging.debug("Connecting camera")
+            logging.debug("Camera connected")
             self.send_cmd([0x23, 0x90, 0xE3, 0x0D])
             time.sleep(1)
             self.send_cmd([0x23, 0x91, 0xE3, 0x0D])
             logging.debug("Modules Enabled")
         except socket_error as e:
-            logging.error("%s" % str(e))
             raise HexitecFemError(e)
 
     def cam_disconnect(self):
@@ -344,7 +366,7 @@ class HexitecFem():
     def initialise_sensor(self):
 
         self.hexitec_camera.x10g_rdma.write(0x60000002, 0, 'Disable State Machine Trigger')
-        print "Disable State Machine Enabling signal"
+        logging.debug("Disable State Machine Enabling signal")
             
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
             self.hexitec_camera.x10g_rdma.write(0x60000004, 0, 'Set bit 0 to 1 to generate test pattern in FEMII, bits [2:1] select which of the 4 sensors is read - data 1_1')
@@ -356,47 +378,47 @@ class HexitecFem():
             self.vsr_addr = 0x91  
 
         if self.sensors_layout == HexitecFem.READOUTMODE[0]:
-            print "Disable synchronisation SM start"
+            logging.debug("Disable synchronisation SM start")
             self.send_cmd([0x23, self.vsr_addr, 0x40, 0x30, 0x41, 0x30, 0x30, 0x0D])
             self.read_response()
-            print ("Reading out single sensor")
+            logging.debug("Reading out single sensor")
         elif self.sensors_layout == HexitecFem.READOUTMODE[1]:
             # Need to set up triggering MODE here
             # Enable synchronisation SM start via trigger 1
-            print "Enable synchronisation SM start via trigger 1"
+            logging.debug("Enable synchronisation SM start via trigger 1")
             self.send_cmd([0x23, self.vsr_addr, 0x42, 0x30, 0x41, 0x30, 0x31, 0x0D])
             self.read_response()
-            print ("Reading out 2x2 sensors")
+            logging.debug("Reading out 2x2 sensors")
 
-        print "Communicating with - ", self.vsr_addr
+        logging.debug("Communicating with - %s" % self.vsr_addr)
         # Set Frame Gen Mux Frame Gate
         self.hexitec_camera.x10g_rdma.write(0x60000001, 2, 'Set Frame Gen Mux Frame Gate - works set to 2')
-        #Followinbg line is important
+        #Following line is important
         self.hexitec_camera.x10g_rdma.write(0xD0000001, self.number_of_frames-1, 'Frame Gate set to self.number_of_frames')
         
         # Send this command to Enable Test Pattern in my VSR design
-        print "Setting Number of Frames to ", self.number_of_frames
-        print "Enable Test Pattern in my VSR design"
+        logging.debug("Setting Number of Frames to %s" % self.number_of_frames)
+        logging.debug("Enable Test Pattern in my VSR design")
         # Use Sync clock from DAQ board
-        print "Use Sync clock from DAQ board"
+        logging.debug("Use Sync clock from DAQ board")
         self.send_cmd([0x23, self.vsr_addr, 0x42, 0x30, 0x31, 0x31, 0x30, 0x0D])
         self.read_response()
-        print "Enable LVDS outputs"
+        logging.debug("Enable LVDS outputs")
         set_register_vsr1_command  = [0x23, 0x90, 0x42, 0x30, 0x31, 0x32, 0x30, 0x0D]
         set_register_vsr2_command  = [0x23, 0x91, 0x42, 0x30, 0x31, 0x32, 0x30, 0x0D]
         self.send_cmd(set_register_vsr1_command)
         self.read_response()
         self.send_cmd(set_register_vsr2_command)
         self.read_response()
-        print "LVDS outputs enabled"
-        print "Read LO IDLE"
+        logging.debug("LVDS outputs enabled")
+        logging.debug("Read LO IDLE")
         self.send_cmd([0x23, self.vsr_addr, 0x40, 0x46, 0x45, 0x41, 0x41, 0x0D])
         self.read_response()
-        print "Read HI IDLE"
+        logging.debug("Read HI IDLE")
         self.send_cmd([0x23, self.vsr_addr, 0x40, 0x46, 0x46, 0x4E, 0x41, 0x0D])
         self.read_response()
         # This sets up test pattern on LVDS outputs
-        print "Set up LVDS test pattern"
+        logging.debug("Set up LVDS test pattern")
         self.send_cmd([0x23, self.vsr_addr, 0x43, 0x30, 0x31, 0x43, 0x30, 0x0D])
         self.read_response()
         # Use default test pattern of 1000000000000000
@@ -404,30 +426,29 @@ class HexitecFem():
         self.read_response()
         
         full_empty = self.hexitec_camera.x10g_rdma.read(0x60000011,  'Check EMPTY Signals')
-        print "Check EMPTY Signals", full_empty
+        logging.debug("Check EMPTY Signals: %s" % full_empty)
         full_empty = self.hexitec_camera.x10g_rdma.read(0x60000012,  'Check FULL Signals')
-        print "Check FULL Signals", full_empty
+        logging.debug("Check FULL Signals: %s" % full_empty)
     
     def calibrate_sensor(self):
-        logging.debug("! calibrate_sensor() ! LINKS NOT LOCKED")
-        print "setting image size"
+        # logging.debug("setting image size")
         # 80x80 pixels 14 bits
         #self.hexitec_camera.set_image_size(80,80,14,16)
 
         if self.sensors_layout == HexitecFem.READOUTMODE[0]:
-            print ("Reading out single sensor")
+            logging.debug("Reading out single sensor")
             self.hexitec_camera.set_image_size(80,80,14,16)
             mux_mode = 0
         elif self.sensors_layout == HexitecFem.READOUTMODE[1]:
             #self.hexitec_camera.x10g_rdma.write(0x60000002, 4, 'Enable State Machine')
             mux_mode = 8
             self.hexitec_camera.set_image_size(160,160,14,16)
-            print ("Reading out 2x2 sensors")
+            logging.debug("Reading out 2x2 sensors")
 
         # Set VCAL
         self.send_cmd([0x23, self.vsr_addr, 0x42, 0x31, 0x38, 0x30, 0x31, 0x0D])
         self.read_response()
-        print "Clear bit 5"
+        logging.debug("Clear bit 5")
         self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x32, 0x30, 0x0D])
         self.read_response()
     
@@ -435,7 +456,7 @@ class HexitecFem():
         self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x31, 0x30, 0x0D])
         self.read_response()
         
-        print "Set bit 6"
+        logging.debug("Set bit 6")
         self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x34, 0x30, 0x0D])
         self.read_response()
         self.send_cmd([0x23, self.vsr_addr, 0x41, 0x30, 0x31, 0x0D])
@@ -445,10 +466,10 @@ class HexitecFem():
 
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
             self.hexitec_camera.x10g_rdma.write(0x60000002, 1, 'Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
-            print ("CALIBRATING VSR_1")    
+            logging.debug("CALIBRATING VSR_1")    
         if self.selected_sensor == HexitecFem.OPTIONS[2]:
             self.hexitec_camera.x10g_rdma.write(0x60000002, 2, 'Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
-            print ("CALIBRATING VSR_2")  
+            logging.debug("CALIBRATING VSR_2")  
             
         # Send command on CMD channel to FEMII
         #self.hexitec_camera.x10g_rdma.write(0x60000002, 3, 'Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
@@ -456,28 +477,25 @@ class HexitecFem():
 
         # Reading back Sync register
         synced = self.hexitec_camera.x10g_rdma.read(0x60000010,  'Check LVDS has synced')
-        print "Sync Register value"
+        logging.debug("Sync Register value")
 
         full_empty = self.hexitec_camera.x10g_rdma.read(0x60000011,  'Check FULL EMPTY Signals')
-        print "Check EMPTY Signals", full_empty
+        logging.debug("Check EMPTY Signals: %s" % full_empty)
 
         full_empty = self.hexitec_camera.x10g_rdma.read(0x60000012,  'Check FULL FULL Signals')
-        print "Check FULL Signals", full_empty
+        logging.debug("Check FULL Signals: %s" % full_empty)
         
         # Check whether the currently selected VSR has synchronised or not
         if synced == 15:
-            print "All Links on VSR's 1 and 2 synchronised"
-            logging.debug("! calibrate_sensor() ! ALL LINKS ON VSR'S 1 AND 2 SYNCHRONISED")
+            logging.debug("All Links on VSR's 1 and 2 synchronised")
             #self.hexitec_camera.x10g_rdma.write(0x60000002, 4, 'Enable state machines in VSRs ')
-            print ("Starting State Machine in VSR's")  
+            logging.debug("Starting State Machine in VSR's")
         elif synced == 12:
-            print "Both Links on VSR 2 synchronised"
-            logging.debug("! calibrate_sensor() ! BOTH LINKS ON VSR 2 SYNCHRONISED")
+            logging.debug("Both Links on VSR 2 synchronised")
         elif synced == 3:
-            print "Both Links on VSR 1 synchronised"
-            logging.debug("! calibrate_sensor() ! BOTH LINKS ON VSR 1 SYNCHRONISED")
+            logging.debug("Both Links on VSR 1 synchronised")
         else:
-            print synced        
+            logging.debug(synced)
 
         # Send this command to Disable Test Pattern in my VSR design
         self.send_cmd([0x23, 0x92, 0x00, 0x0D])
@@ -486,87 +504,89 @@ class HexitecFem():
         self.send_cmd([0x23, self.vsr_addr, 0x43, 0x30, 0x31, 0x43, 0x30, 0x0D])
         self.read_response()
 
-        print "Clear bit 5 - VCAL ENABLED"
+        logging.debug("Clear bit 5 - VCAL ENABLED")
         self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x32, 0x30, 0x0D])
         self.read_response()
 
         if self.dark_correction == HexitecFem.DARKCORRECTION[0]:
             #  Log image to file
-            print "DARK CORRECTION OFF"
+            logging.debug("DARK CORRECTION OFF")
             self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x30, 0x38, 0x0D])
             self.read_response()
         elif self.dark_correction == HexitecFem.DARKCORRECTION[1]:
             #  Log image to file
-            print "DARK CORRECTION ON"
+            logging.debug("DARK CORRECTION ON")
             self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x30, 0x38, 0x0D])    
             self.read_response()
         
         # Read Reg24
-        self.send_cmd([0x23, self.vsr_addr, 0x41, 0x32, 0x34,  0x0D])
-        if self.debug: print "reading Register 0x24"
-        if self.debug: print self.read_response()
+        self.send_cmd([0x23, self.vsr_addr, 0x41, 0x32, 0x34, 0x0D])
+        if self.debug: logging.debug("reading Register 0x24")
+        if self.debug: logging.debug(self.read_response())
         
         self.send_cmd([0x23, self.vsr_addr, 0x41, 0x38, 0x39,  0x0D])
         self.read_response()
         
         time.sleep(3)
         
-        if self.debug: print "Poll register 0x89"
+        if self.debug: logging.debug("Poll register 0x89")
         self.send_cmd([0x23, self.vsr_addr, 0x41, 0x38, 0x39,  0x0D])
         r = self.read_response()
-        if self.debug: print "Bit 1 should be 1" 
-        if self.debug: print r
-        if self.debug: print "Read reg 1"
+        if self.debug: logging.debug("Bit 1 should be 1")
+        if self.debug: logging.debug(r)
+        if self.debug: logging.debug("Read reg 1")
         self.send_cmd([0x23, self.vsr_addr, 0x41, 0x30, 0x31,  0x0D])
         self.read_response()
 
         full_empty = self.hexitec_camera.x10g_rdma.read(0x60000011,  'Check FULL EMPTY Signals')
-        print "Check EMPTY Signals", full_empty
+        logging.debug("Check EMPTY Signals: %s" %  full_empty)
 
         full_empty = self.hexitec_camera.x10g_rdma.read(0x60000012,  'Check FULL FULL Signals')
-        print "Check FULL Signals", full_empty
+        logging.debug("Check FULL Signals: %s" % full_empty)
 
         return synced
  
     def acquire_data(self):
-        
+
+        self.hexitec_camera.x10g_rdma.write(0xD0000001, self.number_of_frames-1, 'Frame Gate set to self.number_of_frames')
+            
         full_empty = self.hexitec_camera.x10g_rdma.read(0x60000011,  'Check FULL EMPTY Signals')
-        print "Check EMPTY Signals", full_empty
+        logging.debug("Check EMPTY Signals: %s" % full_empty)
 
         full_empty = self.hexitec_camera.x10g_rdma.read(0x60000012,  'Check FULL FULL Signals')
-        print "Check FULL Signals", full_empty
+        logging.debug("Check FULL Signals: %s" % full_empty)
         
         if self.sensors_layout == HexitecFem.READOUTMODE[0]:
-            print ("Reading out single sensor")
+            logging.debug("Reading out single sensor")
             mux_mode = 0
         elif self.sensors_layout == HexitecFem.READOUTMODE[1]:
             #self.hexitec_camera.x10g_rdma.write(0x60000002, 4, 'Enable State Machine')
             mux_mode = 8
-            print ("Reading out 2x2 sensors")
+            logging.debug("Reading out 2x2 sensors")
 
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
             self.hexitec_camera.x10g_rdma.write(0x60000004, 0 + mux_mode, 'Sensor 1 1')
-            print ("Sensor 1 1")
+            logging.debug("Sensor 1 1")
         if self.selected_sensor == HexitecFem.OPTIONS[2]:
             self.hexitec_camera.x10g_rdma.write(0x60000004, 4 + mux_mode, 'Sensor 2 1')
-            print ("Sensor 2 1") 
+            logging.debug("Sensor 2 1") 
             
         # Flush the input FIFO buffers
         self.hexitec_camera.x10g_rdma.write(0x60000002, 32, 'Clear Input Buffers')
         self.hexitec_camera.x10g_rdma.write(0x60000002, 0, 'Clear Input Buffers')
         time.sleep(1)
         full_empty = self.hexitec_camera.x10g_rdma.read(0x60000011,  'Check EMPTY Signals')
-        print "Check EMPTY Signals", full_empty
+        logging.debug("Check EMPTY Signals: %s" % full_empty)
         full_empty = self.hexitec_camera.x10g_rdma.read(0x60000012,  'Check FULL Signals')
-        print "Check FULL Signals", full_empty
+        logging.debug("Check FULL Signals: %s" % full_empty)
         
         if self.sensors_layout == HexitecFem.READOUTMODE[1]:
             self.hexitec_camera.x10g_rdma.write(0x60000002, 4, 'Enable State Machine')
             
         if self.debug:
-            print "number of Frames :=", self.number_of_frames
+            logging.debug("number of Frames := %s" % self.number_of_frames)
 
-        print "Data Capture on Wireshark only - no image"
+        logging.debug("Initiate Data Capture")
         self.hexitec_camera.data_stream(self.number_of_frames)
         #
         waited = 0.0
@@ -578,7 +598,8 @@ class HexitecFem():
             waited += delay
             if (self.stop_acquisition):
                 break
-        print("Waited " + str(waited) + " seconds")
+        logging.debug("Data Capture took " + str(waited) + " seconds")
+        self._set_status_message("Requested %s frame(s), taking %s seconds" % (self.number_of_frames, str(waited)))
 
         # Stop the state machine
         self.hexitec_camera.x10g_rdma.write(0x60000002, 0, 'Dis-Enable State Machine')
@@ -593,96 +614,96 @@ class HexitecFem():
             self.stop_acquisition = False
             raise HexitecFemError("User interrupted")
 
-        print "Acquisition Completed, enable signal cleared"
+        logging.debug("Acquisition Completed, enable signal cleared")
         
         # Clear the Mux Mode bit
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
             self.hexitec_camera.x10g_rdma.write(0x60000004, 0, 'Sensor 1 1')
-            print ("Sensor 1 1")
+            logging.debug("Sensor 1 1")
         if self.selected_sensor == HexitecFem.OPTIONS[2]:
             self.hexitec_camera.x10g_rdma.write(0x60000004, 4, 'Sensor 2 1')
-            print ("Sensor 2 1") 
+            logging.debug("Sensor 2 1") 
         full_empty = self.hexitec_camera.x10g_rdma.read(0x60000011,  'Check EMPTY Signals')
-        print "Check EMPTY Signals", full_empty
+        logging.debug("Check EMPTY Signals: %s" % full_empty)
         full_empty = self.hexitec_camera.x10g_rdma.read(0x60000012,  'Check FULL Signals')
-        print "Check FULL Signals", full_empty
+        logging.debug("Check FULL Signals: %s" % full_empty)
         no_frames = self.hexitec_camera.x10g_rdma.read(0xD0000001,  'Check Number of Frames setting') + 1
-        print "Number of Frames", no_frames
+        logging.debug("Number of Frames: %s" % no_frames)
 
-        print "Output from Sensor" 
+        logging.debug("Output from Sensor")
         m0 = self.hexitec_camera.x10g_rdma.read(0x70000010, 'frame last length')
-        print "frame last length", m0
+        logging.debug("frame last length: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x70000011, 'frame max length')
-        print "frame max length", m0
+        logging.debug("frame max length: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x70000012, 'frame min length')
-        print "frame min length", m0
+        logging.debug("frame min length: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x70000013, 'frame number')
-        print "frame number", m0
+        logging.debug("frame number: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x70000014, 'frame last clock cycles')
-        print "frame last clock cycles", m0
+        logging.debug("frame last clock cycles: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x70000015, 'frame max clock cycles')
-        print "frame max clock cycles", m0
+        logging.debug("frame max clock cycles: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x70000016, 'frame min clock cycles')
-        print "frame min clock cycles", m0
+        logging.debug("frame min clock cycles: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x70000017, 'frame data total')
-        print "frame data total", m0
+        logging.debug("frame data total: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x70000018, 'frame data total clock cycles')
-        print "frame data total clock cycles", m0
+        logging.debug("frame data total clock cycles: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x70000019, 'frame trigger count')
-        print "frame trigger count", m0
+        logging.debug("frame trigger count: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x7000001A, 'frame in progress flag')
-        print "frame in progress flag", m0
+        logging.debug("frame in progress flag: %s" % m0)
 
-        print "Output from Frame Gate" 
+        logging.debug("Output from Frame Gate")
         m0 = self.hexitec_camera.x10g_rdma.read(0x80000010, 'frame last length')
-        print "frame last length", m0
+        logging.debug("frame last length: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x80000011, 'frame max length')
-        print "frame max length", m0
+        logging.debug("frame max length: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x80000012, 'frame min length')
-        print "frame min length", m0
+        logging.debug("frame min length: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x80000013, 'frame number')
-        print "frame number", m0
+        logging.debug("frame number: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x80000014, 'frame last clock cycles')
-        print "frame last clock cycles", m0
+        logging.debug("frame last clock cycles: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x80000015, 'frame max clock cycles')
-        print "frame max clock cycles", m0
+        logging.debug("frame max clock cycles: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x80000016, 'frame min clock cycles')
-        print "frame min clock cycles", m0
+        logging.debug("frame min clock cycles: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x80000017, 'frame data total')
-        print "frame data total", m0
+        logging.debug("frame data total: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x80000018, 'frame data total clock cycles')
-        print "frame data total clock cycles", m0
+        logging.debug("frame data total clock cycles: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x80000019, 'frame trigger count')
-        print "frame trigger count", m0
+        logging.debug("frame trigger count: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x8000001A, 'frame in progress flag')
-        print "frame in progress flag", m0    
+        logging.debug("frame in progress flag: %s" % m0)    
         
-        print "Input to XAUI" 
+        logging.debug("Input to XAUI")
         m0 = self.hexitec_camera.x10g_rdma.read(0x90000010, 'frame last length')
-        print "frame last length", m0
+        logging.debug("frame last length: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x90000011, 'frame max length')
-        print "frame max length", m0
+        logging.debug("frame max length: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x90000012, 'frame min length')
-        print "frame min length", m0
+        logging.debug("frame min length: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x90000013, 'frame number')
-        print "frame number", m0
+        logging.debug("frame number: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x90000014, 'frame last clock cycles')
-        print "frame last clock cycles", m0
+        logging.debug("frame last clock cycles: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x90000015, 'frame max clock cycles')
-        print "frame max clock cycles", m0
+        logging.debug("frame max clock cycles: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x90000016, 'frame min clock cycles')
-        print "frame min clock cycles", m0
+        logging.debug("frame min clock cycles: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x90000017, 'frame data total')
-        print "frame data total", m0
+        logging.debug("frame data total: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x90000018, 'frame data total clock cycles')
-        print "frame data total clock cycles", m0
+        logging.debug("frame data total clock cycles: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x90000019, 'frame trigger count')
-        print "frame trigger count", m0
+        logging.debug("frame trigger count: %s" % m0)
         m0 = self.hexitec_camera.x10g_rdma.read(0x9000001A, 'frame in progress flag')
-        print "frame in progress flag", m0    
+        logging.debug("frame in progress flag: %s" % m0)    
 
     def set_up_state_machine(self):
-        print "Setting up state machine"
+        logging.debug("Setting up state machine")
         #  Thes are used to set up the state machine
         sm_timing1  = [0x23, self.vsr_addr, 0x42, 0x30, 0x37, 0x30, 0x33, 0x0D ]
         sm_timing2  = [0x23, self.vsr_addr, 0x42, 0x30, 0x32, 0x30, 0x31, 0x0D ]
@@ -714,7 +735,7 @@ class HexitecFem():
         self.send_cmd([0x23, self.vsr_addr, 0x42, 0x31, 0x38, 0x30, 0x31, 0x0D])
         self.read_response()
 
-        print "Finished Setting up state machine"
+        logging.debug("Finished Setting up state machine")
     
     def load_pwr_cal_read_enables(self):
         enable_sm     = [0x23, self.vsr_addr, 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
@@ -762,97 +783,97 @@ class HexitecFem():
         # Uncalibrated (Image4) row option:
         row_cal_enable2d    = [0x23, self.vsr_addr, 0x44, 0x39, 0x41, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
 
-        print "Use different CAL data"  
+        logging.debug("Use different CAL data")
         self.send_cmd(diff_cal)
         self.read_response()
 
         self.send_cmd(disable_sm)
         self.read_response()
 
-        print "Loading Power, Cal and Read Enables"    
-        print "Column power enable"
+        logging.debug("Loading Power, Cal and Read Enables")
+        logging.debug("Column power enable")
         self.send_cmd(col_power_enable1)
         self.read_response()
         self.send_cmd(col_power_enable2)
         self.read_response()
 
-        print "Row power enable"
+        logging.debug("Row power enable")
         self.send_cmd(row_power_enable1)
         self.read_response()
         self.send_cmd(row_power_enable2)
         self.read_response()
 
         if self.test_mode_image == HexitecFem.TESTMODEIMAGE[0]:    
-            print "Column cal enable A"
+            logging.debug("Column cal enable A")
             self.send_cmd(col_cal_enable1a)
             self.read_response()
             self.send_cmd(col_cal_enable2a)
             self.read_response()
-            print "Row cal enable A"
+            logging.debug("Row cal enable A")
             self.send_cmd(row_cal_enable1a)
             self.read_response()
             self.send_cmd(row_cal_enable2a)
             self.read_response()
         elif self.test_mode_image == HexitecFem.TESTMODEIMAGE[1]:
-            print "Column cal enable B"
+            logging.debug("Column cal enable B")
             self.send_cmd(col_cal_enable1b)
             self.read_response()
             self.send_cmd(col_cal_enable2b)
             self.read_response()
-            print "Row cal enable B"
+            logging.debug("Row cal enable B")
             self.send_cmd(row_cal_enable1b)
             self.read_response()
             self.send_cmd(row_cal_enable2b)
             self.read_response()
         elif self.test_mode_image == HexitecFem.TESTMODEIMAGE[2]:
-            print "Column cal enable C"
+            logging.debug("Column cal enable C")
             self.send_cmd(col_cal_enable1c)
             self.read_response()
             self.send_cmd(col_cal_enable2c)
             self.read_response()
-            print "Row cal enable C"
+            logging.debug("Row cal enable C")
             self.send_cmd(row_cal_enable1c)
             self.read_response()
             self.send_cmd(row_cal_enable2c)
             self.read_response()
         elif self.test_mode_image == HexitecFem.TESTMODEIMAGE[3]:
-            print "Column cal enable D"
+            logging.debug("Column cal enable D")
             self.send_cmd(col_cal_enable1d)
             self.read_response()
             self.send_cmd(col_cal_enable2d)
             self.read_response()
-            print "Row cal enable D"
+            logging.debug("Row cal enable D")
             self.send_cmd(row_cal_enable1d)
             self.read_response()
             self.send_cmd(row_cal_enable2d)
             self.read_response()
             
-        print "Column read enable"
+        logging.debug("Column read enable")
         self.send_cmd(col_read_enable1)
         self.read_response()
         self.send_cmd(col_read_enable2)
         self.read_response()
     
-        print "Row read enable"
+        logging.debug("Row read enable")
         self.send_cmd(row_read_enable1)
         self.read_response()
         self.send_cmd(row_read_enable2)
         self.read_response()
 
-        print "Power, Cal and Read Enables have been loaded" 
+        logging.debug("Power, Cal and Read Enables have been loaded")
         
         self.send_cmd(enable_sm)
         self.read_response()
         
     def write_dac_values(self):
-        print "Writing DAC values"
+        logging.debug("Writing DAC values")
         self.send_cmd([0x23, self.vsr_addr, 0x54, 0x30, 0x32, 0x41, 0x41, 0x30, 0x35, 0x35, 0x35,
                        0x30, 0x35, 0x35, 0x35, 0x30, 0x30, 0x30, 0x30, 0x30, 0x38, 0x45, 0x38, 0x0D])
         self.read_response()
-        print "DAC values set"
+        logging.debug("DAC values set")
         
     def enable_adc(self):
-        print "Enabling ADC"
+        logging.debug("Enabling ADC")
         adc_disable   = [0x23, self.vsr_addr, 0x55, 0x30, 0x32, 0x0D]
         enable_sm     = [0x23, self.vsr_addr, 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
         adc_enable    = [0x23, self.vsr_addr, 0x55, 0x30, 0x33, 0x0D]
@@ -862,7 +883,7 @@ class HexitecFem():
         
         self.send_cmd(adc_disable)
         self.read_response()
-        print "Enable SM"
+        logging.debug("Enable SM")
         self.send_cmd(enable_sm)
         self.read_response()
         self.send_cmd(adc_enable)
@@ -880,7 +901,7 @@ class HexitecFem():
         self.read_response() 
 
     def enable_adc_testmode(self):
-        print "Enabling ADC Testmode"   
+        logging.debug("Enabling ADC Testmode")
         # Set ADC test testmode
         self.send_cmd([0x23, self.vsr_addr, 0x53, 0x30, 0x44, 0x34, 0x38, 0x0d])
         self.read_response() 
@@ -937,9 +958,7 @@ class HexitecFem():
 
         self._set_status_message("VSR2: ADC enabled")
         synced_status = self.calibrate_sensor()
-        print "Synchronised: ", synced_status  # == 15..
-
-        time.sleep(1)
+        logging.debug("Synchronised: %s" % synced_status)  # == 15..
 
         self._set_status_message("Configuring VSR1");
         self.selected_sensor = HexitecFem.OPTIONS[0]
@@ -960,7 +979,7 @@ class HexitecFem():
         
         self._set_status_message("VSR1: ADC enabled")
         synced_status = self.calibrate_sensor()
-        print "Synchronised: ", synced_status  # Saying it's 15..
+        logging.debug("Synchronised: %s" % synced_status)  # Saying it's 15..
 
         self._set_status_message("Initialisation completed. VSR2 and VS1 configured.");
         

@@ -202,6 +202,8 @@ class Hexitec():
     # executor = futures.ThreadPoolExecutor(max_workers=1)
     thread_executor = futures.ThreadPoolExecutor(max_workers=1)
 
+    THRESHOLDOPTIONS = ["value", "filename", "none"]
+
     def __init__(self, options):
         """Initialise the Hexitec object.
 
@@ -234,13 +236,54 @@ class Hexitec():
         version_info = get_versions()
 
         self.dbgCount = 0
+
+        # ParameterTree variables
         self.sensors_layout = "2x2"
+        self.pixel_grid_size = 3
+        self.gradients_filename = ""
+        self.intercepts_filename = ""
+        self.bin_end = 8000
+        self.bin_start = 0
+        self.bin_width = 10.0
+        self.max_frames_received = 540
+        self.raw_data = False
+        self.threshold_filename = ""
+        self.threshold_mode = "value"
+        self.threshold_value = 100
+
         detector = ParameterTree({
             'fem': self.fem.param_tree,
             'daq': self.daq.param_tree,
+            'commit_configuration': (None, self.commit_configuration),
             # Move sensors_layout into own subtree?
             'sensors_layout': (self._get_sensors_layout, self._set_sensors_layout),
-            'debug_count': (self._get_debug_count, self._set_debug_count)
+            'debug_count': (self._get_debug_count, self._set_debug_count),
+            "config": {
+                "addition": {
+                    "pixel_grid_size": (lambda: self.pixel_grid_size, self._set_pixel_grid_size)#,
+                },
+                "calibration": {
+                    "gradients_filename": (lambda: self.gradients_filename, self._set_gradients_filename),
+                    "intercepts_filename": (lambda: self.intercepts_filename, self._set_intercepts_filename)#,
+                },
+                "discrimination": {
+                    "pixel_grid_size": (lambda: self.pixel_grid_size, self._set_pixel_grid_size)#,
+                },
+                "histogram": {
+                    "bin_end": (lambda: self.bin_end, self._set_bin_end),
+                    "bin_start": (lambda: self.bin_start, self._set_bin_start),
+                    "bin_width": (lambda: self.bin_width, self._set_bin_width),
+                    "max_frames_received": (lambda: self.max_frames_received, self._set_max_frames_received)#,
+                },
+                "reorder": {
+                    "raw_data": (lambda: self.raw_data, self._set_raw_data)#,
+                },
+                "threshold": {
+                    "threshold_filename": (lambda: self.threshold_filename, self._set_threshold_filename),
+                    "threshold_mode": (lambda: self.threshold_mode, self._set_threshold_mode),
+                    "threshold_value": (lambda: self.threshold_value, self._set_threshold_value)
+                }
+            },
         })
 
         # Store all information in a parameter tree
@@ -253,7 +296,6 @@ class Hexitec():
 
         self.start_polling()
 
-    ''' Testing polling '''
     @run_on_executor(executor='thread_executor')
     def start_polling(self):
         IOLoop.instance().add_callback(self.poll_histograms)  # Polling Histogram status
@@ -272,6 +314,52 @@ class Hexitec():
 
         time.sleep(0.5)
         IOLoop.instance().call_later(0.5, self.poll_histograms)
+
+    def _set_pixel_grid_size(self, size):
+        if (self.pixel_grid_size in [3, 5]):
+            self.pixel_grid_size = size
+        else:
+            raise ParameterTreeError("Must be either 3 or 5")
+
+    def _set_gradients_filename(self, gradients_filename):
+        if (os.path.isfile(gradients_filename) == False):
+            raise ParameterTreeError("Gradients file doesn't exist")
+        self.gradients_filename = gradients_filename
+
+    def _set_intercepts_filename(self, intercepts_filename):
+        if (os.path.isfile(intercepts_filename) == False):
+            raise ParameterTreeError("Intercepts file doesn't exist")
+        self.intercepts_filename = intercepts_filename
+
+    def _set_bin_end(self, bin_end):
+        self.bin_end = bin_end
+    
+    def _set_bin_start(self, bin_start):
+        self.bin_start = bin_start
+    
+    def _set_bin_width(self, bin_width):
+        self.bin_width = bin_width
+
+    def _set_max_frames_received(self, max_frames_received):
+        self.max_frames_received = max_frames_received
+
+    def _set_raw_data(self, raw_data):
+        self.raw_data = raw_data
+
+    def _set_threshold_filename(self, threshold_filename):
+        if (os.path.isfile(threshold_filename) == False):
+            raise ParameterTreeError("Threshold file doesn't exist")
+        self.threshold_filename = threshold_filename
+
+    def _set_threshold_mode(self, threshold_mode):
+        threshold_mode = threshold_mode.lower()
+        if (threshold_mode in self.THRESHOLDOPTIONS):
+            self.threshold_mode = threshold_mode
+        else:
+            raise ParameterTreeError("Must be one of: value, filename or none")
+
+    def _set_threshold_value(self, threshold_value):
+        self.threshold_value = threshold_value
 
     def _get_debug_count(self):
         return self.dbgCount
@@ -312,6 +400,33 @@ class Hexitec():
 
 # curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/reorder/ -d '{"sensors_layout": "5x8"}'
 # curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fr/config/decoder_config -d '{"sensors_layout": "500x895"}'
+
+    def commit_configuration(self, msg):
+
+        # Loop overall plugins in ParameterTree, updating fp's settings
+        #   Except reorder, until raw_data (i.e. bool) supported
+        for plugin in self.param_tree.tree['detector'].get("config"):
+
+            if plugin != "reorder":
+
+                for param_key in self.param_tree.tree['detector']['config'].get(plugin):
+
+                    # print "\nconfig/%s/%s" % (plugin, param_key), " -> ", self.param_tree.tree['detector']['config'][plugin][param_key].get(), "\n"
+
+                    command = "config/%s/%s" % (plugin, param_key)
+                    payload = str(self.param_tree.tree['detector']['config'][plugin][param_key].get())
+                    request = ApiAdapterRequest(payload, content_type="application/json")
+                    self.adapters["fp"].put(command, request)
+
+        # Effin' works:
+        # command = "config/threshold/threshold_value"
+        # payload = str(121)
+        # request = ApiAdapterRequest(payload, content_type="application/json")
+        # self.adapters["fp"].put(command, request)
+
+        # What does work: (But not {"threshold": {"threshold_value": 7, ...}} !)
+        #curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/threshold -d 
+        #   '{"threshold_value": 7, "threshold_mode": "none"}' | python -m json.tool
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.

@@ -72,7 +72,7 @@
 
         <tr>
           <input type="button" class="btn btn-primary" id='storeButton' name="store_enable" data-size="small" value="store">
-          <input type="button" class="btn btn-primary" id='executeButton' name="store_enable" data-size="small" value="test_stuff">
+          <input type="button" class="btn btn-primary" id='testButton' name="store_enable" data-size="small" value="test_stuff">
           Adding Apply button:&nbsp;
           <input type="button" class="btn btn-primary" id='applyButton' name="store_enable" data-size="small" value="apply">
           <-- These three buttons configure Odin data
@@ -202,8 +202,38 @@
             </td>
           </tr>
           <tr>
+            <th>Camera&nbsp;</th>
+          </tr>
+          <tr>
             <td>
-              Control:&nbsp;
+              Frames&nbsp;
+            </td>
+            <td>
+              <div class="text-frames">
+                <input type="text" id="frames-text" onChange='frames_changed()' maxlength="40" size="7" value= "">
+              </div>
+            </td>
+            <td>
+              &nbsp;<td><span id="frames-warning">&nbsp;</span></td>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              Dark Correction&nbsp;
+            </td>
+            <td>
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
+                  <input type="checkbox" id='darkCorrectionButton' name="dark_correction_enable" data-size="small">
+                </div>
+              </div>
+            </td>
+          </tr>
+          <td> (D.C. Not yet supported)</td>
+
+          <tr>
+            <td>
+              
             </td>
             <td>
               <input type="button" class="btn btn-primary" id='connectButton' name="dc_connect" data-size="small" value="Connect">
@@ -232,7 +262,7 @@
 
           </tr>
             <td>
-              Error(s):&nbsp;
+              Errors:&nbsp;
             </td>
             &nbsp;<td><span id="odin-control-error">&nbsp;</span></td>
             <td>
@@ -416,7 +446,7 @@
               </div>
             </td>
             <td>
-              &nbsp;<td><span id="pixel-warning">&nbsp;</span></td>
+              &nbsp;<td><span id="pixel-grid-size-warning">&nbsp;</span></td>
             </td>
           </tr>
 
@@ -444,7 +474,7 @@
               </div>
             </td>
             <td>
-              &nbsp;<span id="frames-warning">&nbsp;</span>
+              &nbsp;<span id="max-frames-received-warning">&nbsp;</span>
             </td>
           <tr>
             <td>

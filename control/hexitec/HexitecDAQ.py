@@ -38,6 +38,7 @@ class HexitecDAQ():
             "fp": "",
             "fr": ""
         }
+
         self.param_tree = ParameterTree({
             "receiver": {
                 "connected": (self.is_fr_connected, None),
