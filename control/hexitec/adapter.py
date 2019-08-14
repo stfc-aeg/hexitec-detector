@@ -254,6 +254,7 @@ class Hexitec():
         detector = ParameterTree({
             'fem': self.fem.param_tree,
             'daq': self.daq.param_tree,
+            "collect_offsets": (None, self._collect_offsets),
             'commit_configuration': (None, self.commit_configuration),
             # Move sensors_layout into own subtree?
             'sensors_layout': (self._get_sensors_layout, self._set_sensors_layout),
@@ -293,6 +294,7 @@ class Hexitec():
             'server_uptime': (self.get_server_uptime, None),
             'detector': detector
         })
+        self.update_rows_columns_pixels()
 
         self.start_polling()
 
@@ -315,6 +317,16 @@ class Hexitec():
         time.sleep(0.5)
         IOLoop.instance().call_later(0.5, self.poll_histograms)
 
+    def update_rows_columns_pixels(self):
+        """
+        Updates rows, columns and pixels from new sensors_layout value
+        """
+        self.rows, self.columns = self.sensors_layout.split("x")
+        self.rows = int(self.rows) * 80
+        self.columns = int(self.columns) * 80
+        self.pixels = self.rows * self.columns
+        print "rows, columns: ", self.rows, self.columns, " -> ", self.pixels
+
     def _set_pixel_grid_size(self, size):
         if (self.pixel_grid_size in [3, 5]):
             self.pixel_grid_size = size
@@ -332,13 +344,59 @@ class Hexitec():
         self.intercepts_filename = intercepts_filename
 
     def _set_bin_end(self, bin_end):
+        """
+        Updates bin_end, datasets' histograms' dimensions
+        """
         self.bin_end = bin_end
+        self.update_histogram_dimensions()
     
     def _set_bin_start(self, bin_start):
+        """
+        Updates bin_start, datasets' histograms' dimensions
+        """
         self.bin_start = bin_start
+        self.update_histogram_dimensions()
     
     def _set_bin_width(self, bin_width):
+        """
+        Updates bin_width, datasets' histograms' dimensions
+        """
         self.bin_width = bin_width
+        self.update_histogram_dimensions()
+
+    def update_datasets_frame_dimensions(self):
+        """
+        Updates frames datasets' dimensions
+        """
+        # Update data, raw_data datasets
+        for dataset in ["data", "raw_data"]:
+            payload = '{"dims": [%s, %s]}' % (self.rows, self.columns)
+            command = "config/hdf/dataset/" + dataset
+            request = ApiAdapterRequest(str(payload), content_type="application/json")
+            self.adapters["fp"].put(command, request)
+
+    def update_histogram_dimensions(self):
+        """
+        Updates histograms' dimensions in the relevant datasets
+        """
+        number_of_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
+        # energy_bins dataset
+        payload = '{"dims": [%s]}' % (number_of_histograms)
+        command = "config/hdf/dataset/" + "energy_bins"
+        request = ApiAdapterRequest(str(payload), content_type="application/json")
+        self.adapters["fp"].put(command, request)
+
+        # pixel_histograms dataset
+        payload = '{"dims": [%s, %s]}' % (self.pixels, number_of_histograms)
+        command = "config/hdf/dataset/" + "pixel_histograms"
+        request = ApiAdapterRequest(str(payload), content_type="application/json")
+        self.adapters["fp"].put(command, request)
+
+        # summed_histograms dataset
+        payload = '{"dims": [%s]}' % (number_of_histograms)
+        command = "config/hdf/dataset/" + "summed_histograms"
+        request = ApiAdapterRequest(str(payload), content_type="application/json")
+        self.adapters["fp"].put(command, request)
 
     def _set_max_frames_received(self, max_frames_received):
         self.max_frames_received = max_frames_received
@@ -379,15 +437,17 @@ class Hexitec():
         self.daq.cleanup()
 
     def _get_sensors_layout(self):
-
         return self.sensors_layout
 
     def _set_sensors_layout(self, layout):
-
+        """
+        Sets sensors_layout in all FP's plugins and FR; Recalculates rows, columns and pixels
+        """
         self.sensors_layout = layout
 
         # send command to all FP plugins, then FR
-        plugins =  ['addition', 'calibration', 'discrimination', 'histogram', 'reorder', 'next_frame', 'threshold']
+        plugins =  ['addition', 'calibration', 'discrimination', 'histogram', 'reorder', 
+                    'next_frame', 'threshold']
 
         for plugin in plugins:
             command = "config/" + plugin + "/sensors_layout"
@@ -398,11 +458,19 @@ class Hexitec():
         request = ApiAdapterRequest(self.sensors_layout, content_type="application/json")
         self.adapters["fr"].put(command, request)
 
-# curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/reorder/ -d '{"sensors_layout": "5x8"}'
-# curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fr/config/decoder_config -d '{"sensors_layout": "500x895"}'
+        self.update_rows_columns_pixels()
+        self.update_datasets_frame_dimensions()
 
+    def _collect_offsets(self, msg):
+        """
+        Instructs fem(s) to collect offsets
+        """
+        self.fem.collect_offsets()        
+        
     def commit_configuration(self, msg):
-
+        """
+        Pushes settings in 'config/' ParameterTree into FP's plugins
+        """
         # Loop overall plugins in ParameterTree, updating fp's settings
         #   Except reorder, until raw_data (i.e. bool) supported
         for plugin in self.param_tree.tree['detector'].get("config"):
@@ -411,11 +479,12 @@ class Hexitec():
 
                 for param_key in self.param_tree.tree['detector']['config'].get(plugin):
 
-                    # print "\nconfig/%s/%s" % (plugin, param_key), " -> ", self.param_tree.tree['detector']['config'][plugin][param_key].get(), "\n"
+                    # print "\nconfig/%s/%s" % (plugin, param_key), " -> ", \
+                    #         self.param_tree.tree['detector']['config'][plugin][param_key].get(), "\n"
 
                     command = "config/%s/%s" % (plugin, param_key)
-                    payload = str(self.param_tree.tree['detector']['config'][plugin][param_key].get())
-                    request = ApiAdapterRequest(payload, content_type="application/json")
+                    payload = self.param_tree.tree['detector']['config'][plugin][param_key].get()
+                    request = ApiAdapterRequest(str(payload), content_type="application/json")
                     self.adapters["fp"].put(command, request)
 
         # Effin' works:
@@ -424,9 +493,10 @@ class Hexitec():
         # request = ApiAdapterRequest(payload, content_type="application/json")
         # self.adapters["fp"].put(command, request)
 
-        # What does work: (But not {"threshold": {"threshold_value": 7, ...}} !)
+        # What does work:
         #curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/threshold -d 
         #   '{"threshold_value": 7, "threshold_mode": "none"}' | python -m json.tool
+        # (But not {"threshold": {"threshold_value": 7, ...}} !)
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.

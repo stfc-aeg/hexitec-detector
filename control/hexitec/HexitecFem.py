@@ -154,7 +154,7 @@ class HexitecFem():
 
     def _set_dark_correction(self, correction):
         self.dark_correction = correction
-    
+
     def _get_number_frames(self):
         return self.number_of_frames
     
@@ -736,7 +736,11 @@ class HexitecFem():
         self.read_response()
 
         logging.debug("Finished Setting up state machine")
-    
+
+    def collect_offsets(self):
+
+        print "HexitecFem is deffo gonna collect offsets (Watch this space)"
+        
     def load_pwr_cal_read_enables(self):
         enable_sm     = [0x23, self.vsr_addr, 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
         disable_sm    = [0x23, self.vsr_addr, 0x43, 0x30, 0x31, 0x30, 0x31, 0x0D]

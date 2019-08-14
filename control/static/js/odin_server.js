@@ -191,7 +191,29 @@ $( document ).ready(function()
             polling_thread_running = false;    
         }, 1000);
     });
+
+    $('#coButton').on('click', function(event) {
+
+        collect_offsets();
+    });
 });
+
+function collect_offsets() {
+
+    console.log("Let's collect offsets");
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector',
+        contentType: "application/json",
+        data: JSON.stringify({"collect_offsets": ""}),
+        success: function(result) {
+            $('#odin-control-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#odin-control-warning').html(error + ": " + format_error_message(request.responseText));
+        }
+    });
+}
 
 // Functions supporting polling..
 function start_polling_thread() {
@@ -230,27 +252,20 @@ function poll_fem() {
     });
 }
 
-// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config -d 
-//  '{"threshold": {"threshold_value": 11, "threshold_mode": "filename"}}' | python -m json.tool
-
 function test_iac() {
 
-    console.log("Hullo?");
-    function connect_hardware() {
-
-        $.ajax({
-            type: "PUT",
-            url: hexitec_url + 'detector',
-            contentType: "application/json",
-            data: JSON.stringify({"commit_configuration": ""}),
-            success: function(result) {
-                $('#odin-control-warning').html("");
-            },
-            error: function(request, msg, error) {
-                $('#odin-control-warning').html(error + ": " + format_error_message(request.responseText));
-            }
-        });
-    }
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector',
+        contentType: "application/json",
+        data: JSON.stringify({"commit_configuration": ""}),
+        success: function(result) {
+            $('#odin-control-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#odin-control-warning').html(error + ": " + format_error_message(request.responseText));
+        }
+    });
 }
 
 // Debugging:
