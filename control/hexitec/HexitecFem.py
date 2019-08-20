@@ -22,7 +22,8 @@ from tornado.concurrent import run_on_executor
 from tornado.escape import json_decode
 
 class HexitecFem():
-    """ Hexitec Fem class. Represents a single FEM-II module.
+    """
+    Hexitec Fem class. Represents a single FEM-II module.
     
     Controls and configures each FEM-II module ready for a DAQ via UDP.
     """
@@ -33,21 +34,20 @@ class HexitecFem():
     "Sensor_1_2",
     "Sensor_2_1",
     "Sensor_2_2"
-    ] #etc
+    ]
 
     IMAGE = [
     "LOG HDF5 FILE",
     "LOG BIN FILE",
     "STREAM DATA",
     "NETWORK PACKETS ONLY"
-    ] #etc
+    ]
 
     TESTMODEIMAGE = [
-    "IMAGE 1",
-    "IMAGE 2",
-    "IMAGE 3",
-    "IMAGE 4"
-    ]
+    0,
+    1,
+    2,
+    3]
 
     DARKCORRECTION = [
     0,
@@ -92,13 +92,13 @@ class HexitecFem():
         self.status_error = ""
         self.stop_acquisition = False
         # 
-        self.initialise_progress = 0                # Used by initialise_system()
+        self.initialise_progress = 0                            # Used by initialise_system()
         self.operation_percentage_complete = 0
 
         self.selected_sensor    = HexitecFem.OPTIONS[2]         # "Sensor_2_1"
         self.sensors_layout     = HexitecFem.READOUTMODE[1]     # "2x2"
         self.dark_correction    = HexitecFem.DARKCORRECTION[0]  # "DARK CORRECTION OFF" = 0
-        self.test_mode_image    = HexitecFem.TESTMODEIMAGE[3]   # "IMAGE 4"
+        self.test_mode_image    = HexitecFem.TESTMODEIMAGE[3]   # "IMAGE 4" [3]=without vcal, [0]=vcal on, needed for DC..?
 
         param_tree_dict = {
             "ip_addr": (self.get_address, None),    # Replicated, not needed going forwards?
@@ -115,7 +115,8 @@ class HexitecFem():
             "operation_percentage_complete": (self._get_operation_percentage_complete, None),
             "stop_acquisition": (None, self._set_stop_acquisition),
             "dark_correction": (self._get_dark_correction, self._set_dark_correction),
-            "number_frames": (self._get_number_frames, self._set_number_frames)
+            "number_frames": (self._get_number_frames, self._set_number_frames),
+            "vcal": (lambda: self.test_mode_image, self._set_test_mode_image)
         }
 
         self.param_tree = ParameterTree(param_tree_dict)
@@ -161,6 +162,9 @@ class HexitecFem():
     def _set_number_frames(self, frames):
         self.number_of_frames = frames
 
+    def _set_test_mode_image(self, image):
+        self.test_mode_image = image
+
     @run_on_executor(executor='thread_executor')
     def connect_hardware(self, msg):
         try:
@@ -171,17 +175,7 @@ class HexitecFem():
             self._set_status_message("Connecting to camera..")
             self.cam_connect()
             self._set_status_message("Camera connected. Waiting for sensors to initialise..")
-            self.hardware_connected = True
-            self.hardware_initialising = True
-            start = time.time()
-            percent_step = 10
-            self.operation_percentage_complete = 0
-            delay = 0.0
-            while (delay < 10):
-                time.sleep(1.0)
-                self.operation_percentage_complete += percent_step
-                delay = time.time() - start
-            self.hardware_initialising = False
+            self._wait_while_sensors_initialise()
             self._set_status_message("Camera connected. Sensors initialised.")
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to connect with camera: %s" % str(e))
@@ -264,6 +258,22 @@ class HexitecFem():
     def get_debug(self):
         return self.debug
 
+    def _wait_while_sensors_initialise(self):
+        """
+        Wait 10 seconds to allow sensors in VSRs to initialise
+        """
+        self.hardware_connected = True
+        self.hardware_initialising = True
+        start = time.time()
+        percent_step = 10
+        self.operation_percentage_complete = 0
+        delay = 0.0
+        while (delay < 10):
+            time.sleep(1.0)
+            self.operation_percentage_complete += percent_step
+            delay = time.time() - start
+        self.hardware_initialising = False
+
     #  This function sends a command string to the microcontroller
     def send_cmd(self, cmd):
 
@@ -274,7 +284,7 @@ class HexitecFem():
             cmd.append(13)
         if self.debug: logging.debug("Length of command - %s %s" % (len(cmd), len(cmd)%4))
 
-        for i in range ( 0 , len(cmd)/4 ):
+        for i in range(0, len(cmd)/4):
 
             reg_value = 256*256*256*cmd[(i*4)] + 256*256*cmd[(i*4)+1] + 256*cmd[(i*4)+2] + cmd[(i*4)+3] 
             self.hexitec_camera.x10g_rdma.write(0xE0000100, reg_value, 'Write 4 Bytes')
@@ -314,7 +324,7 @@ class HexitecFem():
             if self.debug: logging.debug(format(daty, '02x'))
             data_counter = data_counter + 1
             if empty_count == ABORT_VALUE:
-                logging.error("Error: read_respomse from FEM aborted")
+                logging.error("Error: read_response from FEM aborted")
                 raise HexitecFemError("read_response aborted")
             empty_count = 0          
 
@@ -325,8 +335,7 @@ class HexitecFem():
         if self.debug: logging.debug("FIFO should be empty: %s" % fifo_empty)
         s = ''
 
-        for i in range( 1 , data_counter*4):
-            # if self.debug: logging.debug(i)
+        for i in range(1, data_counter*4):
             s = s + chr(f[i])
 
         if self.debug: 
@@ -527,11 +536,28 @@ class HexitecFem():
         self.send_cmd([0x23, self.vsr_addr, 0x41, 0x38, 0x39,  0x0D])
         self.read_response()
         
-        time.sleep(3)
         
         if self.debug: logging.debug("Poll register 0x89")
-        self.send_cmd([0x23, self.vsr_addr, 0x41, 0x38, 0x39,  0x0D])
-        r = self.read_response()
+        
+        bPolling = True
+        timeTaken = 0
+        while bPolling:
+            self.send_cmd([0x23, self.vsr_addr, 0x41, 0x38, 0x39,  0x0D])
+            r = self.read_response()
+            rr = r.strip()
+            Bit1 = int(rr[-1], 16)
+            if self.debug:
+                logging.debug("Register 0x89, Bit1: %s" % Bit1)
+            # Is PLL locked? (ie is Bit 1 high?)
+            #   r may be.. "12", "06" or '\xef\xbf\xbd2412'
+            if Bit1 & 2:
+                bPolling = False
+            else:
+                time.sleep(0.1)
+                timeTaken += 0.1
+            if timeTaken > 3.0:
+                raise HexitecFemError("Timed out polling register 0x89; PLL remains disabled")
+
         if self.debug: logging.debug("Bit 1 should be 1")
         if self.debug: logging.debug(r)
         if self.debug: logging.debug("Read reg 1")
@@ -739,7 +765,45 @@ class HexitecFem():
 
     def collect_offsets(self):
 
-        print "HexitecFem is deffo gonna collect offsets (Watch this space)"
+        # My interpretation.  Translating this into the array to give to send_cmd():-
+
+        # [ 0x23 , tk.vsr_addr ,  0x40  ,  0x32 ,  0x34 , 0x32, 0x32 ,  0x0D ]
+        # Wait 1s
+        # [ 0x23 , tk.vsr_addr ,  0x40  ,  0x32 ,  0x34 , 0x32, 0x38 ,  0x0D ]
+        
+        # In my code I have used the 0x43 (clear bit) and 0x42 (set bit) commands rather than 0x40 (write) but the results should be the same.
+
+        # for index in range(8):
+        #     low_byte = self.hexitec_camera.x10g_rdma.read(0x00000025, 'Read the low byte')
+        #     high_byte = self.hexitec_camera.x10g_rdma.read(0x00000026, 'Read the high byte')
+        #     # print "BEFORE:\t\t\tlow and hard byte: ", low_byte, " and ", high_byte
+
+        enable_dc_vsr1  = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]  # 0x32, 0x34, 0x32, 0x32, == 2422
+        disable_dc_vsr1 = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]  # 0x32, 0x34, 0x32, 0x38, == 2428
+        enable_dc_vsr2  = [0x23, 0x91, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]
+        disable_dc_vsr2 = [0x23, 0x91, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]
+
+        logging.debug("Gathering offsets..")
+        self.send_cmd(enable_dc_vsr1)
+        self.read_response()
+        self.send_cmd(enable_dc_vsr2)
+        self.read_response()
+
+        time.sleep(1)
+
+        logging.debug("Offsets collected")
+        self.send_cmd(disable_dc_vsr1)
+        self.read_response()
+        self.send_cmd(disable_dc_vsr2)
+        self.read_response()
+
+        # for index in range(8):
+        #     low_byte = self.hexitec_camera.x10g_rdma.read(0x00000025, 'Read the low byte')
+        #     high_byte = self.hexitec_camera.x10g_rdma.read(0x00000026, 'Read the high byte')
+        #     # print " AFTER:\t\t\tlow and hard byte: ", low_byte, " and ", high_byte
+
+        # Experimental: S test reading out the board information:
+        
         
     def load_pwr_cal_read_enables(self):
         enable_sm     = [0x23, self.vsr_addr, 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]

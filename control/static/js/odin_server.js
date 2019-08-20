@@ -360,7 +360,6 @@ function disconnect_hardware() {
 
 function commit_configuration() {
 
-    console.log("mother Fokker");
     $.ajax({
         type: "PUT",
         url: hexitec_url + 'detector',
@@ -861,19 +860,35 @@ var changeHdfWriteEnable = function()
 };
 
 //curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector -d '{"sensors_layout": "5x5"}' | python -m json.tool
-var selectChange = function(selected)
+var selectChange = function(sensors_layout)
 {
-    sensors_layout = selected;
     $.ajax({
         type: "PUT",
         url: hexitec_url + 'detector',
         contentType: "application/json",
-        data: JSON.stringify({"sensors_layout": selected}),
+        data: JSON.stringify({"sensors_layout": sensors_layout}),
         success: function(result) {
             $('#sensors-layout-warning').html("");
         },
         error: function(request, msg, error) {
             $('#sensors-layout-warning').html(error + ": " + format_error_message(request.responseText));
+        }
+    });
+}
+
+//curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector -d '{"vcal": 1}' | python -m json.tool
+var vcalChange = function(vcal)
+{
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector',
+        contentType: "application/json",
+        data: JSON.stringify({"vcal": parseInt(vcal)}),
+        success: function(result) {
+            $('#vcal-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#vcal-warning').html(error + ": " + format_error_message(request.responseText));
         }
     });
 }

@@ -18,6 +18,8 @@ else:
     integer_types = (int,)
     float_types = (float,)
 
+from odin.util import convert_unicode_to_string, decode_request_body
+
 from tornado.escape import json_decode
 from concurrent import futures
 from tornado.ioloop import IOLoop
@@ -36,13 +38,15 @@ from .HexitecFem import HexitecFem
 from .HexitecDAQ import HexitecDAQ
 
 class HexitecAdapter(ApiAdapter):
-    """Hexitec adapter class for the ODIN server.
+    """
+    Hexitec adapter class for the ODIN server.
 
     This adapter provides ODIN clients with information about the Hexitec system.
     """
 
     def __init__(self, **kwargs):
-        """Initialize the HexitecAdapter object.
+        """
+        Initialize the HexitecAdapter object.
 
         This constructor initializes the HexitecAdapter object.
 
@@ -59,7 +63,8 @@ class HexitecAdapter(ApiAdapter):
 
     @response_types('application/json', default='application/json')
     def get(self, path, request):
-        """Handle an HTTP GET request.
+        """
+        Handle an HTTP GET request.
 
         This method handles an HTTP GET request, returning a JSON response.
 
@@ -99,7 +104,8 @@ class HexitecAdapter(ApiAdapter):
     @request_types('application/json')
     @response_types('application/json', default='application/json')
     def put(self, path, request):
-        """Handle an HTTP PUT request.
+        """
+        Handle an HTTP PUT request.
 
         This method handles an HTTP PUT request, returning a JSON response.
 
@@ -129,8 +135,7 @@ class HexitecAdapter(ApiAdapter):
 
             # Only pass request to Hexitec member if no matching adapter found
             if requestSent == False:
-                data = json_decode(request.body)
-                data = self.convert_to_string(data)
+                data = convert_unicode_to_string(decode_request_body(request))
                 self.hexitec.set(path, data)
                 response = self.hexitec.get(path)
         except HexitecError as e:
@@ -146,7 +151,8 @@ class HexitecAdapter(ApiAdapter):
                                   status_code=status_code)
 
     def delete(self, path, request):
-        """Handle an HTTP DELETE request.
+        """
+        Handle an HTTP DELETE request.
 
         This method handles an HTTP DELETE request, returning a JSON response.
 
@@ -160,28 +166,11 @@ class HexitecAdapter(ApiAdapter):
         logging.debug(response)
 
         return ApiAdapterResponse(response, status_code=status_code)
-    
-    """ ADDED TO PREVENT unicode / string mismatch type error """
-    def convert_to_string(self, obj):
-        """
-        Convert all unicode parts of a dictionary or list to standard strings.
-        This method may not handle special characters well!
-        :param obj: the dictionary, list, or unicode string
-        :return: the same data type as obj, but with unicode strings converted to python strings.
-        """
-        if isinstance(obj, dict):
-            return {self.convert_to_string(key): self.convert_to_string(value)
-                    for key, value in obj.items()}
-        elif isinstance(obj, list):
-            return [self.convert_to_string(element) for element in obj]
-        elif isinstance(obj, unicode):
-            return obj.encode('utf-8')
-
-        return obj
 
     def initialize(self, adapters):
-        """Get references to required adapters and pass those references to the classes that need
-            to use them
+        """
+        Get references to required adapters and pass those references to the classes that need
+        to use them
         """
         self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
         # Pass adapter list to Hexitec class:
@@ -190,13 +179,17 @@ class HexitecAdapter(ApiAdapter):
         # self.adapters["liveview"] = adapter
 
 class HexitecError(Exception):
-    """Simple exception class for Hexitec to wrap lower-level exceptions."""
+    """
+    Simple exception class for Hexitec to wrap lower-level exceptions.
+    """
 
     pass
 
 
 class Hexitec():
-    """Hexitec - class that extracts and stores information about system-level parameters."""
+    """
+    Hexitec - class that extracts and stores information about system-level parameters.
+    """
 
     # Thread executor used for background tasks
     # executor = futures.ThreadPoolExecutor(max_workers=1)
@@ -205,7 +198,8 @@ class Hexitec():
     THRESHOLDOPTIONS = ["value", "filename", "none"]
 
     def __init__(self, options):
-        """Initialise the Hexitec object.
+        """
+        Initialise the Hexitec object.
 
         This constructor initlialises the Hexitec object, building a parameter tree and
         launching a background task if enabled
@@ -239,6 +233,8 @@ class Hexitec():
 
         # ParameterTree variables
         self.sensors_layout = "2x2"
+        self.vcal = 3               # 0-2: Calibrated Image 0-2; 3: Normal data
+
         self.pixel_grid_size = 3
         self.gradients_filename = ""
         self.intercepts_filename = ""
@@ -252,13 +248,14 @@ class Hexitec():
         self.threshold_value = 100
 
         detector = ParameterTree({
-            'fem': self.fem.param_tree,
-            'daq': self.daq.param_tree,
+            "fem": self.fem.param_tree,
+            "daq": self.daq.param_tree,
             "collect_offsets": (None, self._collect_offsets),
-            'commit_configuration': (None, self.commit_configuration),
+            "commit_configuration": (None, self.commit_configuration),
             # Move sensors_layout into own subtree?
-            'sensors_layout': (self._get_sensors_layout, self._set_sensors_layout),
-            'debug_count': (self._get_debug_count, self._set_debug_count),
+            "sensors_layout": (self._get_sensors_layout, self._set_sensors_layout),
+            "vcal": (self._get_vcal, self._set_vcal),
+            "debug_count": (self._get_debug_count, self._set_debug_count),
             "config": {
                 "addition": {
                     "pixel_grid_size": (lambda: self.pixel_grid_size, self._set_pixel_grid_size)#,
@@ -289,10 +286,10 @@ class Hexitec():
 
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
-            'odin_version': version_info['version'],
-            'tornado_version': tornado.version,
-            'server_uptime': (self.get_server_uptime, None),
-            'detector': detector
+            "odin_version": version_info['version'],
+            "tornado_version": tornado.version,
+            "server_uptime": (self.get_server_uptime, None),
+            "detector": detector
         })
         self.update_rows_columns_pixels()
 
@@ -325,7 +322,6 @@ class Hexitec():
         self.rows = int(self.rows) * 80
         self.columns = int(self.columns) * 80
         self.pixels = self.rows * self.columns
-        print "rows, columns: ", self.rows, self.columns, " -> ", self.pixels
 
     def _set_pixel_grid_size(self, size):
         if (self.pixel_grid_size in [3, 5]):
@@ -369,7 +365,7 @@ class Hexitec():
         Updates frames datasets' dimensions
         """
         # Update data, raw_data datasets
-        for dataset in ["data", "raw_data"]:
+        for dataset in ["data", "raw_frames"]:
             payload = '{"dims": [%s, %s]}' % (self.rows, self.columns)
             command = "config/hdf/dataset/" + dataset
             request = ApiAdapterRequest(str(payload), content_type="application/json")
@@ -426,8 +422,9 @@ class Hexitec():
         self.dbgCount = count
 
     def initialize(self, adapters):
-        """Get references to required adapters and pass those references to the classes that need
-            to use them
+        """
+        Get references to required adapters and pass those references to the classes that need
+        to use them
         """
         self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
 
@@ -460,6 +457,16 @@ class Hexitec():
 
         self.update_rows_columns_pixels()
         self.update_datasets_frame_dimensions()
+
+    def _get_vcal(self):
+        return self.vcal
+
+    def _set_vcal(self, vcal):
+        """
+        Sets vcal in Fem(s)
+        """
+        self.vcal = vcal
+        self.fem._set_test_mode_image(vcal)
 
     def _collect_offsets(self, msg):
         """
@@ -499,14 +506,16 @@ class Hexitec():
         # (But not {"threshold": {"threshold_value": 7, ...}} !)
 
     def get_server_uptime(self):
-        """Get the uptime for the ODIN server.
+        """
+        Get the uptime for the ODIN server.
 
         This method returns the current uptime for the ODIN server.
         """
         return time.time() - self.init_time
 
     def get(self, path):
-        """Get the parameter tree.
+        """
+        Get the parameter tree.
 
         This method returns the parameter tree for use by clients via the Hexitec adapter.
 
@@ -515,7 +524,8 @@ class Hexitec():
         return self.param_tree.get(path)
 
     def set(self, path, data):
-        """Set parameters in the parameter tree.
+        """
+        Set parameters in the parameter tree.
 
         This method simply wraps underlying ParameterTree method so that an exceptions can be
         re-raised with an appropriate HexitecError.

@@ -10,7 +10,8 @@ from tornado.ioloop import IOLoop
 
 
 class HexitecDAQ():
-    """Encapsulates all the functionaility to initiate the DAQ.
+    """
+    Encapsulates all the functionaility to initiate the DAQ.
     
     TODO: Configures the Frame Receiver and Frame Processor plugins
     TODO: Configures the HDF File Writer Plugin
@@ -69,7 +70,8 @@ class HexitecDAQ():
         # self.get_fr_config_file()
 
     def start_acquisition(self, num_frames):
-        """Ensures the odin data FP and FR are configured, and turn on File Writing
+        """
+        Ensures the odin data FP and FR are configured, and turn on File Writing
         """
         logging.debug("Setting up Acquisition")
         fr_status = self.get_od_status("fr")
