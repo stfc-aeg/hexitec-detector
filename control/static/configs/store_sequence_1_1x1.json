@@ -1,7 +1,7 @@
 [
     {
         "store":
-	{
+    	{
             "index": "one", 
             "value":
             [
@@ -38,16 +38,16 @@
                         }
                     }
                 },
-		{
-		    "plugin": {
-			"load": {
-			    "index": "live_view",
-			    "name": "LiveViewPlugin",
-			    "library": "/u/ckd27546/develop/projects/odin-demo/install/lib/libLiveViewPlugin.so"
-			}
-		    }
-		},
-		{
+                {
+                    "plugin": {
+                    "load": {
+                        "index": "live_view",
+                        "name": "LiveViewPlugin",
+                        "library": "/u/ckd27546/develop/projects/odin-demo/install/lib/libLiveViewPlugin.so"
+                        }
+                    }
+                },
+                {
                     "plugin": {
                         "load": {
                             "index": "hdf",
@@ -80,14 +80,14 @@
                         }
                     }
                 },
-		{
-		    "plugin": {
-			"connect": {
-			    "index": "live_view",
-			    "connection": "histogram"
-			}
-		    }
-		},
+                {
+                    "plugin": {
+                    "connect": {
+                        "index": "live_view",
+                        "connection": "histogram"
+                        }
+                    }
+                },
                 {
                     "plugin": {
                         "connect": {
@@ -98,51 +98,38 @@
                 },
                 {
                     "reorder": {
-                        "width": 80,
-                        "height": 80,
-                        "fem_max_cols": 80,
-                        "fem_max_rows": 80,
-			"sensors_layout": "1x1",
-                        "reorder": false,
+                        "sensors_layout": "1x1",
                         "raw_data": false
                     }
                 },
                 {
                     "threshold":
                     {
-                        "width": 80,
-                        "height": 80,
-                        "fem_max_cols": 80,
-                        "fem_max_rows": 80,
                         "threshold_file": "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/t_threshold_file.txt",
                         "threshold_value": 100,
                         "threshold_mode": "value",
-			"sensors_layout": "1x1"
+                        "sensors_layout": "1x1"
                     }
                 },
                 {
                     "histogram":
                     {
-                        "width": 80,
-                        "height": 80,
-                        "fem_max_cols": 80,
-                        "fem_max_rows": 80,
                         "max_frames_received": 540,
                         "bin_start": 0,
                         "bin_end": 8000,
                         "bin_width": 10,
-			"sensors_layout": "1x1"
+                        "sensors_layout": "1x1"
                     }
                 },
-		{
-		    "live_view": 
-		    {
-			"frame_frequency": 50,
-			"per_second": 0,
-			"live_view_socket_addr": "tcp://127.0.0.1:5020",
-			"dataset_name": "raw_frames"
-		    }
-		},
+                {
+                    "live_view": 
+                    {
+                        "frame_frequency": 50,
+                        "per_second": 0,
+                        "live_view_socket_addr": "tcp://127.0.0.1:5020",
+                        "dataset_name": "raw_frames"
+                    }
+                },
                 {
                     "hdf": 
                     {
@@ -155,40 +142,40 @@
                                 "cmd": "create",
                                 "datatype": "float",
                                 "dims": [80, 80],
-				"chunks": [1, 80, 80],
-				"compression": "none"
+                                "chunks": [1, 80, 80],
+                                "compression": "none"
                             },
                             "raw_frames" : 
                             {
                                 "cmd": "create",
                                 "datatype": "float",
                                 "dims": [80, 80],
-				"chunks": [1, 80, 80],
-				"compression": "none"
+                                "chunks": [1, 80, 80],
+                                "compression": "none"
                             },
                             "energy_bins" :
                             {
                                 "cmd": "create",
                                 "datatype": "float",
                                 "dims": [800],
-				"chunks": [1, 800],
-				"compression": "none"
+                                "chunks": [1, 800],
+                                "compression": "none"
                             },
                             "pixel_histograms" :
                             {
                                 "cmd": "create",
                                 "datatype": "float",
                                 "dims": [6400, 800],
-				"chunks": [1, 6400, 800],
-				"compression": "none"
+                                "chunks": [1, 6400, 800],
+                                "compression": "none"
                             },
                             "summed_histograms" :
                             {
                                 "cmd": "create",
                                 "datatype": "uint64",
                                 "dims": [800],
-				"chunks": [1, 800],
-				"compression": "none"
+                                "chunks": [1, 800],
+                                "compression": "none"
                             }
                         }
                     }
@@ -196,8 +183,8 @@
                 {
                     "hdf": {
                         "file": {
-                        "name": "Sequence_one_file_",
-                        "path": "/tmp/"
+                            "name": "Sequence_one_file_",
+                            "path": "/tmp/"
                         }
                     }
                 }

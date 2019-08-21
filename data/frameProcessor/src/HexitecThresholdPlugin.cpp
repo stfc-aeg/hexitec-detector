@@ -109,7 +109,7 @@ namespace FrameProcessor
 		{
 	    std::string threshold_mode = config.get_param<std::string>(
 	    		HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE);
-	    /// Which threshold mode selected?
+
 	    if (threshold_mode.compare(std::string("none")) == 0)
 	    {
 	    	threshold_mode_ = (ThresholdMode)0;
@@ -139,15 +139,19 @@ namespace FrameProcessor
 			threshold_filename_ = config.get_param<std::string>(
 					HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE);
 
-			LOG4CXX_TRACE(logger_, "Setting thresholds from file: " << threshold_filename_);
-			if (set_threshold_per_pixel(threshold_filename_.c_str()))
-			{
-				LOG4CXX_TRACE(logger_, "Read thresholds from file successfully");
-			}
-			else
-			{
-				LOG4CXX_ERROR(logger_, "Failed to read thresholds from file")
-			}
+      // Update threshold filename if filename mode selected
+      if (!threshold_filename_.empty())
+      {
+        LOG4CXX_TRACE(logger_, "Setting thresholds from file: " << threshold_filename_);
+        if (set_threshold_per_pixel(threshold_filename_.c_str()))
+        {
+          LOG4CXX_TRACE(logger_, "Read thresholds from file successfully");
+        }
+        else
+        {
+          LOG4CXX_ERROR(logger_, "Failed to read thresholds from file")
+        }
+      }
 		}
   }
 

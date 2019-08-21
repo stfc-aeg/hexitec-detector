@@ -539,16 +539,16 @@ function apply_ui_values() {
     // Load all UI settings into HexitecDAQ's ParameterTree
     changeRawDataEnable();
 
+    threshold_mode_changed();
+    threshold_value_changed();
     var threshold_mode = $('#threshold-mode-text').prop('value');
-    // Check whether threshold filename mode requested
-    //  (0 if strings equal, 1 if they're different)
+    // Update threshold filename if threshold filename mode set
+    //  (0: strings equal [filename mode], 1: not [none/value mode])
     if (threshold_mode.localeCompare("filename") == 0)
     {
         threshold_filename_changed();
     }
-    threshold_value_changed();
-    threshold_mode_changed();
-
+    
     gradients_filename_changed();
     intercepts_filename_changed();
     pixel_grid_size_changed();

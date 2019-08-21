@@ -3,6 +3,7 @@
 import socket
 import struct
 import time
+import logging
 
 class RdmaUDP(object):
 
@@ -46,17 +47,17 @@ class RdmaUDP(object):
             if len(response) == 56:
                 decoded = struct.unpack('=IIIIQQQQQ', response)
                 data = decoded[3]
-                #print [hex(val) for val in decoded]
+                #logging.debug([hex(val) for val in decoded])
 
         if self.debug:
-            print 'R %08X : %08X %s' % (address, data, comment)
+            logging.debug('R %08X : %08X %s' % (address, data, comment))
 
         return data
 
     def write(self, address, data, comment=''):
 
         if self.debug:
-            print 'W %08X : %08X %s' % (address, data, comment)
+            logging.debug('W %08X : %08X %s' % (address, data, comment))
 
         #create single write command + 5 data cycle nop command for padding
         command = struct.pack('=BBBBIQBBBBIQQQQQ', 1,0,0,2, address, data, 9,0,0,255,0, 0,0,0,0,0)
@@ -70,7 +71,7 @@ class RdmaUDP(object):
             #time.sleep(10)
             if len(response) == 48:
                 decoded = struct.unpack('=IIIIQQQQ', response)
-                #print decoded
+                #logging.debug(decoded)
 
         return
 
@@ -85,23 +86,23 @@ class RdmaUDP(object):
             #time.sleep(10)
             #decoded = struct.unpack('=I', response)
             #decoded = 0x00000000
-            #print len(response)
+            #logging.debug(len(response))
 
         if self.debug:
-            print 'R %08X : %08X %s' % (address, decoded, comment)
+            logging.debug('R %08X : %08X %s' % (address, decoded, comment))
 
         return decoded
 
     def block_write(self, address, data, comment=''):
 
         if self.debug:
-            print 'W %08X : %08X %s' % (address, data, comment)
+            logging.debug('W %08X : %08X %s' % (address, data, comment))
 
         #create block write command
         length = len(data)/4-1
         command = struct.pack('=BBBBI', length,0,0,0, address)
         command= command+data
-        print len(command)
+        logging.debug(len(command))
 
         #Send the single write command packet
         self.txsocket.sendto(command,(self.TgtRxUDPIPAddr,self.TgtRxUDPIPPrt))
@@ -111,27 +112,7 @@ class RdmaUDP(object):
             response = self.rxsocket.recv(self.UDPMaxRx)
             #time.sleep(10)
             #decoded = struct.unpack('=II', response)
-            print len(response)
-
-        return
-
-    def block_nop(self, comment=''):
-
-        if self.debug:
-            print 'W %08X : %08X %s' % (comment)
-
-        #create block nop command
-        command = struct.pack('=BBBBIQQQQQ',255,0,0,4, 0, 0,0,0,0,0)
-
-        #Send the single write command packet
-        self.txsocket.sendto(command,(self.TargetRxUDPIPAddr,self.TargetRxUDPIPPrt))
-
-        if self.ack:
-            #receive acknowledge packet
-            response = self.rxsocket.recv(self.UDPMaxRx)
-            #time.sleep(10)
-            #decoded = struct.unpack('=I', response)
-            print len(response)
+            logging.debug(len(response))
 
         return
 
