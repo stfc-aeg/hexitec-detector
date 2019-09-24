@@ -1002,7 +1002,13 @@ class HexitecFem():
             self.send_cmd([0x23, 0x90, 0x53, 0x31, 0x42, 0x46, 0x46, 0x0d])
             self.read_response()
             self.send_cmd([0x23, 0x90, 0x53, 0x31, 0x43, 0x33, 0x42, 0x0d])
-            self.read_response()           
+            self.read_response()
+
+    def setup_camera(self, put_string="None"):
+        logging.debug("SETTING UP CAMERA")
+        logging.debug("This function to replace initialise_system; Just sleep for a second for now..")
+        time.sleep(1)
+        logging.debug("SETTING UP CAMERA: DONE")
 
     def initialise_system(self):
         # Does init, load, set up, write, enable, calibrate all in one fell swoooop

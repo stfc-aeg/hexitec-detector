@@ -210,7 +210,7 @@ class Hexitec():
         self.file_name = options.get("save_file", defaults.save_file)
         # self.vector_file_dir = options.get("vector_file_dir", defaults.vector_file_dir)
         # self.vector_file = options.get("vector_file_name", defaults.vector_file)
-        # self.acq_num = options.get("acquisition_num_frames", defaults.acq_num)
+        self.acq_num = options.get("acquisition_num_frames", defaults.acq_num)
         # self.acq_gap = options.get("acquisition_frame_gap", defaults.acq_gap)
         odin_data_dir = options.get("odin_data_dir", defaults.odin_data_dir)
         odin_data_dir = os.path.expanduser(odin_data_dir)
@@ -282,6 +282,11 @@ class Hexitec():
                     "threshold_value": (lambda: self.threshold_value, self._set_threshold_value)
                 }
             },
+            # Implement acquisition through daq class:
+            "acquisition": {
+                "num_frames": (lambda: self.acq_num, self.set_acq_num),
+                "start_acq": (None, self.acquisition)
+            }
         })
 
         # Store all information in a parameter tree
@@ -314,6 +319,10 @@ class Hexitec():
         time.sleep(0.5)
         IOLoop.instance().call_later(0.5, self.poll_histograms)
 
+    def set_acq_num(self, num):
+        logging.debug("Number Frames: %d", num)
+        self.acq_num = num
+        
     def update_rows_columns_pixels(self):
         """
         Updates rows, columns and pixels from new sensors_layout value
@@ -433,6 +442,21 @@ class Hexitec():
     def cleanup(self):
         self.daq.cleanup()
 
+    def acquisition(self, put_data):
+        if self.daq.in_progress:
+            logging.warning("Cannot Start Acquistion: Already in progress")
+            return
+        self.daq.start_acquisition(self.acq_num)
+        # for fem in self.fems:
+        self.fem.setup_camera()
+            # fem.get_aligner_status()  # TODO: is this required?
+            # locked = fem.get_idelay_lock_status()
+            # if not locked:
+            #     fem.load_vectors_from_file()
+        self.fem.collect_data()
+        # self.fems[0].frame_gate_settings(self.acq_num - 1, self.acq_gap)
+        # self.fems[0].frame_gate_trigger()
+
     def _get_sensors_layout(self):
         return self.sensors_layout
 
@@ -546,7 +570,7 @@ class HexitecDetectorDefaults():
         # self.vector_file_dir = "/aeg_sw/work/projects/qem/python/03052018/"
         # self.vector_file = "QEM_D4_198_ADC_10_icbias30_ifbias24.txt"
         self.odin_data_dir = "~/develop/projects/odin-demo/install/"
-        self.acq_num = 4096
+        self.acq_num = 20
         self.acq_gap = 1
         self.fem = {
             "ip_addr": "192.168.0.122",

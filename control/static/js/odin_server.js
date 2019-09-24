@@ -11,7 +11,7 @@ var next_frame_enable = false;
 var calibration_enable = false;
 var hdf_write_enable = false;
 
-var base_path = "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/control/static/configs/";
+var base_path = "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/config/"
 var store_filename = "store_sequence_";
 var execute_filename = "execute_sequence_";
 var sensors_layout   = "2x2";
@@ -959,7 +959,7 @@ function fp_config_changed()
     });
 };
 
-//    curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fr/config/config_file -d "/u/ckd27546/develop/projects/odin-demo/install/config/data/client_msgs/hexitec_fr.json"
+//    curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fr/config/config_file -d "~/develop/projects/odin-demo/hexitec-detector/data/config/fr_hexitec_config.json"
 function fr_config_changed()
 {
     var fr_config_file = $('#fr-config-text').prop('value');

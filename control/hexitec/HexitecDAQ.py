@@ -7,7 +7,8 @@ from subprocess import Popen
 from odin.adapters.adapter import ApiAdapterRequest
 from odin.adapters.parameter_tree import ParameterTree
 from tornado.ioloop import IOLoop
-
+# Is a hardcoded wait necessary?
+import time
 
 class HexitecDAQ():
     """
@@ -43,13 +44,13 @@ class HexitecDAQ():
         self.param_tree = ParameterTree({
             "receiver": {
                 "connected": (self.is_fr_connected, None),
-                "configured": (self.is_fr_configured, None)#,
-                # "config_file": (self.get_fr_config_file, None)
+                "configured": (self.is_fr_configured, None),
+                "config_file": (self.get_fr_config_file, None)
             },
             "processor": {
                 "connected": (self.is_fp_connected, None),
-                "configured": (self.is_fp_configured, None)#,
-                # "config_file": (self.get_fp_config_file, None)
+                "configured": (self.is_fp_configured, None),
+                "config_file": (self.get_fp_config_file, None)
             },
             "file_info": {
                 "enabled": (lambda: self.file_writing, self.set_file_writing),
@@ -66,8 +67,8 @@ class HexitecDAQ():
         self.adapters["fp"] = adapters['fp']
         self.adapters["fr"] = adapters['fr']
         self.adapters["file_interface"] = adapters['file_interface']
-        # self.get_fp_config_file()
-        # self.get_fr_config_file()
+        self.get_fp_config_file()
+        self.get_fr_config_file()
 
     def start_acquisition(self, num_frames):
         """
@@ -76,10 +77,15 @@ class HexitecDAQ():
         logging.debug("Setting up Acquisition")
         fr_status = self.get_od_status("fr")
         fp_status = self.get_od_status("fp")
+        # DIRTY hack: Must wait 2 seconds for each of FP, FR
+        #             to start before we can configure them..
+        config_delay = 2
 
         if self.is_fr_connected(fr_status) is False:
-            print "Attempting to run FR......."
+            logging.debug("Attempting to run FR.......")
             self.run_odin_data("fr")
+            logging.debug("Wait %s seconds allowing FrameReceiver to start.." % config_delay)
+            time.sleep(config_delay)
             self.config_odin_data("fr")
         elif self.is_fr_configured(fr_status) is False:
             self.config_odin_data("fr")
@@ -87,8 +93,10 @@ class HexitecDAQ():
             logging.debug("Frame Receiver Already connected/configured")
 
         if self.is_fp_connected(fp_status) is False:
-            print "Attempting to run FP......."
+            logging.debug("Attempting to run FP.......")
             self.run_odin_data("fp")
+            logging.debug("Wait %s seconds allowing FrameProcessor to start.." % config_delay)
+            time.sleep(config_delay)
             self.config_odin_data("fp")
         elif self.is_fp_configured(fp_status) is False:
             self.config_odin_data("fp")
@@ -158,46 +166,48 @@ class HexitecDAQ():
         finally:
             return response
 
-    # def get_fr_config_file(self):
-    #     try:
-    #         return_val = None
-    #         request = ApiAdapterRequest(None)
-    #         response = self.adapters["file_interface"].get("", request).data
-    #         self.config_dir = response["config_dir"]
-    #         for config_file in response["fr_config_files"]:
-    #             if "qem" in config_file.lower():
-    #                 return_val = config_file
-    #                 break
-    #         else:
-    #             return_val = response["fr_config_files"][0]
+    def get_fr_config_file(self):
+        try:
+            return_val = None
+            request = ApiAdapterRequest(None)
+            response = self.adapters["file_interface"].get("", request).data
+            self.config_dir = response["config_dir"]
+            print("fr cfg: %s" % response["fr_config_files"])
+            for config_file in response["fr_config_files"]:
+                if "qem" in config_file.lower():
+                    return_val = config_file
+                    break
+            else:
+                return_val = response["fr_config_files"][0]
 
-    #     except KeyError:
-    #         logging.warning("File Interface Adapter Not Found")
-    #         return_val = ""
+        except KeyError:
+            logging.warning("File Interface Adapter Not Found")
+            return_val = ""
 
-    #     finally:
-    #         self.config_files["fr"] = return_val
-    #         return return_val
+        finally:
+            self.config_files["fr"] = return_val
+            return return_val
 
-    # def get_fp_config_file(self):
-    #     try:
-    #         return_val = None
-    #         request = ApiAdapterRequest(None)
-    #         response = self.adapters["file_interface"].get("", request).data
-    #         self.config_dir = response["config_dir"]
-    #         for config_file in response["fp_config_files"]:
-    #             if "qem" in config_file.lower():
-    #                 return_val = config_file
-    #                 break
-    #         else:
-    #             return_val = response["fp_config_files"][0]
+    def get_fp_config_file(self):
+        try:
+            return_val = None
+            request = ApiAdapterRequest(None)
+            response = self.adapters["file_interface"].get("", request).data
+            self.config_dir = response["config_dir"]
+            print("fp cfg: %s" % response["fp_config_files"])
+            for config_file in response["fp_config_files"]:
+                if "qem" in config_file.lower():
+                    return_val = config_file
+                    break
+            else:
+                return_val = response["fp_config_files"][0]
 
-    #     except KeyError:
-    #         logging.warning("File Interface Adapter Not Found")
+        except KeyError:
+            logging.warning("File Interface Adapter Not Found")
 
-    #     finally:
-    #         self.config_files["fp"] = return_val
-    #         return return_val
+        finally:
+            self.config_files["fp"] = return_val
+            return return_val
 
     def set_data_dir(self, directory):
         self.file_dir = directory
@@ -228,6 +238,10 @@ class HexitecDAQ():
         logging.debug(config)
         request = ApiAdapterRequest(config, content_type="application/json")
         command = "config/config_file"
+        print("Configuring %s" % adapter)
+        print("Send'g cmd: %s" % command)
+        print("Send'g req: %s" % request)
+        logging.debug("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
         _ = self.adapters[adapter].put(command, request)
 
     def run_odin_data(self, process_name):

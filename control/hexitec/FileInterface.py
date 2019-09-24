@@ -181,8 +181,10 @@ class FileInterface():
         self.clear_lists()
         logging.debug(self.odin_data_config_dir)
         for file in os.listdir(os.path.expanduser(self.odin_data_config_dir)):
-            if file.endswith('.json') and "qemii" in file:
+            # print("\tFound file: %s" % file)
+            if file.endswith('.json') and "hexitec" in file:
                 self.txt_files.append(file)
+        # print("\t\t Matching file(s): %s" % self.txt_files)
 
     def get_fp_config_files(self):
         """ gets the frame processor config files from the list of text files found
