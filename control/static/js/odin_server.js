@@ -728,26 +728,6 @@ function pixel_grid_size_changed()
     });
 }
 
-// max_frames_received_changed: Sets number of frames processed before histograms written to disk
-function max_frames_received_changed()
-{
-    var max_frames_received = $('#max-frames-received-text').prop('value');
-    max_frames_received = JSON.stringify(parseInt(max_frames_received));
-
-    $.ajax({
-        type: "PUT",
-        url: hexitec_url + 'detector/config/histogram/max_frames_received',
-        contentType: "application/json",
-        data: max_frames_received,
-        success: function(result) {
-            $('#max-frames-received-warning').html("");
-        },
-        error: function(request, msg, error) {
-            $('#max-frames-received-warning').html(error + ": " + format_error_message(request.responseText));
-        }
-    });
-}
-
 function bin_start_changed()
 {
     var bin_start = $('#bin-start-text').prop('value');
@@ -1019,34 +999,15 @@ function hdf_file_name_changed()
     });
 };
 
-// curl  -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/hdf/frames -d "3"
-function hdf_frames_changed()
-{
-    var hdf_frames = $('#hdf-frames-text').prop('value');
-    $.ajax({
-        type: "PUT",
-        url: hexitec_url + 'fp/config/hdf/frames',
-        contentType: "application/json",
-        data: (hdf_frames),
-        success: function(result) {
-            $('#hdf-frames-warning').html("");
-            $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
-        },
-        error: function(request, msg, error) {
-            $('#hdf-frames-warning').html(error + ": " + format_error_message(request.responseText));
-            $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
-        }
-    });
-};
-
-// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/fem/number_frames -d "111"
+// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/acquisition -d '{"num_frames": 3}'
 function frames_changed()
 {
     var frames = $('#frames-text').prop('value');
     console.log("frames: " + frames);
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/fem/number_frames',
+        // url: hexitec_url + 'detector/fem/number_frames',
+        url: hexitec_url + 'detector/acquisition/num_frames',
         contentType: "application/json",
         data: (frames),
         success: function(result) {

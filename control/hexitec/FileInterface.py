@@ -179,7 +179,7 @@ class FileInterface():
         Clears the internal lists first to prevent circular appending at every "GET"
         """
         self.clear_lists()
-        logging.debug(self.odin_data_config_dir)
+        # logging.debug(self.odin_data_config_dir)
         for file in os.listdir(os.path.expanduser(self.odin_data_config_dir)):
             # print("\tFound file: %s" % file)
             if file.endswith('.json') and "hexitec" in file:

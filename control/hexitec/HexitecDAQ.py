@@ -172,9 +172,9 @@ class HexitecDAQ():
             request = ApiAdapterRequest(None)
             response = self.adapters["file_interface"].get("", request).data
             self.config_dir = response["config_dir"]
-            print("fr cfg: %s" % response["fr_config_files"])
+            # print("fr cfg: %s" % response["fr_config_files"])
             for config_file in response["fr_config_files"]:
-                if "qem" in config_file.lower():
+                if "hexitec" in config_file.lower():
                     return_val = config_file
                     break
             else:
@@ -194,9 +194,9 @@ class HexitecDAQ():
             request = ApiAdapterRequest(None)
             response = self.adapters["file_interface"].get("", request).data
             self.config_dir = response["config_dir"]
-            print("fp cfg: %s" % response["fp_config_files"])
+            # print("fp cfg: %s" % response["fp_config_files"])
             for config_file in response["fp_config_files"]:
-                if "qem" in config_file.lower():
+                if "hexitec" in config_file.lower():
                     return_val = config_file
                     break
             else:
