@@ -144,7 +144,7 @@ namespace FrameProcessor
 						static_cast<char *>(const_cast<void *>(data_ptr)));
 
 				///TODO: This function do not exist; Design it to match requirements
-//	        some_function(static_cast<float *>(input_ptr));
+        // some_function(static_cast<float *>(input_ptr));
 
 				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
 															 " dataset, frame number: " << frame->get_frame_number());
@@ -152,9 +152,7 @@ namespace FrameProcessor
 			}
 			catch (const std::exception& e)
 			{
-				std::stringstream ss;
-				ss << "HEXITEC frame decode failed: " << e.what();
-				LOG4CXX_ERROR(logger_, ss.str());
+				LOG4CXX_ERROR(logger_, "HexitecTemplatePluginfailed: " << e.what());
 			}
 		}
     else
@@ -174,32 +172,31 @@ namespace FrameProcessor
 	//!
 	std::size_t HexitecTemplatePlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
 	{
-	    // Clear the current map
-	    sensors_layout_.clear();
+    // Clear the current map
+    sensors_layout_.clear();
 
-	    // Define entry and port:idx delimiters
-	    const std::string entry_delimiter("x");
+    // Define entry and port:idx delimiters
+    const std::string entry_delimiter("x");
 
-	    // Vector to hold entries split from map
-	    std::vector<std::string> map_entries;
+    // Vector to hold entries split from map
+    std::vector<std::string> map_entries;
 
-	    // Split into entries
-	    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
+    // Split into entries
+    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
 
-	    // If a valid entry is found, save into the map
-	    if (map_entries.size() == 2) {
-	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
-	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
-	        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
-	    }
+    // If a valid entry is found, save into the map
+    if (map_entries.size() == 2) {
+      int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
+      int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
+      sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+    }
 
-      image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
-      image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
-      image_pixels_ = image_width_ * image_height_;
+    image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+    image_pixels_ = image_width_ * image_height_;
 
-	    // Return the number of valid entries parsed
-	    return sensors_layout_.size();
+    // Return the number of valid entries parsed
+    return sensors_layout_.size();
 	}
 
 } /* namespace FrameProcessor */
-

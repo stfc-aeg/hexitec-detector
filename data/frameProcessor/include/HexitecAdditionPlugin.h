@@ -28,7 +28,6 @@ using namespace log4cxx::helpers;
 
 namespace FrameProcessor
 {
-
   typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
   /** Applies the Charged Sharing algorithm to a Hexitec frame.
@@ -39,61 +38,60 @@ namespace FrameProcessor
    */
   class HexitecAdditionPlugin : public FrameProcessorPlugin
   {
-  public:
-    HexitecAdditionPlugin();
-    virtual ~HexitecAdditionPlugin();
+    public:
+      HexitecAdditionPlugin();
+      virtual ~HexitecAdditionPlugin();
 
-    int get_version_major();
-    int get_version_minor();
-    int get_version_patch();
-    std::string get_version_short();
-    std::string get_version_long();
+      int get_version_major();
+      int get_version_minor();
+      int get_version_patch();
+      std::string get_version_short();
+      std::string get_version_long();
 
-    void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
-    void requestConfiguration(OdinData::IpcMessage& reply);
-    void status(OdinData::IpcMessage& status);
-    bool reset_statistics(void);
+      void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
+      void requestConfiguration(OdinData::IpcMessage& reply);
+      void status(OdinData::IpcMessage& status);
+      bool reset_statistics(void);
 
-  private:
-    /** Configuration constant for pixel_grid_size **/
-    static const std::string CONFIG_PIXEL_GRID_SIZE;
-		/** Configuration constant for Hardware sensors **/
-		static const std::string CONFIG_SENSORS_LAYOUT;
+    private:
+      /** Configuration constant for pixel_grid_size **/
+      static const std::string CONFIG_PIXEL_GRID_SIZE;
+      /** Configuration constant for Hardware sensors **/
+      static const std::string CONFIG_SENSORS_LAYOUT;
 
-    std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
-    std::string sensors_layout_str_;
-    HexitecSensorLayoutMap sensors_layout_;
+      std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
+      std::string sensors_layout_str_;
+      HexitecSensorLayoutMap sensors_layout_;
 
-    void process_frame(boost::shared_ptr<Frame> frame);
+      void process_frame(boost::shared_ptr<Frame> frame);
 
-    void prepare_charged_sharing(float *input_frame);
-  	void process_addition(float *extended_frame, int extended_frame_rows,
-  												int start_position, int end_position);
+      void prepare_charged_sharing(float *input_frame);
+      void process_addition(float *extended_frame, int extended_frame_rows,
+                            int start_position, int end_position);
 
-    int directional_distance_;
-    int number_rows_;
-    int number_columns_;
+      int directional_distance_;
+      int number_rows_;
+      int number_columns_;
 
-    /** Pointer to logger **/
-    LoggerPtr logger_;
-    /** Image width **/
-    int image_width_;
-    /** Image height **/
-    int image_height_;
-    /** Image pixel count **/
-    int image_pixels_;
+      /** Pointer to logger **/
+      LoggerPtr logger_;
+      /** Image width **/
+      int image_width_;
+      /** Image height **/
+      int image_height_;
+      /** Image pixel count **/
+      int image_pixels_;
 
-    /** Pixel grid size */
-    int pixel_grid_size_;
+      /** Pixel grid size */
+      int pixel_grid_size_;
 
-    // DEBUGGING functions:
-    void print_nonzero_pixels(float *in, int numberRows, int numberColumns);
-    void check_memory(float *float_pointer, int offset);
-    void print_last_row(float *in, int numberRows, int numberCols);
-    int debugFrameCounter;
-    std::ofstream outFile;
-  	void writeFile(std::string filePrefix, float *frame);
-
+      // DEBUGGING functions:
+      void print_nonzero_pixels(float *in, int numberRows, int numberColumns);
+      void check_memory(float *float_pointer, int offset);
+      void print_last_row(float *in, int numberRows, int numberCols);
+      int debugFrameCounter;
+      std::ofstream outFile;
+      void writeFile(std::string filePrefix, float *frame);
   };
 
   /**

@@ -33,51 +33,51 @@ namespace FrameProcessor
    */
   class HexitecDiscriminationPlugin : public FrameProcessorPlugin
   {
-  public:
-    HexitecDiscriminationPlugin();
-    virtual ~HexitecDiscriminationPlugin();
+    public:
+      HexitecDiscriminationPlugin();
+      virtual ~HexitecDiscriminationPlugin();
 
-    int get_version_major();
-    int get_version_minor();
-    int get_version_patch();
-    std::string get_version_short();
-    std::string get_version_long();
+      int get_version_major();
+      int get_version_minor();
+      int get_version_patch();
+      std::string get_version_short();
+      std::string get_version_long();
 
-    void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
-    void requestConfiguration(OdinData::IpcMessage& reply);
-    void status(OdinData::IpcMessage& status);
-    bool reset_statistics(void);
+      void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
+      void requestConfiguration(OdinData::IpcMessage& reply);
+      void status(OdinData::IpcMessage& status);
+      bool reset_statistics(void);
 
-  private:
-    /** Configuration constant for pixel grid size **/
-    static const std::string CONFIG_PIXEL_GRID_SIZE;
-		/** Configuration constant for Hardware sensors **/
-		static const std::string CONFIG_SENSORS_LAYOUT;
+    private:
+      /** Configuration constant for pixel grid size **/
+      static const std::string CONFIG_PIXEL_GRID_SIZE;
+      /** Configuration constant for Hardware sensors **/
+      static const std::string CONFIG_SENSORS_LAYOUT;
 
-    void process_frame(boost::shared_ptr<Frame> frame);
+      void process_frame(boost::shared_ptr<Frame> frame);
 
-    void prepareChargedSharing(float *inFrame);
-    void processDiscrimination(float *extendedFrame, int extendedFrameRows,
-                               int startPosn, int endPosn);
+      void prepareChargedSharing(float *inFrame);
+      void processDiscrimination(float *extendedFrame, int extendedFrameRows,
+                                int startPosn, int endPosn);
 
-    std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
-    std::string sensors_layout_str_;
-    HexitecSensorLayoutMap sensors_layout_;
+      std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
+      std::string sensors_layout_str_;
+      HexitecSensorLayoutMap sensors_layout_;
 
-    int directional_distance_;
-    int number_rows_;
-    int number_columns_;
+      int directional_distance_;
+      int number_rows_;
+      int number_columns_;
 
-    /** Pointer to logger **/
-    LoggerPtr logger_;
-    /** Image width **/
-    int image_width_;
-    /** Image height **/
-    int image_height_;
-    /** Image pixel count **/
-    int image_pixels_;
+      /** Pointer to logger **/
+      LoggerPtr logger_;
+      /** Image width **/
+      int image_width_;
+      /** Image height **/
+      int image_height_;
+      /** Image pixel count **/
+      int image_pixels_;
 
-    int pixel_grid_size_;
+      int pixel_grid_size_;
   };
 
   /**

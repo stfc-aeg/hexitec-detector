@@ -138,7 +138,7 @@ namespace FrameProcessor
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data_ptr()));
+      static_cast<const char*>(frame->get_data_ptr()));
 
     // Check datasets name
     FrameMetaData &incoming_frame_meta = frame->meta_data();
@@ -147,7 +147,7 @@ namespace FrameProcessor
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
 			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
- 														 " dataset, frame number: " << frame->get_frame_number());
+                    " dataset, frame number: " << frame->get_frame_number());
 			this->push(frame);
     }
     else if (dataset.compare(std::string("data")) == 0)
@@ -167,9 +167,7 @@ namespace FrameProcessor
 			}
 			catch (const std::exception& e)
 			{
-				std::stringstream ss;
-				ss << "HEXITEC frame decode failed: " << e.what();
-				LOG4CXX_ERROR(logger_, ss.str());
+				LOG4CXX_ERROR(logger_, "HexitecDiscriminationPlugin failed: " << e.what());
 			}
     }
     else
@@ -186,7 +184,7 @@ namespace FrameProcessor
    */
   void HexitecDiscriminationPlugin::prepareChargedSharing(float *frame)
   {
-     /// extendedFrame contains empty (1-2) pixel(s) on all 4 sides to enable charge
+    /// extendedFrame contains empty (1-2) pixel(s) on all 4 sides to enable charge
   	/// 	sharing algorithm execution
 		int sidePadding          = 2 *  directional_distance_;
 		int extendedFrameRows    = (number_rows_ + sidePadding);
@@ -205,9 +203,9 @@ namespace FrameProcessor
 
 		for (int i = startPosn; i < endPosn; )
 		{
-			 memcpy(&(extendedFrame[i]), rowPtr, number_columns_ * sizeof(float));
-			 rowPtr = rowPtr + number_columns_;
-			 i = i + increment;
+      memcpy(&(extendedFrame[i]), rowPtr, number_columns_ * sizeof(float));
+      rowPtr = rowPtr + number_columns_;
+      i = i + increment;
 		}
 
 		//// CS example frame, with directional_distance_ = 1
@@ -230,9 +228,9 @@ namespace FrameProcessor
 		rowPtr = frame;
 		for (int i = startPosn; i < endPosn; )
 		{
-			 memcpy(rowPtr, &(extendedFrame[i]), number_columns_ * sizeof(float));
-			 rowPtr = rowPtr + number_columns_;
-			 i = i + increment;
+      memcpy(rowPtr, &(extendedFrame[i]), number_columns_ * sizeof(float));
+      rowPtr = rowPtr + number_columns_;
+      i = i + increment;
 		}
 
 		free(extendedFrame);
@@ -309,34 +307,34 @@ namespace FrameProcessor
 	//!
 	std::size_t HexitecDiscriminationPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
 	{
-	    // Clear the current map
-	    sensors_layout_.clear();
+    // Clear the current map
+    sensors_layout_.clear();
 
-	    // Define entry and port:idx delimiters
-	    const std::string entry_delimiter("x");
+    // Define entry and port:idx delimiters
+    const std::string entry_delimiter("x");
 
-	    // Vector to hold entries split from map
-	    std::vector<std::string> map_entries;
+    // Vector to hold entries split from map
+    std::vector<std::string> map_entries;
 
-	    // Split into entries
-	    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
+    // Split into entries
+    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
 
-	    // If a valid entry is found, save into the map
-	    if (map_entries.size() == 2) {
-	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
-	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
-	        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
-	    }
+    // If a valid entry is found, save into the map
+    if (map_entries.size() == 2) {
+      int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
+      int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
+      sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+    }
 
-      image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
-      image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
-      image_pixels_ = image_width_ * image_height_;
+    image_width_  = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+    image_pixels_ = image_width_ * image_height_;
 
-      number_rows_ = image_height_;
-      number_columns_ = image_width_;
+    number_rows_    = image_height_;
+    number_columns_ = image_width_;
 
-	    // Return the number of valid entries parsed
-	    return sensors_layout_.size();
+    // Return the number of valid entries parsed
+    return sensors_layout_.size();
 	}
 
 } /* namespace FrameProcessor */

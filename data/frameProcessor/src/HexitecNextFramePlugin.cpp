@@ -138,7 +138,7 @@ namespace FrameProcessor
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data_ptr()));
+      static_cast<const char*>(frame->get_data_ptr()));
 
     // Check datasets name
     FrameMetaData &incoming_frame_meta = frame->meta_data();
@@ -147,7 +147,7 @@ namespace FrameProcessor
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
 			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
- 														 " dataset, frame number: " << current_frame_number);
+                    " dataset, frame number: " << current_frame_number);
 			this->push(frame);
     }
     else if (dataset.compare(std::string("data")) == 0)
@@ -156,14 +156,14 @@ namespace FrameProcessor
 			{
 				// Define pointer to the input image data
 				void* input_ptr = static_cast<void *>(
-						static_cast<char *>(const_cast<void *>(data_ptr)));
+          static_cast<char *>(const_cast<void *>(data_ptr)));
 
 				// Don't compare current against last frame if not adjacent
 				if ((last_frame_number_+1) != current_frame_number)
 				{
-					LOG4CXX_TRACE(logger_, "Not correcting current frame, because last frame number: " <<
-																	last_frame_number_ << " versus current_frame_number: "
-																	<< current_frame_number);
+					LOG4CXX_TRACE(logger_, "Not correcting current frame; last frame number: " <<
+                        last_frame_number_ << " versus current_frame_number: "
+                        << current_frame_number);
 				}
 				else
 				{
@@ -173,7 +173,7 @@ namespace FrameProcessor
 				}
 
 				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-															 " dataset, frame number: " << current_frame_number);
+                      " dataset, frame number: " << current_frame_number);
 
 				last_frame_number_ = current_frame_number;
 
@@ -187,9 +187,7 @@ namespace FrameProcessor
 			}
 			catch (const std::exception& e)
 			{
-				std::stringstream ss;
-				ss << "HEXITEC frame decode failed: " << e.what();
-				LOG4CXX_ERROR(logger_, ss.str());
+				LOG4CXX_ERROR(logger_, "HexitecNextFramePlugin failed: " << e.what());
 			}
 		}
     else
@@ -231,30 +229,30 @@ namespace FrameProcessor
 	//!
 	std::size_t HexitecNextFramePlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
 	{
-	    // Clear the current map
-	    sensors_layout_.clear();
+    // Clear the current map
+    sensors_layout_.clear();
 
-	    // Define entry and port:idx delimiters
-	    const std::string entry_delimiter("x");
+    // Define entry and port:idx delimiters
+    const std::string entry_delimiter("x");
 
-	    // Vector to hold entries split from map
-	    std::vector<std::string> map_entries;
+    // Vector to hold entries split from map
+    std::vector<std::string> map_entries;
 
-	    // Split into entries
-	    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
+    // Split into entries
+    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
 
-	    // If a valid entry is found, save into the map
-	    if (map_entries.size() == 2) {
-	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
-	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
-	        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
-	    }
+    // If a valid entry is found, save into the map
+    if (map_entries.size() == 2) {
+      int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
+      int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
+      sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+    }
 
-      image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
-      image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+    image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
 
-	    // Return the number of valid entries parsed
-	    return sensors_layout_.size();
+    // Return the number of valid entries parsed
+    return sensors_layout_.size();
 	}
 
 	//! Reset array used to store last_frame values.

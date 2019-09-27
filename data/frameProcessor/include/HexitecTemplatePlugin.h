@@ -32,39 +32,39 @@ namespace FrameProcessor
    */
   class HexitecTemplatePlugin : public FrameProcessorPlugin
   {
-  public:
-    HexitecTemplatePlugin();
-    virtual ~HexitecTemplatePlugin();
+    public:
+      HexitecTemplatePlugin();
+      virtual ~HexitecTemplatePlugin();
 
-    int get_version_major();
-    int get_version_minor();
-    int get_version_patch();
-    std::string get_version_short();
-    std::string get_version_long();
+      int get_version_major();
+      int get_version_minor();
+      int get_version_patch();
+      std::string get_version_short();
+      std::string get_version_long();
 
-    void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
-    void requestConfiguration(OdinData::IpcMessage& reply);
-    void status(OdinData::IpcMessage& status);
-    bool reset_statistics(void);
+      void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
+      void requestConfiguration(OdinData::IpcMessage& reply);
+      void status(OdinData::IpcMessage& status);
+      bool reset_statistics(void);
 
-  private:
-		/** Configuration constant for Hardware sensors **/
-		static const std::string CONFIG_SENSORS_LAYOUT;
+    private:
+      /** Configuration constant for Hardware sensors **/
+      static const std::string CONFIG_SENSORS_LAYOUT;
 
-    std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
-    std::string sensors_layout_str_;
-    HexitecSensorLayoutMap sensors_layout_;
+      std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
+      std::string sensors_layout_str_;
+      HexitecSensorLayoutMap sensors_layout_;
 
-    void process_frame(boost::shared_ptr<Frame> frame);
+      void process_frame(boost::shared_ptr<Frame> frame);
 
-    /** Pointer to logger **/
-    LoggerPtr logger_;
-    /** Image width **/
-    int image_width_;
-    /** Image height **/
-    int image_height_;
-    /** Image pixel count **/
-    int image_pixels_;
+      /** Pointer to logger **/
+      LoggerPtr logger_;
+      /** Image width **/
+      int image_width_;
+      /** Image height **/
+      int image_height_;
+      /** Image pixel count **/
+      int image_pixels_;
   };
 
   /**

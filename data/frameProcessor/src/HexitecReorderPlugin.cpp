@@ -143,10 +143,6 @@ namespace FrameProcessor
   {
     const Hexitec::FrameHeader* hdr_ptr = static_cast<const Hexitec::FrameHeader*>(frame->get_data_ptr());
     Hexitec::SensorConfigNumber sensors_config = static_cast<Hexitec::SensorConfigNumber>(sensors_config_);
-//    LOG4CXX_DEBUG(logger_, "Processing lost packets for frame " << hdr_ptr->frame_number);
-//    LOG4CXX_DEBUG(logger_, "Packets received: " << hdr_ptr->total_packets_received
-//                                                << " out of a maximum "
-//                                                << Hexitec::num_fem_frame_packets(sensors_config));
     if (hdr_ptr->total_packets_received < Hexitec::num_fem_frame_packets(sensors_config)){
       int packets_lost = Hexitec::num_fem_frame_packets(sensors_config) - hdr_ptr->total_packets_received;
       LOG4CXX_ERROR(logger_, "Frame number " << hdr_ptr->frame_number << " has dropped " << packets_lost << " packet(s)");
@@ -231,8 +227,8 @@ namespace FrameProcessor
           convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
                                             static_cast<float *>(output_ptr));
 
-					LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: "
-																 << frame->get_frame_number());
+					LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: " <<
+                        frame->get_frame_number());
 					this->push(raw_frame);
       	}
 
@@ -252,16 +248,14 @@ namespace FrameProcessor
         convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
                                           static_cast<float *>(output_ptr));
 
-				LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: "
-															 << frame->get_frame_number());
+				LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: " <<
+                      frame->get_frame_number());
 				this->push(data_frame);
 			}
     }
     catch (const std::exception& e)
     {
-      std::stringstream ss;
-      ss << "HEXITEC frame decode failed: " << e.what();
-      LOG4CXX_ERROR(logger_, ss.str());
+      LOG4CXX_ERROR(logger_, "HexitecReorderPlugin failed: " << e.what());
     }
   }
 
@@ -270,10 +264,9 @@ namespace FrameProcessor
    *
    * \return size of the reordered image in bytes
    */
-  std::size_t HexitecReorderPlugin::reordered_image_size() {
-
+  std::size_t HexitecReorderPlugin::reordered_image_size()
+  {
     return image_width_ * image_height_ * sizeof(float);
-
   }
 
   /**
@@ -305,34 +298,34 @@ namespace FrameProcessor
 	//!
 	std::size_t HexitecReorderPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
 	{
-	    // Clear the current map
-	    sensors_layout_.clear();
+    // Clear the current map
+    sensors_layout_.clear();
 
-	    // Define entry and port:idx delimiters
-	    const std::string entry_delimiter("x");
+    // Define entry and port:idx delimiters
+    const std::string entry_delimiter("x");
 
-	    // Vector to hold entries split from map
-	    std::vector<std::string> map_entries;
+    // Vector to hold entries split from map
+    std::vector<std::string> map_entries;
 
-	    // Split into entries
-	    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
+    // Split into entries
+    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
 
-	    // If a valid entry is found, save into the map
-	    if (map_entries.size() == 2) {
-	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
-	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
-	        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
-	    }
+    // If a valid entry is found, save into the map
+    if (map_entries.size() == 2) {
+      int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
+      int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
+      sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+    }
 
-      image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
-      image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
-      image_pixels_ = image_width_ * image_height_;
+    image_width_  = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+    image_pixels_ = image_width_ * image_height_;
 
-	    // Return the number of valid entries parsed
-	    return sensors_layout_.size();
+    // Return the number of valid entries parsed
+    return sensors_layout_.size();
 	}
 
-  //// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
+  /// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
 	void HexitecReorderPlugin::writeFile(std::string filePrefix, float *frame)
 	{
     std::ostringstream hitPixelsStream;

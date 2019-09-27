@@ -108,7 +108,7 @@ namespace FrameProcessor
     if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE))
 		{
 	    std::string threshold_mode = config.get_param<std::string>(
-	    		HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE);
+        HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE);
 
 	    if (threshold_mode.compare(std::string("none")) == 0)
 	    {
@@ -224,7 +224,7 @@ namespace FrameProcessor
   {
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data_ptr()));
+      static_cast<const char*>(frame->get_data_ptr()));
 
     // Check datasets name
     FrameMetaData &incoming_frame_meta = frame->meta_data();
@@ -242,7 +242,7 @@ namespace FrameProcessor
 			{
 				// Define pointer to the input image data
 				void* input_ptr = static_cast<void *>(
-						static_cast<char *>(const_cast<void *>(data_ptr)));
+          static_cast<char *>(const_cast<void *>(data_ptr)));
 
 				// Execute selected method of applying threshold(s) (none, value, or file)
 				switch (threshold_mode_)
@@ -271,9 +271,7 @@ namespace FrameProcessor
 			}
 			catch (const std::exception& e)
 			{
-				std::stringstream ss;
-				ss << "HEXITEC frame decode failed: " << e.what();
-				LOG4CXX_ERROR(logger_, ss.str());
+				LOG4CXX_ERROR(logger_, "HexitecThresholdPlugin failed: " << e.what());
 			}
 		}
     else
@@ -349,13 +347,13 @@ namespace FrameProcessor
     /// Count number of floats in file:
     std::ifstream file(filename);
     int file_values = std::distance(std::istream_iterator<double>(file),
-                                std::istream_iterator<double>());
+                                    std::istream_iterator<double>());
     file.close();
 
     if (image_pixels_ != file_values)
     {
-      LOG4CXX_ERROR(logger_, "Expected " << image_pixels_ << " values but read " << file_values
-                          << " values from file: " << filename);
+      LOG4CXX_ERROR(logger_, "Expected " << image_pixels_ << " values but read " <<
+                    file_values << " values from file: " << filename);
 
 			LOG4CXX_WARN(logger_, "Using default values instead");
       for (int val = 0; val < image_pixels_; val ++)
@@ -410,9 +408,9 @@ namespace FrameProcessor
 
     // If a valid entry is found, save into the map
     if (map_entries.size() == 2) {
-        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
-        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
-        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+      int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
+      int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
+      sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
     }
 
     image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;

@@ -31,7 +31,6 @@ using namespace log4cxx::helpers;
 
 namespace FrameProcessor
 {
-
   typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
   /** Calibration of Hexitec Frame objects.
@@ -40,62 +39,62 @@ namespace FrameProcessor
    */
   class HexitecCalibrationPlugin : public FrameProcessorPlugin
   {
-  public:
-    HexitecCalibrationPlugin();
-    virtual ~HexitecCalibrationPlugin();
+    public:
+      HexitecCalibrationPlugin();
+      virtual ~HexitecCalibrationPlugin();
 
-    int get_version_major();
-    int get_version_minor();
-    int get_version_patch();
-    std::string get_version_short();
-    std::string get_version_long();
+      int get_version_major();
+      int get_version_minor();
+      int get_version_patch();
+      std::string get_version_short();
+      std::string get_version_long();
 
-    void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
-    void requestConfiguration(OdinData::IpcMessage& reply);
-    void status(OdinData::IpcMessage& status);
-    bool reset_statistics(void);
+      void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
+      void requestConfiguration(OdinData::IpcMessage& reply);
+      void status(OdinData::IpcMessage& status);
+      bool reset_statistics(void);
 
-  private:
-    /** Configuration constant for Gradients **/
-    static const std::string CONFIG_GRADIENTS_FILE;
-    /** Configuration constant for Intercepts **/
-    static const std::string CONFIG_INTERCEPTS_FILE;
-		/** Configuration constant for Hardware sensors **/
-		static const std::string CONFIG_SENSORS_LAYOUT;
+    private:
+      /** Configuration constant for Gradients **/
+      static const std::string CONFIG_GRADIENTS_FILE;
+      /** Configuration constant for Intercepts **/
+      static const std::string CONFIG_INTERCEPTS_FILE;
+      /** Configuration constant for Hardware sensors **/
+      static const std::string CONFIG_SENSORS_LAYOUT;
 
-    std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
-    std::string sensors_layout_str_;
-    HexitecSensorLayoutMap sensors_layout_;
+      std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
+      std::string sensors_layout_str_;
+      HexitecSensorLayoutMap sensors_layout_;
 
-    void process_frame(boost::shared_ptr<Frame> frame);
-    void calibrate_pixels(float *image);
+      void process_frame(boost::shared_ptr<Frame> frame);
+      void calibrate_pixels(float *image);
 
-    /** Pointer to logger **/
-    LoggerPtr logger_;
-    /** Image width **/
-    int image_width_;
-    /** Image height **/
-    int image_height_;
-    /** Image pixel count **/
-    int image_pixels_;
+      /** Pointer to logger **/
+      LoggerPtr logger_;
+      /** Image width **/
+      int image_width_;
+      /** Image height **/
+      int image_height_;
+      /** Image pixel count **/
+      int image_pixels_;
 
-    bool gradients_status_;
-    bool intercepts_status_;
-    float *gradient_values_;
-    float *intercept_values_;
-    void setGradients(const char *gradientFilename);
-    void setIntercepts(const char *interceptFilename);
-    bool getData(const char *filename, float *dataValue, float defaultValue);
+      bool gradients_status_;
+      bool intercepts_status_;
+      float *gradient_values_;
+      float *intercept_values_;
+      void setGradients(const char *gradientFilename);
+      void setIntercepts(const char *interceptFilename);
+      bool getData(const char *filename, float *dataValue, float defaultValue);
 
-    std::string gradients_filename_;
-    std::string intercepts_filename_;
+      std::string gradients_filename_;
+      std::string intercepts_filename_;
 
-    void reset_calibration_values();
+      void reset_calibration_values();
 
-    // DEBUGGING functions:
-    int debugFrameCounter;
-    std::ofstream outFile;
-  	void writeFile(std::string filePrefix, float *frame);
+      // DEBUGGING functions:
+      int debugFrameCounter;
+      std::ofstream outFile;
+      void writeFile(std::string filePrefix, float *frame);
   };
 
   /**

@@ -39,61 +39,61 @@ namespace FrameProcessor
    */
   class HexitecThresholdPlugin : public FrameProcessorPlugin
   {
-  public:
-    HexitecThresholdPlugin();
-    virtual ~HexitecThresholdPlugin();
+    public:
+      HexitecThresholdPlugin();
+      virtual ~HexitecThresholdPlugin();
 
-    int get_version_major();
-    int get_version_minor();
-    int get_version_patch();
-    std::string get_version_short();
-    std::string get_version_long();
+      int get_version_major();
+      int get_version_minor();
+      int get_version_patch();
+      std::string get_version_short();
+      std::string get_version_long();
 
-    void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
-    void requestConfiguration(OdinData::IpcMessage& reply);
-    void status(OdinData::IpcMessage& status);
-    bool reset_statistics(void);
+      void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
+      void requestConfiguration(OdinData::IpcMessage& reply);
+      void status(OdinData::IpcMessage& status);
+      bool reset_statistics(void);
 
-  private:
-    /** Configuration constant for threshold mode **/
-    static const std::string CONFIG_THRESHOLD_MODE;
-    /** Configuration constant for threshold value **/
-    static const std::string CONFIG_THRESHOLD_VALUE;
-    /** Configuration constant for threshold file **/
-    static const std::string CONFIG_THRESHOLD_FILE;
-		/** Configuration constant for Hardware sensors **/
-		static const std::string CONFIG_SENSORS_LAYOUT;
+    private:
+      /** Configuration constant for threshold mode **/
+      static const std::string CONFIG_THRESHOLD_MODE;
+      /** Configuration constant for threshold value **/
+      static const std::string CONFIG_THRESHOLD_VALUE;
+      /** Configuration constant for threshold file **/
+      static const std::string CONFIG_THRESHOLD_FILE;
+      /** Configuration constant for Hardware sensors **/
+      static const std::string CONFIG_SENSORS_LAYOUT;
 
-    void process_frame(boost::shared_ptr<Frame> frame);
-    std::size_t thresholded_image_size();
+      void process_frame(boost::shared_ptr<Frame> frame);
+      std::size_t thresholded_image_size();
 
-    std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
-    std::string sensors_layout_str_;
-    HexitecSensorLayoutMap sensors_layout_;
+      std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
+      std::string sensors_layout_str_;
+      HexitecSensorLayoutMap sensors_layout_;
 
-    /** Pointer to logger **/
-    LoggerPtr logger_;
-    /** Image width **/
-    int image_width_;
-    /** Image height **/
-    int image_height_;
-    /** Image pixel count **/
-    int image_pixels_;
+      /** Pointer to logger **/
+      LoggerPtr logger_;
+      /** Image width **/
+      int image_width_;
+      /** Image height **/
+      int image_height_;
+      /** Image pixel count **/
+      int image_pixels_;
 
-    void process_threshold_value(float *in);
-    void process_threshold_file(float *in);
-    bool get_data(const char *filename, uint16_t default_value);
-    bool set_threshold_per_pixel(const char *threshold_filename);
-    std::string determineThresholdMode(int mode);
+      void process_threshold_value(float *in);
+      void process_threshold_file(float *in);
+      bool get_data(const char *filename, uint16_t default_value);
+      bool set_threshold_per_pixel(const char *threshold_filename);
+      std::string determineThresholdMode(int mode);
 
-    void reset_threshold_values();
+      void reset_threshold_values();
 
-    // Member variables:
-    unsigned int threshold_value_;
-    uint16_t *threshold_per_pixel_;
-    bool thresholds_status_;
-    ThresholdMode threshold_mode_;
-    std::string threshold_filename_;
+      // Member variables:
+      unsigned int threshold_value_;
+      uint16_t *threshold_per_pixel_;
+      bool thresholds_status_;
+      ThresholdMode threshold_mode_;
+      std::string threshold_filename_;
   };
 
   /**

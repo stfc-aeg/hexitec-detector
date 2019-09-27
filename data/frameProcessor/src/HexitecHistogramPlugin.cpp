@@ -32,7 +32,7 @@ namespace FrameProcessor
     logger_ = Logger::getLogger("FP.HexitecHistogramPlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecHistogramPlugin version " <<
-    												this->get_version_long() << " loaded.");
+                  this->get_version_long() << " loaded.");
 
     bin_start_   = 0;
     bin_end_     = 8000;
@@ -136,8 +136,8 @@ namespace FrameProcessor
     float *pHxtBin = static_cast<float *>(energy_bins_->get_data_ptr());	// New implementation
     for (long i = bin_start_; i < number_bins_; i++, currentBin += bin_width_)
     {
-       *pHxtBin = currentBin;
-       pHxtBin++;
+      *pHxtBin = currentBin;
+      pHxtBin++;
     }
 
 		// Clear histogram values
@@ -145,7 +145,6 @@ namespace FrameProcessor
 		float *summed = static_cast<float *>(summed_histograms_->get_data_ptr());
 		memset(pixels, 0, (number_bins_ * image_pixels_) * sizeof(float));
 		memset(summed, 0, number_bins_ * sizeof(uint64_t));
-
   }
 
   /**
@@ -197,18 +196,10 @@ namespace FrameProcessor
     {
     	flush_histograms_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS);
 
-      LOG4CXX_TRACE(logger_, " ***** GOING TO PUSH THE HISTOGRAMS NOW! assuming:" << flush_histograms_);
-
     	if (flush_histograms_ == 1)
     	{
 				/// Time to push current histogram data
 				writeHistogramsToDisk();
-
-				// // Clear histogram values - Not needed, initialiseHistograms() does this
-				// float *pixels = static_cast<float *>(pixel_histograms_->get_data_ptr());
-				// float *summed = static_cast<float *>(summed_histograms_->get_data_ptr());
-		    // memset(pixels, 0, (number_bins_ * image_pixels_) * sizeof(float));
-		    // memset(summed, 0, number_bins_ * sizeof(uint64_t));
 
 				frames_counter_ = 0;
 
@@ -271,7 +262,7 @@ namespace FrameProcessor
   {
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data_ptr()));
+      static_cast<const char*>(frame->get_data_ptr()));
 
     // Check dataset's name
     FrameMetaData &incoming_frame_meta = frame->meta_data();
@@ -298,28 +289,23 @@ namespace FrameProcessor
 
 				// Write histograms to disc when maximum number of frames received
 				if ( ((frames_counter_ % max_frames_received_) == 0) &&
-						(frames_counter_ != 0) )	// Fix why empty histograms written to 2nd (third et cetera) HDF5 files? - Not quite..
-				// if (frames_counter_ == max_frames_received_)
+						(frames_counter_ != 0) )
 				{
 					/// Time to push current histogram data to file
 					writeHistogramsToDisk();
 				}
 
 				/// Histogram will access data dataset but not change it in any way
-				/// 	Therefore do not need to check frame dimensions, allocated memory,
-				/// 	etc
+				/// 	Therefore do not need to check frame dimensions, etc
 
 				// Pass on data dataset unmodified:
-
 				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-	 														 " dataset, frame number: " << frame->get_frame_number());
+                      " dataset, frame number: " << frame->get_frame_number());
 				this->push(frame);
 			}
 			catch (const std::exception& e)
 			{
-				std::stringstream ss;
-				ss << "HEXITEC frame decode failed: " << e.what();
-				LOG4CXX_ERROR(logger_, ss.str());
+				LOG4CXX_ERROR(logger_, "HexitecHistogramPlugin failed: " << e.what());
 			}
 		}
     else
@@ -341,7 +327,6 @@ namespace FrameProcessor
 
 		LOG4CXX_TRACE(logger_, "Pushing " << pixel_histograms_->get_meta_data().get_dataset_name() << " dataset");
 		this->push(pixel_histograms_);
-
   }
 
   /**
@@ -353,14 +338,14 @@ namespace FrameProcessor
   void HexitecHistogramPlugin::add_frame_data_to_histogram_with_sum(float *frame)
   {
 		const void* pixel_ptr = static_cast<const void*>(
-				static_cast<const char*>(pixel_histograms_->get_data_ptr()));
+      static_cast<const char*>(pixel_histograms_->get_data_ptr()));
 		void* pixel_input_ptr = static_cast<void *>(
-				static_cast<char *>(const_cast<void *>(pixel_ptr)));
+      static_cast<char *>(const_cast<void *>(pixel_ptr)));
 
 		const void* summed_ptr = static_cast<const void*>(
-				static_cast<const char*>(summed_histograms_->get_data_ptr()));
+      static_cast<const char*>(summed_histograms_->get_data_ptr()));
 		void* summed_input_ptr = static_cast<void *>(
-				static_cast<char *>(const_cast<void *>(summed_ptr)));
+      static_cast<char *>(const_cast<void *>(summed_ptr)));
 
 		float *currentHistogram = static_cast<float *>(pixel_input_ptr);
 		uint64_t *summed = static_cast<uint64_t *>(summed_input_ptr);
@@ -417,31 +402,31 @@ namespace FrameProcessor
 	//!
 	std::size_t HexitecHistogramPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
 	{
-	    // Clear the current map
-	    sensors_layout_.clear();
+    // Clear the current map
+    sensors_layout_.clear();
 
-	    // Define entry and port:idx delimiters
-	    const std::string entry_delimiter("x");
+    // Define entry and port:idx delimiters
+    const std::string entry_delimiter("x");
 
-	    // Vector to hold entries split from map
-	    std::vector<std::string> map_entries;
+    // Vector to hold entries split from map
+    std::vector<std::string> map_entries;
 
-	    // Split into entries
-	    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
+    // Split into entries
+    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
 
-	    // If a valid entry is found, save into the map
-	    if (map_entries.size() == 2) {
-	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
-	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
-	        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
-	    }
+    // If a valid entry is found, save into the map
+    if (map_entries.size() == 2) {
+      int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
+      int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
+      sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+    }
 
-      image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
-      image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
-      image_pixels_ = image_width_ * image_height_;
+    image_width_  = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+    image_pixels_ = image_width_ * image_height_;
 
-	    // Return the number of valid entries parsed
-	    return sensors_layout_.size();
+    // Return the number of valid entries parsed
+    return sensors_layout_.size();
 	}
 
 } /* namespace FrameProcessor */

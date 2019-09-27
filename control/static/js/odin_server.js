@@ -552,7 +552,6 @@ function apply_ui_values() {
     gradients_filename_changed();
     intercepts_filename_changed();
     pixel_grid_size_changed();
-    max_frames_received_changed();
     bin_start_changed();
     bin_end_changed();
     bin_width_changed();
@@ -561,7 +560,6 @@ function apply_ui_values() {
     // fp_config_changed(); 
     hdf_file_path_changed();
     hdf_file_name_changed();
-    hdf_frames_changed();
 
     // If hdf write already enabled, toggle off and on so hdf settings sent
     if ( $("[name='hdf_write_enable']").prop('checked') == true)
@@ -987,7 +985,7 @@ function hdf_file_name_changed()
         type: "PUT",
         url: hexitec_url + 'fp/config/hdf/file/name',
         contentType: "application/json",
-        data: (hdf_file_name),
+        data: (hdf_file_name + "_" + showTime()),
         success: function(result) {
             $('#hdf-file-name-warning').html("");
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
@@ -997,6 +995,7 @@ function hdf_file_name_changed()
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
         }
     });
+    console.log(hdf_file_name + "_" + showTime());
 };
 
 // curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/acquisition -d '{"num_frames": 3}'
@@ -1018,3 +1017,15 @@ function frames_changed()
         }
     });
 };
+
+function showTime() {
+    var timeNow = new Date();
+    var hours   = timeNow.getHours();
+    var minutes = timeNow.getMinutes();
+    var seconds = timeNow.getSeconds();
+    var timeString = "" + hours;
+    timeString  += ((minutes < 10) ? ":0" : "") + minutes;
+    timeString  += ((seconds < 10) ? ":0" : "") + seconds;
+    return timeString;
+}
+  
