@@ -1024,8 +1024,8 @@ function showTime() {
     var minutes = timeNow.getMinutes();
     var seconds = timeNow.getSeconds();
     var timeString = "" + hours;
-    timeString  += ((minutes < 10) ? ":0" : "") + minutes;
-    timeString  += ((seconds < 10) ? ":0" : "") + seconds;
+    timeString  += ((minutes < 10) ? "0" : "") + minutes;
+    timeString  += ((seconds < 10) ? "0" : "") + seconds;
     return timeString;
 }
   

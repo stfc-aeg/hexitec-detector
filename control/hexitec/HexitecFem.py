@@ -458,19 +458,19 @@ class HexitecFem():
         self.send_cmd([0x23, self.vsr_addr, 0x42, 0x31, 0x38, 0x30, 0x31, 0x0D])
         self.read_response()
         logging.debug("Clear bit 5")
-        self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x32, 0x30, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x32, 0x30, 0x0D])    # Clear Bit, 20 -> 10100 (Bits: 2 & 4)
         self.read_response()
     
         # Set bit 4 of Reg24
-        self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x31, 0x30, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x31, 0x30, 0x0D])    # Set Bit, 10 -> 1010 (Bits: 1 & 3)
         self.read_response()
         
         logging.debug("Set bit 6")
-        self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x34, 0x30, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x34, 0x30, 0x0D])    # Clear bit, 40 -> 101000 (Bits: 3 & 5)
         self.read_response()
         self.send_cmd([0x23, self.vsr_addr, 0x41, 0x30, 0x31, 0x0D])
         self.read_response()
-        self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x32, 0x32, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x32, 0x32, 0x0D])    # Set bit, 22 -> 10110 ( Bits: 1, 2 & 4)
         self.read_response()
 
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
@@ -514,22 +514,22 @@ class HexitecFem():
         self.read_response()
 
         logging.debug("Clear bit 5 - VCAL ENABLED")
-        self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x32, 0x30, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x32, 0x30, 0x0D])        # Clear Bit, 20 -> 10100    (Bits 2 & 4)
         self.read_response()
 
         if self.dark_correction == HexitecFem.DARKCORRECTION[0]:
             #  Log image to file
             logging.debug("DARK CORRECTION OFF")
-            self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x30, 0x38, 0x0D])
+            self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x30, 0x38, 0x0D])    # Clear Bit, 08 -> 1000     (Bits: 3)
             self.read_response()
         elif self.dark_correction == HexitecFem.DARKCORRECTION[1]:
             #  Log image to file
             logging.debug("DARK CORRECTION ON")
-            self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x30, 0x38, 0x0D])    
+            self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x30, 0x38, 0x0D])    # Set Bit, 08 -> 1000       (bits 3)
             self.read_response()
         
         # Read Reg24
-        self.send_cmd([0x23, self.vsr_addr, 0x41, 0x32, 0x34, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, 0x41, 0x32, 0x34, 0x0D])                    # Read FPGA Reg
         if self.debug: logging.debug("reading Register 0x24")
         if self.debug: logging.debug(self.read_response())
         
@@ -778,8 +778,24 @@ class HexitecFem():
         #     high_byte = self.hexitec_camera.x10g_rdma.read(0x00000026, 'Read the high byte')
         #     # print "BEFORE:\t\t\tlow and hard byte: ", low_byte, " and ", high_byte
 
-        enable_dc_vsr1  = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]  # 0x32, 0x34, 0x32, 0x32, == 2422
-        disable_dc_vsr1 = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]  # 0x32, 0x34, 0x32, 0x38, == 2428
+        print("Reading back register value 24:")
+        self.send_cmd([0x23, 0x90, 0x41, 0x32, 0x34, 0x0D])
+        # self.send_cmd([0x23, self.vsr_addr, 0x41, 0x32, 0x34, 0x0D])                    # Read FPGA Reg
+        r = self.read_response()
+        print(r, "\n\n")
+
+        self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x31, 0x30, 0x0D])    # Set Bit, 10 -> 10000 (Bits: 4)
+        self.read_response()
+
+        for index in range(8):
+            self.send_cmd([0x23, self.vsr_addr, 0x41, 0x32, 0x35, 0x0D])            # Read FPGA Reg25 (Low B)
+            low_byte = self.read_response()
+            self.send_cmd([0x23, self.vsr_addr, 0x41, 0x32, 0x36, 0x0D])            # Read FPGA Reg25 (Low B)
+            high_byte = self.read_response()
+            print "BEFORE:\t\t\tlow and hard byte: ", low_byte, " and ", high_byte
+
+        enable_dc_vsr1  = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]  # 0x32, 0x34, 0x32, 0x32, == 24; 22
+        disable_dc_vsr1 = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]  # 0x32, 0x34, 0x32, 0x38, == 24; 28
         enable_dc_vsr2  = [0x23, 0x91, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]
         disable_dc_vsr2 = [0x23, 0x91, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]
 
@@ -797,10 +813,11 @@ class HexitecFem():
         self.send_cmd(disable_dc_vsr2)
         self.read_response()
 
-        # for index in range(8):
-        #     low_byte = self.hexitec_camera.x10g_rdma.read(0x00000025, 'Read the low byte')
-        #     high_byte = self.hexitec_camera.x10g_rdma.read(0x00000026, 'Read the high byte')
-        #     # print " AFTER:\t\t\tlow and hard byte: ", low_byte, " and ", high_byte
+        # This reads FPGA (ie FEM-II) regs, not uC's regs, MODIFY THIS AND TEST AGAIN !
+        for index in range(8):
+            low_byte = self.hexitec_camera.x10g_rdma.read(0x00000025, 'Read the low byte')
+            high_byte = self.hexitec_camera.x10g_rdma.read(0x00000026, 'Read the high byte')
+            # print " AFTER:\t\t\tlow and hard byte: ", low_byte, " and ", high_byte
 
         # Experimental: S test reading out the board information:
         
