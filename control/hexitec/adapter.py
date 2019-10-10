@@ -321,7 +321,7 @@ class Hexitec():
 
     def set_number_frames(self, frames):
         self.number_frames = frames
-        # Update number of frames in Hardware and histogram and hdf plugins
+        # Update number of frames in Hardware, and histogram and hdf plugins
         self.fem._set_number_frames(self.number_frames)
 
         command = "config/histogram/max_frames_received"

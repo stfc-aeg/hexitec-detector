@@ -234,7 +234,7 @@ function poll_fem() {
         var status_error = response.fem.status_error;
         $('#odin-control-error').html(status_error);
 
-        console.log(" status_message: " + status_message + " status_error: " + status_error);
+        console.log(" status_message: '" + status_message + "'. status_error: '" + status_error + "'.");
 
         var progress_element = document.getElementById("progress-odin");
         progress_element.value = percentage_complete;

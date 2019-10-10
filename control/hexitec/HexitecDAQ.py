@@ -23,7 +23,7 @@ class HexitecDAQ():
         self.adapters = {}
 
         self.file_dir = save_file_dir
-        self.file_name = save_file_name
+        # self.file_name = save_file_name
         self.odin_data_dir = odin_data_dir
 
         self.in_progress = False
@@ -54,7 +54,7 @@ class HexitecDAQ():
             },
             "file_info": {
                 "enabled": (lambda: self.file_writing, self.set_file_writing),
-                "file_name": (lambda: self.file_name, self.set_file_name),
+                # "file_name": (lambda: self.file_name, self.set_file_name),
                 "file_dir": (lambda: self.file_dir, self.set_data_dir)
             },
             "in_progress": (lambda: self.in_progress, None)
@@ -212,19 +212,20 @@ class HexitecDAQ():
     def set_data_dir(self, directory):
         self.file_dir = directory
 
-    def set_file_name(self, name):
-        self.file_name = name
+    # def set_file_name(self, name):
+    #     self.file_name = name
 
     def set_file_writing(self, writing):
+        print("\n\n ------------------ hexitecDaq.set_file_writing(%s) ------------------\n" % writing)
         self.file_writing = writing
         # send command to Odin Data
         command = "config/hdf/file/path"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         self.adapters["fp"].put(command, request)
 
-        command = "config/hdf/file/name"
-        request.body = self.file_name
-        self.adapters["fp"].put(command, request)
+        # command = "config/hdf/file/name"
+        # request.body = self.file_name
+        # self.adapters["fp"].put(command, request)
 
         command = "config/hdf/write"
         request.body = "{}".format(writing)

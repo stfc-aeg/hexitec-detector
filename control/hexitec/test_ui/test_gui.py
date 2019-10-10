@@ -11,6 +11,11 @@ import time
 import datetime
 from QemCam import *
 
+class TestGuiError(Exception):
+    """Simple exception class for script to wrap lower-level exceptions."""
+
+    pass
+
 qemcamera = QemCam()
 
 # 10G RDMA IP addresses      
@@ -1349,7 +1354,3 @@ entry_2.insert(0, 10)
 
 root.mainloop()
 
-class TestGuiError(Exception):
-    """Simple exception class for script to wrap lower-level exceptions."""
-
-    pass

@@ -177,7 +177,9 @@ class HexitecFem():
             self._set_status_message("Camera connected. Waiting for sensors to initialise..")
             self._wait_while_sensors_initialise()
             self._set_status_message("Camera connected. Sensors initialised.")
-        except (HexitecFemError, ParameterTreeError) as e:
+        except ParameterTreeError as e:
+            self._set_status_error("%s" % str(e))
+        except HexitecFemError as e:
             self._set_status_error("Failed to connect with camera: %s" % str(e))
             self._set_status_message("Is camera powered?")
             logging.error("%s" % str(e))
@@ -307,30 +309,37 @@ class HexitecFem():
             while fifo_empty == FIFO_EMPTY_FLAG and empty_count < ABORT_VALUE:
                 fifo_empty = self.hexitec_camera.x10g_rdma.read(0xE0000011, 'FIFO EMPTY FLAG')
                 empty_count = empty_count + 1
-            if self.debug: logging.debug("Got data:- ")
+
             dat = self.hexitec_camera.x10g_rdma.read(0xE0000200, 'Data')
-            if self.debug: logging.debug("Bytes are:- ")
+
             daty = dat/256/256/256%256
             f.append(daty)
-            if self.debug: logging.debug(format(daty, '02x'))
+            daty1 = daty
+
             daty = dat/256/256%256
             f.append(daty)
-            if self.debug: logging.debug(format(daty, '02x'))
+            daty2 = daty
+
             daty = dat/256%256
             f.append(daty)
-            if self.debug: logging.debug(format(daty, '02x'))
+            daty3 = daty
+
             daty = dat%256
             f.append(daty)
-            if self.debug: logging.debug(format(daty, '02x'))
+            daty4 = daty
+
+            if self.debug:
+                logging.debug(format(daty1, '02x') + " " + format(daty2, '02x') + " " + format(daty3, '02x') + " " + format(daty4, '02x'))
+
             data_counter = data_counter + 1
             if empty_count == ABORT_VALUE:
                 logging.error("Error: read_response from FEM aborted")
                 raise HexitecFemError("read_response aborted")
-            empty_count = 0          
+            empty_count = 0
 
         if self.debug: 
-            logging.debug("Counter is :- %s" % data_counter)
-            logging.debug("Length is:- %s" % len(f))
+            logging.debug("Counter is :- %s Length is:- %s" % (data_counter, len(f)))
+
         fifo_empty = self.hexitec_camera.x10g_rdma.read(0xE0000011, 'Data')
         if self.debug: logging.debug("FIFO should be empty: %s" % fifo_empty)
         s = ''
@@ -772,56 +781,94 @@ class HexitecFem():
         # [ 0x23 , tk.vsr_addr ,  0x40  ,  0x32 ,  0x34 , 0x32, 0x38 ,  0x0D ]
         
         # In my code I have used the 0x43 (clear bit) and 0x42 (set bit) commands rather than 0x40 (write) but the results should be the same.
+        try:
+            if self.hardware_connected != True:
+                raise ParameterTreeError("Can't collect offsets without any connection established")
 
-        # for index in range(8):
-        #     low_byte = self.hexitec_camera.x10g_rdma.read(0x00000025, 'Read the low byte')
-        #     high_byte = self.hexitec_camera.x10g_rdma.read(0x00000026, 'Read the high byte')
-        #     # print "BEFORE:\t\t\tlow and hard byte: ", low_byte, " and ", high_byte
+            self.operation_percentage_complete = 0
 
-        print("Reading back register value 24:")
-        self.send_cmd([0x23, 0x90, 0x41, 0x32, 0x34, 0x0D])
-        # self.send_cmd([0x23, self.vsr_addr, 0x41, 0x32, 0x34, 0x0D])                    # Read FPGA Reg
-        r = self.read_response()
-        print(r, "\n\n")
+            print("\n\nReading back register value 24")
+            self.send_cmd([0x23, 0x90, 0x41, 0x32, 0x34, 0x0D])
+            vsr1 = self.read_response()
+            self.send_cmd([0x23, 0x91, 0x41, 0x32, 0x34, 0x0D])
+            vsr2 = self.read_response()
+            print("VSR1: '%s' VSR2: '%s'\n\n", (vsr1.replace('\r', ''), vsr2.replace('\r','')))
 
-        self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x31, 0x30, 0x0D])    # Set Bit, 10 -> 10000 (Bits: 4)
-        self.read_response()
+            self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x31, 0x30, 0x0D])    # Set Bit, 10 -> 10000 (Bits: 4)
+            self.read_response()
 
-        for index in range(8):
-            self.send_cmd([0x23, self.vsr_addr, 0x41, 0x32, 0x35, 0x0D])            # Read FPGA Reg25 (Low B)
-            low_byte = self.read_response()
-            self.send_cmd([0x23, self.vsr_addr, 0x41, 0x32, 0x36, 0x0D])            # Read FPGA Reg25 (Low B)
-            high_byte = self.read_response()
-            print "BEFORE:\t\t\tlow and hard byte: ", low_byte, " and ", high_byte
+            # number_pixels = 8
+            # for index in range(number_pixels):
+            #     self.send_cmd([0x23, 0x90, 0x41, 0x32, 0x35, 0x0D])            # Read FPGA Reg25 (Low B)
+            #     vsr1_low_byte = self.read_response()
+            #     vsr1_low_byte = vsr1_low_byte.replace('\r', '')
+            #     self.send_cmd([0x23, 0x90, 0x41, 0x32, 0x36, 0x0D])            # Read FPGA Reg25 (Low B)
+            #     vsr1_high_byte = self.read_response()
+            #     vsr1_high_byte = vsr1_high_byte.replace('\r', '')
+            #     self.send_cmd([0x23, 0x91, 0x41, 0x32, 0x35, 0x0D])            # Read FPGA Reg25 (Low B)
+            #     vsr2_low_byte = self.read_response()
+            #     vsr2_low_byte = vsr2_low_byte.replace('\r', '')
+            #     self.send_cmd([0x23, 0x91, 0x41, 0x32, 0x36, 0x0D])            # Read FPGA Reg25 (Low B)
+            #     vsr2_high_byte = self.read_response()
+            #     vsr2_high_byte = vsr2_high_byte.replace('\r', '')
 
-        enable_dc_vsr1  = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]  # 0x32, 0x34, 0x32, 0x32, == 24; 22
-        disable_dc_vsr1 = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]  # 0x32, 0x34, 0x32, 0x38, == 24; 28
-        enable_dc_vsr2  = [0x23, 0x91, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]
-        disable_dc_vsr2 = [0x23, 0x91, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]
+            #     print("BEFORE:\t\t\tVSR1: '%s %s'\t; VSR2: '%s %s'" % 
+            #             (vsr1_high_byte[1: -1], vsr1_low_byte[1: -1], vsr2_high_byte[1: -1], vsr2_low_byte[1: -1]))
 
-        logging.debug("Gathering offsets..")
-        self.send_cmd(enable_dc_vsr1)
-        self.read_response()
-        self.send_cmd(enable_dc_vsr2)
-        self.read_response()
+            enable_dc_vsr1  = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]  # 0x32, 0x34, 0x32, 0x32, == 24; 22
+            disable_dc_vsr1 = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]  # 0x32, 0x34, 0x32, 0x38, == 24; 28
+            enable_dc_vsr2  = [0x23, 0x91, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]
+            disable_dc_vsr2 = [0x23, 0x91, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]
 
-        time.sleep(1)
+            logging.debug("Gathering offsets..")
+            self.send_cmd(enable_dc_vsr1)
+            self.read_response()
+            self.send_cmd(enable_dc_vsr2)
+            self.read_response()
 
-        logging.debug("Offsets collected")
-        self.send_cmd(disable_dc_vsr1)
-        self.read_response()
-        self.send_cmd(disable_dc_vsr2)
-        self.read_response()
+            time.sleep(1)
+            # # Register 0x89 (Have offsets collection finished?)
+            # check_offsets = [0x23, self.vsr_addr, 0x41, 0x38, 0x49, 0x30, 0x30, 0x0D]
+            # self.send_cmd(check_offsets)
+            # for idx in range(3):
+            #     offsets_status = self.read_response()
+            #     logging.debug("%s: Offsets status: %s" % (idx, offsets_status.replace('\r', '')))
+            #     time.sleep(0.75)
 
-        # This reads FPGA (ie FEM-II) regs, not uC's regs, MODIFY THIS AND TEST AGAIN !
-        for index in range(8):
-            low_byte = self.hexitec_camera.x10g_rdma.read(0x00000025, 'Read the low byte')
-            high_byte = self.hexitec_camera.x10g_rdma.read(0x00000026, 'Read the high byte')
-            # print " AFTER:\t\t\tlow and hard byte: ", low_byte, " and ", high_byte
 
-        # Experimental: S test reading out the board information:
-        
-        
+            logging.debug("Offsets collected")
+            self.send_cmd(disable_dc_vsr1)
+            self.read_response()
+            self.send_cmd(disable_dc_vsr2)
+            self.read_response()
+
+            # for index in range(number_pixels):
+            #     self.send_cmd([0x23, 0x90, 0x41, 0x32, 0x35, 0x0D])            # Read FPGA Reg25 (Low B)
+            #     vsr1_low_byte = self.read_response()
+            #     vsr1_low_byte = vsr1_low_byte.replace('\r', '')
+            #     self.send_cmd([0x23, 0x90, 0x41, 0x32, 0x36, 0x0D])            # Read FPGA Reg25 (Low B)
+            #     vsr1_high_byte = self.read_response()
+            #     vsr1_high_byte = vsr1_high_byte.replace('\r', '')
+            #     self.send_cmd([0x23, 0x91, 0x41, 0x32, 0x35, 0x0D])            # Read FPGA Reg25 (Low B)
+            #     vsr2_low_byte = self.read_response()
+            #     vsr2_low_byte = vsr2_low_byte.replace('\r', '')
+            #     self.send_cmd([0x23, 0x91, 0x41, 0x32, 0x36, 0x0D])            # Read FPGA Reg25 (Low B)
+            #     vsr2_high_byte = self.read_response()
+            #     vsr2_high_byte = vsr2_high_byte.replace('\r', '')
+
+            #     print(" AFTER:\t\t\tVSR1: '%s %s'\t; VSR2: '%s %s'" % 
+            #             (vsr1_high_byte[1: -1], vsr1_low_byte[1: -1], vsr2_high_byte[1: -1], vsr2_low_byte[1: -1]))
+
+            self.operation_percentage_complete = 100
+            self._set_status_message("Offsets collections operation completed.")
+
+        except (HexitecFemError, ParameterTreeError) as e:
+            self._set_status_error("Can't collect offsets without a working connection: %s" % str(e))
+            logging.error("%s" % str(e))
+        except Exception as e:
+            self._set_status_error("Uncaught Exception; Failed to collect offsets: %s" % str(e))
+            logging.error("%s" % str(e))
+
     def load_pwr_cal_read_enables(self):
         enable_sm     = [0x23, self.vsr_addr, 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
         disable_sm    = [0x23, self.vsr_addr, 0x43, 0x30, 0x31, 0x30, 0x31, 0x0D]
