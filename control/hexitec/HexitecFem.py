@@ -104,19 +104,13 @@ class HexitecFem():
             "ip_addr": (self.get_address, None),    # Replicated, not needed going forwards?
             "port": (self.get_port, None),          # Replicated, not needed going forwards?
             "id": (self.id, None),
-            "connect_hardware": (None, self.connect_hardware),
-            "initialise_hardware": (None, self.initialise_hardware),
-            "collect_data": (None, self.collect_data),
-            "disconnect_hardware": (None, self.disconnect_hardware),
             "debug": (self.get_debug, self.set_debug),
             "status_message": (self._get_status_message, None),
             "status_error": (self._get_status_error, None),
             "initialise_progress": (self._get_initialise_progress, None),
             "operation_percentage_complete": (self._get_operation_percentage_complete, None),
-            "stop_acquisition": (None, self._set_stop_acquisition),
             "dark_correction": (self._get_dark_correction, self._set_dark_correction),
             "number_frames": (self._get_number_frames, self._set_number_frames),
-            "vcal": (lambda: self.test_mode_image, self._set_test_mode_image)
         }
 
         self.param_tree = ParameterTree(param_tree_dict)
@@ -177,6 +171,7 @@ class HexitecFem():
             self._set_status_message("Camera connected. Waiting for sensors to initialise..")
             self._wait_while_sensors_initialise()
             self._set_status_message("Camera connected. Sensors initialised.")
+            self.initialise_progress = 0
         except ParameterTreeError as e:
             self._set_status_error("%s" % str(e))
         except HexitecFemError as e:
@@ -220,6 +215,7 @@ class HexitecFem():
             self._set_status_message("Acquiring data..")
             self.acquire_data()
             self.operation_percentage_complete = 100
+            self.initialise_progress = 0
             # Acquisition completed, note completion
             self.acquisition_completed = True
             self.acquisition_timestamp = time.time()
@@ -246,6 +242,7 @@ class HexitecFem():
             self.cam_disconnect()
             self._set_status_message("Camera disconnected")
             self.operation_percentage_complete = 100
+            self.initialise_progress = 0
             self.hardware_connected = False
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to disconnect: %s" % str(e))
@@ -632,6 +629,7 @@ class HexitecFem():
             time.sleep(delay)
             waited += delay
             if (self.stop_acquisition):
+                self.stop_acquisition = False
                 break
         logging.debug("Data Capture took " + str(waited) + " seconds")
         self._set_status_message("Requested %s frame(s), taking %s seconds" % (self.number_of_frames, str(waited)))
@@ -772,15 +770,9 @@ class HexitecFem():
 
         logging.debug("Finished Setting up state machine")
 
+    @run_on_executor(executor='thread_executor')
     def collect_offsets(self):
 
-        # My interpretation.  Translating this into the array to give to send_cmd():-
-
-        # [ 0x23 , tk.vsr_addr ,  0x40  ,  0x32 ,  0x34 , 0x32, 0x32 ,  0x0D ]
-        # Wait 1s
-        # [ 0x23 , tk.vsr_addr ,  0x40  ,  0x32 ,  0x34 , 0x32, 0x38 ,  0x0D ]
-        
-        # In my code I have used the 0x43 (clear bit) and 0x42 (set bit) commands rather than 0x40 (write) but the results should be the same.
         try:
             if self.hardware_connected != True:
                 raise ParameterTreeError("Can't collect offsets without any connection established")
@@ -792,33 +784,30 @@ class HexitecFem():
             vsr1 = self.read_response()
             self.send_cmd([0x23, 0x91, 0x41, 0x32, 0x34, 0x0D])
             vsr2 = self.read_response()
-            print("VSR1: '%s' VSR2: '%s'\n\n", (vsr1.replace('\r', ''), vsr2.replace('\r','')))
+            print("VSR1: '%s' VSR2: '%s'\n\n" % (vsr1.replace('\r', ''), vsr2.replace('\r','')))
 
             self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x31, 0x30, 0x0D])    # Set Bit, 10 -> 10000 (Bits: 4)
             self.read_response()
 
-            # number_pixels = 8
-            # for index in range(number_pixels):
-            #     self.send_cmd([0x23, 0x90, 0x41, 0x32, 0x35, 0x0D])            # Read FPGA Reg25 (Low B)
-            #     vsr1_low_byte = self.read_response()
-            #     vsr1_low_byte = vsr1_low_byte.replace('\r', '')
-            #     self.send_cmd([0x23, 0x90, 0x41, 0x32, 0x36, 0x0D])            # Read FPGA Reg25 (Low B)
-            #     vsr1_high_byte = self.read_response()
-            #     vsr1_high_byte = vsr1_high_byte.replace('\r', '')
-            #     self.send_cmd([0x23, 0x91, 0x41, 0x32, 0x35, 0x0D])            # Read FPGA Reg25 (Low B)
-            #     vsr2_low_byte = self.read_response()
-            #     vsr2_low_byte = vsr2_low_byte.replace('\r', '')
-            #     self.send_cmd([0x23, 0x91, 0x41, 0x32, 0x36, 0x0D])            # Read FPGA Reg25 (Low B)
-            #     vsr2_high_byte = self.read_response()
-            #     vsr2_high_byte = vsr2_high_byte.replace('\r', '')
-
-            #     print("BEFORE:\t\t\tVSR1: '%s %s'\t; VSR2: '%s %s'" % 
-            #             (vsr1_high_byte[1: -1], vsr1_low_byte[1: -1], vsr2_high_byte[1: -1], vsr2_low_byte[1: -1]))
-
             enable_dc_vsr1  = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]  # 0x32, 0x34, 0x32, 0x32, == 24; 22
-            disable_dc_vsr1 = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]  # 0x32, 0x34, 0x32, 0x38, == 24; 28
             enable_dc_vsr2  = [0x23, 0x91, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]
+            disable_dc_vsr1 = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]  # 0x32, 0x34, 0x32, 0x38, == 24; 28
             disable_dc_vsr2 = [0x23, 0x91, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]
+            enable_sm_vsr1  = [0x23, 0x90, 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
+            enable_sm_vsr2  = [0x23, 0x90, 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
+            disable_sm_vsr1 = [0x23, 0x90, 0x43, 0x30, 0x31, 0x30, 0x30, 0x0D]
+            disable_sm_vsr2 = [0x23, 0x90, 0x43, 0x30, 0x31, 0x30, 0x30, 0x0D]
+
+            # 1. System is fully initialised (Done already)
+
+            # # 2. Stop the state machine
+
+            self.send_cmd(disable_sm_vsr1)
+            self.read_response()
+            self.send_cmd(disable_sm_vsr2)
+            self.read_response()
+
+            # 3. Set reg 0x24 to 0x22
 
             logging.debug("Gathering offsets..")
             self.send_cmd(enable_dc_vsr1)
@@ -826,15 +815,33 @@ class HexitecFem():
             self.send_cmd(enable_dc_vsr2)
             self.read_response()
 
+            # # 4. Start the state machine
+
+            self.send_cmd(enable_sm_vsr1)
+            self.read_response()
+            self.send_cmd(enable_sm_vsr2)
+            self.read_response()
+
+            # 5. Wait > 8192 * frame time (EITHER 1 sec or loop: 0.25s * 4)
+
             time.sleep(1)
             # # Register 0x89 (Have offsets collection finished?)
-            # check_offsets = [0x23, self.vsr_addr, 0x41, 0x38, 0x49, 0x30, 0x30, 0x0D]
+            #       Unstable, crashes frequently
+            # check_offsets = [0x23, self.vsr_addr, 0x41, 0x38, 0x49, 0x0D]
             # self.send_cmd(check_offsets)
             # for idx in range(3):
             #     offsets_status = self.read_response()
             #     logging.debug("%s: Offsets status: %s" % (idx, offsets_status.replace('\r', '')))
-            #     time.sleep(0.75)
+            #     time.sleep(0.5)
 
+            # 6. Stop state machine
+
+            self.send_cmd(disable_sm_vsr1)
+            self.read_response()
+            self.send_cmd(disable_sm_vsr2)
+            self.read_response()
+
+            # 7. Set reg 0x24 to 0x28
 
             logging.debug("Offsets collected")
             self.send_cmd(disable_dc_vsr1)
@@ -842,22 +849,12 @@ class HexitecFem():
             self.send_cmd(disable_dc_vsr2)
             self.read_response()
 
-            # for index in range(number_pixels):
-            #     self.send_cmd([0x23, 0x90, 0x41, 0x32, 0x35, 0x0D])            # Read FPGA Reg25 (Low B)
-            #     vsr1_low_byte = self.read_response()
-            #     vsr1_low_byte = vsr1_low_byte.replace('\r', '')
-            #     self.send_cmd([0x23, 0x90, 0x41, 0x32, 0x36, 0x0D])            # Read FPGA Reg25 (Low B)
-            #     vsr1_high_byte = self.read_response()
-            #     vsr1_high_byte = vsr1_high_byte.replace('\r', '')
-            #     self.send_cmd([0x23, 0x91, 0x41, 0x32, 0x35, 0x0D])            # Read FPGA Reg25 (Low B)
-            #     vsr2_low_byte = self.read_response()
-            #     vsr2_low_byte = vsr2_low_byte.replace('\r', '')
-            #     self.send_cmd([0x23, 0x91, 0x41, 0x32, 0x36, 0x0D])            # Read FPGA Reg25 (Low B)
-            #     vsr2_high_byte = self.read_response()
-            #     vsr2_high_byte = vsr2_high_byte.replace('\r', '')
+            # # 8. Start state machine
 
-            #     print(" AFTER:\t\t\tVSR1: '%s %s'\t; VSR2: '%s %s'" % 
-            #             (vsr1_high_byte[1: -1], vsr1_low_byte[1: -1], vsr2_high_byte[1: -1], vsr2_low_byte[1: -1]))
+            self.send_cmd(enable_sm_vsr1)
+            self.read_response()
+            self.send_cmd(enable_sm_vsr2)
+            self.read_response()
 
             self.operation_percentage_complete = 100
             self._set_status_message("Offsets collections operation completed.")

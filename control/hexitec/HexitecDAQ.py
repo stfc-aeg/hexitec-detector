@@ -216,7 +216,6 @@ class HexitecDAQ():
     #     self.file_name = name
 
     def set_file_writing(self, writing):
-        print("\n\n ------------------ hexitecDaq.set_file_writing(%s) ------------------\n" % writing)
         self.file_writing = writing
         # send command to Odin Data
         command = "config/hdf/file/path"

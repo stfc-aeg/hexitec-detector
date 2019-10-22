@@ -467,7 +467,7 @@ def calibrate_sensor():
     full_empty = qemcamera.x10g_rdma.read(0x60000012 ,  'Check FULL FULL Signals' )
     print "Check FULL Signals" , full_empty
  
-def aquire_data():
+def acquire_data():
     
     full_empty = qemcamera.x10g_rdma.read(0x60000011 ,  'Check FULL EMPTY Signals' )
     print "Check EMPTY Signals" , full_empty
@@ -1329,7 +1329,7 @@ entry_2.pack()
 button5 = tk.Button(frame, 
                    text="AQUIRE DATA", 
                    fg="red",
-                   command=aquire_data)
+                   command=acquire_data)
 button5.pack(side=tk.BOTTOM)
 button1 = tk.Button(frame, 
                    text="DISS-CONNECT", 

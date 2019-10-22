@@ -241,7 +241,7 @@ class Hexitec():
         self.bin_end = 8000
         self.bin_start = 0
         self.bin_width = 10.0
-        self.max_frames_received = 540
+        self.max_frames_received = 10
         self.raw_data = False
         self.threshold_filename = ""
         self.threshold_mode = "value"
@@ -250,8 +250,13 @@ class Hexitec():
         detector = ParameterTree({
             "fem": self.fem.param_tree,
             "daq": self.daq.param_tree,
+            "connect_hardware": (None, self.connect_hardware),
+            "initialise_hardware": (None, self.initialise_hardware),
+            "collect_data": (None, self.collect_data),
+            "disconnect_hardware": (None, self.disconnect_hardware),
             "collect_offsets": (None, self._collect_offsets),
             "commit_configuration": (None, self.commit_configuration),
+            # "stop_acquisition": (None, self._set_stop_acquisition),
             # Move sensors_layout into own subtree?
             "sensors_layout": (self._get_sensors_layout, self._set_sensors_layout),
             "vcal": (self._get_vcal, self._set_vcal),
@@ -319,15 +324,25 @@ class Hexitec():
         time.sleep(0.5)
         IOLoop.instance().call_later(0.5, self.poll_histograms)
 
+    def connect_hardware(self, msg):
+        self.fem.connect_hardware(msg)
+      
+    def initialise_hardware(self, msg):
+        self.fem.initialise_hardware(msg)
+
+    def collect_data(self, msg):
+        self.fem.collect_data(msg)
+
+    def disconnect_hardware(self, msg):
+        self.fem.disconnect_hardware(msg)
+
     def set_number_frames(self, frames):
         self.number_frames = frames
         # Update number of frames in Hardware, and histogram and hdf plugins
         self.fem._set_number_frames(self.number_frames)
 
-        command = "config/histogram/max_frames_received"
-        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-        request.body = "{}".format(self.number_frames)
-        self.adapters["fp"].put(command, request)
+        # Avoid config/histogram/max_frames_received - use own paramTree instead
+        self._set_max_frames_received(self.number_frames)
 
         command = "config/hdf/frames"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
@@ -470,6 +485,9 @@ class Hexitec():
         self.fem.collect_data()
         # self.fems[0].frame_gate_settings(self.number_frames - 1, self.acq_gap)
         # self.fems[0].frame_gate_trigger()
+
+    # def _set_stop_acquisition(self, stop):
+    #     self.fem._set_stop_acquisition = stop
 
     def _get_sensors_layout(self):
         return self.sensors_layout

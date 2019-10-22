@@ -160,7 +160,6 @@
                 {
                     "histogram":
                     {
-                        "max_frames_received": 540,
                         "bin_start": 0,
                         "bin_end": 8000,
                         "bin_width": 10,
@@ -170,16 +169,15 @@
                 {
                     "live_view": 
                     {
-                    "frame_frequency": 50,
-                    "per_second": 0,
-                    "live_view_socket_addr": "tcp://127.0.0.1:5020",
-                    "dataset_name": "raw_frames"
+                        "frame_frequency": 50,
+                        "per_second": 0,
+                        "live_view_socket_addr": "tcp://127.0.0.1:5020",
+                        "dataset_name": "raw_frames"
                     }
                 },
                 {
                     "hdf": 
                     {
-                        "frames": 540,
                         "master": "data",
                         "dataset": 
                         {
@@ -229,8 +227,7 @@
                 {
                     "hdf": {
                         "file": {
-                        "name": "Sequence_four_file_",
-                        "path": "/tmp"
+                            "path": "/data/hexitec/"
                         }
                     }
                 }

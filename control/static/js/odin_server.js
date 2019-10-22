@@ -17,7 +17,7 @@ var execute_filename = "execute_sequence_";
 var sensors_layout   = "2x2";
 
 var polling_thread_running = false;
-var dark_correction_enable = false;
+// var dark_correction_enable = false;
 
 $( document ).ready(function()
 {
@@ -52,17 +52,15 @@ $( document ).ready(function()
             var pixel_grid_size = $('#pixel-grid-size-text').prop('value');
 
             var addition_payload = {"addition": 
-                                {"enable": addition_enable,
-                                "pixel_grid_size": parseInt(pixel_grid_size)} };
+                                {"pixel_grid_size": parseInt(pixel_grid_size)} };
 
             var discrimination_payload = {"discrimination": 
-                                {"enable": discrimination_enable, 
-                                "pixel_grid_size": parseInt(pixel_grid_size)} };
+                                {"pixel_grid_size": parseInt(pixel_grid_size)} };
 
             // plugin param
             $.ajax({
                 type: "PUT",
-                url: hexitec_url + 'fp/config',
+                url: hexitec_url + 'detector/config',
                 contentType: "application/json",
                 data: JSON.stringify(addition_payload),
                 success: function(result) {
@@ -76,7 +74,7 @@ $( document ).ready(function()
             // plugin param
             $.ajax({
                 type: "PUT",
-                url: hexitec_url + 'fp/config',
+                url: hexitec_url + 'detector/config',
                 contentType: "application/json",
                 data: JSON.stringify(discrimination_payload),
                 success: function(result) {
@@ -156,12 +154,12 @@ $( document ).ready(function()
 
     // Odin Control
 
-    // Configure Raw Data switch
-    $("[name='dark_correction_enable']").bootstrapSwitch();
-    $("[name='dark_correction_enable']").bootstrapSwitch('state', dark_correction_enable, true);
-    $('input[name="dark_correction_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
-        changeDarkCorrectionEnable();
-    });
+    // // Configure Dark Correction switch
+    // $("[name='dark_correction_enable']").bootstrapSwitch();
+    // $("[name='dark_correction_enable']").bootstrapSwitch('state', dark_correction_enable, true);
+    // $('input[name="dark_correction_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
+    //     changeDarkCorrectionEnable();
+    // });
 
     $('#connectButton').on('click', function(event) {
  
@@ -290,12 +288,12 @@ function check_debug_count() {
 }
 
 
-// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/fem/ -d '{"connect_hardware": ""}' | python -m json.tool
+// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/ -d '{"connect_hardware": ""}' | python -m json.tool
 function connect_hardware() {
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/fem',
+        url: hexitec_url + 'detector',
         contentType: "application/json",
         data: JSON.stringify({"connect_hardware": ""}),
         success: function(result) {
@@ -311,7 +309,7 @@ function initialise_hardware() {
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/fem',
+        url: hexitec_url + 'detector',
         contentType: "application/json",
         data: JSON.stringify({"initialise_hardware": ""}),
         success: function(result) {
@@ -327,7 +325,7 @@ function collect_data() {
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/fem',
+        url: hexitec_url + 'detector',
         contentType: "application/json",
         data: JSON.stringify({"collect_data": ""}),
         success: function(result) {
@@ -343,7 +341,7 @@ function disconnect_hardware() {
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/fem',
+        url: hexitec_url + 'detector',
         contentType: "application/json",
         data: JSON.stringify({"disconnect_hardware": ""}),
         success: function(result) {
@@ -556,8 +554,6 @@ function apply_ui_values() {
     bin_end_changed();
     bin_width_changed();
 
-    // Don't (re-)load FP config file from UI or config may be changed unintentionally
-    // fp_config_changed(); 
     hdf_file_path_changed();
     hdf_file_name_changed();
 
@@ -601,7 +597,6 @@ function threshold_filename_changed()
 
     $.ajax({
         type: "PUT",
-        // url: hexitec_url + 'fp/config/threshold/threshold_filename',
         url: hexitec_url + 'detector/config/threshold/threshold_filename',
         contentType: "application/json",
         data: threshold_filename,
@@ -789,9 +784,7 @@ var changeRawDataEnable = function ()
     
     $.ajax({
         type: "PUT",
-        // url: hexitec_url + 'detector/config/reorder/raw_data',
-        // Write straight into HexitecReorderPlugin's variable
-        url: hexitec_url + 'fp/config/reorder/raw_data',
+        url: hexitec_url + 'detector/config/reorder/raw_data',
         contentType: "application/json",
         data: JSON.stringify(raw_data_enable),
         success: function(result) {
@@ -803,23 +796,23 @@ var changeRawDataEnable = function ()
     });
 };
 
-// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/fem/dark_correction -d "1"
-var changeDarkCorrectionEnable = function ()
-{
-    dark_correction_enable = $("[name='dark_correction_enable']").bootstrapSwitch('state');
-    $.ajax({
-        type: "PUT",
-        url: hexitec_url + 'detector/fem/dark_correction',
-        contentType: "application/json",
-        data: JSON.stringify(dark_correction_enable),
-        success: function(result) {
-            console.log("dark_correction successfully changed");
-        },
-        error: function(request, msg, error) {
-            console.log("dark_correction couldn't be changed");
-        }
-    });
-};
+// // curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/fem/dark_correction -d "1"
+// var changeDarkCorrectionEnable = function ()
+// {
+//     dark_correction_enable = $("[name='dark_correction_enable']").bootstrapSwitch('state');
+//     $.ajax({
+//         type: "PUT",
+//         url: hexitec_url + 'detector/fem/dark_correction',
+//         contentType: "application/json",
+//         data: JSON.stringify(dark_correction_enable),
+//         success: function(result) {
+//             console.log("dark_correction successfully changed");
+//         },
+//         error: function(request, msg, error) {
+//             console.log("dark_correction couldn't be changed");
+//         }
+//     });
+// };
 
 var changeNextFrameEnable = function()
 {
@@ -1005,7 +998,6 @@ function frames_changed()
     console.log("frames: " + frames);
     $.ajax({
         type: "PUT",
-        // url: hexitec_url + 'detector/fem/number_frames',
         url: hexitec_url + 'detector/acquisition/num_frames',
         contentType: "application/json",
         data: (frames),

@@ -159,7 +159,6 @@
                 {
                     "histogram":
                     {
-                        "max_frames_received": 540,
                         "bin_start": 0,
                         "bin_end": 8000,
                         "bin_width": 10,
@@ -178,7 +177,6 @@
                 {
                     "hdf": 
                     {
-                        "frames": 540,
                         "master": "data",
                         "dataset": 
                         {
@@ -228,8 +226,7 @@
                 {
                     "hdf": {
                         "file": {
-                        "name": "Sequence_six_file_",
-                        "path": "/tmp"
+                            "path": "/data/hexitec/"
                         }
                     }
                 }

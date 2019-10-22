@@ -12,9 +12,20 @@ class RdmaUDP(object):
         self.rxsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         self.rxsocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, RxUDPBuf)
+        timeval = struct.pack('ll', 5, 100)
+        self.rxsocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, timeval)
 
-        self.rxsocket.bind((MasterRxUDPIPAddress, MasterRxUDPIPPort))
-        self.txsocket.bind((MasterTxUDPIPAddress, MasterTxUDPIPPort))
+        try:
+            self.rxsocket.bind((MasterRxUDPIPAddress, MasterRxUDPIPPort))
+        except socket.error as e:
+            print "\nError connecting to Control, IP: ", MasterRxUDPIPAddress, " port: ", MasterRxUDPIPPort
+            print "  Error: ", e, "\n"
+
+        try:
+            self.txsocket.bind((MasterTxUDPIPAddress, MasterTxUDPIPPort))
+        except socket.error as e:
+            print "Error connecting to Control, IP: ", MasterTxUDPIPAddress, " port: ", MasterTxUDPIPPort
+            print "  Error: ", e, "\n"
 
         #self.rxsocket.settimeout(None)
         #self.txsocket.settimeout(None)
