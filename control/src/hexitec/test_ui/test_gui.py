@@ -6,7 +6,7 @@ Created on Wed Jan 16 08:02:14 2019
 @author: jpe87
 """
 
-import Tkinter as tk
+import tkinter as tk
 import time
 import datetime
 from QemCam import *
@@ -130,10 +130,10 @@ def display_2():
     # ValueError is the type of error expected from this conversion
     except ValueError:
         #Display Error Window (Title, Prompt)
-        print('Non-Int Error', 'Please enter an integer')
+        print(('Non-Int Error', 'Please enter an integer'))
         num = 20
     else:
-        print "GUI setting number of frames to:- "
+        print("GUI setting number of frames to:- ")
         print(num)
     return(num)
 
@@ -143,7 +143,7 @@ def send_cmd( cmd ):
 
     while len(cmd)%4 != 0:
         cmd.append(13)
-    print "Length of command - " , len(cmd) , len(cmd)%4      
+    print("Length of command - " , len(cmd) , len(cmd)%4)      
     #print cmd
     for i in range ( 0 , len(cmd)/4 ):
         
@@ -163,9 +163,9 @@ def display_voltages( f ):
         s = s + get_dec(f[i+3]) + get_dec(f[i+2])*16 + get_dec(f[i+1])*256 + get_dec(f[i])*4096
         j = (i-2)/4+1
         if j == 9:
-            print "Voltage %.d %.2f" % ( j+1 , s*2.048/4096 )
+            print("Voltage %.d %.2f" % ( j+1 , s*2.048/4096 ))
         else:
-            print "Voltage %.d %.2f" % ( j+1 , s*3.3/4096 )
+            print("Voltage %.d %.2f" % ( j+1 , s*3.3/4096 ))
 
 #  Simple function to return the decimal value of a number in ASCII (0-9, A-F)                       
 def get_dec( a ):
@@ -198,21 +198,21 @@ def read_response():
           #fifo_empty = 0
           #rint "FIFO Empty" , fifo_empty , empty_count
           empty_count = empty_count + 1
-      if debug: print "Got data:- " 
+      if debug: print("Got data:- ") 
       dat = qemcamera.x10g_rdma.read(0xE0000200, 'Data')
-      if debug: print "Bytes are:- " 
+      if debug: print("Bytes are:- ") 
       daty = dat/256/256/256%256
       f.append(daty)
-      if debug: print format(daty, '02x')
+      if debug: print(format(daty, '02x'))
       daty = dat/256/256%256
       f.append(daty)
-      if debug: print format(daty, '02x')
+      if debug: print(format(daty, '02x'))
       daty = dat/256%256
       f.append(daty)
-      if debug: print format(daty, '02x')
+      if debug: print(format(daty, '02x'))
       daty = dat%256
       f.append(daty)
-      if debug: print format(daty, '02x')
+      if debug: print(format(daty, '02x'))
       data_counter = data_counter + 1
       if empty_count == ABORT_VALUE:
           raise TestGuiError("Abort in read_response()")
@@ -220,22 +220,22 @@ def read_response():
       empty_count = 0
 
     if debug: 
-        print "Counter is :- " , data_counter 
-        print "Length is:-" , len(f)
+        print("Counter is :- " , data_counter) 
+        print("Length is:-" , len(f))
 #    dat = qemcamera.x10g_rdma.read(0xE0000200, 'Data')
 #    print "FIFO should be empty " , dat
     fifo_empty = qemcamera.x10g_rdma.read(0xE0000011, 'Data')
-    print "FIFO should be empty " , fifo_empty    
+    print("FIFO should be empty " , fifo_empty)    
 
     s = ''
     for i in range( 1 , data_counter*4):
-        if debug: print i
+        if debug: print(i)
         s = s + chr(f[i])
 
     if debug:
-        print "String :- " , s
-        print f[0] 
-        print f[1]
+        print("String :- " , s)
+        print(f[0]) 
+        print(f[1])
 
     return(s)
     
@@ -247,13 +247,13 @@ def cam_connect():
     send_cmd ([ 0x23 , 0x90 , 0xE3 , 0x0D ] )
     time.sleep(1)
     send_cmd ([ 0x23 , 0x91 , 0xE3 , 0x0D ] )
-    print "Enable modules"
+    print("Enable modules")
 
     
 def cam_disconnect(): 
     send_cmd ([ 0x23 , 0x90 , 0xE2 , 0x0D ] )
     send_cmd ([ 0x23 , 0x91 , 0xE2 , 0x0D ] )
-    print "Modules Disabled"
+    print("Modules Disabled")
     qemcamera.disconnect()
     print ("Camera is Dis-connected")      
 
@@ -262,7 +262,7 @@ def initialise_sensor():
 
     label1.config(text="Links not locked")
     qemcamera.x10g_rdma.write(0x60000002 , 0  , 'Disable State Machine Trigger' )
-    print "Disable State Machine Enabling signal"
+    print("Disable State Machine Enabling signal")
         
     if variable1.get() == OPTIONS[0]:
         qemcamera.x10g_rdma.write(0x60000004 , 0 , 'Set bit 0 to 1 to generate test pattern in FEMII, bits [2:1] select which of the 4 sensors is read - data 1_1' )
@@ -282,14 +282,14 @@ def initialise_sensor():
         tk.vsr_addr = 0x91          
 
     if variable8.get() == READOUTMODE[0]:
-        print "Disable synchronisation SM start"
+        print("Disable synchronisation SM start")
         send_cmd ([ 0x23 , tk.vsr_addr , 0x40 , 0x30 , 0x41 , 0x30 , 0x30 , 0x0D ] )
         read_response()
         print ("Reading out single sensor")
     elif variable8.get() == READOUTMODE[1]:
         # Need to set up triggering MODE here
         # Enable synchronisation SM start via trigger 1
-        print "Enable synchronisation SM start via trigger 1"
+        print("Enable synchronisation SM start via trigger 1")
         send_cmd ([ 0x23 , tk.vsr_addr , 0x42 , 0x30 , 0x41 , 0x30 , 0x31 , 0x0D ] )
         read_response()
         # Enable synchronisation SM start on rising or falling edge of ADC clock
@@ -297,40 +297,40 @@ def initialise_sensor():
 #        send_cmd ([ 0x23 , tk.vsr_addr , 0x43 , 0x31 , 0x34 , 0x30 , 0x31 , 0x0D ] )
 #        read_response()        
         print ("Reading out 2x2 sensors")
-    print variable1.get()    
+    print(variable1.get())    
 
     number_of_frames = display_2()    
     
 
-    print "Communicating with - " , tk.vsr_addr
+    print("Communicating with - " , tk.vsr_addr)
     # Set Frame Gen Mux Frame Gate
     qemcamera.x10g_rdma.write(0x60000001 , 2 , 'Set Frame Gen Mux Frame Gate - works set to 2' )
     #Followinbg line is important
     qemcamera.x10g_rdma.write(0xD0000001 , number_of_frames-1 , 'Frame Gate set to number_of_frames')
     
     # Send this command to Enable Test Pattern in my VSR design
-    print "Setting Number of Frames to " , number_of_frames
-    print "Enable Test Pattern in my VSR design"
+    print("Setting Number of Frames to " , number_of_frames)
+    print("Enable Test Pattern in my VSR design")
     # Use Sync clock from DAQ board
-    print "Use Sync clock from DAQ board"
+    print("Use Sync clock from DAQ board")
     send_cmd ([ 0x23 , tk.vsr_addr , 0x42 , 0x30 , 0x31 , 0x31 , 0x30 , 0x0D ] )
     read_response()
-    print "Enable LVDS outputs"
+    print("Enable LVDS outputs")
     set_register_vsr1_command  = [ 0x23 , 0x90 , 0x42, 0x30 , 0x31 , 0x32 , 0x30 ,0x0D]
     set_register_vsr2_command  = [ 0x23 , 0x91 , 0x42, 0x30 , 0x31 , 0x32 , 0x30 ,0x0D]
     send_cmd( set_register_vsr1_command )
     read_response()
     send_cmd( set_register_vsr2_command )
     read_response()
-    print "LVDS outputs enabled"
-    print "Read LO IDLE"
+    print("LVDS outputs enabled")
+    print("Read LO IDLE")
     send_cmd( [ 0x23 , tk.vsr_addr, 0x40, 0x46 , 0x45 , 0x41 , 0x41 , 0x0D] )
     read_response()
-    print "Read HI IDLE"
+    print("Read HI IDLE")
     send_cmd( [ 0x23 , tk.vsr_addr, 0x40, 0x46 , 0x46 , 0x4E , 0x41 , 0x0D] )
     read_response()
     # This sets up test pattern on LVDS outputs
-    print "Set up LVDS test pattern"
+    print("Set up LVDS test pattern")
     send_cmd( [ 0x23 , tk.vsr_addr , 0x43 , 0x30 , 0x31 , 0x43 ,0x30 , 0x0D])
     read_response()
     # Use default test pattern of 1000000000000000
@@ -338,15 +338,15 @@ def initialise_sensor():
     read_response()
     
     full_empty = qemcamera.x10g_rdma.read(0x60000011 ,  'Check EMPTY Signals' )
-    print "Check EMPTY Signals" , full_empty
+    print("Check EMPTY Signals" , full_empty)
     full_empty = qemcamera.x10g_rdma.read(0x60000012 ,  'Check FULL Signals' )
-    print "Check FULL Signals" , full_empty
+    print("Check FULL Signals" , full_empty)
 
     
 def calibrate_sensor():
     global label1
     label1.config(text="Links not locked")
-    print "setting image size"
+    print("setting image size")
     # 80x80 pixels 14 bits
     #qemcamera.set_image_size(80,80,14,16)
 
@@ -363,7 +363,7 @@ def calibrate_sensor():
     # Set VCAL
     send_cmd( [ 0x23 , tk.vsr_addr , 0x42 , 0x31 , 0x38 , 0x30 ,0x31 , 0x0D])
     read_response()
-    print "Clear bit 5"
+    print("Clear bit 5")
     send_cmd( [ 0x23 , tk.vsr_addr , 0x43 , 0x32 , 0x34 , 0x32 ,0x30 , 0x0D])
     read_response()
  
@@ -371,7 +371,7 @@ def calibrate_sensor():
     send_cmd( [ 0x23 , tk.vsr_addr , 0x42 , 0x32 , 0x34 , 0x31 ,0x30 , 0x0D])
     read_response()
     
-    print "Set bit 6"
+    print("Set bit 6")
     send_cmd( [ 0x23 , tk.vsr_addr , 0x43 , 0x32 , 0x34 , 0x34 ,0x30 , 0x0D])
     read_response()
     send_cmd ([ 0x23 , tk.vsr_addr , 0x41 , 0x30 , 0x31 , 0x0D ] )
@@ -398,27 +398,27 @@ def calibrate_sensor():
 
     # Reading back Sync register
     synced = qemcamera.x10g_rdma.read(0x60000010 ,  'Check LVDS has synced' )
-    print "Sync Register value"
+    print("Sync Register value")
 
     full_empty = qemcamera.x10g_rdma.read(0x60000011 ,  'Check FULL EMPTY Signals' )
-    print "Check EMPTY Signals" , full_empty
+    print("Check EMPTY Signals" , full_empty)
 
     full_empty = qemcamera.x10g_rdma.read(0x60000012 ,  'Check FULL FULL Signals' )
-    print "Check FULL Signals" , full_empty
+    print("Check FULL Signals" , full_empty)
     
     if synced == 15:
-        print "All Links on VSR's 1 and 2 synchronised"
+        print("All Links on VSR's 1 and 2 synchronised")
         label1.config(text="All Links on VSR's 1 and 2 synchronised")  
         #qemcamera.x10g_rdma.write(0x60000002 , 4 , 'Enable state machines in VSRs ')
         print ("Starting State Machine in VSR's")  
     elif synced == 12:
-        print "Both Links on VSR 2 synchronised"
+        print("Both Links on VSR 2 synchronised")
         label1.config(text="Both Links on VSR 2 synchronised")        
     elif synced == 3:
-        print "Both Links on VSR 1 synchronised"
+        print("Both Links on VSR 1 synchronised")
         label1.config(text="Both Links on VSR 1 synchronised")
     else:
-        print synced
+        print(synced)
 
     # Send this command to Disable Test Pattern in my VSR design
     send_cmd( [ 0x23 , 0x92, 0x00 , 0x0D] )  
@@ -427,53 +427,53 @@ def calibrate_sensor():
     send_cmd( [ 0x23 , tk.vsr_addr , 0x43 , 0x30 , 0x31 , 0x43 ,0x30 , 0x0D])
     read_response()
 
-    print "Clear bit 5 - VCAL ENABLED"
+    print("Clear bit 5 - VCAL ENABLED")
     send_cmd( [ 0x23 , tk.vsr_addr , 0x43 , 0x32 , 0x34, 0x32 ,0x30 , 0x0D])
     read_response()
 
     if variable7.get() == DARKCORRECTION[0]:
         #  Log image to file
-        print "DARK CORRECTION OFF"
+        print("DARK CORRECTION OFF")
         send_cmd( [ 0x23 , tk.vsr_addr , 0x43 , 0x32 , 0x34, 0x30 ,0x38 , 0x0D])
         read_response()
     elif variable7.get() == DARKCORRECTION[1]:
         #  Log image to file
-        print "DARK CORRECTION ON"
+        print("DARK CORRECTION ON")
         send_cmd( [ 0x23 , tk.vsr_addr , 0x42 , 0x32 , 0x34, 0x30 ,0x38 , 0x0D])    
         read_response()
     
     # Read Reg24
     send_cmd( [ 0x23 , tk.vsr_addr, 0x41, 0x32 , 0x34  ,0x0D] )
-    print "reading Register 0x24"
-    print read_response()
+    print("reading Register 0x24")
+    print(read_response())
     
     send_cmd( [ 0x23 , tk.vsr_addr, 0x41, 0x38 , 0x39  ,0x0D] )
     read_response()
     
     time.sleep(3)
     
-    print "Poll register 0x89"
+    print("Poll register 0x89")
     send_cmd( [ 0x23 , tk.vsr_addr, 0x41, 0x38 , 0x39  ,0x0D] )
     r = read_response()
-    print "Bit 1 should be 1" 
-    print r
-    print "Read reg 1"
+    print("Bit 1 should be 1") 
+    print(r)
+    print("Read reg 1")
     send_cmd ([ 0x23 , tk.vsr_addr, 0x41, 0x30 , 0x31  ,0x0D] )
     read_response()
 
     full_empty = qemcamera.x10g_rdma.read(0x60000011 ,  'Check FULL EMPTY Signals' )
-    print "Check EMPTY Signals" , full_empty
+    print("Check EMPTY Signals" , full_empty)
 
     full_empty = qemcamera.x10g_rdma.read(0x60000012 ,  'Check FULL FULL Signals' )
-    print "Check FULL Signals" , full_empty
+    print("Check FULL Signals" , full_empty)
  
 def acquire_data():
     
     full_empty = qemcamera.x10g_rdma.read(0x60000011 ,  'Check FULL EMPTY Signals' )
-    print "Check EMPTY Signals" , full_empty
+    print("Check EMPTY Signals" , full_empty)
 
     full_empty = qemcamera.x10g_rdma.read(0x60000012 ,  'Check FULL FULL Signals' )
-    print "Check FULL Signals" , full_empty
+    print("Check FULL Signals" , full_empty)
     
     global number_of_frames
 
@@ -503,9 +503,9 @@ def acquire_data():
     qemcamera.x10g_rdma.write(0x60000002 , 0  , 'Clear Input Buffers' )
     time.sleep(1)
     full_empty = qemcamera.x10g_rdma.read(0x60000011 ,  'Check EMPTY Signals' )
-    print "Check EMPTY Signals" , full_empty
+    print("Check EMPTY Signals" , full_empty)
     full_empty = qemcamera.x10g_rdma.read(0x60000012 ,  'Check FULL Signals' )
-    print "Check FULL Signals" , full_empty
+    print("Check FULL Signals" , full_empty)
     
     if variable8.get() == READOUTMODE[1]:
         qemcamera.x10g_rdma.write(0x60000002 , 4  , 'Enable State Machine' )
@@ -514,42 +514,42 @@ def acquire_data():
     inputValue=textBox.get("1.0","end-1c")
 
     file_string = '/tmp/Hexitec'+ datetime.datetime.now().strftime("%b_%d_%H%M%S_") + variable1.get() + '_' + inputValue
-    print file_string 
-    print "number of Frames :=" , number_of_frames
+    print(file_string) 
+    print("number of Frames :=" , number_of_frames)
     
     if variable2.get() == IMAGE[0]:
         #  Log image to file
-        print "Logging Image to HDF5 file"
+        print("Logging Image to HDF5 file")
         qemcamera.log_image_stream(file_string, number_of_frames)  
     if variable2.get() == IMAGE[1]:
         #  Log image to file
-        print "Logging Image to BIN file"
+        print("Logging Image to BIN file")
         qemcamera.log_image_stream_bin(file_string, number_of_frames)  
     if variable2.get() == IMAGE[2]:
         #  Stream image 
-        print "Streaming Image"
+        print("Streaming Image")
         qemcamera.display_image_stream(number_of_frames)
     if variable2.get() == IMAGE[3]:
         #  Data Capture only
-        print "Data Capture on Wireshark only - no image"
+        print("Data Capture on Wireshark only - no image")
         qemcamera.data_stream(number_of_frames)  
-        print "Wait 5 seconds"
+        print("Wait 5 seconds")
         #
         resp = 0
         #for wait in range(40):
         while resp < 1:
             resp = qemcamera.x10g_rdma.read(0x60000014, 'Check data transfer completed?')
-            print "Transfer complete = ", resp
+            print("Transfer complete = ", resp)
             time.sleep(0.25)
-        print "No 10 seconds Waited"
+        print("No 10 seconds Waited")
         #
         #time.sleep(5)
-        print "Waited 5 seconds"
+        print("Waited 5 seconds")
         
     # Stop the state machine
     qemcamera.x10g_rdma.write(0x60000002 , 0  , 'Dis-Enable State Machine' )
     
-    print "Aquasition Complete, clear enable signal"    
+    print("Aquasition Complete, clear enable signal")    
     qemcamera.x10g_rdma.write(0xD0000000 , 2 , 'Clear enable signal' )
     qemcamera.x10g_rdma.write(0xD0000000 , 0 , 'Clear enable signal' )
     
@@ -567,86 +567,86 @@ def acquire_data():
         qemcamera.x10g_rdma.write(0x60000004 , 6 , 'Sensor 2 2' )
         print ("Sensor 2 2")
     full_empty = qemcamera.x10g_rdma.read(0x60000011 ,  'Check EMPTY Signals' )
-    print "Check EMPTY Signals" , full_empty
+    print("Check EMPTY Signals" , full_empty)
     full_empty = qemcamera.x10g_rdma.read(0x60000012 ,  'Check FULL Signals' )
-    print "Check FULL Signals" , full_empty
+    print("Check FULL Signals" , full_empty)
     no_frames = qemcamera.x10g_rdma.read(0xD0000001 ,  'Check Number of Frames setting' ) + 1
-    print "Number of Frames" , no_frames
+    print("Number of Frames" , no_frames)
 
-    print "Output from Sensor" 
+    print("Output from Sensor") 
     m0 = qemcamera.x10g_rdma.read(0x70000010, 'frame last length')
-    print "frame last length" , m0
+    print("frame last length" , m0)
     m0 = qemcamera.x10g_rdma.read(0x70000011, 'frame max length')
-    print "frame max length" , m0
+    print("frame max length" , m0)
     m0 = qemcamera.x10g_rdma.read(0x70000012, 'frame min length')
-    print "frame min length" , m0
+    print("frame min length" , m0)
     m0 = qemcamera.x10g_rdma.read(0x70000013, 'frame number')
-    print "frame number" , m0
+    print("frame number" , m0)
     m0 = qemcamera.x10g_rdma.read(0x70000014, 'frame last clock cycles')
-    print "frame last clock cycles" , m0
+    print("frame last clock cycles" , m0)
     m0 = qemcamera.x10g_rdma.read(0x70000015, 'frame max clock cycles')
-    print "frame max clock cycles" , m0
+    print("frame max clock cycles" , m0)
     m0 = qemcamera.x10g_rdma.read(0x70000016, 'frame min clock cycles')
-    print "frame min clock cycles" , m0
+    print("frame min clock cycles" , m0)
     m0 = qemcamera.x10g_rdma.read(0x70000017, 'frame data total')
-    print "frame data total" , m0
+    print("frame data total" , m0)
     m0 = qemcamera.x10g_rdma.read(0x70000018, 'frame data total clock cycles')
-    print "frame data total clock cycles" , m0
+    print("frame data total clock cycles" , m0)
     m0 = qemcamera.x10g_rdma.read(0x70000019, 'frame trigger count')
-    print "frame trigger count" , m0
+    print("frame trigger count" , m0)
     m0 = qemcamera.x10g_rdma.read(0x7000001A, 'frame in progress flag')
-    print "frame in progress flag" , m0
+    print("frame in progress flag" , m0)
 
-    print "Output from Frame Gate" 
+    print("Output from Frame Gate") 
     m0 = qemcamera.x10g_rdma.read(0x80000010, 'frame last length')
-    print "frame last length" , m0
+    print("frame last length" , m0)
     m0 = qemcamera.x10g_rdma.read(0x80000011, 'frame max length')
-    print "frame max length" , m0
+    print("frame max length" , m0)
     m0 = qemcamera.x10g_rdma.read(0x80000012, 'frame min length')
-    print "frame min length" , m0
+    print("frame min length" , m0)
     m0 = qemcamera.x10g_rdma.read(0x80000013, 'frame number')
-    print "frame number" , m0
+    print("frame number" , m0)
     m0 = qemcamera.x10g_rdma.read(0x80000014, 'frame last clock cycles')
-    print "frame last clock cycles" , m0
+    print("frame last clock cycles" , m0)
     m0 = qemcamera.x10g_rdma.read(0x80000015, 'frame max clock cycles')
-    print "frame max clock cycles" , m0
+    print("frame max clock cycles" , m0)
     m0 = qemcamera.x10g_rdma.read(0x80000016, 'frame min clock cycles')
-    print "frame min clock cycles" , m0
+    print("frame min clock cycles" , m0)
     m0 = qemcamera.x10g_rdma.read(0x80000017, 'frame data total')
-    print "frame data total" , m0
+    print("frame data total" , m0)
     m0 = qemcamera.x10g_rdma.read(0x80000018, 'frame data total clock cycles')
-    print "frame data total clock cycles" , m0
+    print("frame data total clock cycles" , m0)
     m0 = qemcamera.x10g_rdma.read(0x80000019, 'frame trigger count')
-    print "frame trigger count" , m0
+    print("frame trigger count" , m0)
     m0 = qemcamera.x10g_rdma.read(0x8000001A, 'frame in progress flag')
-    print "frame in progress flag" , m0    
+    print("frame in progress flag" , m0)    
     
-    print "Input to XAUI" 
+    print("Input to XAUI") 
     m0 = qemcamera.x10g_rdma.read(0x90000010, 'frame last length')
-    print "frame last length" , m0
+    print("frame last length" , m0)
     m0 = qemcamera.x10g_rdma.read(0x90000011, 'frame max length')
-    print "frame max length" , m0
+    print("frame max length" , m0)
     m0 = qemcamera.x10g_rdma.read(0x90000012, 'frame min length')
-    print "frame min length" , m0
+    print("frame min length" , m0)
     m0 = qemcamera.x10g_rdma.read(0x90000013, 'frame number')
-    print "frame number" , m0
+    print("frame number" , m0)
     m0 = qemcamera.x10g_rdma.read(0x90000014, 'frame last clock cycles')
-    print "frame last clock cycles" , m0
+    print("frame last clock cycles" , m0)
     m0 = qemcamera.x10g_rdma.read(0x90000015, 'frame max clock cycles')
-    print "frame max clock cycles" , m0
+    print("frame max clock cycles" , m0)
     m0 = qemcamera.x10g_rdma.read(0x90000016, 'frame min clock cycles')
-    print "frame min clock cycles" , m0
+    print("frame min clock cycles" , m0)
     m0 = qemcamera.x10g_rdma.read(0x90000017, 'frame data total')
-    print "frame data total" , m0
+    print("frame data total" , m0)
     m0 = qemcamera.x10g_rdma.read(0x90000018, 'frame data total clock cycles')
-    print "frame data total clock cycles" , m0
+    print("frame data total clock cycles" , m0)
     m0 = qemcamera.x10g_rdma.read(0x90000019, 'frame trigger count')
-    print "frame trigger count" , m0
+    print("frame trigger count" , m0)
     m0 = qemcamera.x10g_rdma.read(0x9000001A, 'frame in progress flag')
-    print "frame in progress flag" , m0    
+    print("frame in progress flag" , m0)    
     
 def set_up_state_machine():
-    print "Setting up state machine"
+    print("Setting up state machine")
     #  Thes are used to set up the state machine
     sm_timing1  = [ 0x23 , tk.vsr_addr, 0x42, 0x30 , 0x37 , 0x30  , 0x33 , 0x0D ]
     sm_timing2  = [ 0x23 , tk.vsr_addr, 0x42, 0x30 , 0x32 , 0x30  , 0x31 , 0x0D ]
@@ -679,7 +679,7 @@ def set_up_state_machine():
     read_response()
     
 
-    print "Finished Setting up state machine"
+    print("Finished Setting up state machine")
     
 def load_pwr_cal_read_enables():
     enable_sm     = [ 0x23 , tk.vsr_addr, 0x42, 0x30 , 0x31 , 0x30 , 0x31  , 0x0D]
@@ -747,103 +747,103 @@ def load_pwr_cal_read_enables():
     # Uncalibrated (Image4) row option:
     row_cal_enable2d    = [ 0x23 , tk.vsr_addr, 0x44 , 0x39 , 0x41 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x30 , 0x0D]
 
-    print "\t\t\tUber writes #2"
+    print("\t\t\tUber writes #2")
     # col_cal_enable1a = [ 0x23 , tk.vsr_addr , 0x44 , 0x35 , 0x37 , 0x46  , 0x46  , 0x46  , 0x46 , 0x46 , 0x46 , 0x30 , 0x30 , 0x30  , 0x30 , 0x30 , 0x30 , 0x30   ,0x30 , 0x30  ,0x30, 0x30  , 0x30 , 0x30 , 0x30 , 0x0D ]
     # col_cal_enable2a = [ 0x23 , tk.vsr_addr , 0x44 , 0x42 , 0x38 , 0x46  , 0x46  , 0x46  , 0x46 , 0x46 , 0x46 , 0x30 , 0x30 , 0x30  , 0x30 , 0x30 , 0x30 , 0x30   ,0x30 , 0x30  ,0x30, 0x30  , 0x30 , 0x30 , 0x30 , 0x0D ]
     col_cal_enable1a = [ 0x23 , tk.vsr_addr , 0x44 , 0x35 , 0x37 , 0x46  , 0x30  , 0x46  , 0x46 , 0x46 , 0x46 , 0x30 , 0x30 , 0x30  , 0x30 , 0x30 , 0x30 , 0x30   ,0x30 , 0x30  ,0x30, 0x30  , 0x30 , 0x30 , 0x30 , 0x0D ]
     col_cal_enable2a = [ 0x23 , tk.vsr_addr , 0x44 , 0x42 , 0x38 , 0x46  , 0x30  , 0x46  , 0x46 , 0x46 , 0x46 , 0x30 , 0x30 , 0x30  , 0x30 , 0x30 , 0x30 , 0x30   ,0x30 , 0x30  ,0x30, 0x30  , 0x30 , 0x30 , 0x30 , 0x0D ]
 
 
-    print "Use different CAL data"  
+    print("Use different CAL data")  
     send_cmd( diff_cal )
     read_response()
 
     send_cmd( disable_sm )
     read_response()
     
-    print "Loading Power, Cal and Read Enables"    
-    print "Column power enable"
+    print("Loading Power, Cal and Read Enables")    
+    print("Column power enable")
     send_cmd( col_power_enable1 )
     read_response()
     send_cmd( col_power_enable2 )
     read_response()
 
-    print "Row power enable"
+    print("Row power enable")
     send_cmd( row_power_enable1 )
     read_response()
     send_cmd( row_power_enable2 )
     read_response()
 
     if variable9.get() == TESTMODEIMAGE[0]:    
-        print "Column cal enable A"
+        print("Column cal enable A")
         send_cmd( col_cal_enable1a )
         read_response()
         send_cmd( col_cal_enable2a )
         read_response()
-        print "Row cal enable A"
+        print("Row cal enable A")
         send_cmd( row_cal_enable1a )
         read_response()
         send_cmd( row_cal_enable2a )
         read_response()
     elif variable9.get() == TESTMODEIMAGE[1]:
-        print "Column cal enable B"
+        print("Column cal enable B")
         send_cmd( col_cal_enable1b )
         read_response()
         send_cmd( col_cal_enable2b )
         read_response()
-        print "Row cal enable B"
+        print("Row cal enable B")
         send_cmd( row_cal_enable1b )
         read_response()
         send_cmd( row_cal_enable2b )
         read_response()
     elif variable9.get() == TESTMODEIMAGE[2]:
-        print "Column cal enable C"
+        print("Column cal enable C")
         send_cmd( col_cal_enable1c )
         read_response()
         send_cmd( col_cal_enable2c )
         read_response()
-        print "Row cal enable C"
+        print("Row cal enable C")
         send_cmd( row_cal_enable1c )
         read_response()
         send_cmd( row_cal_enable2c )
         read_response()
     elif variable9.get() == TESTMODEIMAGE[3]:
-        print "Column cal enable D"
+        print("Column cal enable D")
         send_cmd( col_cal_enable1d )
         read_response()
         send_cmd( col_cal_enable2d )
         read_response()
-        print "Row cal enable D"
+        print("Row cal enable D")
         send_cmd( row_cal_enable1d )
         read_response()
         send_cmd( row_cal_enable2d )
         read_response()
         
-    print "Column read enable"
+    print("Column read enable")
     send_cmd( col_read_enable1 )
     read_response()
     send_cmd( col_read_enable2 )
     read_response()
  
-    print "Row read enable"
+    print("Row read enable")
     send_cmd( row_read_enable1 )
     read_response()
     send_cmd( row_read_enable2 )
     read_response()
 
-    print "Power, Cal and Read Enables have been loaded" 
+    print("Power, Cal and Read Enables have been loaded") 
        
     send_cmd( enable_sm )
     read_response()
     
 def write_dac_values():
-    print"Writing DAC values"
+    print("Writing DAC values")
     send_cmd( [ 0x23 , tk.vsr_addr, 0x54, 0x30, 0x32, 0x41, 0x41, 0x30, 0x35, 0x35, 0x35 , 0x30, 0x35, 0x35, 0x35 ,0x30, 0x30, 0x30, 0x30, 0x30, 0x38, 0x45, 0x38 , 0x0D ] )
     read_response()
-    print "DAC values set"
+    print("DAC values set")
     
 def enable_adc():
-    print "Enabling ADC"
+    print("Enabling ADC")
     adc_disable   = [ 0x23 , tk.vsr_addr, 0x55, 0x30 , 0x32 , 0x0D]
     enable_sm     = [ 0x23 , tk.vsr_addr, 0x42, 0x30 , 0x31 , 0x30 , 0x31  , 0x0D]
     adc_enable    = [ 0x23 , tk.vsr_addr, 0x55, 0x30 , 0x33 , 0x0D]
@@ -853,7 +853,7 @@ def enable_adc():
     
     send_cmd( adc_disable )
     read_response()
-    print "Enable SM"
+    print("Enable SM")
     send_cmd( enable_sm )
     read_response()
     send_cmd( adc_enable)
@@ -872,7 +872,7 @@ def enable_adc():
 
 
 def enable_adc_testmode():
-    print "Enabling ADC Testmode"   
+    print("Enabling ADC Testmode")   
     # Set ADC test testmode
     send_cmd( [0x23, tk.vsr_addr, 0x53, 0x30, 0x44, 0x34, 0x38, 0x0d ] )
     read_response() 
@@ -911,152 +911,152 @@ def enable_adc_testmode():
 def modify_register():
         cmd_string = [ 0x23 , tk.vsr_addr , 0x42 , 0x32 , 0x34 , 0x30 , 0x31 , 0x0D ]
         if variable3.get() == SETCLR[0]:
-            print "0x42"
+            print("0x42")
             cmd_string[2] = 0x42
         elif variable3.get() == SETCLR[1]:
             cmd_string[2] = 0x43
         if variable4.get() == REGADDRMSB[0]:
-            print "0x30"
+            print("0x30")
             cmd_string[3] = 0x30            
         elif variable4.get() == REGADDRMSB[1]:
-            print "0x31"
+            print("0x31")
             cmd_string[3] = 0x31            
         elif variable4.get() == REGADDRMSB[2]:
-            print "0x32"
+            print("0x32")
             cmd_string[3] = 0x32            
         elif variable4.get() == REGADDRMSB[3]:
-            print "0x33"
+            print("0x33")
             cmd_string[3] = 0x33            
         elif variable4.get() == REGADDRMSB[4]:
-            print "0x34"
+            print("0x34")
             cmd_string[3] = 0x34            
         elif variable4.get() == REGADDRMSB[5]:
-            print "0x35"
+            print("0x35")
             cmd_string[3] = 0x35            
         elif variable4.get() == REGADDRMSB[6]:
-            print "0x36"
+            print("0x36")
             cmd_string[3] = 0x36            
         elif variable4.get() == REGADDRMSB[7]:
-            print "0x37"
+            print("0x37")
             cmd_string[3] = 0x37            
         elif variable4.get() == REGADDRMSB[8]:
-            print "0x38"
+            print("0x38")
             cmd_string[3] = 0x38            
         elif variable4.get() == REGADDRMSB[9]:
-            print "0x39"
+            print("0x39")
             cmd_string[3] = 0x39            
         elif variable4.get() == REGADDRMSB[10]:
-            print "0x41"
+            print("0x41")
             cmd_string[3] = 0x41            
         elif variable4.get() == REGADDRMSB[11]:
-            print "0x42"
+            print("0x42")
             cmd_string[3] = 0x42            
         elif variable4.get() == REGADDRMSB[12]:
-            print "0x43"
+            print("0x43")
             cmd_string[3] = 0x43            
         elif variable4.get() == REGADDRMSB[13]:
-            print "0x44"
+            print("0x44")
             cmd_string[3] = 0x44            
         elif variable4.get() == REGADDRMSB[14]:
-            print "0x45"
+            print("0x45")
             cmd_string[3] = 0x45            
         elif variable4.get() == REGADDRMSB[15]:
-            print "0x46"
+            print("0x46")
             cmd_string[3] = 0x46  
             
         if variable5.get() == REGADDRLSB[0]:
-            print "0x30"
+            print("0x30")
             cmd_string[4] = 0x30
         elif variable5.get() == REGADDRLSB[1]:
-            print "0x31"
+            print("0x31")
             cmd_string[4] = 0x31
         elif variable5.get() == REGADDRLSB[2]:
-            print "0x32"
+            print("0x32")
             cmd_string[4] = 0x32
         elif variable5.get() == REGADDRLSB[3]:
-            print "0x33"
+            print("0x33")
             cmd_string[4] = 0x33
         elif variable5.get() == REGADDRLSB[4]:
-            print "0x34"
+            print("0x34")
             cmd_string[4] = 0x34
         elif variable5.get() == REGADDRLSB[5]:
-            print "0x35"
+            print("0x35")
             cmd_string[4] = 0x35
         elif variable5.get() == REGADDRLSB[6]:
-            print "0x36"
+            print("0x36")
             cmd_string[4] = 0x36
         elif variable5.get() == REGADDRLSB[7]:
-            print "0x37"
+            print("0x37")
             cmd_string[4] = 0x37
         elif variable5.get() == REGADDRLSB[8]:
-            print "0x38"
+            print("0x38")
             cmd_string[4] = 0x38
         elif variable5.get() == REGADDRLSB[9]:
-            print "0x39"
+            print("0x39")
             cmd_string[4] = 0x39
         elif variable5.get() == REGADDRLSB[10]:
-            print "0x41"
+            print("0x41")
             cmd_string[4] = 0x41
         elif variable5.get() == REGADDRLSB[11]:
-            print "0x42"
+            print("0x42")
             cmd_string[4] = 0x42
         elif variable5.get() == REGADDRLSB[12]:
-            print "0x43"
+            print("0x43")
             cmd_string[4] = 0x43
         elif variable5.get() == REGADDRLSB[13]:
-            print "0x44"
+            print("0x44")
             cmd_string[4] = 0x44
         elif variable5.get() == REGADDRLSB[14]:
-            print "0x45"
+            print("0x45")
             cmd_string[4] = 0x45
         elif variable5.get() == REGADDRLSB[15]:
-            print "0x46"
+            print("0x46")
             cmd_string[4] = 0x46
 
         if variable6.get() == BITVALUE[0]:
-            print "0x30"
-            print "0x31"
+            print("0x30")
+            print("0x31")
             cmd_string[5] = 0x30
             cmd_string[6] = 0x31
         elif variable6.get() == BITVALUE[1]:
-            print "0x30"
-            print "0x32"
+            print("0x30")
+            print("0x32")
             cmd_string[5] = 0x30
             cmd_string[6] = 0x32
         elif variable6.get() == BITVALUE[2]:
-            print "0x30"
-            print "0x34"
+            print("0x30")
+            print("0x34")
             cmd_string[5] = 0x30
             cmd_string[6] = 0x34
         elif variable6.get() == BITVALUE[3]:
-            print "0x30"
-            print "0x38"
+            print("0x30")
+            print("0x38")
             cmd_string[5] = 0x30
             cmd_string[6] = 0x38
         elif variable6.get() == BITVALUE[4]:
-            print "0x31"
-            print "0x30"
+            print("0x31")
+            print("0x30")
             cmd_string[5] = 0x31
             cmd_string[6] = 0x30
         elif variable6.get() == BITVALUE[5]:
-            print "0x32"
-            print "0x30"
+            print("0x32")
+            print("0x30")
             cmd_string[5] = 0x32
             cmd_string[6] = 0x30
         elif variable6.get() == BITVALUE[6]:
-            print "0x34"
-            print "0x30"
+            print("0x34")
+            print("0x30")
             cmd_string[5] = 0x34
             cmd_string[6] = 0x30
         elif variable6.get() == BITVALUE[7]:
-            print "0x38"
-            print "0x30"
+            print("0x38")
+            print("0x30")
             cmd_string[5] = 0x38
             cmd_string[6] = 0x30
-        print cmd_string
+        print(cmd_string)
         send_cmd(cmd_string)
         ret = read_response()
-        print ret
+        print(ret)
         
 def pixel_value_array(my_list = []):
 #    print "line" , my_list
@@ -1147,9 +1147,9 @@ def load_image():
     pixel_value = [ 0x30 , 0x30 , 0x30 , 0x30]
     cmd_string = [ 0x23 , tk.vsr_addr, 0x46, 0x32, 0x38, 0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 , 0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 ,0x32 , 0x35 , 0x30 , 0x30 , 0x32 , 0x36 , 0x30 , 0x30 , 0x0D]
 
-    print len(cmd_string)
+    print(len(cmd_string))
     for x in range(0,2):
-        print x
+        print(x)
         for y in range (0,20):
             # This uses an incrementing count as data
 #            cmd_string[(y*8)+7] = pixel_value[2]
@@ -1165,14 +1165,14 @@ def load_image():
             
             pixel_value =  pixel_value_array( pixel_value ) 
         
-        print "Sending Image Data Stream"
-        print cmd_string
+        print("Sending Image Data Stream")
+        print(cmd_string)
 
         send_cmd(cmd_string)
         ret = read_response()
-        print ret 
+        print(ret) 
      
-    print "set / reset bits"
+    print("set / reset bits")
     send_cmd(disable_sm)
     read_response()
     send_cmd(clr_b0_reg24)
@@ -1187,7 +1187,7 @@ def life_saver():
     try:
         print(" -=-=-=-=-=-=-=-=-  Setup System to config VSR 2.. -=-=-=-=-=-=-=-=- ")
         variable1.set(OPTIONS[2])
-        print "variable1: ", variable1.get()
+        print("variable1: ", variable1.get())
         initialise_sensor()
         print(" -=-=-=-=- sensors initialised! -=-=-=-=- ")
         load_pwr_cal_read_enables()
@@ -1201,7 +1201,7 @@ def life_saver():
         calibrate_sensor()
         print(" -=-=-=-=- VSR 2 all Done -=-=-=-=-")
     except Exception as e:
-        print("Failed to initialise VSR2: %s" % e)
+        print(("Failed to initialise VSR2: %s" % e))
         return
 
     time.sleep(1)
@@ -1209,7 +1209,7 @@ def life_saver():
     try:
         print(" -=-=-=-=-=-=-=-=-  Setup System to config VSR 1.. -=-=-=-=-=-=-=-=- ")
         variable1.set(OPTIONS[0])
-        print "variable1: ", variable1.get()
+        print("variable1: ", variable1.get())
         initialise_sensor()
         print(" -=-=-=-=- sensors initialised! -=-=-=-=- ")
         load_pwr_cal_read_enables()
@@ -1223,7 +1223,7 @@ def life_saver():
         calibrate_sensor()
         print(" -=-=-=-=- VSR 1 all Done -=-=-=-=-")
     except Exception as e:
-        print("Failed to initialise VSR1: %s" % e)
+        print(("Failed to initialise VSR1: %s" % e))
         return
 
     

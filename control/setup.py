@@ -9,7 +9,6 @@ PY3 = (sys.version_info[0] == 3)
 required = [
     'odin',
     # 'odin_data',  # MANUAL INSTALL REQUIRED
-    'odin_devices',
     'opencv-python'
 ]
 
@@ -24,17 +23,6 @@ dependency_links = [
     'https://github.com/odin-detector/odin-control/zipball/master#egg=odin'
 ]
 
-# subdirectory=tools/python&
-#setup(name='qemii',
-#      packages=find_packages('src'),
-#      package_dir={'': 'src'},
-#      install_requires=required,
-#      dependency_links=dependency_links,
-#      zip_safe=False
-#)
-
-##
-
 setup(name='hexitec',
       version=versioneer.get_version(),
       cmdclass=versioneer.get_cmdclass(),
@@ -42,7 +30,8 @@ setup(name='hexitec',
       url='https://github.com/stfc-aeg/hexitec-detector',
       author='Christian Angelsen',
       author_email='christian.angelsen@stfc.ac.uk',
-      packages=find_packages(),
+      packages=find_packages('src'),
+      package_dir={'': 'src'},
       install_requires=required,
       dependency_links=dependency_links,
       zip_safe=False,

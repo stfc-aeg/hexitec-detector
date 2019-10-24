@@ -144,9 +144,16 @@ tags
 control/static/js/bootstrap-3.3.6-dist/*
 
 # Ignore Qt project file (used to view source code in QtCreator)
-<<<<<<< HEAD
-*.pro
-=======
 *.pro
 *.pro.user
->>>>>>> july17_framereceiver
+
+# Ignore tox
+.tox/*
+
+.vscode/*
+
+.pytest_cache/*
+
+__pycache__/*
+
+

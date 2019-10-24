@@ -212,10 +212,10 @@ class Hexitec():
         # self.vector_file = options.get("vector_file_name", defaults.vector_file)
         self.number_frames = options.get("acquisition_num_frames", defaults.number_frames)
         # self.acq_gap = options.get("acquisition_frame_gap", defaults.acq_gap)
-        odin_data_dir = options.get("odin_data_dir", defaults.odin_data_dir)
-        odin_data_dir = os.path.expanduser(odin_data_dir)
+        # odin_data_dir = options.get("odin_data_dir", defaults.odin_data_dir)
+        # odin_data_dir = os.path.expanduser(odin_data_dir)
 
-        self.daq = HexitecDAQ(self.file_dir, self.file_name, odin_data_dir=odin_data_dir)
+        self.daq = HexitecDAQ(self.file_dir, self.file_name)
 
         # -------
 
@@ -601,7 +601,7 @@ class HexitecDetectorDefaults():
         self.save_file = "default_file"
         # self.vector_file_dir = "/aeg_sw/work/projects/qem/python/03052018/"
         # self.vector_file = "QEM_D4_198_ADC_10_icbias30_ifbias24.txt"
-        self.odin_data_dir = "~/develop/projects/odin-demo/install/"
+        # self.odin_data_dir = "~/develop/projects/odin-demo/install/"
         self.number_frames = 20
         self.acq_gap = 1
         self.fem = {

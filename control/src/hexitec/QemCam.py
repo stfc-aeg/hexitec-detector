@@ -72,7 +72,7 @@ class QemCam(object):
     
     def print_ram_depth(self):
         ram_depth = self.x10g_rdma.read(0xB0000010, 'qem sequencer ram depth reg 0')
-        print "%-32s %-8i" % ("-> sequencer ram depth :" ,ram_depth/8 )
+        print("%-32s %-8i" % ("-> sequencer ram depth :" ,ram_depth//8 ))
         time.sleep(self.delay)
         return
     
@@ -153,7 +153,7 @@ class QemCam(object):
         size_status = number_bytes_r4 + number_bytes_r8 + lp_number_bytes_r8 + lp_number_bytes_r32
         
         if size_status != 0:
-            print "%-32s %8i %8i %8i %8i %8i %8i" % ('-> size error', number_bytes, number_bytes_r4, number_bytes_r8, first_packets, lp_number_bytes_r8, lp_number_bytes_r32 )
+            print("%-32s %8i %8i %8i %8i %8i %8i" % ('-> size error', number_bytes, number_bytes_r4, number_bytes_r8, first_packets, lp_number_bytes_r8, lp_number_bytes_r32 ))
         else:   
             address = self.receiver | 0x01
             data = (pixel_count_max & 0x1FFFF) -1
@@ -189,7 +189,7 @@ class QemCam(object):
             
         # set up registers if no size errors     
         if size_status != 0:
-            print "%-32s %8i %8i %8i %8i %8i %8i" % ('-> size error', number_bytes, number_bytes_r4, number_bytes_r8, first_packets, lp_number_bytes_r8, lp_number_bytes_r32 )
+            print("%-32s %8i %8i %8i %8i %8i %8i" % ('-> size error', number_bytes, number_bytes_r4, number_bytes_r8, first_packets, lp_number_bytes_r8, lp_number_bytes_r32 ))
         else:   
             address = self.receiver | 0x01
             data = (pixel_count_max & 0x1FFFF) -1
@@ -243,7 +243,7 @@ class QemCam(object):
     
         
     def load_vectors_from_file(self, vector_file_name='default.txt'):
-        print "%-32s %s" % ("-> loading vector file:",vector_file_name)
+        print("%-32s %s" % ("-> loading vector file:",vector_file_name))
 
         #extract lines into array
         with open(vector_file_name, 'r') as f:
@@ -258,22 +258,22 @@ class QemCam(object):
           
             number_vectors = len(data)-3
           
-            print "%-32s %-8i" % ("-> vectors loaded:" ,number_vectors)
-            print "%-32s %-8i" % ("-> loop position :" ,loop_length)
-            print "%-32s %-8i" % ("-> init position :" ,init_length )
+            print("%-32s %-8i" % ("-> vectors loaded:" ,number_vectors))
+            print("%-32s %-8i" % ("-> loop position :" ,loop_length))
+            print("%-32s %-8i" % ("-> init position :" ,init_length ))
             f.close()
             
         self.stop_sequencer()
         
         #load sequencer RAM
-        print "%-32s %s" % ("-> Loading Sequncer RAM:", "")
+        print("%-32s %s" % ("-> Loading Sequncer RAM:", ""))
         for seq_address in range(number_vectors):
             words = data[seq_address+3].split()
             format_words = "%64s" % words[0]
             vector = int(words[0],2)
             lower_vector_word = vector & 0xFFFFFFFF
             upper_vector_word = vector >> 32
-            if self.debug_level == 0 : print "%64s %016X %8X %8X" % (format_words, vector, upper_vector_word, lower_vector_word)
+            if self.debug_level == 0 : print("%64s %016X %8X %8X" % (format_words, vector, upper_vector_word, lower_vector_word))
             #load fpga block ram
             ram_address = seq_address * 2 + 0xB1000000
             self.x10g_rdma.write(ram_address, lower_vector_word, 'qem seq ram loop 0')
@@ -336,16 +336,16 @@ class QemCam(object):
     
     
     def set_clock(self):
-        print "-> set clock not implemented yet..."
+        print("-> set clock not implemented yet...")
         return
     
     def i2c_write(self,address=0x0, data=0x0):
-        print "-> set clock not implemented yet..."
+        print("-> set clock not implemented yet...")
         
         return
     
     def i2c_read(self, i2c_addr=0x0):
-        print "-> set clock not implemented yet..."
+        print("-> set clock not implemented yet...")
         #setup i2c read command - read + address + data
         address = self.top_reg | 0x08
         i2c_address = i2c_addr & 0x7F
@@ -361,7 +361,7 @@ class QemCam(object):
         # check error status
         i2c_status = self.x10g_rdma.read(address, 0x0, 'i2c status')
         if i2c_status != 0x0 :
-            print "%-32s %1X" % ("-> i2c satus:", i2c_status)
+            print("%-32s %1X" % ("-> i2c satus:", i2c_status))
         # read i2c data
         address = self.top_reg | 0x18
         i2c_data = self.x10g_rdma.read(address, 'i2c read data') & 0xFF

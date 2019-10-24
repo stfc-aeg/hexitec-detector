@@ -7,4 +7,6 @@ source=
     .tox/py*/lib/python*/site-packages/
 
 [report]
-omit = *_version*
+omit = 
+    *_version*
+    */__init__.py
