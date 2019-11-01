@@ -1,4 +1,3 @@
-
 api_version = '0.1';
 var hexitec_url = '/api/' + api_version + '/hexitec/';
 
@@ -190,10 +189,12 @@ $( document ).ready(function()
         }, 1000);
     });
 
-    $('#coButton').on('click', function(event) {
+    $('#offsetsButton').on('click', function(event) {
 
         collect_offsets();
     });
+
+    
 });
 
 function collect_offsets() {
@@ -232,10 +233,31 @@ function poll_fem() {
         var status_error = response.fem.status_error;
         $('#odin-control-error').html(status_error);
 
-        console.log(" status_message: '" + status_message + "'. status_error: '" + status_error + "'.");
+        // console.log(" status_message: '" + status_message + "'. status_error: '" + status_error + "'.");
 
         var progress_element = document.getElementById("progress-odin");
         progress_element.value = percentage_complete;
+        // If status_error is set, highlighted by setting colour(s) to red
+        var connect_button = document.getElementById("connectButton");
+        var initialise_button = document.getElementById("initialiseButton");
+        var acquire_button = document.getElementById("acquireButton");
+        var offsets_button = document.getElementById("offsetsButton");
+        if (status_error.length > 0)
+        {
+            connect_button.style = "background-color:red";
+            initialise_button.style = "background-color:red";
+            acquire_button.style = "background-color:red";
+            offsets_button.style = "background-color:red";
+        }
+        else
+        {
+            connect_button.style = "background-color:none";
+            initialise_button.style = "background-color:none";
+            acquire_button.style = "background-color:none";
+            offsets_button.style = "background-color:none";
+        }
+        // console.log("prog_element.style: " + progress_element.style );
+        // progress_element.style = "width: 100%;background-color:red";
         // Keep running this function - Need an exit strategy???
         // window.setTimeout(poll_fem, 500);
 

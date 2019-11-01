@@ -20,9 +20,9 @@ class ImageStreamUDP(object):
 
         self.rxsocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, RxUDPBuf)
 
-        print "Rx: ", MasterRxUDPIPAddress, MasterRxUDPIPPort
+        print("Rx: ", MasterRxUDPIPAddress, MasterRxUDPIPPort)
         self.rxsocket.bind((MasterRxUDPIPAddress, MasterRxUDPIPPort))
-        print "Tx: ", MasterTxUDPIPAddress, MasterTxUDPIPPort
+        print("Tx: ", MasterTxUDPIPAddress, MasterTxUDPIPPort)
         self.txsocket.bind((MasterTxUDPIPAddress, MasterTxUDPIPPort))
 
         #self.rxsocket.settimeout(None)
@@ -74,7 +74,7 @@ class ImageStreamUDP(object):
         data_rem  = data_size % self.image_mtu
         if data_rem != 0: self.num_pkt = self.num_pkt + 1
         
-        print x_size, y_size, f_size, self.num_pkt
+        print(x_size, y_size, f_size, self.num_pkt)
         
         return
         
@@ -97,16 +97,16 @@ class ImageStreamUDP(object):
                 #data3 = (ord(pkt[pkt_top+7]) << 24) + (ord(pkt[pkt_top+6]) << 16) + (ord(pkt[pkt_top+5]) << 8) + ord(pkt[pkt_top+4])
                 # print trailer
                 pkt_str = "%08X %08X %08X %08X %08X" % (pkt_num, pkt_len, frame_number, packet_number)
-                print pkt_str
+                print(pkt_str)
             pld_len = (pkt_len-8)//2
             #build image
             pkt_str = "%08X %08X %08X %08X %08X" % (insert_point, pkt_num, pkt_len, self.num_pkt, pld_len)
-            print pkt_str
+            print(pkt_str)
             #print "Printing Header"
             data0 = (ord(pkt[3]) << 24) + (ord(pkt[2]) << 16) + (ord(pkt[1]) << 8) + ord(pkt[0])
             data1 = (ord(pkt[7]) << 24) + (ord(pkt[6]) << 16) + (ord(pkt[5]) << 8) + ord(pkt[4])
             pkt_str = "%08X %08X %08X" % (data1 , data0 , pkt_num)
-            print pkt_str            
+            print(pkt_str)            
             #pkt_array_1d=np.fromstring(pkt, dtype=np.uint16, count=6400)
             pkt_array_1d=np.fromstring(pkt[8:], dtype=np.uint16, count=pld_len)
             self.sensor_image_1d[insert_point:insert_point + pld_len] = pkt_array_1d
@@ -118,8 +118,8 @@ class ImageStreamUDP(object):
                 for i in range(0,20):
                     self.sensor_image_ro[pixel_count] = self.sensor_image_1d[(i*4)+j+(k*80)]
                     pixel_count = pixel_count + 1;
-        print "Pixel Count A"
-        print pixel_count
+        print("Pixel Count A")
+        print(pixel_count)
         #self.sensor_image = self.sensor_image_1d.reshape(self.image_size_x,self.image_size_y)
         self.sensor_image = self.sensor_image_ro.reshape(self.image_size_x,self.image_size_y)
         return self.sensor_image
@@ -135,8 +135,8 @@ class ImageStreamUDP(object):
                 pkt = self.rxsocket.recv(9000)
                 #extract trailer
                 pkt_len = len(pkt)
-                print "Image Number:-" , img_num
-                print "Packet Length:-" , pkt_len
+                print("Image Number:-" , img_num)
+                print("Packet Length:-" , pkt_len)
                 pld_len = (pkt_len-8)//2
 
                 pkt_array_1d=np.fromstring(pkt[8:], dtype=np.uint16, count=pld_len)

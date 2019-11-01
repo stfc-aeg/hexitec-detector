@@ -1,5 +1,7 @@
 [run]
-omit = "_version*
+omit = 
+    "_version*
+    test_ui/test_gui.py
 
 [paths]
 source=
@@ -10,3 +12,4 @@ source=
 omit = 
     *_version*
     */__init__.py
+    test_ui/test_gui.py

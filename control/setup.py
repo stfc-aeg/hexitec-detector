@@ -9,7 +9,16 @@ PY3 = (sys.version_info[0] == 3)
 required = [
     'odin',
     # 'odin_data',  # MANUAL INSTALL REQUIRED
-    'opencv-python'
+    'opencv-python',
+    # These come from requirements.txt, but tox too myopic to see that file...
+    # Seems they're no longer needed to make odin_server reg custom API adapters..
+    #'nose>=1.3.7',
+    #'coverage==4.1b2',
+    #'codeclimate-test-reporter>=0.1.0',
+    #'pyzmq>=15.2.0',
+    #'requests>=2.9.1',
+    #'tornado>=4.3,<5.0',
+    #'future'
 ]
 
 if PY3:

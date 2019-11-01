@@ -478,13 +478,7 @@ class Hexitec():
         self.daq.start_acquisition(self.number_frames)
         # for fem in self.fems:
         self.fem.setup_camera()
-            # fem.get_aligner_status()  # TODO: is this required?
-            # locked = fem.get_idelay_lock_status()
-            # if not locked:
-            #     fem.load_vectors_from_file()
         self.fem.collect_data()
-        # self.fems[0].frame_gate_settings(self.number_frames - 1, self.acq_gap)
-        # self.fems[0].frame_gate_trigger()
 
     # def _set_stop_acquisition(self, stop):
     #     self.fem._set_stop_acquisition = stop
