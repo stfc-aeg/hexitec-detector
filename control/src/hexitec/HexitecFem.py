@@ -1163,6 +1163,7 @@ class HexitecFem():
             self.send_cmd([0x23, 0x90, 0x53, 0x31, 0x43, 0x33, 0x42, 0x0d])
             self.read_response()
 
+    #TODO: Complete or remove this func?
     def setup_camera(self, put_string="None"):
         logging.debug("SETTING UP CAMERA")
         logging.debug("This function to replace initialise_system; Just sleep for a second for now..")

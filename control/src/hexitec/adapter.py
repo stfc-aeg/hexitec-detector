@@ -221,7 +221,45 @@ class Hexitec():
 
         self.adapters = {}
 
-        self.fem = HexitecFem()
+#        self.fem = HexitecFem()
+        self.fems = []
+        for key, value in options.items():
+            logging.debug("%s: %s", key, value)
+            if "fem" in key:
+                fem_info = value.split(',')
+                fem_info = [(i.split('=')[0], i.split('=')[1]) for i in fem_info]
+                fem_dict = {fem_key.strip(): fem_value.strip() for (fem_key, fem_value) in fem_info}
+                logging.debug(fem_dict)
+
+                self.fems.append(HexitecFem(
+                    fem_dict.get("ip_addr", defaults.fem["ip_addr"]),
+                    fem_dict.get("port", defaults.fem["port"]),
+                    fem_dict.get("id", defaults.fem["id"]),
+                    fem_dict.get("server_ctrl_ip_addr", defaults.fem["server_ctrl_ip"]),
+                    fem_dict.get("camera_ctrl_ip_addr", defaults.fem["camera_ctrl_ip"]),
+                    fem_dict.get("server_data_ip_addr", defaults.fem["server_data_ip"]),
+                    fem_dict.get("camera_data_ip_addr", defaults.fem["camera_data_ip"])
+                    # vector file only required for the "main" FEM, fem_0
+                    #self.vector_file_dir,
+                    #self.vector_file
+                ))
+
+        if not self.fems:  # if self.fems is empty
+            self.fems.append(HexitecFem(
+                ip_address=defaults.fem["ip_addr"],
+                port=defaults.fem["port"],
+                fem_id=defaults.fem["id"],
+                server_ctrl_ip_addr=defaults.fem["server_ctrl_ip"],
+                camera_ctrl_ip_addr=defaults.fem["camera_ctrl_ip"],
+                server_data_ip_addr=defaults.fem["server_data_ip"],
+                camera_data_ip_addr=defaults.fem["camera_data_ip"]
+                #vector_file_dir=self.vector_file_dir,
+                #vector_file=self.vector_file
+            ))
+
+        fem_tree = {}
+        for fem in self.fems:
+            fem_tree["fem_{}".format(fem.id)] = fem.param_tree
 
         # Store initialisation time
         self.init_time = time.time()
@@ -235,20 +273,9 @@ class Hexitec():
         self.sensors_layout = "2x2"
         self.vcal = 3               # 0-2: Calibrated Image 0-2; 3: Normal data
 
-        self.pixel_grid_size = 3
-        self.gradients_filename = ""
-        self.intercepts_filename = ""
-        self.bin_end = 8000
-        self.bin_start = 0
-        self.bin_width = 10.0
-        self.max_frames_received = 10
-        self.raw_data = False
-        self.threshold_filename = ""
-        self.threshold_mode = "value"
-        self.threshold_value = 100
-
         detector = ParameterTree({
-            "fem": self.fem.param_tree,
+            # "fem": self.fems.param_tree,
+            "fems": fem_tree,
             "daq": self.daq.param_tree,
             "connect_hardware": (None, self.connect_hardware),
             "initialise_hardware": (None, self.initialise_hardware),
@@ -261,32 +288,6 @@ class Hexitec():
             "sensors_layout": (self._get_sensors_layout, self._set_sensors_layout),
             "vcal": (self._get_vcal, self._set_vcal),
             "debug_count": (self._get_debug_count, self._set_debug_count),
-            "config": {
-                "addition": {
-                    "pixel_grid_size": (lambda: self.pixel_grid_size, self._set_pixel_grid_size)#,
-                },
-                "calibration": {
-                    "gradients_filename": (lambda: self.gradients_filename, self._set_gradients_filename),
-                    "intercepts_filename": (lambda: self.intercepts_filename, self._set_intercepts_filename)#,
-                },
-                "discrimination": {
-                    "pixel_grid_size": (lambda: self.pixel_grid_size, self._set_pixel_grid_size)#,
-                },
-                "histogram": {
-                    "bin_end": (lambda: self.bin_end, self._set_bin_end),
-                    "bin_start": (lambda: self.bin_start, self._set_bin_start),
-                    "bin_width": (lambda: self.bin_width, self._set_bin_width),
-                    "max_frames_received": (lambda: self.max_frames_received, self._set_max_frames_received)#,
-                },
-                "reorder": {
-                    "raw_data": (lambda: self.raw_data, self._set_raw_data)#,
-                },
-                "threshold": {
-                    "threshold_filename": (lambda: self.threshold_filename, self._set_threshold_filename),
-                    "threshold_mode": (lambda: self.threshold_mode, self._set_threshold_mode),
-                    "threshold_value": (lambda: self.threshold_value, self._set_threshold_value)
-                }
-            },
             # Implement acquisition through daq class:
             "acquisition": {
                 "num_frames": (lambda: self.number_frames, self.set_number_frames),
@@ -310,44 +311,42 @@ class Hexitec():
         IOLoop.instance().add_callback(self.poll_histograms)  # Polling Histogram status
 
     def poll_histograms(self):
-        if (self.fem.acquisition_completed):
-            timeout = time.time() - self.fem.acquisition_timestamp
-            if (timeout > 1.0):
-                # Issue reset to histogram
-                command = "config/histogram/flush_histograms"
-                request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-                request.body = "{}".format(1)
-                self.adapters["fp"].put(command, request)
-                # Clear fem's Boolean
-                self.fem.acquisition_completed = False
+        for fem in self.fems:
+            if fem.acquisition_completed:
+                timeout = time.time() - fems.acquisition_timestamp
+                if (timeout > 1.0):
+                    # Issue reset to histogram
+                    command = "config/histogram/flush_histograms"
+                    request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+                    request.body = "{}".format(1)
+                    self.adapters["fp"].put(command, request)
+                    # Clear fem's Boolean
+                    fems.acquisition_completed = False
 
         time.sleep(0.5)
         IOLoop.instance().call_later(0.5, self.poll_histograms)
 
     def connect_hardware(self, msg):
-        self.fem.connect_hardware(msg)
-      
+        for fem in self.fems:
+            fem.connect_hardware(msg)
+
     def initialise_hardware(self, msg):
-        self.fem.initialise_hardware(msg)
+        for fem in self.fems:
+            fem.initialise_hardware(msg)
 
     def collect_data(self, msg):
-        self.fem.collect_data(msg)
+        for fem in self.fems:
+            fem.collect_data(msg)
 
     def disconnect_hardware(self, msg):
-        self.fem.disconnect_hardware(msg)
+        for fem in self.fems:
+            fem.disconnect_hardware(msg)
 
     def set_number_frames(self, frames):
         self.number_frames = frames
         # Update number of frames in Hardware, and histogram and hdf plugins
-        self.fem._set_number_frames(self.number_frames)
-
-        # Avoid config/histogram/max_frames_received - use own paramTree instead
-        self._set_max_frames_received(self.number_frames)
-
-        command = "config/hdf/frames"
-        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-        request.body = "{}".format(self.number_frames)
-        self.adapters["fp"].put(command, request)
+        for fem in self.fems:
+            fem._set_number_frames(self.number_frames)
 
         self.daq.set_file_writing(False)
         self.daq.set_file_writing(True)
@@ -476,12 +475,12 @@ class Hexitec():
             logging.warning("Cannot Start Acquistion: Already in progress")
             return
         self.daq.start_acquisition(self.number_frames)
-        # for fem in self.fems:
-        self.fem.setup_camera()
-        self.fem.collect_data()
+        for fem in self.fems:
+            self.fems.setup_camera()    #TODO: Complete or remove this func?
+            self.fems.collect_data()
 
     # def _set_stop_acquisition(self, stop):
-    #     self.fem._set_stop_acquisition = stop
+    #     self.fems._set_stop_acquisition = stop
 
     def _get_sensors_layout(self):
         return self.sensors_layout
@@ -516,14 +515,16 @@ class Hexitec():
         Sets vcal in Fem(s)
         """
         self.vcal = vcal
-        self.fem._set_test_mode_image(vcal)
+        for fem in self.fems:
+            fem._set_test_mode_image(vcal)
 
     def _collect_offsets(self, msg):
         """
         Instructs fem(s) to collect offsets
         """
-        self.fem.collect_offsets()        
-        
+        for fem in self.fems:
+            fem.collect_offsets()        
+
     def commit_configuration(self, msg):
         """
         Pushes settings in 'config/' ParameterTree into FP's plugins
@@ -602,8 +603,8 @@ class HexitecDetectorDefaults():
             "ip_addr": "192.168.0.122",
             "port": "8070",
             "id": 0,
-            "server_ctrl_ip": "10.0.1.2",
-            "camera_ctrl_ip": "10.0.1.102",
-            "server_data_ip": "10.0.2.2",
-            "camera_data_ip": "10.0.2.102"
+            "server_ctrl_ip": "10.0.2.2",
+            "camera_ctrl_ip": "10.0.2.1",
+            "server_data_ip": "10.0.4.2",
+            "camera_data_ip": "10.0.4.1"
         }
