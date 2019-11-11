@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
@@ -31,42 +30,52 @@ class HexitecFem():
     thread_executor = futures.ThreadPoolExecutor(max_workers=2)
 
     OPTIONS = [
-    "Sensor_1_1",
-    "Sensor_1_2",
-    "Sensor_2_1",
-    "Sensor_2_2"
+        "Sensor_1_1",
+        "Sensor_1_2",
+        "Sensor_2_1",
+        "Sensor_2_2"
     ]
 
     IMAGE = [
-    "LOG HDF5 FILE",
-    "LOG BIN FILE",
-    "STREAM DATA",
-    "NETWORK PACKETS ONLY"
+        "LOG HDF5 FILE",
+        "LOG BIN FILE",
+        "STREAM DATA",
+        "NETWORK PACKETS ONLY"
     ]
 
     TESTMODEIMAGE = [
-    0,
-    1,
-    2,
-    3]
+        0,
+        1,
+        2,
+        3
+    ]
 
     DARKCORRECTION = [
-    0,
-    1]
+        0,
+        1
+    ]
 
     READOUTMODE = [
-    "SINGLE",
-    "2x2"]
+        "SINGLE",
+        "2x2"
+    ]
 
+    VSR_ADDRESS = [
+        0x90,
+        0x91
+    ]
 
     def __init__(self, ip_address='127.0.0.1', port=1232, fem_id=1,
                 server_ctrl_ip_addr='10.0.2.2', camera_ctrl_ip_addr='10.0.2.1',
-                server_data_ip_addr='10.0.4.2', camera_data_ip_addr='10.0.4.1'):
+                server_data_ip_addr='10.0.4.2', camera_data_ip_addr='10.0.4.1',
+                callback_function=None):
 
         self.ip_address = ip_address
         self.port = port
         self.id = int(fem_id)
         self.x10g_rdma = None
+
+        self.callback_function = callback_function
 
         # 10G RDMA IP addresses
         self.server_ctrl_ip_addr = server_ctrl_ip_addr    #'10.0.2.2'
@@ -78,7 +87,6 @@ class HexitecFem():
 
         # FPGA base addresses
         self.rdma_addr = {
-            # "sequencer":       0xB0000000,
             "receiver":        0xC0000000,
             "frm_gate":        0xD0000000
         }
@@ -90,12 +98,14 @@ class HexitecFem():
         
         self.strm_mtu = 8000
 
-        self.vsr_addr = 0x90
+        self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
 
         self.number_of_frames = 10
 
         self.hardware_connected = False
         self.hardware_initialising = False
+
+        self.health = True
 
         # Acquisition completed, note completion
         self.acquisition_completed = False
@@ -116,17 +126,45 @@ class HexitecFem():
         self.dark_correction    = HexitecFem.DARKCORRECTION[0]  # "DARK CORRECTION OFF" = 0
         self.test_mode_image    = HexitecFem.TESTMODEIMAGE[3]   # "IMAGE 4" [3]=without vcal, [0]=vcal on, needed for DC..?
 
+        self.vsr1_ambient    = 0
+        self.vsr1_humidity   = 0
+        self.vsr1_asic1      = 0
+        self.vsr1_asic2      = 0
+        self.vsr1_adc        = 0
+
+        self.vsr2_ambient    = 0
+        self.vsr2_humidity   = 0
+        self.vsr2_asic1      = 0
+        self.vsr2_asic2      = 0
+        self.vsr2_adc        = 0
+
         param_tree_dict = {
             "ip_addr": (self.get_address, None),    # Replicated, not needed going forwards?
             "port": (self.get_port, None),          # Replicated, not needed going forwards?
             "id": (self.id, None),
             "debug": (self.get_debug, self.set_debug),
+            "health": (lambda: self.health, None),
             "status_message": (self._get_status_message, None),
             "status_error": (self._get_status_error, None),
             "initialise_progress": (self._get_initialise_progress, None),
             "operation_percentage_complete": (self._get_operation_percentage_complete, None),
             "dark_correction": (self._get_dark_correction, self._set_dark_correction),
             "number_frames": (self._get_number_frames, self._set_number_frames),
+            "read_sensors": (None, self.read_sensors),
+            "vsr1_sensors": {
+                "ambient": (lambda: self.vsr1_ambient, None),
+                "humidity": (lambda: self.vsr1_humidity, None),
+                "asic1": (lambda: self.vsr1_asic1, None),
+                "asic2": (lambda: self.vsr1_asic2, None),
+                "adc": (lambda: self.vsr1_adc, None),
+            },
+            "vsr2_sensors": {
+                "ambient": (lambda: self.vsr2_ambient, None),
+                "humidity": (lambda: self.vsr2_humidity, None),
+                "asic1": (lambda: self.vsr2_asic1, None),
+                "asic2": (lambda: self.vsr2_asic2, None),
+                "adc": (lambda: self.vsr2_adc, None),
+            }
         }
 
         self.param_tree = ParameterTree(param_tree_dict)
@@ -146,6 +184,16 @@ class HexitecFem():
             raise socket_error("Failed to setup Control connection: %s" % e)
 
         return
+
+    def read_sensors(self, msg):
+            # DEBUGGING: let's try reading out those temperature And humidity values
+            vsr = self.vsr_addr
+            self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
+            self.read_temperatures_humidity_values()
+            self.vsr_addr = HexitecFem.VSR_ADDRESS[1]
+            self.read_temperatures_humidity_values()
+            self.vsr_addr = vsr
+            ###
 
     def disconnect(self):
         # should be called on shutdown to close sockets
@@ -227,12 +275,23 @@ class HexitecFem():
 
     def _set_status_message(self, message):
         self.status_message = message
+        # Transition to communicate via adapter..
+        (errorOK, this_fem, last_fem) = self.callback_function(self.id, self.health, self.status_message, self.status_error)
+        if errorOK != True:
+            logging.error("Current FEM (id: %s) prevented from clearing error flagged by \
+                    FEM(id: %s) (DBG, self.id: %s)" % (this_fem, last_fem, self.id))
 
     def _get_status_error(self):
         return self.status_error
 
     def _set_status_error(self, error):
+        if error == "":
+            self.health = True
+        else:
+            self.health = False
         self.status_error = str(error)
+        # Transition to communicate via adapter..
+        self.callback_function(self.id, self.health, self.status_message, self.status_error)
 
     def _set_stop_acquisition(self, stop):
         self.stop_acquisition = stop
@@ -455,9 +514,9 @@ class HexitecFem():
         try:
             self.connect()
             logging.debug("Camera connected")
-            self.send_cmd([0x23, 0x90, 0xE3, 0x0D])
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0xE3, 0x0D])
             time.sleep(1)                           # Redundant/can be reduced?
-            self.send_cmd([0x23, 0x91, 0xE3, 0x0D])
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0xE3, 0x0D])
             logging.debug("Modules Enabled")
         except socket_error as e:
             raise HexitecFemError(e)
@@ -465,8 +524,8 @@ class HexitecFem():
 
     def cam_disconnect(self):
         try:
-            self.send_cmd([0x23, 0x90, 0xE2, 0x0D])
-            self.send_cmd([0x23, 0x91, 0xE2, 0x0D])
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0xE2, 0x0D])
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0xE2, 0x0D])
             # self.close()
             logging.debug("Modules Disabled")
             self.disconnect()
@@ -486,11 +545,11 @@ class HexitecFem():
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
             self.x10g_rdma.write(0x60000004, 0, 'Set bit 0 to 1 to generate test pattern in FEMII, bits [2:1] select which of the 4 sensors is read - data 1_1')
             logging.debug("Initialising sensors on board VSR_1")
-            self.vsr_addr = 0x90
+            self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
         if self.selected_sensor == HexitecFem.OPTIONS[2]:
             self.x10g_rdma.write(0x60000004, 4, 'Set bit 0 to 1 to generate test pattern in FEMII, bits [2:1] select which of the 4 sensors is read - data 2_1')
             logging.debug("Initialising sensors on board VSR 2")
-            self.vsr_addr = 0x91  
+            self.vsr_addr = HexitecFem.VSR_ADDRESS[1]  
 
         if self.sensors_layout == HexitecFem.READOUTMODE[0]:
             logging.debug("Disable synchronisation SM start")
@@ -519,8 +578,8 @@ class HexitecFem():
         self.send_cmd([0x23, self.vsr_addr, 0x42, 0x30, 0x31, 0x31, 0x30, 0x0D])
         self.read_response()
         logging.debug("Enable LVDS outputs")
-        set_register_vsr1_command  = [0x23, 0x90, 0x42, 0x30, 0x31, 0x32, 0x30, 0x0D]
-        set_register_vsr2_command  = [0x23, 0x91, 0x42, 0x30, 0x31, 0x32, 0x30, 0x0D]
+        set_register_vsr1_command  = [0x23, HexitecFem.VSR_ADDRESS[0], 0x42, 0x30, 0x31, 0x32, 0x30, 0x0D]
+        set_register_vsr2_command  = [0x23, HexitecFem.VSR_ADDRESS[1], 0x42, 0x30, 0x31, 0x32, 0x30, 0x0D]
         self.send_cmd(set_register_vsr1_command)
         self.read_response()
         self.send_cmd(set_register_vsr2_command)
@@ -878,23 +937,23 @@ class HexitecFem():
             self.operation_percentage_steps = 15
 
             print("\n\nReading back register value 24")
-            self.send_cmd([0x23, 0x90, 0x41, 0x32, 0x34, 0x0D])
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x41, 0x32, 0x34, 0x0D])
             vsr1 = self.read_response()
-            self.send_cmd([0x23, 0x91, 0x41, 0x32, 0x34, 0x0D])
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x41, 0x32, 0x34, 0x0D])
             vsr2 = self.read_response()
             print("VSR1: '%s' VSR2: '%s'\n\n" % (vsr1.replace('\r', ''), vsr2.replace('\r','')))
 
             self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x31, 0x30, 0x0D])    # Set Bit, 10 -> 10000 (Bits: 4)
             self.read_response()
 
-            enable_dc_vsr1  = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]  # 0x32, 0x34, 0x32, 0x32, == 24; 22
-            enable_dc_vsr2  = [0x23, 0x91, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]
-            disable_dc_vsr1 = [0x23, 0x90, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]  # 0x32, 0x34, 0x32, 0x38, == 24; 28
-            disable_dc_vsr2 = [0x23, 0x91, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]
-            enable_sm_vsr1  = [0x23, 0x90, 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
-            enable_sm_vsr2  = [0x23, 0x90, 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
-            disable_sm_vsr1 = [0x23, 0x90, 0x43, 0x30, 0x31, 0x30, 0x30, 0x0D]
-            disable_sm_vsr2 = [0x23, 0x90, 0x43, 0x30, 0x31, 0x30, 0x30, 0x0D]
+            enable_dc_vsr1  = [0x23, HexitecFem.VSR_ADDRESS[0], 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]  # 0x32, 0x34, 0x32, 0x32, == 24; 22
+            enable_dc_vsr2  = [0x23, HexitecFem.VSR_ADDRESS[1], 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]
+            disable_dc_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]  # 0x32, 0x34, 0x32, 0x38, == 24; 28
+            disable_dc_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]
+            enable_sm_vsr1  = [0x23, HexitecFem.VSR_ADDRESS[0], 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
+            enable_sm_vsr2  = [0x23, HexitecFem.VSR_ADDRESS[1], 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
+            disable_sm_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], 0x43, 0x30, 0x31, 0x30, 0x30, 0x0D]
+            disable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], 0x43, 0x30, 0x31, 0x30, 0x30, 0x0D]
 
             # 1. System is fully initialised (Done already)
 
@@ -957,6 +1016,18 @@ class HexitecFem():
             self.operation_percentage_complete = 100
             self._set_status_message("Offsets collections operation completed.")
 
+            # # DEBUGGING: let's try reading out those temperature And humidity values
+            # vsr = self.vsr_addr
+            # self.read_temperatures_humidity_values()
+            # ###
+            # DEBUGGING: let's try reading out those temperature And humidity values
+            vsr = self.vsr_addr
+            self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
+            self.read_temperatures_humidity_values()
+            self.vsr_addr = HexitecFem.VSR_ADDRESS[1]
+            self.read_temperatures_humidity_values()
+            self.vsr_addr = vsr
+            ###
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Can't collect offsets without a working connection: %s" % str(e))
             logging.error("%s" % str(e))
@@ -1152,15 +1223,15 @@ class HexitecFem():
             self.read_response()  
         elif self.test_mode_image == HexitecFem.TESTMODEIMAGE[2]:
             # 0x3FF7 - Word 2
-            self.send_cmd([0x23, 0x90, 0x53, 0x31, 0x42, 0x46, 0x37, 0x0d])
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x53, 0x31, 0x42, 0x46, 0x37, 0x0d])
             self.read_response()
-            self.send_cmd([0x23, 0x90, 0x53, 0x31, 0x43, 0x33, 0x46, 0x0d])
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x53, 0x31, 0x43, 0x33, 0x46, 0x0d])
             self.read_response()
         elif self.test_mode_image == HexitecFem.TESTMODEIMAGE[3]:
             # 0x3BFF - Word 2
-            self.send_cmd([0x23, 0x90, 0x53, 0x31, 0x42, 0x46, 0x46, 0x0d])
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x53, 0x31, 0x42, 0x46, 0x46, 0x0d])
             self.read_response()
-            self.send_cmd([0x23, 0x90, 0x53, 0x31, 0x43, 0x33, 0x42, 0x0d])
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x53, 0x31, 0x43, 0x33, 0x42, 0x0d])
             self.read_response()
 
     #TODO: Complete or remove this func?
@@ -1214,8 +1285,102 @@ class HexitecFem():
         self._set_status_message("VSR1: ADC enabled")
         synced_status = self.calibrate_sensor()
         logging.debug("Synchronised: %s" % synced_status)  # Saying it's 15..
-
+        print("----------------------------------------------------------------------------------------------")
         self._set_status_message("Initialisation completed. VSR2 and VS1 configured.");
+
+    def read_temperatures_humidity_values(self):
+        logging.debug("------------------------------------------------------ VSR addr: %s Read temperature, humidity values.. ------------------------------------------------------" % self.vsr_addr)
+        self.send_cmd([0x23, self.vsr_addr, 0x52, 0x0D])
+        sensors_values = self.read_response()
+
+        ambient_hex     = sensors_values.strip()[1:5]
+        humidity_hex    = sensors_values.strip()[5:9]
+        asic1_hex       = sensors_values.strip()[9:13]
+        asic2_hex       = sensors_values.strip()[13:17]
+        adc_hex         = sensors_values.strip()[17:21]
+
+        if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
+            self.vsr1_ambient     = self.get_ambient_temperature(ambient_hex)
+            self.vsr1_humidity    = self.get_humidity(humidity_hex)
+            self.vsr1_asic1       = self.get_asic_temperature(asic1_hex)
+            self.vsr1_asic2       = self.get_asic_temperature(asic2_hex)
+            self.vsr1_adc         = self.get_adc_temperature(adc_hex)
+            logging.debug("Ambient: %.2fC\tHumidity: %.2f%s\tAsic1: %.2fC\tAsic2: %.2fC\tAdc: %.2fC" % (self.vsr1_ambient, self.vsr1_humidity, "%", self.vsr1_asic1, self.vsr1_asic2, self.vsr1_adc))
+        else:
+            if (self.vsr_addr == HexitecFem.VSR_ADDRESS[1]):
+                self.vsr2_ambient     = self.get_ambient_temperature(ambient_hex)
+                self.vsr2_humidity    = self.get_humidity(humidity_hex)
+                self.vsr2_asic1       = self.get_asic_temperature(asic1_hex)
+                self.vsr2_asic2       = self.get_asic_temperature(asic2_hex)
+                self.vsr2_adc         = self.get_adc_temperature(adc_hex)
+                logging.debug("Ambient: %.2fC\tHumidity: %.2f%s\tAsic1: %.2fC\tAsic2: %.2fC\tAdc: %.2fC" % (self.vsr2_ambient, self.vsr2_humidity, "%", self.vsr2_asic1, self.vsr2_asic2, self.vsr2_adc))
+
+
+        logging.debug("------------------------------------------------------ Temperature, humidity values read! ------------------------------------------------------")
+
+    # Calc ambient temp: [1ST VALUE]
+    def get_ambient_temperature(self, hex_val):
+        try:
+            return ((int(hex_val, 16) * 175.72) / 65536) - 46.84
+        except ValueError as e:
+            logging.error("Error converting ambient temperature: %s" % e)
+            return -1
+
+    # Calc  Humidity: [2ND VALUE]
+    def get_humidity(self, hex_val):
+        try:
+            return ((int(hex_val, 16) * 125) / 65535) - 6
+        except ValueError as e:
+            logging.error("Error converting humidity: %s" % e)
+            return -1
+
+    # Calc ASIC temp: [3RD & 4TH VALUE]
+    def get_asic_temperature(self, hex_val):
+        try:
+            return int(hex_val, 16) * 0.0625
+        except ValueError as e:
+            logging.error("Error converting ASIC temperature: %s" % e)
+            return -1
+
+    # Calc ADC Temperature: [5TH VALUE]
+    def get_adc_temperature(self, hex_val):
+        try:
+            return int(hex_val, 16) * 0.0625
+        except ValueError as e:
+            logging.error("Error converting ADC temperature: %s" % e)
+            return -1
+
+
+    # -=-=-=-=-=-
+    # Example:
+    # s = '\x907BD8297002DE0A0002F2FF\r\r\r\r'
+    # I.e.:
+    #\x90  7BD8 2970 02DE 0A00 02F2 FF
+
+    # >>> a = s.strip()[1:5]
+    # >>> b = s.strip()[5:9]
+    # >>> c = s.strip()[9:13]
+    # >>> d = s.strip()[13:17]
+    # >>> e = s.strip()[17:21]
+    # >>>
+    # >>> a = s.strip()[1:5]
+    # >>> a, b, c, d ,e
+    # ('7BD8', '2970', '02DE', '0A00', '02F2')
+    # >>> get_adc_temp(a)
+    # 1981.5
+    # >>> get_adc_temp('0x7BD8')
+    # 1981.5
+    # >>>
+    # >>> get_amb_temp(a)
+    # 38.167124023437495
+    # >>> get_humidity(b)
+    # 14.233463035019454
+    # >>> get_asic_temp(c)
+    # 45.875
+    # >>> get_asic_temp(d)
+    # 160.0
+    # >>> get_adc_temp(e)
+    # 47.125
 
 
 class HexitecFemError(Exception):

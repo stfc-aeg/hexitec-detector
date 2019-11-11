@@ -2,7 +2,7 @@
 
 This class implements an adapter used for Hexitec
 
-Christian Angelsen, STFC Application Engineering
+Christian Angelsen, STFC Detector Systems Software Group
 """
 import logging
 import tornado
@@ -195,33 +195,23 @@ class Hexitec():
     # executor = futures.ThreadPoolExecutor(max_workers=1)
     thread_executor = futures.ThreadPoolExecutor(max_workers=1)
 
-    THRESHOLDOPTIONS = ["value", "filename", "none"]
-
     def __init__(self, options):
         """
         Initialise the Hexitec object.
 
-        This constructor initlialises the Hexitec object, building a parameter tree and
+        This constructor initialises the Hexitec object, building a parameter tree and
         launching a background task if enabled
         """
         # Begin implementing DAQ code..
         defaults = HexitecDetectorDefaults()
         self.file_dir = options.get("save_dir", defaults.save_dir)
         self.file_name = options.get("save_file", defaults.save_file)
-        # self.vector_file_dir = options.get("vector_file_dir", defaults.vector_file_dir)
-        # self.vector_file = options.get("vector_file_name", defaults.vector_file)
         self.number_frames = options.get("acquisition_num_frames", defaults.number_frames)
-        # self.acq_gap = options.get("acquisition_frame_gap", defaults.acq_gap)
-        # odin_data_dir = options.get("odin_data_dir", defaults.odin_data_dir)
-        # odin_data_dir = os.path.expanduser(odin_data_dir)
 
         self.daq = HexitecDAQ(self.file_dir, self.file_name)
 
-        # -------
-
         self.adapters = {}
 
-#        self.fem = HexitecFem()
         self.fems = []
         for key, value in options.items():
             logging.debug("%s: %s", key, value)
@@ -238,10 +228,8 @@ class Hexitec():
                     fem_dict.get("server_ctrl_ip_addr", defaults.fem["server_ctrl_ip"]),
                     fem_dict.get("camera_ctrl_ip_addr", defaults.fem["camera_ctrl_ip"]),
                     fem_dict.get("server_data_ip_addr", defaults.fem["server_data_ip"]),
-                    fem_dict.get("camera_data_ip_addr", defaults.fem["camera_data_ip"])
-                    # vector file only required for the "main" FEM, fem_0
-                    #self.vector_file_dir,
-                    #self.vector_file
+                    fem_dict.get("camera_data_ip_addr", defaults.fem["camera_data_ip"]),
+                    self.callback_function
                 ))
 
         if not self.fems:  # if self.fems is empty
@@ -252,9 +240,8 @@ class Hexitec():
                 server_ctrl_ip_addr=defaults.fem["server_ctrl_ip"],
                 camera_ctrl_ip_addr=defaults.fem["camera_ctrl_ip"],
                 server_data_ip_addr=defaults.fem["server_data_ip"],
-                camera_data_ip_addr=defaults.fem["camera_data_ip"]
-                #vector_file_dir=self.vector_file_dir,
-                #vector_file=self.vector_file
+                camera_data_ip_addr=defaults.fem["camera_data_ip"],
+                callback_function=self.callback_function
             ))
 
         fem_tree = {}
@@ -267,14 +254,16 @@ class Hexitec():
         # Get package version information
         version_info = get_versions()
 
+        self.vcal = 3               # 0-2: Calibrated Image 0-2; 3: Normal data
+        
+        self.fem_id = 101
+        self.health = True
+        self.status_message = ""
+        self.status_error = ""
+
         self.dbgCount = 0
 
-        # ParameterTree variables
-        self.sensors_layout = "2x2"
-        self.vcal = 3               # 0-2: Calibrated Image 0-2; 3: Normal data
-
         detector = ParameterTree({
-            # "fem": self.fems.param_tree,
             "fems": fem_tree,
             "daq": self.daq.param_tree,
             "connect_hardware": (None, self.connect_hardware),
@@ -284,14 +273,18 @@ class Hexitec():
             "collect_offsets": (None, self._collect_offsets),
             "commit_configuration": (None, self.commit_configuration),
             # "stop_acquisition": (None, self._set_stop_acquisition),
-            # Move sensors_layout into own subtree?
-            "sensors_layout": (self._get_sensors_layout, self._set_sensors_layout),
             "vcal": (self._get_vcal, self._set_vcal),
             "debug_count": (self._get_debug_count, self._set_debug_count),
             # Implement acquisition through daq class:
             "acquisition": {
                 "num_frames": (lambda: self.number_frames, self.set_number_frames),
                 "start_acq": (None, self.acquisition)
+            },
+            "status": {
+                "fem_id": (lambda: self.fem_id, None),
+                "system_health": (lambda: self.health, None),
+                "status_message": (lambda: self.status_message, None),
+                "status_error": (lambda: self.status_error, None)
             }
         })
 
@@ -302,10 +295,23 @@ class Hexitec():
             "server_uptime": (self.get_server_uptime, None),
             "detector": detector
         })
-        self.update_rows_columns_pixels()
 
         self.start_polling()
 
+    def callback_function(self, fem_id, health, message, error):
+        (errorOK, this_fem, last_fem) = (True, None, None)
+        if (fem_id != self.fem_id) and (health == True) and (self.health == False):
+            # self.fem_id already signalled an error, prevent (different) fem_id clearing that error
+            (errorOK, this_fem, last_fem) = (False, fem_id, self.fem_id)
+        else:
+            self.fem_id = fem_id
+            self.health = health
+            self.status_message = message
+            self.status_error = error
+            # print("  !!! adapter.py rx'd  : ", self.fem_id, self.health, self.status_message, self.status_error, "  --------------------------------------------------------------------------------")
+        return (errorOK, this_fem, last_fem)
+
+    ## Move polling thread to hexitecDaq? - DAQ has no handle(s) of fem(s)..
     @run_on_executor(executor='thread_executor')
     def start_polling(self):
         IOLoop.instance().add_callback(self.poll_histograms)  # Polling Histogram status
@@ -313,7 +319,7 @@ class Hexitec():
     def poll_histograms(self):
         for fem in self.fems:
             if fem.acquisition_completed:
-                timeout = time.time() - fems.acquisition_timestamp
+                timeout = time.time() - fem.acquisition_timestamp
                 if (timeout > 1.0):
                     # Issue reset to histogram
                     command = "config/histogram/flush_histograms"
@@ -321,8 +327,10 @@ class Hexitec():
                     request.body = "{}".format(1)
                     self.adapters["fp"].put(command, request)
                     # Clear fem's Boolean
-                    fems.acquisition_completed = False
-
+                    fem.acquisition_completed = False
+        #TODO: Also check sensor values?
+        # ..
+        
         time.sleep(0.5)
         IOLoop.instance().call_later(0.5, self.poll_histograms)
 
@@ -344,114 +352,15 @@ class Hexitec():
 
     def set_number_frames(self, frames):
         self.number_frames = frames
-        # Update number of frames in Hardware, and histogram and hdf plugins
+        # Update number of frames in Hardware, and (via DAQ) histogram and hdf plugins
         for fem in self.fems:
             fem._set_number_frames(self.number_frames)
+
+        self.daq.set_number_frames(self.number_frames)
 
         self.daq.set_file_writing(False)
         self.daq.set_file_writing(True)
         
-    def update_rows_columns_pixels(self):
-        """
-        Updates rows, columns and pixels from new sensors_layout value
-        """
-        self.rows, self.columns = self.sensors_layout.split("x")
-        self.rows = int(self.rows) * 80
-        self.columns = int(self.columns) * 80
-        self.pixels = self.rows * self.columns
-
-    def _set_pixel_grid_size(self, size):
-        if (self.pixel_grid_size in [3, 5]):
-            self.pixel_grid_size = size
-        else:
-            raise ParameterTreeError("Must be either 3 or 5")
-
-    def _set_gradients_filename(self, gradients_filename):
-        if (os.path.isfile(gradients_filename) == False):
-            raise ParameterTreeError("Gradients file doesn't exist")
-        self.gradients_filename = gradients_filename
-
-    def _set_intercepts_filename(self, intercepts_filename):
-        if (os.path.isfile(intercepts_filename) == False):
-            raise ParameterTreeError("Intercepts file doesn't exist")
-        self.intercepts_filename = intercepts_filename
-
-    def _set_bin_end(self, bin_end):
-        """
-        Updates bin_end, datasets' histograms' dimensions
-        """
-        self.bin_end = bin_end
-        self.update_histogram_dimensions()
-    
-    def _set_bin_start(self, bin_start):
-        """
-        Updates bin_start, datasets' histograms' dimensions
-        """
-        self.bin_start = bin_start
-        self.update_histogram_dimensions()
-    
-    def _set_bin_width(self, bin_width):
-        """
-        Updates bin_width, datasets' histograms' dimensions
-        """
-        self.bin_width = bin_width
-        self.update_histogram_dimensions()
-
-    def update_datasets_frame_dimensions(self):
-        """
-        Updates frames datasets' dimensions
-        """
-        # Update data, raw_data datasets
-        for dataset in ["data", "raw_frames"]:
-            payload = '{"dims": [%s, %s]}' % (self.rows, self.columns)
-            command = "config/hdf/dataset/" + dataset
-            request = ApiAdapterRequest(str(payload), content_type="application/json")
-            self.adapters["fp"].put(command, request)
-
-    def update_histogram_dimensions(self):
-        """
-        Updates histograms' dimensions in the relevant datasets
-        """
-        number_of_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
-        # energy_bins dataset
-        payload = '{"dims": [%s]}' % (number_of_histograms)
-        command = "config/hdf/dataset/" + "energy_bins"
-        request = ApiAdapterRequest(str(payload), content_type="application/json")
-        self.adapters["fp"].put(command, request)
-
-        # pixel_histograms dataset
-        payload = '{"dims": [%s, %s]}' % (self.pixels, number_of_histograms)
-        command = "config/hdf/dataset/" + "pixel_histograms"
-        request = ApiAdapterRequest(str(payload), content_type="application/json")
-        self.adapters["fp"].put(command, request)
-
-        # summed_histograms dataset
-        payload = '{"dims": [%s]}' % (number_of_histograms)
-        command = "config/hdf/dataset/" + "summed_histograms"
-        request = ApiAdapterRequest(str(payload), content_type="application/json")
-        self.adapters["fp"].put(command, request)
-
-    def _set_max_frames_received(self, max_frames_received):
-        self.max_frames_received = max_frames_received
-
-    def _set_raw_data(self, raw_data):
-        self.raw_data = raw_data
-
-    def _set_threshold_filename(self, threshold_filename):
-        if (os.path.isfile(threshold_filename) == False):
-            raise ParameterTreeError("Threshold file doesn't exist")
-        self.threshold_filename = threshold_filename
-
-    def _set_threshold_mode(self, threshold_mode):
-        threshold_mode = threshold_mode.lower()
-        if (threshold_mode in self.THRESHOLDOPTIONS):
-            self.threshold_mode = threshold_mode
-        else:
-            raise ParameterTreeError("Must be one of: value, filename or none")
-
-    def _set_threshold_value(self, threshold_value):
-        self.threshold_value = threshold_value
-
     def _get_debug_count(self):
         return self.dbgCount
 
@@ -482,30 +391,6 @@ class Hexitec():
     # def _set_stop_acquisition(self, stop):
     #     self.fems._set_stop_acquisition = stop
 
-    def _get_sensors_layout(self):
-        return self.sensors_layout
-
-    def _set_sensors_layout(self, layout):
-        """
-        Sets sensors_layout in all FP's plugins and FR; Recalculates rows, columns and pixels
-        """
-        self.sensors_layout = layout
-
-        # send command to all FP plugins, then FR
-        plugins =  ['addition', 'calibration', 'discrimination', 'histogram', 'reorder', 
-                    'next_frame', 'threshold']
-
-        for plugin in plugins:
-            command = "config/" + plugin + "/sensors_layout"
-            request = ApiAdapterRequest(self.sensors_layout, content_type="application/json")
-            self.adapters["fp"].put(command, request)
-
-        command = "config/decoder_config/sensors_layout"
-        request = ApiAdapterRequest(self.sensors_layout, content_type="application/json")
-        self.adapters["fr"].put(command, request)
-
-        self.update_rows_columns_pixels()
-        self.update_datasets_frame_dimensions()
 
     def _get_vcal(self):
         return self.vcal
@@ -527,34 +412,15 @@ class Hexitec():
 
     def commit_configuration(self, msg):
         """
-        Pushes settings in 'config/' ParameterTree into FP's plugins
+        Pushes HexitecDAQ's 'config/' ParameterTree settings into FP's plugins
         """
-        # Loop overall plugins in ParameterTree, updating fp's settings
-        #   Except reorder, until raw_data (i.e. bool) supported
-        for plugin in self.param_tree.tree['detector'].get("config"):
+        self.daq.commit_configuration()
 
-            if plugin != "reorder":
+    def _get_status_message(self):
+        return self.status_message
 
-                for param_key in self.param_tree.tree['detector']['config'].get(plugin):
-
-                    # print "\nconfig/%s/%s" % (plugin, param_key), " -> ", \
-                    #         self.param_tree.tree['detector']['config'][plugin][param_key].get(), "\n"
-
-                    command = "config/%s/%s" % (plugin, param_key)
-                    payload = self.param_tree.tree['detector']['config'][plugin][param_key].get()
-                    request = ApiAdapterRequest(str(payload), content_type="application/json")
-                    self.adapters["fp"].put(command, request)
-
-        # Effin' works:
-        # command = "config/threshold/threshold_value"
-        # payload = str(121)
-        # request = ApiAdapterRequest(payload, content_type="application/json")
-        # self.adapters["fp"].put(command, request)
-
-        # What does work:
-        #curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/threshold -d 
-        #   '{"threshold_value": 7, "threshold_mode": "none"}' | python -m json.tool
-        # (But not {"threshold": {"threshold_value": 7, ...}} !)
+    def _get_status_error(self):
+        return self.status_error
 
     def get_server_uptime(self):
         """
