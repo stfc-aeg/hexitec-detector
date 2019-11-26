@@ -1,6 +1,6 @@
 """Demo adapter for ODIN control FileInterface
-This class implements a simple adapter used for demonstration purposes in a
-Tim Nicholls, STFC Application Engineering
+This class implements a simple adapter used for demonstration purposes
+Tim Nicholls, STFC Detector Systems Software Group
 """
 import logging
 import tornado

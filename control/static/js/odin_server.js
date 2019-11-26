@@ -16,19 +16,12 @@ var execute_filename = "execute_sequence_";
 var sensors_layout   = "2x2";
 
 var polling_thread_running = false;
+var system_health = true;
+var fem_error_id = -1;
 // var dark_correction_enable = false;
 
 $( document ).ready(function()
 {
-    $('.dec-number').on('change', function () {
-        const value = Number($(this).val());
-        $(this).val(value.toFixed(2));
-   });
-   
-    // update_api_version();
-    // update_api_adapters();
-    poll_update()
-    
     $(".bootstrap-switch").bootstrapSwitch({
         'size': 'midi',
         'onSwitchChange': function(event, state) {
@@ -59,7 +52,7 @@ $( document ).ready(function()
             // plugin param
             $.ajax({
                 type: "PUT",
-                url: hexitec_url + 'detector/config',
+                url: hexitec_url + 'detector/daq/config',
                 contentType: "application/json",
                 data: JSON.stringify(addition_payload),
                 success: function(result) {
@@ -73,7 +66,7 @@ $( document ).ready(function()
             // plugin param
             $.ajax({
                 type: "PUT",
-                url: hexitec_url + 'detector/config',
+                url: hexitec_url + 'detector/daq/config',
                 contentType: "application/json",
                 data: JSON.stringify(discrimination_payload),
                 success: function(result) {
@@ -142,11 +135,9 @@ $( document ).ready(function()
         apply_ui_values();
     });
 
-    // curl -s http://localhost:8888/api/0.1/hexitec/detector/debug_count | python -m json.tool
     // Test button:
     $('#testButton').on('click', function(event) {
 
-        // check_debug_count();
         test_iac();
         ;
     });
@@ -183,10 +174,11 @@ $( document ).ready(function()
     $('#disconnectButton').on('click', function(event) {
  
         disconnect_hardware();
-        // Stop polling thread - after 1 second delay
+        // Stop polling thread after a 2 second delay to 
+        //  allow any lingering message(s) through
         setTimeout(function() {
             polling_thread_running = false;    
-        }, 1000);
+        }, 2000);
     });
 
     $('#offsetsButton').on('click', function(event) {
@@ -199,7 +191,6 @@ $( document ).ready(function()
 
 function collect_offsets() {
 
-    console.log("Let's collect offsets");
     $.ajax({
         type: "PUT",
         url: hexitec_url + 'detector',
@@ -221,49 +212,112 @@ function start_polling_thread() {
 }
 
 function poll_fem() {
-//http://localhost:8888/api/0.1/hexitec/detector/fem
 
-    $.getJSON(hexitec_url + 'detector/fem', function(response) {
+    $.getJSON(hexitec_url + 'detector/', function(response) {
 
-        var percentage_complete = response.fem.operation_percentage_complete;
-        // console.log("percentage_complete: " + response.fem.operation_percentage_complete);
+        var fems = response["detector"]["fems"]
+        var adapter_status = response["detector"]["status"]
 
-        var status_message = response.fem.status_message;
+        var percentage_complete = fems["fem_0"]["operation_percentage_complete"];
+
+        // http://localhost:8888/api/0.1/hexitec/detector/fems/fem_0/diagnostics/successful_reads
+        // Diagnostics:
+        var num_reads = fems["fem_0"]["diagnostics"]["successful_reads"];
+        console.log("percentage_complete: " + fems["fem_0"]["operation_percentage_complete"] + " reads: " + num_reads + " msg: " + adapter_status["status_message"]);
+
+        // Obtain overall adapter statuses
+
+        var status_message = adapter_status["status_message"];
         $('#odin-control-message').html(status_message);
-        var status_error = response.fem.status_error;
-        $('#odin-control-error').html(status_error);
 
-        // console.log(" status_message: '" + status_message + "'. status_error: '" + status_error + "'.");
-
-        var progress_element = document.getElementById("progress-odin");
-        progress_element.value = percentage_complete;
-        // If status_error is set, highlighted by setting colour(s) to red
-        var connect_button = document.getElementById("connectButton");
-        var initialise_button = document.getElementById("initialiseButton");
-        var acquire_button = document.getElementById("acquireButton");
-        var offsets_button = document.getElementById("offsetsButton");
+        // Get adapter error (either set or empty)
+        var status_error = adapter_status["status_error"];
+        // Include fem_id if adapter in error
+        var status = "";
         if (status_error.length > 0)
         {
-            connect_button.style = "background-color:red";
-            initialise_button.style = "background-color:red";
-            acquire_button.style = "background-color:red";
-            offsets_button.style = "background-color:red";
+            status = "Fem: " + adapter_status["fem_id"] + " caused: '" + status_error + "'";
+        }
+        $('#odin-control-error').html(status);
+
+        for (fem in fems)
+        {
+            //TODO: Prevent multiple fems overwriting one another's values
+
+            // Hardcoded reading out all sensor data from one Fem:
+            $('#vsr1_humidity').html(fems[fem]["vsr1_sensors"]["humidity"].toFixed(2));
+            $('#vsr1_ambient').html(fems[fem]["vsr1_sensors"]["ambient"].toFixed(2));
+            $('#vsr1_asic1').html(fems[fem]["vsr1_sensors"]["asic1"].toFixed(2));
+            $('#vsr1_asic2').html(fems[fem]["vsr1_sensors"]["asic2"].toFixed(2));
+            $('#vsr1_adc').html(fems[fem]["vsr1_sensors"]["adc"].toFixed(2));
+
+            $('#vsr2_humidity').html(fems[fem]["vsr2_sensors"]["humidity"].toFixed(2));
+            $('#vsr2_ambient').html(fems[fem]["vsr2_sensors"]["ambient"].toFixed(2));
+            $('#vsr2_asic1').html(fems[fem]["vsr2_sensors"]["asic1"].toFixed(2));
+            $('#vsr2_asic2').html(fems[fem]["vsr2_sensors"]["asic2"].toFixed(2));
+            $('#vsr2_adc').html(fems[fem]["vsr2_sensors"]["adc"].toFixed(2));
+
+            // console.log("fem: " + JSON.stringify(fems[fem]));   // e.g. fem = "fem_0"
+            // fem: {"dark_correction":0,"ip_addr":"192.168.0.122","vsr2_sensors":{"humidity":12,
+            //      "asic2":160,"asic1":46.25,"adc":47.5,"ambient":38.63902832031249},"status_error":"",
+            //      "vsr1_sensors":{"humidity":12,"asic2":45.125,"asic1":44.9375,"adc":47.3125,
+            //      "ambient":39.861689453124995},"port":"8070","read_sensors":null,
+            //      "operation_percentage_complete":100,"health":true,"number_frames":10,"debug":false,
+            //      "status_message":"Camera disconnected","id":0,"initialise_progress":0}
+
+            // console.log("fem id: '" + fems[fem]["id"] + "' health: '" + fems[fem]["health"] + "' stat msg: '" + fems[fem]["status_message"] + "'.");
+            
+        }
+
+        // system_health    // true=all fem(s) OK, false=fem(s) bad, fem_error_id says which one
+        // fem_error_id
+
+        // var status_message = response.fem_0.status_message;
+        // var status_message = fems["fem_0"]["status_message"];
+        // $('#odin-control-message').html(status_message);
+
+        // // var status_error = response.fem_0.status_error;
+        // var status_error = fems["fem_0"]["status_error"];
+        // $('#odin-control-error').html(status_error);
+
+        // var status = " msg: '" + status_message + "'";
+        // if (status_error.length > 0)
+        // {
+        //     status = status + " error: '" + status_error + "'";
+        // }
+        // console.log(status);
+
+        lampDOM = document.getElementById("Green");
+
+        // Clear status if camera disconnected, otherwise look for any error
+        if (status_message == "Camera disconnected")
+        {
+            // console.log("disconnected");
+            lampDOM.classList.remove("lampGreen");
+            lampDOM.classList.remove("lampRed");
         }
         else
         {
-            connect_button.style = "background-color:none";
-            initialise_button.style = "background-color:none";
-            acquire_button.style = "background-color:none";
-            offsets_button.style = "background-color:none";
+            // console.log("ELSE..");
+            if (status_error.length  == 0)
+            {
+                // console.log("NO ERROR");
+                lampDOM.classList.add("lampGreen");
+            }
+            else
+            {
+                // console.log("ERROR !!!1!");
+                lampDOM.classList.remove("lampGreen");
+                lampDOM.classList.add("lampRed");
+            }
         }
-        // console.log("prog_element.style: " + progress_element.style );
-        // progress_element.style = "width: 100%;background-color:red";
-        // Keep running this function - Need an exit strategy???
-        // window.setTimeout(poll_fem, 500);
+
+        var progress_element = document.getElementById("progress-odin");
+        progress_element.value = percentage_complete;
 
         if (polling_thread_running == true)
         {
-            window.setTimeout(poll_fem, 500);
+            window.setTimeout(poll_fem, 950);
         }
         else
         {
@@ -272,6 +326,7 @@ function poll_fem() {
     });
 }
 
+// Test purposes only:
 function test_iac() {
 
     $.ajax({
@@ -284,27 +339,6 @@ function test_iac() {
         },
         error: function(request, msg, error) {
             $('#odin-control-warning').html(error + ": " + format_error_message(request.responseText));
-        }
-    });
-}
-
-// Debugging:
-function check_debug_count() {
-
-    $.getJSON(hexitec_url + 'detector/debug_count', function(response) {
-
-        var current_value = response.debug_count;
-
-        document.getElementById("hdf-frames-text").value = response.debug_count;
-        var progress_element = document.getElementById("progress-odin");
-        progress_element.value = current_value;
-        if (current_value < 100 && current_value != 0) 
-        {
-            window.setTimeout(check_debug_count, 750);
-        }
-        else
-        {
-            console.log("Debug counting completed");
         }
     });
 }
@@ -344,12 +378,13 @@ function initialise_hardware() {
 }
 
 function collect_data() {
-
+    console.log("CHANGED ACQUIRE BUTTON TO TARGET ADAPTER: 'start_acq' INSTEAD OF collect_data");
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector',
+        url: hexitec_url + 'detector/acquisition',
         contentType: "application/json",
-        data: JSON.stringify({"collect_data": ""}),
+        // data: JSON.stringify({"collect_data": ""}),
+        data: JSON.stringify({"start_acq": ""}),
         success: function(result) {
             $('#odin-control-warning').html("");
         },
@@ -579,6 +614,7 @@ function apply_ui_values() {
     hdf_file_path_changed();
     hdf_file_name_changed();
 
+    // TODO: Redundant while file writing is controlled through the GUI (may change in the future???)
     // If hdf write already enabled, toggle off and on so hdf settings sent
     if ( $("[name='hdf_write_enable']").prop('checked') == true)
     {
@@ -596,22 +632,6 @@ function poll_update() {
     setTimeout(poll_update, 500);   
 }
 
-// function update_api_version() {
-
-//     $.getJSON('/api', function(response) {
-//         $('#api-version').html(response.api_version);
-//         api_version = response.api_version;
-//     });
-// }
-
-// function update_api_adapters() {
-
-//     $.getJSON('/api/' + api_version + '/adapters/', function(response) {
-//         adapter_list = response.adapters.join(", ");
-//         $('#api-adapters').html(adapter_list);
-//     });
-// }
-
 function threshold_filename_changed()
 {
     var threshold_filename = $('#threshold-filename-text').prop('value');
@@ -619,7 +639,7 @@ function threshold_filename_changed()
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/config/threshold/threshold_filename',
+        url: hexitec_url + 'detector/daq/config/threshold/threshold_filename',
         contentType: "application/json",
         data: threshold_filename,
         success: function(result) {
@@ -640,7 +660,7 @@ function threshold_value_changed()
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/config/threshold/threshold_value',
+        url: hexitec_url + 'detector/daq/config/threshold/threshold_value',
         contentType: "application/json",
         data: threshold_value,
         success: function(result) {
@@ -659,7 +679,7 @@ function threshold_mode_changed()
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/config/threshold/threshold_mode',
+        url: hexitec_url + 'detector/daq/config/threshold/threshold_mode',
         contentType: "application/json",
         data: threshold_mode,
         success: function(result) {
@@ -678,7 +698,7 @@ function gradients_filename_changed()
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/config/calibration/gradients_filename',
+        url: hexitec_url + 'detector/daq/config/calibration/gradients_filename',
         contentType: "application/json",
         data: gradients_filename,
         success: function(result) {
@@ -697,7 +717,7 @@ function intercepts_filename_changed()
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/config/calibration/intercepts_filename',
+        url: hexitec_url + 'detector/daq/config/calibration/intercepts_filename',
         contentType: "application/json",
         data: intercepts_filename,
         success: function(result) {
@@ -718,7 +738,7 @@ function pixel_grid_size_changed()
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/config/addition/pixel_grid_size',
+        url: hexitec_url + 'detector/daq/config/addition/pixel_grid_size',
         contentType: "application/json",
         data: pixel_grid_size,
         success: function(result) {
@@ -731,7 +751,7 @@ function pixel_grid_size_changed()
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/config/discrimination/pixel_grid_size',
+        url: hexitec_url + 'detector/daq/config/discrimination/pixel_grid_size',
         contentType: "application/json",
         data: pixel_grid_size,
         success: function(result) {
@@ -750,7 +770,7 @@ function bin_start_changed()
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/config/histogram/bin_start',
+        url: hexitec_url + 'detector/daq/config/histogram/bin_start',
         contentType: "application/json",
         data: bin_start,
         success: function(result) {
@@ -769,7 +789,7 @@ function bin_end_changed()
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/config/histogram/bin_end',
+        url: hexitec_url + 'detector/daq/config/histogram/bin_end',
         contentType: "application/json",
         data: bin_end,
         success: function(result) {
@@ -788,7 +808,7 @@ function bin_width_changed()
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/config/histogram/bin_width',
+        url: hexitec_url + 'detector/daq/config/histogram/bin_width',
         contentType: "application/json",
         data: bin_width,
         success: function(result) {
@@ -800,20 +820,36 @@ function bin_width_changed()
     });
 }
 
+// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/daq/config/reorder/raw_data -d "true"
+// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/reorder/raw_data -d "true"
 var changeRawDataEnable = function ()
 {
     raw_data_enable = $("[name='raw_data_enable']").bootstrapSwitch('state');
     
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/config/reorder/raw_data',
+        // TODO: Temporarily fixed until bool Type supported:
+        url: hexitec_url + 'fp/config/reorder/raw_data',  // Target FP Plugin directly
         contentType: "application/json",
         data: JSON.stringify(raw_data_enable),
         success: function(result) {
-            console.log("Raw_data successfully changed");
+            console.log("Raw_data in FP: successfully changed");
         },
         error: function(request, msg, error) {
-            console.log("Raw_data couldn't be changed");
+            console.log("Raw_data in FP: couldn't be changed");
+        }
+    });
+
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/reorder/raw_data',  // Target DAQ adapter
+        contentType: "application/json",
+        data: JSON.stringify(raw_data_enable),
+        success: function(result) {
+            console.log("Raw_data in daq: successfully changed");
+        },
+        error: function(request, msg, error) {
+            console.log("Raw_data in daq: couldn't be changed");
         }
     });
 };
@@ -857,7 +893,7 @@ var selectChange = function(sensors_layout)
 {
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector',
+        url: hexitec_url + 'detector/daq',
         contentType: "application/json",
         data: JSON.stringify({"sensors_layout": sensors_layout}),
         success: function(result) {
@@ -889,10 +925,12 @@ var vcalChange = function(vcal)
 // setHdfWrite: Helper function to toggle hdf writing on/off
 function setHdfWrite(enable)
 {
+    console.log(" CHANGED setHdfWrite TO TARGET DAQ INSTEAD");
     hdf_write_enable = enable;
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'fp/config/hdf/write',
+        // url: hexitec_url + 'fp/config/hdf/write',
+        url: hexitec_url + 'detector/daq/file_info/enabled',
         contentType: "application/json",
         data: JSON.stringify(hdf_write_enable),
         success: function(result) {
@@ -906,7 +944,6 @@ function setHdfWrite(enable)
                 $('#fp-config-text').prop('disabled', true);
                 $('#hdf-file-path-text').prop('disabled', true);
                 $('#hdf-file-name-text').prop('disabled', true);
-                $('#hdf-frames-text').prop('disabled', true);
             }
             else
             {
@@ -915,7 +952,6 @@ function setHdfWrite(enable)
                 $('#fp-config-text').prop('disabled', false);
                 $('#hdf-file-path-text').prop('disabled', false);
                 $('#hdf-file-name-text').prop('disabled', false);
-                $('#hdf-frames-text').prop('disabled', false);
             }
         },
         error: function(request, msg, error) {
@@ -973,14 +1009,16 @@ function fr_config_changed()
 };
 
 //curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/hdf/file/path -d "/tmp"
+//curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/daq/file_info/ -d '{"file_dir": "me_path"}'
 function hdf_file_path_changed()
 {
     var hdf_file_path = $('#hdf-file-path-text').prop('value');
+    var payload = {"file_dir": hdf_file_path};
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'fp/config/hdf/file/path',
+        url: hexitec_url + 'detector/daq/file_info',
         contentType: "application/json",
-        data: (hdf_file_path),
+        data: JSON.stringify(payload),
         success: function(result) {
             $('#hdf-file-path-warning').html("");
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
@@ -992,15 +1030,17 @@ function hdf_file_path_changed()
     });
 };
 
-// curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/hdf/file/name -d "test"
+//curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/hdf/file/name -d "test"
+//curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/daq/file_info/ -d '{"file_name": "relts.h5"}'
 function hdf_file_name_changed()
 {
     var hdf_file_name = $('#hdf-file-name-text').prop('value');
+    var payload = {"file_name": hdf_file_name + "_" + showTime()};
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'fp/config/hdf/file/name',
+        url: hexitec_url + 'detector/daq/file_info/',
         contentType: "application/json",
-        data: (hdf_file_name + "_" + showTime()),
+        data: JSON.stringify(payload),
         success: function(result) {
             $('#hdf-file-name-warning').html("");
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
@@ -1010,7 +1050,6 @@ function hdf_file_name_changed()
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', true);
         }
     });
-    console.log(hdf_file_name + "_" + showTime());
 };
 
 // curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/acquisition -d '{"num_frames": 3}'
@@ -1042,4 +1081,3 @@ function showTime() {
     timeString  += ((seconds < 10) ? "0" : "") + seconds;
     return timeString;
 }
-  

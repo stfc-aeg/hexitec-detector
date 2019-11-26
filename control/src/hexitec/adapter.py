@@ -8,6 +8,8 @@ import logging
 import tornado
 import time
 import os
+#
+import threading
 
 # Making checking for integer type Python2/3 independent
 import sys
@@ -228,8 +230,7 @@ class Hexitec():
                     fem_dict.get("server_ctrl_ip_addr", defaults.fem["server_ctrl_ip"]),
                     fem_dict.get("camera_ctrl_ip_addr", defaults.fem["camera_ctrl_ip"]),
                     fem_dict.get("server_data_ip_addr", defaults.fem["server_data_ip"]),
-                    fem_dict.get("camera_data_ip_addr", defaults.fem["camera_data_ip"]),
-                    self.callback_function
+                    fem_dict.get("camera_data_ip_addr", defaults.fem["camera_data_ip"])
                 ))
 
         if not self.fems:  # if self.fems is empty
@@ -240,8 +241,7 @@ class Hexitec():
                 server_ctrl_ip_addr=defaults.fem["server_ctrl_ip"],
                 camera_ctrl_ip_addr=defaults.fem["camera_ctrl_ip"],
                 server_data_ip_addr=defaults.fem["server_data_ip"],
-                camera_data_ip_addr=defaults.fem["camera_data_ip"],
-                callback_function=self.callback_function
+                camera_data_ip_addr=defaults.fem["camera_data_ip"]
             ))
 
         fem_tree = {}
@@ -298,25 +298,15 @@ class Hexitec():
 
         self.start_polling()
 
-    def callback_function(self, fem_id, health, message, error):
-        (errorOK, this_fem, last_fem) = (True, None, None)
-        if (fem_id != self.fem_id) and (health == True) and (self.health == False):
-            # self.fem_id already signalled an error, prevent (different) fem_id clearing that error
-            (errorOK, this_fem, last_fem) = (False, fem_id, self.fem_id)
-        else:
-            self.fem_id = fem_id
-            self.health = health
-            self.status_message = message
-            self.status_error = error
-            # print("  !!! adapter.py rx'd  : ", self.fem_id, self.health, self.status_message, self.status_error, "  --------------------------------------------------------------------------------")
-        return (errorOK, this_fem, last_fem)
-
-    ## Move polling thread to hexitecDaq? - DAQ has no handle(s) of fem(s)..
     @run_on_executor(executor='thread_executor')
     def start_polling(self):
         IOLoop.instance().add_callback(self.poll_histograms)  # Polling Histogram status
 
     def poll_histograms(self):
+        # for t in threading.enumerate():
+        #     logging.debug(" *** thread: %s" % t.getName())
+        # logging.debug("tick-tock!? \n")
+        start = time.time()
         for fem in self.fems:
             if fem.acquisition_completed:
                 timeout = time.time() - fem.acquisition_timestamp
@@ -328,11 +318,21 @@ class Hexitec():
                     self.adapters["fp"].put(command, request)
                     # Clear fem's Boolean
                     fem.acquisition_completed = False
-        #TODO: Also check sensor values?
-        # ..
-        
-        time.sleep(0.5)
-        IOLoop.instance().call_later(0.5, self.poll_histograms)
+            #TODO: Also check sensor values?
+            # ..
+            health = fem.get_health()
+            # Don't note current id if error already found in another fem
+            if self.health:
+                self.fem_id = fem.get_id()
+                self.status_error = fem._get_status_error()
+                self.status_message = fem._get_status_message()
+                self.health = self.health and health
+                # print(" Health report; fem id (%s)" % fem.get_id(), "    err: ", self.status_error,"    msg: ", self.status_message)
+            else:
+                pass
+                # print(" ALERT: Don't note fem's id (%s). Existing info:" % fem.get_id(), "    err: ", self.status_error, "    msg: ", self.status_message)
+
+        IOLoop.instance().call_later(1.0, self.poll_histograms)
 
     def connect_hardware(self, msg):
         for fem in self.fems:
@@ -349,6 +349,10 @@ class Hexitec():
     def disconnect_hardware(self, msg):
         for fem in self.fems:
             fem.disconnect_hardware(msg)
+        # With all FEM(s) disconnected, reset system status
+        self.status_error = ""
+        self.status_message = ""
+        self.health = True
 
     def set_number_frames(self, frames):
         self.number_frames = frames
@@ -358,8 +362,10 @@ class Hexitec():
 
         self.daq.set_number_frames(self.number_frames)
 
-        self.daq.set_file_writing(False)
-        self.daq.set_file_writing(True)
+        # Toggle file writing off/on if current on
+        if self.daq.file_writing:
+            self.daq.set_file_writing(False)
+            self.daq.set_file_writing(True)
         
     def _get_debug_count(self):
         return self.dbgCount
@@ -385,8 +391,7 @@ class Hexitec():
             return
         self.daq.start_acquisition(self.number_frames)
         for fem in self.fems:
-            self.fems.setup_camera()    #TODO: Complete or remove this func?
-            self.fems.collect_data()
+            fem.collect_data()
 
     # def _set_stop_acquisition(self, stop):
     #     self.fems._set_stop_acquisition = stop

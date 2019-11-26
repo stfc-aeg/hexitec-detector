@@ -7,6 +7,8 @@ from odin.adapters.adapter import ApiAdapterRequest
 from odin.adapters.parameter_tree import ParameterTree
 from tornado.ioloop import IOLoop
 
+from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+
 class HexitecDAQ():
     """
     Encapsulates all the functionaility to initiate the DAQ.
@@ -15,6 +17,8 @@ class HexitecDAQ():
     TODO: Configures the HDF File Writer Plugin
     TODO: Configures the Live View Plugin
     """
+
+    THRESHOLDOPTIONS = ["value", "filename", "none"]
 
     def __init__(self, save_file_dir="", save_file_name=""):
         self.adapters = {}
@@ -37,6 +41,27 @@ class HexitecDAQ():
             "fr": ""
         }
 
+        ## Migration from adapter.py ##
+
+        # ParameterTree variables
+        self.sensors_layout = "2x2"
+
+        self.pixel_grid_size = 3
+        self.gradients_filename = ""
+        self.intercepts_filename = ""
+        self.bin_end = 8000
+        self.bin_start = 0
+        self.bin_width = 10.0
+        self.max_frames_received = 10
+        self.raw_data = False
+        self.threshold_filename = ""
+        self.threshold_mode = "value"
+        self.threshold_value = 100
+
+        self.rows, self.columns = 80, 80
+        self.pixels = self.rows * self.columns
+        self.number_frames = 20
+
         self.param_tree = ParameterTree({
             "receiver": {
                 "connected": (partial(self.is_od_connected, adapter="fr"), None),
@@ -53,8 +78,37 @@ class HexitecDAQ():
                 "file_name": (lambda: self.file_name, self.set_file_name),
                 "file_dir": (lambda: self.file_dir, self.set_data_dir)
             },
-            "in_progress": (lambda: self.in_progress, None)
+            "in_progress": (lambda: self.in_progress, None),
+            # Adapter.py migration:
+            "config": {
+                "addition": {
+                    "pixel_grid_size": (lambda: self.pixel_grid_size, self._set_pixel_grid_size)
+                },
+                "calibration": {
+                    "gradients_filename": (lambda: self.gradients_filename, self._set_gradients_filename),
+                    "intercepts_filename": (lambda: self.intercepts_filename, self._set_intercepts_filename)
+                },
+                "discrimination": {
+                    "pixel_grid_size": (lambda: self.pixel_grid_size, self._set_pixel_grid_size)
+                },
+                "histogram": {
+                    "bin_end": (lambda: self.bin_end, self._set_bin_end),
+                    "bin_start": (lambda: self.bin_start, self._set_bin_start),
+                    "bin_width": (lambda: self.bin_width, self._set_bin_width),
+                    "max_frames_received": (lambda: self.max_frames_received, self._set_max_frames_received)
+                },
+                "reorder": {
+                    "raw_data": (lambda: self.raw_data, self._set_raw_data)#,
+                },
+                "threshold": {
+                    "threshold_filename": (lambda: self.threshold_filename, self._set_threshold_filename),
+                    "threshold_mode": (lambda: self.threshold_mode, self._set_threshold_mode),
+                    "threshold_value": (lambda: self.threshold_value, self._set_threshold_value)
+                }
+            },
+            "sensors_layout": (self._get_sensors_layout, self._set_sensors_layout)
         })
+        self.update_rows_columns_pixels()
 
     def initialize(self, adapters):
         self.adapters["fp"] = adapters['fp']
@@ -175,6 +229,9 @@ class HexitecDAQ():
     def set_data_dir(self, directory):
         self.file_dir = directory
 
+    def set_number_frames(self, number_frames):
+        self.number_frames = number_frames
+
     def set_file_name(self, name):
         self.file_name = name
 
@@ -185,12 +242,23 @@ class HexitecDAQ():
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         self.adapters["fp"].put(command, request)
 
-        # command = "config/hdf/file/name"
-        # request.body = self.file_name
-        # self.adapters["fp"].put(command, request)
+        print(" -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- setting fname: \n  ", self.file_name)
+        command = "config/hdf/file/name"
+        request.body = self.file_name
+        self.adapters["fp"].put(command, request)
 
         command = "config/hdf/write"
         request.body = "{}".format(writing)
+        self.adapters["fp"].put(command, request)
+
+        #TODO: adapter.py migration - Right place for this?
+
+        # Avoid config/histogram/max_frames_received - use own paramTree instead
+        self._set_max_frames_received(self.number_frames)
+
+        command = "config/hdf/frames"
+        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+        request.body = "{}".format(self.number_frames)
         self.adapters["fp"].put(command, request)
 
     def config_odin_data(self, adapter):
@@ -202,3 +270,158 @@ class HexitecDAQ():
         request = ApiAdapterRequest(config, content_type="application/json")
         command = "config/config_file"
         _ = self.adapters[adapter].put(command, request)
+
+    def update_rows_columns_pixels(self):
+        """
+        Updates rows, columns and pixels from new sensors_layout value
+        """
+        self.rows, self.columns = self.sensors_layout.split("x")
+        self.rows = int(self.rows) * 80
+        self.columns = int(self.columns) * 80
+        self.pixels = self.rows * self.columns
+
+    def _set_pixel_grid_size(self, size):
+        if (self.pixel_grid_size in [3, 5]):
+            self.pixel_grid_size = size
+        else:
+            raise ParameterTreeError("Must be either 3 or 5")
+
+    def _set_gradients_filename(self, gradients_filename):
+        if (path.isfile(gradients_filename) == False):
+            raise ParameterTreeError("Gradients file doesn't exist")
+        self.gradients_filename = gradients_filename
+
+    def _set_intercepts_filename(self, intercepts_filename):
+        if (path.isfile(intercepts_filename) == False):
+            raise ParameterTreeError("Intercepts file doesn't exist")
+        self.intercepts_filename = intercepts_filename
+
+    def _set_bin_end(self, bin_end):
+        """
+        Updates bin_end, datasets' histograms' dimensions
+        """
+        self.bin_end = bin_end
+        self.update_histogram_dimensions()
+    
+    def _set_bin_start(self, bin_start):
+        """
+        Updates bin_start, datasets' histograms' dimensions
+        """
+        self.bin_start = bin_start
+        self.update_histogram_dimensions()
+    
+    def _set_bin_width(self, bin_width):
+        """
+        Updates bin_width, datasets' histograms' dimensions
+        """
+        self.bin_width = bin_width
+        self.update_histogram_dimensions()
+
+    def update_datasets_frame_dimensions(self):
+        """
+        Updates frames datasets' dimensions
+        """
+        # Update data, raw_data datasets
+        for dataset in ["data", "raw_frames"]:
+            payload = '{"dims": [%s, %s]}' % (self.rows, self.columns)
+            command = "config/hdf/dataset/" + dataset
+            request = ApiAdapterRequest(str(payload), content_type="application/json")
+            self.adapters["fp"].put(command, request)
+
+    def update_histogram_dimensions(self):
+        """
+        Updates histograms' dimensions in the relevant datasets
+        """
+        number_of_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
+        # energy_bins dataset
+        payload = '{"dims": [%s]}' % (number_of_histograms)
+        command = "config/hdf/dataset/" + "energy_bins"
+        request = ApiAdapterRequest(str(payload), content_type="application/json")
+        self.adapters["fp"].put(command, request)
+
+        # pixel_histograms dataset
+        payload = '{"dims": [%s, %s]}' % (self.pixels, number_of_histograms)
+        command = "config/hdf/dataset/" + "pixel_histograms"
+        request = ApiAdapterRequest(str(payload), content_type="application/json")
+        self.adapters["fp"].put(command, request)
+
+        # summed_histograms dataset
+        payload = '{"dims": [%s]}' % (number_of_histograms)
+        command = "config/hdf/dataset/" + "summed_histograms"
+        request = ApiAdapterRequest(str(payload), content_type="application/json")
+        self.adapters["fp"].put(command, request)
+
+    def _set_max_frames_received(self, max_frames_received):
+        self.max_frames_received = max_frames_received
+
+    def _set_raw_data(self, raw_data):
+        self.raw_data = raw_data
+
+    def _set_threshold_filename(self, threshold_filename):
+        if (path.isfile(threshold_filename) == False):
+            raise ParameterTreeError("Threshold file doesn't exist")
+        self.threshold_filename = threshold_filename
+
+    def _set_threshold_mode(self, threshold_mode):
+        threshold_mode = threshold_mode.lower()
+        if (threshold_mode in self.THRESHOLDOPTIONS):
+            self.threshold_mode = threshold_mode
+        else:
+            raise ParameterTreeError("Must be one of: value, filename or none")
+
+    def _set_threshold_value(self, threshold_value):
+        self.threshold_value = threshold_value
+
+    def _get_sensors_layout(self):
+        return self.sensors_layout
+
+    def _set_sensors_layout(self, layout):
+        """
+        Sets sensors_layout in all FP's plugins and FR; Recalculates rows, columns and pixels
+        """
+        self.sensors_layout = layout
+
+        # send command to all FP plugins, then FR
+        plugins =  ['addition', 'calibration', 'discrimination', 'histogram', 'reorder', 
+                    'next_frame', 'threshold']
+
+        for plugin in plugins:
+            command = "config/" + plugin + "/sensors_layout"
+            request = ApiAdapterRequest(self.sensors_layout, content_type="application/json")
+            self.adapters["fp"].put(command, request)
+
+        command = "config/decoder_config/sensors_layout"
+        request = ApiAdapterRequest(self.sensors_layout, content_type="application/json")
+        self.adapters["fr"].put(command, request)
+
+        self.update_rows_columns_pixels()
+        self.update_datasets_frame_dimensions()
+
+    def commit_configuration(self):
+
+        # Loop overall plugins in ParameterTree, updating fp's settings
+        #   Except reorder, until raw_data (i.e. bool) supported
+        for plugin in self.param_tree.tree.get("config"):
+
+            if plugin != "reorder":
+
+                for param_key in self.param_tree.tree['config'].get(plugin):
+
+                    # print "\nconfig/%s/%s" % (plugin, param_key), " -> ", \
+                    #         self.param_tree.tree['detector']['config'][plugin][param_key].get(), "\n"
+
+                    command = "config/%s/%s" % (plugin, param_key)
+                    payload = self.param_tree.tree['config'][plugin][param_key].get()
+                    request = ApiAdapterRequest(str(payload), content_type="application/json")
+                    self.adapters["fp"].put(command, request)
+
+        # Effin' works:
+        # command = "config/threshold/threshold_value"
+        # payload = str(121)
+        # request = ApiAdapterRequest(payload, content_type="application/json")
+        # self.adapters["fp"].put(command, request)
+
+        # What does work:
+        #curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/threshold -d 
+        #   '{"threshold_value": 7, "threshold_mode": "none"}' | python -m json.tool
+        # (But not {"threshold": {"threshold_value": 7, ...}} !)

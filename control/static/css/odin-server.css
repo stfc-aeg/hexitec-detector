@@ -57,3 +57,22 @@ body {
     width: 100%;
     left: 0;
 }
+
+/* Test traffic lights.. */
+
+.lamp {
+    height: 30px;
+    width: 30px;
+    border-style: solid;
+    border-width: 2px;
+    border-radius: 25px;
+}
+.lampRed {
+    background-color: red;
+}
+.lampYellow {
+    background-color: yellow;
+}
+.lampGreen {
+    background-color: green;
+}

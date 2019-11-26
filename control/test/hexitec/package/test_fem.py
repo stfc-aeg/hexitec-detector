@@ -3,11 +3,6 @@ Test Cases for the Hexitec Fem in hexitec
 Christian Angelsen, STFC Detector Systems Software Group
 """
 
-"""
-Test Cases for the QEMII Fem in qemii.detector
-Adam Neaves, STFC Detector Systems Software Group
-"""
-
 import sys
 import pytest
 import time
@@ -40,11 +35,6 @@ class FemTestFixture(object):
             "frm_gate":        0xD0000000
         }
 
-        self.vector_file_dir = "fake/vector/file/dir"
-        self.vector_file = "FakeVectorFile.txt"
-        self.vector_length = 3
-        self.vector_loop = 1
-
         with patch("hexitec.HexitecFem.RdmaUDP"):
             self.fem = HexitecFem(self.ip, self.port, self.id,
                                 self.ip, self.ip, self.ip, self.ip)
@@ -64,7 +54,6 @@ class TestFem():
     def test_init(self, test_fem):
         """Assert the initilisation of the Fem class works"""
         assert test_fem.fem.ip_address == test_fem.ip
-        # assert test_fem.fem.vector_file_dir == test_fem.vector_file_dir
         assert test_fem.fem.id == test_fem.id
 
     def test_nonzero_id(self, test_fem):
@@ -350,7 +339,3 @@ class TestFem():
 
             time.sleep(0.1)
             assert test_fem.fem.hardware_connected == True
-
-
-
-

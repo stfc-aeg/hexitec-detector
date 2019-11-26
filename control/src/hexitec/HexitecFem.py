@@ -10,6 +10,8 @@ Created on Fri July 05 15:00:14 2019
 import time
 import datetime
 import logging
+#
+import threading
 
 from hexitec.RdmaUDP import *
 
@@ -64,6 +66,8 @@ class HexitecFem():
         0x90,
         0x91
     ]
+    
+    SENSORS_READOUT_OK = 7
 
     def __init__(self, ip_address='127.0.0.1', port=1232, fem_id=1,
                 server_ctrl_ip_addr='10.0.2.2', camera_ctrl_ip_addr='10.0.2.1',
@@ -103,7 +107,7 @@ class HexitecFem():
         self.number_of_frames = 10
 
         self.hardware_connected = False
-        self.hardware_initialising = False
+        self.hardware_busy = False
 
         self.health = True
 
@@ -112,6 +116,9 @@ class HexitecFem():
         self.acquisition_timestamp = 0.0
 
         self.debug = False
+        # Diagnostics:
+        self.exception_triggered = False
+        self.successful_reads = 0
 
         self.status_message = ""
         self.status_error = ""
@@ -139,9 +146,13 @@ class HexitecFem():
         self.vsr2_adc        = 0
 
         param_tree_dict = {
+            "diagnostics": {
+                "successful_reads": (lambda: self.successful_reads, None),
+                "config_sequence": (None, self.config_sequence),
+            },
             "ip_addr": (self.get_address, None),    # Replicated, not needed going forwards?
             "port": (self.get_port, None),          # Replicated, not needed going forwards?
-            "id": (self.id, None),
+            "id": (lambda: self.id, None),
             "debug": (self.get_debug, self.set_debug),
             "health": (lambda: self.health, None),
             "status_message": (self._get_status_message, None),
@@ -169,6 +180,31 @@ class HexitecFem():
 
         self.param_tree = ParameterTree(param_tree_dict)
 
+    def config_sequence(self, cmd):
+
+        print("You send me this: '%s' which is '%s'" % (cmd, type(cmd)))
+        print("Hardcoded expression: '%s'" % [0x23, HexitecFem.VSR_ADDRESS[0], 0xE3, 0x0D])
+        # Convert str to list of ints:
+        cmd = self.convert_cmd_to_list(cmd)
+        
+        print("What we cooked up:")
+        print([0x23, HexitecFem.VSR_ADDRESS[0], cmd, 0x0D])
+        # try:
+        print("1st..")
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], cmd, 0x0D])
+        print("2nd..")
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], cmd, 0x0D])
+        # except Exception as e:
+        #     print("BANG, exception! b/c: %s" % e)
+
+    def convert_cmd_to_list(self, cmd):
+        no_whites = cmd.replace(" ", "")
+        tokenised = no_whites.split(",")
+        value_list = []
+        for idx in tokenised:
+            value_list.append(int(idx, 16))
+        return value_list
+
     def __del__(self):
         if self.x10g_rdma is not None:
             self.x10g_rdma.close()
@@ -179,21 +215,25 @@ class HexitecFem():
                                     self.camera_ctrl_ip_addr, 61650, self.camera_ctrl_ip_addr, 61651, 2000000, 9000, 20)
             self.x10g_rdma.setDebug(False)
             self.x10g_rdma.ack = True
-            if bDebug: raise socket_error("Failed to setup Control connection")
         except socket_error as e:
             raise socket_error("Failed to setup Control connection: %s" % e)
 
         return
 
-    def read_sensors(self, msg):
-            # DEBUGGING: let's try reading out those temperature And humidity values
+    def read_sensors(self, msg=None):
+        try:
             vsr = self.vsr_addr
             self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
             self.read_temperatures_humidity_values()
             self.vsr_addr = HexitecFem.VSR_ADDRESS[1]
             self.read_temperatures_humidity_values()
             self.vsr_addr = vsr
-            ###
+        except (HexitecFemError, ParameterTreeError) as e:
+            self._set_status_error("Failed to read sensors: %s" % str(e))
+            logging.error("%s" % str(e))
+        except Exception as e:
+            self._set_status_error("Uncaught Exception; Reading sensors failed: %s" % str(e))
+            logging.error("%s" % str(e))
 
     def disconnect(self):
         # should be called on shutdown to close sockets
@@ -275,23 +315,13 @@ class HexitecFem():
 
     def _set_status_message(self, message):
         self.status_message = message
-        # Transition to communicate via adapter..
-        (errorOK, this_fem, last_fem) = self.callback_function(self.id, self.health, self.status_message, self.status_error)
-        if errorOK != True:
-            logging.error("Current FEM (id: %s) prevented from clearing error flagged by \
-                    FEM(id: %s) (DBG, self.id: %s)" % (this_fem, last_fem, self.id))
 
     def _get_status_error(self):
         return self.status_error
 
     def _set_status_error(self, error):
-        if error == "":
-            self.health = True
-        else:
-            self.health = False
+        self.health = True if error == "" else False
         self.status_error = str(error)
-        # Transition to communicate via adapter..
-        self.callback_function(self.id, self.health, self.status_message, self.status_error)
 
     def _set_stop_acquisition(self, stop):
         self.stop_acquisition = stop
@@ -314,8 +344,25 @@ class HexitecFem():
     def _get_test_mode_image(self):
         return self.test_mode_image
 
-    @run_on_executor(executor='thread_executor')
-    def connect_hardware(self, msg):
+    def get_health(self):
+        return self.health
+
+    def get_id(self):
+        return self.id
+
+    # @run_on_executor(executor='thread_executor')
+    def start_polling(self):
+        IOLoop.instance().add_callback(self.poll_sensors)
+
+    def poll_sensors(self):
+        # Poll hardware while connected and not busy initialising, 
+        #     collecting offsets et cetera
+        if self.hardware_connected and (self.hardware_busy == False):
+            self.read_sensors()
+        IOLoop.instance().call_later(1.0, self.poll_sensors)
+
+    # @run_on_executor(executor='thread_executor')
+    def connect_hardware(self, msg=None):
         try:
             if self.hardware_connected:
                 raise ParameterTreeError("Connection already established")
@@ -325,6 +372,8 @@ class HexitecFem():
             self._set_status_message("Connecting to camera..")
             self.cam_connect()
             self._set_status_message("Camera connected. Waiting for sensors to initialise..")
+            logging.debug("\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+            logging.debug("conn_hw() %s" % threading.current_thread())
             self._wait_while_sensors_initialise()
             self._set_status_message("Camera connected. Sensors initialised.")
             self.initialise_progress = 0
@@ -338,20 +387,25 @@ class HexitecFem():
             self._set_status_error("Uncaught Exception; Failed to establish camera connection: %s" % str(e))
             logging.error("%s" % str(e))
             # Cannot raise error beyond this thread
+        
+        # Start polling thread
+        self.start_polling()
 
     @run_on_executor(executor='thread_executor')
-    def initialise_hardware(self, msg):
+    def initialise_hardware(self, msg=None):
         try:
             if self.hardware_connected != True:
                 raise ParameterTreeError("No connection established")
-            if self.hardware_initialising:
+            if self.hardware_busy:
                 raise HexitecFemError("Hardware sensors busy initialising")
             else:
                 self._set_status_error("")
+            self.hardware_busy = True
             self.operation_percentage_complete = 0
             self.operation_percentage_steps = 108
             self.initialise_system()
             self.initialise_progress = 0
+            self.hardware_busy = False
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to initialise camera: %s" % str(e))
             logging.error("%s" % str(e))
@@ -360,14 +414,15 @@ class HexitecFem():
             logging.error("%s" % str(e))
 
     @run_on_executor(executor='thread_executor')
-    def collect_data(self, msg):
+    def collect_data(self, msg=None):
         try:
             if self.hardware_connected != True:
                 raise ParameterTreeError("No connection established")
-            if self.hardware_initialising:
+            if self.hardware_busy:
                 raise HexitecFemError("Hardware sensors busy initialising")
             else:
                 self._set_status_error("")
+            self.hardware_busy = True
             self.operation_percentage_complete = 0
             self.operation_percentage_steps = 108           #TODO: Amend to suit this func..!
             self._set_status_message("Acquiring data..")
@@ -377,6 +432,7 @@ class HexitecFem():
             # Acquisition completed, note completion
             self.acquisition_completed = True
             self.acquisition_timestamp = time.time()
+            self.hardware_busy = False
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to collect data: %s" % str(e))
             logging.error("%s" % str(e))
@@ -384,8 +440,8 @@ class HexitecFem():
             self._set_status_error("Uncaught Exception; Data collection failed: %s" % str(e))
             logging.error("%s" % str(e))
 
-    @run_on_executor(executor='thread_executor')
-    def disconnect_hardware(self, msg):
+    # @run_on_executor(executor='thread_executor')
+    def disconnect_hardware(self, msg=None):
         try:
             if self.hardware_connected == False:
                 raise ParameterTreeError("No connection to disconnect")
@@ -395,13 +451,14 @@ class HexitecFem():
             if self.operation_percentage_complete < 100:
                 self.stop_acquisition = True
             #
+            self.hardware_connected = False
             self.operation_percentage_complete = 0
             self._set_status_message("Disconnecting camera..")
             self.cam_disconnect()
             self._set_status_message("Camera disconnected")
             self.operation_percentage_complete = 100
             self.initialise_progress = 0
-            self.hardware_connected = False
+            # self.hardware_connected = False
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to disconnect: %s" % str(e))
             logging.error("%s" % str(e))
@@ -419,22 +476,34 @@ class HexitecFem():
         """
         Wait 10 seconds to allow sensors in VSRs to initialise
         """
-        self.hardware_initialising = True
-        start = time.time()
-        percent_step = 10
-        self.operation_percentage_complete = 0
-        delay = 0.0
-        while (delay < 10):
-            time.sleep(1.0)
-            self.operation_percentage_complete += percent_step
-            delay = time.time() - start
-        self.hardware_initialising = False
+        # logging.debug("\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+        # logging.debug("_wait_while..() %s" % threading.current_thread())
+        self.hardware_busy = True
+        self.start = time.time()
+        self.delay = 10
+        IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
+
+    def initialisation_check_loop(self):
+        # logging.debug("\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+        # logging.debug("init_check() %s" % threading.current_thread())
+        if len(self.status_error) > 0:
+            # Error encountered, return prematurely
+            self.operation_percentage_complete = 0
+            self.hardware_busy = False
+            return
+        self.delay = time.time() - self.start
+        self.operation_percentage_complete += 10
+        if (self.delay < 10):
+            IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
+        else:
+            self.hardware_busy = False
 
     #  This function sends a command string to the microcontroller
-    def send_cmd(self, cmd):
+    def send_cmd(self, cmd, track_progress=True):
 
-        self.initialise_progress += 1
-        self.operation_percentage_complete = (self.initialise_progress * 100)  // self.operation_percentage_steps;
+        if track_progress:
+            self.initialise_progress += 1
+            self.operation_percentage_complete = (self.initialise_progress * 100)  // self.operation_percentage_steps;
 
         while len(cmd)%4 != 0:
             cmd.append(13)
@@ -456,7 +525,8 @@ class HexitecFem():
         FIFO_EMPTY_FLAG = 1
         empty_count = 0
         daty = RETURN_START_CHR
-        
+        #Example: daty will contain: 0x23, self.vsr_addr, 0x40, 0x30, 0x41, 0x30, 0x30, 0x0D
+
         while daty != CARRIAGE_RTN :
             fifo_empty = FIFO_EMPTY_FLAG
 
@@ -465,20 +535,25 @@ class HexitecFem():
                 empty_count = empty_count + 1
 
             dat = self.x10g_rdma.read(0xE0000200, 'Data')
+            # logging.debug("dat: %s" % format(dat, '02x'))
 
             daty = dat//256//256//256%256
+            # daty = (dat >> 24) & 0xFF
             f.append(daty)
             daty1 = daty
 
             daty = dat//256//256%256
+            # daty = (dat >> 16) & 0xFF
             f.append(daty)
             daty2 = daty
 
             daty = dat//256%256
+            # daty = (dat >> 8) & 0xFF
             f.append(daty)
             daty3 = daty
 
             daty = dat%256
+            # daty = dat & 0xFF
             f.append(daty)
             daty4 = daty
 
@@ -488,8 +563,13 @@ class HexitecFem():
             data_counter = data_counter + 1
             if empty_count == ABORT_VALUE:
                 logging.error("Error: read_response from FEM aborted")
+                self.exception_triggered = True
                 raise HexitecFemError("read_response aborted")
             empty_count = 0
+
+        # Diagnostics: Count number of successful reads before 1st exception thrown
+        if self.exception_triggered == False:
+            self.successful_reads += 1
 
         if self.debug: 
             logging.debug("Counter is :- %s Length is:- %s" % (data_counter, len(f)))
@@ -505,6 +585,8 @@ class HexitecFem():
             logging.debug("String :- %s" % s)
             logging.debug(f[0])
             logging.debug(f[1])
+            logging.debug(f[2])
+            logging.debug(f[3])
 
         return(s)
 
@@ -515,7 +597,6 @@ class HexitecFem():
             self.connect()
             logging.debug("Camera connected")
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0xE3, 0x0D])
-            time.sleep(1)                           # Redundant/can be reduced?
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0xE3, 0x0D])
             logging.debug("Modules Enabled")
         except socket_error as e:
@@ -669,7 +750,7 @@ class HexitecFem():
             logging.debug(synced)
 
         # Send this command to Disable Test Pattern in my VSR design
-        self.send_cmd([0x23, 0x92, 0x00, 0x0D])
+        # self.send_cmd([0x23, 0x92, 0x00, 0x0D])
         
         # Clear training enable
         self.send_cmd([0x23, self.vsr_addr, 0x43, 0x30, 0x31, 0x43, 0x30, 0x0D])
@@ -692,8 +773,11 @@ class HexitecFem():
         
         # Read Reg24
         self.send_cmd([0x23, self.vsr_addr, 0x41, 0x32, 0x34, 0x0D])                    # Read FPGA Reg
-        if self.debug: logging.debug("reading Register 0x24")
-        if self.debug: logging.debug(self.read_response())
+        if self.debug: 
+            logging.debug("reading Register 0x24")
+            logging.debug(self.read_response())
+        else:
+            self.read_response()
         
         self.send_cmd([0x23, self.vsr_addr, 0x41, 0x38, 0x39,  0x0D])
         self.read_response()
@@ -785,10 +869,9 @@ class HexitecFem():
             time.sleep(delay)
             waited += delay
             if (self.stop_acquisition):
-                self.stop_acquisition = False
                 break
         logging.debug("Data Capture took " + str(waited) + " seconds")
-        self._set_status_message("Requested %s frame(s), taking %s seconds" % (self.number_of_frames, str(waited)))
+        self._set_status_message("Requested %s frame(s), took %s seconds" % (self.number_of_frames, str(waited)))
 
         # Stop the state machine
         self.x10g_rdma.write(0x60000002, 0, 'Dis-Enable State Machine')
@@ -932,16 +1015,20 @@ class HexitecFem():
         try:
             if self.hardware_connected != True:
                 raise ParameterTreeError("Can't collect offsets without any connection established")
+            if self.hardware_busy:
+                raise HexitecFemError("Hardware sensors busy initialising")
+            else:
+                self._set_status_error("")
 
+            self.hardware_busy = True
             self.operation_percentage_complete = 0
             self.operation_percentage_steps = 15
 
-            print("\n\nReading back register value 24")
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x41, 0x32, 0x34, 0x0D])
             vsr1 = self.read_response()
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x41, 0x32, 0x34, 0x0D])
             vsr2 = self.read_response()
-            print("VSR1: '%s' VSR2: '%s'\n\n" % (vsr1.replace('\r', ''), vsr2.replace('\r','')))
+            logging.debug("Reading back register 24; VSR1: '%s' VSR2: '%s'" % (vsr1.replace('\r', ''), vsr2.replace('\r','')))
 
             self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x31, 0x30, 0x0D])    # Set Bit, 10 -> 10000 (Bits: 4)
             self.read_response()
@@ -1015,19 +1102,7 @@ class HexitecFem():
 
             self.operation_percentage_complete = 100
             self._set_status_message("Offsets collections operation completed.")
-
-            # # DEBUGGING: let's try reading out those temperature And humidity values
-            # vsr = self.vsr_addr
-            # self.read_temperatures_humidity_values()
-            # ###
-            # DEBUGGING: let's try reading out those temperature And humidity values
-            vsr = self.vsr_addr
-            self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
-            self.read_temperatures_humidity_values()
-            self.vsr_addr = HexitecFem.VSR_ADDRESS[1]
-            self.read_temperatures_humidity_values()
-            self.vsr_addr = vsr
-            ###
+            self.hardware_busy = False
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Can't collect offsets without a working connection: %s" % str(e))
             logging.error("%s" % str(e))
@@ -1234,13 +1309,6 @@ class HexitecFem():
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x53, 0x31, 0x43, 0x33, 0x42, 0x0d])
             self.read_response()
 
-    #TODO: Complete or remove this func?
-    def setup_camera(self, put_string="None"):
-        logging.debug("SETTING UP CAMERA")
-        logging.debug("This function to replace initialise_system; Just sleep for a second for now..")
-        time.sleep(1)
-        logging.debug("SETTING UP CAMERA: DONE")
-
     def initialise_system(self):
         # Does init, load, set up, write, enable, calibrate all in one fell swoooop
         #  for VSR2 followed by VSR1
@@ -1289,36 +1357,45 @@ class HexitecFem():
         self._set_status_message("Initialisation completed. VSR2 and VS1 configured.");
 
     def read_temperatures_humidity_values(self):
-        logging.debug("------------------------------------------------------ VSR addr: %s Read temperature, humidity values.. ------------------------------------------------------" % self.vsr_addr)
-        self.send_cmd([0x23, self.vsr_addr, 0x52, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, 0x52, 0x0D], False)
         sensors_values = self.read_response()
+        sensors_values = sensors_values.strip()
+        if self.debug: 
+            logging.debug("VSR: %s sensors_values: %s len: %s" % (format(self.vsr_addr, '#02x'), sensors_values, len(sensors_values)))
 
-        ambient_hex     = sensors_values.strip()[1:5]
-        humidity_hex    = sensors_values.strip()[5:9]
-        asic1_hex       = sensors_values.strip()[9:13]
-        asic2_hex       = sensors_values.strip()[13:17]
-        adc_hex         = sensors_values.strip()[17:21]
+        # Check register value is koshure or sensor values weren't read out
+        initial_value = -1
+        try:
+            initial_value = int(sensors_values[1])
+        except ValueError as e:
+            logging.error("Failed to readout intelligible sensor values")
+            return
 
-        if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
-            self.vsr1_ambient     = self.get_ambient_temperature(ambient_hex)
-            self.vsr1_humidity    = self.get_humidity(humidity_hex)
-            self.vsr1_asic1       = self.get_asic_temperature(asic1_hex)
-            self.vsr1_asic2       = self.get_asic_temperature(asic2_hex)
-            self.vsr1_adc         = self.get_adc_temperature(adc_hex)
-            logging.debug("Ambient: %.2fC\tHumidity: %.2f%s\tAsic1: %.2fC\tAsic2: %.2fC\tAdc: %.2fC" % (self.vsr1_ambient, self.vsr1_humidity, "%", self.vsr1_asic1, self.vsr1_asic2, self.vsr1_adc))
+        if initial_value == HexitecFem.SENSORS_READOUT_OK:
+
+            ambient_hex     = sensors_values[1:5]
+            humidity_hex    = sensors_values[5:9]
+            asic1_hex       = sensors_values[9:13]
+            asic2_hex       = sensors_values[13:17]
+            adc_hex         = sensors_values[17:21]
+
+            if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
+                self.vsr1_ambient     = self.get_ambient_temperature(ambient_hex)
+                self.vsr1_humidity    = self.get_humidity(humidity_hex)
+                self.vsr1_asic1       = self.get_asic_temperature(asic1_hex)
+                self.vsr1_asic2       = self.get_asic_temperature(asic2_hex)
+                self.vsr1_adc         = self.get_adc_temperature(adc_hex)
+            else:
+                if (self.vsr_addr == HexitecFem.VSR_ADDRESS[1]):
+                    self.vsr2_ambient     = self.get_ambient_temperature(ambient_hex)
+                    self.vsr2_humidity    = self.get_humidity(humidity_hex)
+                    self.vsr2_asic1       = self.get_asic_temperature(asic1_hex)
+                    self.vsr2_asic2       = self.get_asic_temperature(asic2_hex)
+                    self.vsr2_adc         = self.get_adc_temperature(adc_hex)
         else:
-            if (self.vsr_addr == HexitecFem.VSR_ADDRESS[1]):
-                self.vsr2_ambient     = self.get_ambient_temperature(ambient_hex)
-                self.vsr2_humidity    = self.get_humidity(humidity_hex)
-                self.vsr2_asic1       = self.get_asic_temperature(asic1_hex)
-                self.vsr2_asic2       = self.get_asic_temperature(asic2_hex)
-                self.vsr2_adc         = self.get_adc_temperature(adc_hex)
-                logging.debug("Ambient: %.2fC\tHumidity: %.2f%s\tAsic1: %.2fC\tAsic2: %.2fC\tAdc: %.2fC" % (self.vsr2_ambient, self.vsr2_humidity, "%", self.vsr2_asic1, self.vsr2_asic2, self.vsr2_adc))
+            logging.debug("VSR 0x%s: Sensor data temporarily unavailable" % format(self.vsr_addr, '02x'))
 
-
-        logging.debug("------------------------------------------------------ Temperature, humidity values read! ------------------------------------------------------")
-
-    # Calc ambient temp: [1ST VALUE]
+    # Calculate ambient temperature
     def get_ambient_temperature(self, hex_val):
         try:
             return ((int(hex_val, 16) * 175.72) / 65536) - 46.84
@@ -1326,7 +1403,7 @@ class HexitecFem():
             logging.error("Error converting ambient temperature: %s" % e)
             return -1
 
-    # Calc  Humidity: [2ND VALUE]
+    # Calculate Humidity
     def get_humidity(self, hex_val):
         try:
             return ((int(hex_val, 16) * 125) / 65535) - 6
@@ -1334,7 +1411,7 @@ class HexitecFem():
             logging.error("Error converting humidity: %s" % e)
             return -1
 
-    # Calc ASIC temp: [3RD & 4TH VALUE]
+    # Calculate ASIC temperature
     def get_asic_temperature(self, hex_val):
         try:
             return int(hex_val, 16) * 0.0625
@@ -1342,45 +1419,13 @@ class HexitecFem():
             logging.error("Error converting ASIC temperature: %s" % e)
             return -1
 
-    # Calc ADC Temperature: [5TH VALUE]
+    # Calculate ADC Temperature
     def get_adc_temperature(self, hex_val):
         try:
             return int(hex_val, 16) * 0.0625
         except ValueError as e:
             logging.error("Error converting ADC temperature: %s" % e)
             return -1
-
-
-    # -=-=-=-=-=-
-    # Example:
-    # s = '\x907BD8297002DE0A0002F2FF\r\r\r\r'
-    # I.e.:
-    #\x90  7BD8 2970 02DE 0A00 02F2 FF
-
-    # >>> a = s.strip()[1:5]
-    # >>> b = s.strip()[5:9]
-    # >>> c = s.strip()[9:13]
-    # >>> d = s.strip()[13:17]
-    # >>> e = s.strip()[17:21]
-    # >>>
-    # >>> a = s.strip()[1:5]
-    # >>> a, b, c, d ,e
-    # ('7BD8', '2970', '02DE', '0A00', '02F2')
-    # >>> get_adc_temp(a)
-    # 1981.5
-    # >>> get_adc_temp('0x7BD8')
-    # 1981.5
-    # >>>
-    # >>> get_amb_temp(a)
-    # 38.167124023437495
-    # >>> get_humidity(b)
-    # 14.233463035019454
-    # >>> get_asic_temp(c)
-    # 45.875
-    # >>> get_asic_temp(d)
-    # 160.0
-    # >>> get_adc_temp(e)
-    # 47.125
 
 
 class HexitecFemError(Exception):
