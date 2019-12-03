@@ -69,6 +69,12 @@ class HexitecFem():
     
     SENSORS_READOUT_OK = 7
 
+    GAIN_VALID_VALUES = (0, 1)
+
+    ROWS1_VALID_RANGE = [0, 16383]
+
+    HEX_ASCII_CODE = [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46] 
+
     def __init__(self, ip_address='127.0.0.1', port=1232, fem_id=1,
                 server_ctrl_ip_addr='10.0.2.2', camera_ctrl_ip_addr='10.0.2.1',
                 server_data_ip_addr='10.0.4.2', camera_data_ip_addr='10.0.4.1',
@@ -145,6 +151,10 @@ class HexitecFem():
         self.vsr2_asic2      = 0
         self.vsr2_adc        = 0
 
+        # Variables supporting handling of ini-style aspect config file
+        self.aspect_config  = "(Blank)"
+        self.aspect_parameters = {}
+
         param_tree_dict = {
             "diagnostics": {
                 "successful_reads": (lambda: self.successful_reads, None),
@@ -161,6 +171,7 @@ class HexitecFem():
             "operation_percentage_complete": (self._get_operation_percentage_complete, None),
             "dark_correction": (self._get_dark_correction, self._set_dark_correction),
             "number_frames": (self._get_number_frames, self._set_number_frames),
+            "aspect_config": (lambda: self.aspect_config, self._set_aspect_config),
             "read_sensors": (None, self.read_sensors),
             "vsr1_sensors": {
                 "ambient": (lambda: self.vsr1_ambient, None),
@@ -372,8 +383,6 @@ class HexitecFem():
             self._set_status_message("Connecting to camera..")
             self.cam_connect()
             self._set_status_message("Camera connected. Waiting for sensors to initialise..")
-            logging.debug("\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
-            logging.debug("conn_hw() %s" % threading.current_thread())
             self._wait_while_sensors_initialise()
             self._set_status_message("Camera connected. Sensors initialised.")
             self.initialise_progress = 0
@@ -513,7 +522,7 @@ class HexitecFem():
 
             reg_value = 256*256*256*cmd[(i*4)] + 256*256*cmd[(i*4)+1] + 256*cmd[(i*4)+2] + cmd[(i*4)+3] 
             self.x10g_rdma.write(0xE0000100, reg_value, 'Write 4 Bytes')
-            time.sleep(0.25)
+            # time.sleep(0.25)
 
     # Displays the returned response from the microcontroller
     def read_response(self):
@@ -527,7 +536,15 @@ class HexitecFem():
         daty = RETURN_START_CHR
         #Example: daty will contain: 0x23, self.vsr_addr, 0x40, 0x30, 0x41, 0x30, 0x30, 0x0D
 
-        while daty != CARRIAGE_RTN :
+        # JE mods
+        daty1 = RETURN_START_CHR
+        daty2 = RETURN_START_CHR
+        daty3 = RETURN_START_CHR
+        daty4 = RETURN_START_CHR
+
+        # while daty1 != CARRIAGE_RTN and daty2 != CARRIAGE_RTN and daty3 != CARRIAGE_RTN and daty4 != CARRIAGE_RTN: # NEW
+        while daty != CARRIAGE_RTN :    # Old
+
             fifo_empty = FIFO_EMPTY_FLAG
 
             while fifo_empty == FIFO_EMPTY_FLAG and empty_count < ABORT_VALUE:
@@ -535,25 +552,22 @@ class HexitecFem():
                 empty_count = empty_count + 1
 
             dat = self.x10g_rdma.read(0xE0000200, 'Data')
-            # logging.debug("dat: %s" % format(dat, '02x'))
+            # if dat != 0x01:
+            #     logging.debug("dat: %s" % format(dat, '02x'))
 
-            daty = dat//256//256//256%256
-            # daty = (dat >> 24) & 0xFF
+            daty = (dat >> 24) & 0xFF
             f.append(daty)
             daty1 = daty
 
-            daty = dat//256//256%256
-            # daty = (dat >> 16) & 0xFF
+            daty = (dat >> 16) & 0xFF
             f.append(daty)
             daty2 = daty
 
-            daty = dat//256%256
-            # daty = (dat >> 8) & 0xFF
+            daty = (dat >> 8) & 0xFF
             f.append(daty)
             daty3 = daty
 
-            daty = dat%256
-            # daty = dat & 0xFF
+            daty = dat & 0xFF
             f.append(daty)
             daty4 = daty
 
@@ -976,20 +990,40 @@ class HexitecFem():
 
     def set_up_state_machine(self):
         logging.debug("Setting up state machine")
-        #  Thes are used to set up the state machine
-        sm_timing1  = [0x23, self.vsr_addr, 0x42, 0x30, 0x37, 0x30, 0x33, 0x0D ]
-        sm_timing2  = [0x23, self.vsr_addr, 0x42, 0x30, 0x32, 0x30, 0x31, 0x0D ]
-        sm_timing3  = [0x23, self.vsr_addr, 0x42, 0x30, 0x34, 0x30, 0x31, 0x0D ]
-        sm_timing4  = [0x23, self.vsr_addr, 0x42, 0x30, 0x35, 0x30, 0x36, 0x0D ]
-        sm_timing5  = [0x23, self.vsr_addr, 0x42, 0x30, 0x39, 0x30, 0x32, 0x0D ]
-        sm_timing6  = [0x23, self.vsr_addr, 0x42, 0x30, 0x45, 0x30, 0x41, 0x0D ]
-        sm_timing7  = [0x23, self.vsr_addr, 0x42, 0x31, 0x42, 0x30, 0x38, 0x0D ]
-        sm_timing8  = [0x23, self.vsr_addr, 0x42, 0x31, 0x34, 0x30, 0x31, 0x0D ]
-        
+        #  These are used to set up the state machine
+        sm_timing1  = [0x23, self.vsr_addr, 0x42, 0x30, 0x37, 0x30, 0x33, 0x0D]    # Reg 0x07 -> 3 (Ena PLL, ADC PLL)
+        #sm_timing2  = [0x23, self.vsr_addr, 0x42, 0x30, 0x32, 0x30, 0x31, 0x0D]    # Reg 0x02 -> RowS1 (val=0x01)
+        sm_timing3  = [0x23, self.vsr_addr, 0x42, 0x30, 0x34, 0x30, 0x31, 0x0D]    # Reg 0x04 -> S1Sph
+        sm_timing4  = [0x23, self.vsr_addr, 0x42, 0x30, 0x35, 0x30, 0x36, 0x0D]    # Reg 0x05 -> SphS2
+        sm_timing5  = [0x23, self.vsr_addr, 0x42, 0x30, 0x39, 0x30, 0x32, 0x0D]    # Reg 0x09 -> ADC-CLK-delay
+        sm_timing6  = [0x23, self.vsr_addr, 0x42, 0x30, 0x45, 0x30, 0x41, 0x0D]    # Reg 0x0E -> ADC-pipeline SYNC-delay
+        sm_timing7  = [0x23, self.vsr_addr, 0x42, 0x31, 0x42, 0x30, 0x38, 0x0D]    # Reg 0x1B -> waitClkRow
+        sm_timing8  = [0x23, self.vsr_addr, 0x42, 0x31, 0x34, 0x30, 0x31, 0x0D]    # Reg 0x14 -> Start SM on falling (0) / rising (1) Edge of ADC-CLK
+
+
+        # Begin make hardware settings accessible through ini-style config file
+        reg_002 = 0x30, 0x31    # Default RowS1 High Byte value: 1 (maximum warp speed)
+        reg_003 = 0x30, 0x30    # Default RowS1 Low Byte value : 0 (ditto)
+
         self.send_cmd(sm_timing1)
         self.read_response()
-        self.send_cmd(sm_timing2)
+
+        # Trial obtaining RowS1 Value from config file
+        row_s1 = self._extract_row_s1()
+        if row_s1 > -1:
+            # Valid value, within range
+            row_s1_low = row_s1 & 0xFF
+            row_s1_high = row_s1 >> 8
+            reg_002 = self.convert_to_aspect_format(row_s1_low)
+            reg_003 = self.convert_to_aspect_format(row_s1_high)
+
+        # Send RowS1 low byte to Register 0x02 (Accepts 8 bits)
+        self.send_cmd([0x23, self.vsr_addr, 0x42, 0x30, 0x32, reg_002[0], reg_002[1], 0x0D])
         self.read_response()
+        # Send RowS1 high byte to Register 0x03 (Accepts 6 bits)
+        self.send_cmd([0x23, self.vsr_addr, 0x42, 0x30, 0x33, reg_003[0], reg_003[1], 0x0D])
+        self.read_response()
+
         self.send_cmd(sm_timing3)
         self.read_response()
         self.send_cmd(sm_timing4)
@@ -1393,7 +1427,7 @@ class HexitecFem():
                     self.vsr2_asic2       = self.get_asic_temperature(asic2_hex)
                     self.vsr2_adc         = self.get_adc_temperature(adc_hex)
         else:
-            logging.debug("VSR 0x%s: Sensor data temporarily unavailable" % format(self.vsr_addr, '02x'))
+            logging.warn("VSR 0x%s: Sensor data temporarily unavailable" % format(self.vsr_addr, '02x'))
 
     # Calculate ambient temperature
     def get_ambient_temperature(self, hex_val):
@@ -1427,8 +1461,87 @@ class HexitecFem():
             logging.error("Error converting ADC temperature: %s" % e)
             return -1
 
+    def _set_aspect_config(self, filename):
+        # Check whether file exists..
+        try:
+            with open(filename, 'r') as f:
+                pass
+            self.aspect_config = filename
+            logging.debug("aspect_config: '%s' Filename: '%s'" % (self.aspect_config, filename))
+        except IOError as e:
+            logging.error("Cannot open provided aspect file: %s -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-" % e)
+            raise ParameterTreeError("Error: %s" % e)
+        #
+        import pprint
+        self.read_ini_file(self.aspect_config)
+        pprint.pprint(self.aspect_parameters)
+
+    def _parse_ini_file(self, parameters):
+        pass
+
+    def _extract_gain(self, parameters):
+
+        gain = int(parameters['Gain'])
+        if gain in self.GAIN_VALID_RANGE:
+            # Within valid range
+            self.gain = gain
+        else:
+            logging.error("Error parsing Gain from file, got: ", gain, " Valid range: ", self.GAIN_VALID_RANGE)
+
+    def _extract_row_s1(self):
+        row_s1 = -1
+        try:
+            row_s1 = int(self.aspect_parameters['Row -> S1'])
+            if row_s1 >= self.ROWS1_VALID_RANGE[0] and row_s1 <= self.ROWS1_VALID_RANGE[1]:
+                pass; #self.row_s1 = row_s1
+            else:
+                logging.error("Error parsing Row S1 from file, got: %s, valid range: %s-%s" % (row_s1, self.ROWS1_VALID_RANGE[0], self.ROWS1_VALID_RANGE[1]))
+                row_s1 = -1
+        except KeyError:
+            logging.error("Error: No '%s' Key defined!" % 'Row -> S1')
+        return row_s1
+
+    def convert_to_aspect_format(self, value):
+        '''  Convert integer to Aspect's hexadecimal notation
+                e.g. 31 (=1F) -> 0x31, 0x46
+        '''
+        hex_string = "{:02x}".format(value)
+        #logging.debug("value: {:} Hex: {:}".format(value, hex_string))
+        high_string = hex_string[0]
+        low_string = hex_string[1]
+        high_int = int(high_string, 16)
+        low_int = int(low_string, 16)
+        high_encoded = self.HEX_ASCII_CODE[high_int]
+        low_encoded = self.HEX_ASCII_CODE[low_int]
+        #logging.debug("H: {:02x} L: {:02x}".format(high_encoded, low_encoded))
+        return high_encoded, low_encoded
+
+    # Read ini-style file
+    def read_ini_file(self, filename):
+        try:
+            with open(filename, 'r') as f:
+                line = "(blank)"
+                while len(line) > 0:
+                    line = f.readline()
+                    if "[" in line:
+                        pass
+                    else:
+                        try:
+                            key, value = line.split("=")
+                            key, value = key.strip(), value.strip().strip("\"")
+                            if key in self.aspect_parameters:
+                                logging.warning("Doublet! Key '%s' (= '%s') already set. Ignoring new value: '%s'" % (key, self.aspect_parameters[key], value))
+                            else:
+                                self.aspect_parameters[key] = value
+                        except ValueError:
+                            #Don't parse empty line(s)
+                            pass
+        except IOError as e:
+            logging.error("Error parsing ini file: %s -------------------------------------------------------------------------" % e)
+
 
 class HexitecFemError(Exception):
     """Simple exception class for HexitecFem to wrap lower-level exceptions."""
 
     pass
+

@@ -468,7 +468,7 @@ class HexitecDetectorDefaults():
         # self.vector_file_dir = "/aeg_sw/work/projects/qem/python/03052018/"
         # self.vector_file = "QEM_D4_198_ADC_10_icbias30_ifbias24.txt"
         # self.odin_data_dir = "~/develop/projects/odin-demo/install/"
-        self.number_frames = 20
+        self.number_frames = 10
         self.acq_gap = 1
         self.fem = {
             "ip_addr": "192.168.0.122",

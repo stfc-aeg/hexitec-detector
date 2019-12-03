@@ -60,7 +60,7 @@ class HexitecDAQ():
 
         self.rows, self.columns = 80, 80
         self.pixels = self.rows * self.columns
-        self.number_frames = 20
+        self.number_frames = 10
 
         self.param_tree = ParameterTree({
             "receiver": {
@@ -147,8 +147,8 @@ class HexitecDAQ():
             fp_status = self.get_od_status('fp')
             # get current frame written number. if not found, assume FR
             # just started up and it will be 0
-            hdf_status = fp_status.get('hdf', {"frames_written": 0})
-        self.frame_start_acquisition = hdf_status['frames_written']
+            hdf_status = fp_status.get('hdf', {"frames_processed": 0})
+        self.frame_start_acquisition = hdf_status['frames_processed']
         self.frame_end_acquisition = self.frame_start_acquisition + num_frames
         logging.info("FRAME START ACQ: %d END ACQ: %d",
                      self.frame_start_acquisition,
@@ -159,8 +159,8 @@ class HexitecDAQ():
         self.set_file_writing(True)
 
     def acquisition_check_loop(self):
-        hdf_status = self.get_od_status('fp').get('hdf', {"frames_written": 0})
-        if hdf_status['frames_written'] == self.frame_end_acquisition:
+        hdf_status = self.get_od_status('fp').get('hdf', {"frames_processed": 0})
+        if hdf_status['frames_processed'] == self.frame_end_acquisition:
             self.stop_acquisition()
             logging.debug("Acquisition Complete")
         else:
@@ -242,7 +242,6 @@ class HexitecDAQ():
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         self.adapters["fp"].put(command, request)
 
-        print(" -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- setting fname: \n  ", self.file_name)
         command = "config/hdf/file/name"
         request.body = self.file_name
         self.adapters["fp"].put(command, request)
@@ -250,8 +249,6 @@ class HexitecDAQ():
         command = "config/hdf/write"
         request.body = "{}".format(writing)
         self.adapters["fp"].put(command, request)
-
-        #TODO: adapter.py migration - Right place for this?
 
         # Avoid config/histogram/max_frames_received - use own paramTree instead
         self._set_max_frames_received(self.number_frames)
@@ -424,4 +421,3 @@ class HexitecDAQ():
         # What does work:
         #curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/threshold -d 
         #   '{"threshold_value": 7, "threshold_mode": "none"}' | python -m json.tool
-        # (But not {"threshold": {"threshold_value": 7, ...}} !)
