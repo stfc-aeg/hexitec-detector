@@ -10,6 +10,7 @@ Created on Fri July 05 15:00:14 2019
 import time
 import datetime
 import logging
+import configparser
 #
 import threading
 
@@ -1660,11 +1661,11 @@ class HexitecFem():
         dctrl = [0x30, 0x30, 0x30, 0x30]
         rsrv2 = [0x30, 0x38, 0x45, 0x38]
 
-        umid = self._extract_exponential('Uref_mid', bit_range=12)
-        if umid > -1:
+        umid_value = self._extract_exponential('Uref_mid', bit_range=12)
+        if umid_value > -1:
             # Valid value, within range
-            umid_high = umid >> 8
-            umid_low = umid & 0xFF
+            umid_high = umid_value >> 8
+            umid_low = umid_value & 0xFF
             umid[0], umid[1] = self.convert_to_aspect_format(umid_high)
             umid[2], umid[3] = self.convert_to_aspect_format(umid_low)
 
@@ -1965,8 +1966,8 @@ class HexitecFem():
         #logging.debug("H: {:02x} L: {:02x}".format(high_encoded, low_encoded))
         return high_encoded, low_encoded
 
-    # Read ini-style file
-    def read_ini_file(self, filename):
+    # Read ini-style file - Original implementation
+    def read_ini_file_original(self, filename):
         try:
             with open(filename, 'r') as f:
                 line = "(blank)"
@@ -1987,6 +1988,17 @@ class HexitecFem():
                             pass
         except IOError as e:
             logging.error("Error parsing ini file: %s" % e)
+
+    def read_ini_file(self, filename):
+        ''' Read filename, parsing case sensitive keys, decoded as strings '''
+        parser = configparser.ConfigParser()
+        # Maintain case-sensitivity:
+        parser.optionxform=str
+        parser.read(filename)
+        for sect in parser.sections():
+            print('Section:', sect)
+            for k,v in parser.items(sect):
+                self.aspect_parameters[k] = v.encode("utf-8").strip("\"")
 
 
 class HexitecFemError(Exception):
