@@ -14,7 +14,7 @@ import configparser
 #
 import threading
 
-from hexitec.RdmaUDP import *
+from hexitec.RdmaUDP import RdmaUDP
 
 from concurrent import futures
 from socket import error as socket_error

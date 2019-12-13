@@ -9,6 +9,11 @@ from tornado.ioloop import IOLoop
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
+import h5py
+from datetime import datetime
+# To flatten dictionary of dictionaries into single dictionary
+import collections
+
 class HexitecDAQ():
     """
     Encapsulates all the functionaility to initiate the DAQ.
@@ -46,6 +51,14 @@ class HexitecDAQ():
         # ParameterTree variables
         self.sensors_layout = "2x2"
 
+        # Note that these four enable(s) are cosmetic only - written as meta data
+        #   actual control is exercises from odin_server.js via sequence config files
+        #   loading select(ed) plugins
+        self.addition_enable = False
+        self.discrimination_enable = False
+        self.calibration_enable = False
+        self.next_frame_enable = False
+
         self.pixel_grid_size = 3
         self.gradients_filename = ""
         self.intercepts_filename = ""
@@ -82,13 +95,16 @@ class HexitecDAQ():
             # Adapter.py migration:
             "config": {
                 "addition": {
+                    "enable": (lambda: self.addition_enable, self._set_addition_enable),
                     "pixel_grid_size": (lambda: self.pixel_grid_size, self._set_pixel_grid_size)
                 },
                 "calibration": {
+                    "enable": (lambda: self.calibration_enable, self._set_calibration_enable),
                     "gradients_filename": (lambda: self.gradients_filename, self._set_gradients_filename),
                     "intercepts_filename": (lambda: self.intercepts_filename, self._set_intercepts_filename)
                 },
                 "discrimination": {
+                    "enable": (lambda: self.discrimination_enable, self._set_discrimination_enable),
                     "pixel_grid_size": (lambda: self.pixel_grid_size, self._set_pixel_grid_size)
                 },
                 "histogram": {
@@ -98,7 +114,10 @@ class HexitecDAQ():
                     "max_frames_received": (lambda: self.max_frames_received, self._set_max_frames_received)
                 },
                 "reorder": {
-                    "raw_data": (lambda: self.raw_data, self._set_raw_data)#,
+                    "raw_data": (lambda: self.raw_data, self._set_raw_data)
+                },
+                "next_frame": {
+                    "enable": (lambda: self.next_frame_enable, self._set_next_frame_enable)
                 },
                 "threshold": {
                     "threshold_filename": (lambda: self.threshold_filename, self._set_threshold_filename),
@@ -163,6 +182,8 @@ class HexitecDAQ():
         if hdf_status['frames_processed'] == self.frame_end_acquisition:
             self.stop_acquisition()
             logging.debug("Acquisition Complete")
+            # All required frames processed, wait for hdf file to close
+            self.await_hdf_closing()
         else:
             IOLoop.instance().call_later(.5, self.acquisition_check_loop)
 
@@ -170,7 +191,54 @@ class HexitecDAQ():
         """ Disable file writing so the processes can access the save data """
         self.in_progress = False
         self.set_file_writing(False)
+##
+    def await_hdf_closing(self):
 
+        hdf_status = self.get_od_status('fp').get('hdf', {"writing": True})
+        if hdf_status['writing']:
+            IOLoop.instance().call_later(0.5, self.await_hdf_closing)
+        else:
+            full_path = self.file_dir + self.file_name + '_000001.h5'
+            print("\nlet's writ file: %s\n\n\n\n\n" % full_path)
+            self.meta_file(full_path, "daq", self.param_tree.get(''))
+
+    def write_metadata(self, metadata_group, ma_dict):
+        print("Adding metadata to file")
+        ma_dict = self.flatten(ma_dict)
+        print(" ma_dict:\n\n%s\n\n\n" % ma_dict)
+        # Build metadata attributes from cached parameters
+        for param, val in ma_dict.items():
+            print("  Adding key %s (%s), value %s (%s)" % (param, type(param), val, type(val)))
+            # print("  key '%s' val '%s')" % (param, val['file_name']))
+            metadata_group.attrs[param] = val#['file_name']
+        # Add additional attribute to record current date
+        metadata_group.attrs['runDate'] = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
+        # Write the XML configuration files into the metadata group
+        # self.xml_ds = {}
+        # str_type = h5py.special_dtype(vlen=str)
+
+    def meta_file(self, filename, meta_group_name, ma_dict):
+        hdf_file_location = filename
+        try:
+            hdf_file = h5py.File(hdf_file_location, 'r+')
+        except IOError as e:
+            print("Failed to open HDF file with error: %s" % e)
+            raise(e)
+        # Create metadata group and add datasets to it
+        metadata_group = hdf_file.create_group(meta_group_name)
+        self.write_metadata(metadata_group, ma_dict)
+        hdf_file.close()
+
+    def flatten(self, d, parent_key='', sep='/'):
+        items = []
+        for k, v in d.items():
+            new_key = parent_key + sep + k if parent_key else k
+            if isinstance(v, collections.MutableMapping):
+                items.extend(self.flatten(v, new_key, sep=sep).items())
+            else:
+                items.append((new_key, v))
+        return dict(items)
+##
     def is_od_connected(self, status=None, adapter=""):
         if status is None:
             status = self.get_od_status(adapter)
@@ -276,6 +344,18 @@ class HexitecDAQ():
         self.rows = int(self.rows) * 80
         self.columns = int(self.columns) * 80
         self.pixels = self.rows * self.columns
+
+    def _set_addition_enable(self, addition_enable):
+        self.addition_enable = addition_enable
+
+    def _set_calibration_enable(self, calibration_enable):
+        self.calibration_enable = calibration_enable
+
+    def _set_discrimination_enable(self, discrimination_enable):
+        self.discrimination_enable = discrimination_enable
+
+    def _set_next_frame_enable(self, next_frame_enable):
+        self.next_frame_enable = next_frame_enable
 
     def _set_pixel_grid_size(self, size):
         if (self.pixel_grid_size in [3, 5]):

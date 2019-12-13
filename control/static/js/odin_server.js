@@ -44,10 +44,12 @@ $( document ).ready(function()
             var pixel_grid_size = $('#pixel-grid-size-text').prop('value');
 
             var addition_payload = {"addition": 
-                                {"pixel_grid_size": parseInt(pixel_grid_size)} };
+                                {"enable": addition_enable, 
+                                "pixel_grid_size": parseInt(pixel_grid_size)} };
 
             var discrimination_payload = {"discrimination": 
-                                {"pixel_grid_size": parseInt(pixel_grid_size)} };
+                                {"enable": discrimination_enable, 
+                                "pixel_grid_size": parseInt(pixel_grid_size)} };
 
             // plugin param
             $.ajax({
@@ -144,7 +146,7 @@ $( document ).ready(function()
 
     // Odin Control
 
-    // // Configure Dark Correction switch
+    // Configure Dark Correction switch
     // $("[name='dark_correction_enable']").bootstrapSwitch();
     // $("[name='dark_correction_enable']").bootstrapSwitch('state', dark_correction_enable, true);
     // $('input[name="dark_correction_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
@@ -872,14 +874,38 @@ var changeRawDataEnable = function ()
 //     });
 // };
 
-var changeNextFrameEnable = function()
+var changeNextFrameEnable = function ()
 {
     next_frame_enable = $("[name='next_frame_enable']").bootstrapSwitch('state');
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/next_frame/enable',
+        contentType: "application/json",
+        data: JSON.stringify(next_frame_enable),
+        success: function(result) {
+            console.log("dark_correction successfully changed");
+        },
+        error: function(request, msg, error) {
+            console.log("dark_correction couldn't be changed");
+        }
+    });
 };
 
 var changeCalibrationEnable = function()
 {
     calibration_enable = $("[name='calibration_enable']").bootstrapSwitch('state');
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/calibration/enable',
+        contentType: "application/json",
+        data: JSON.stringify(calibration_enable),
+        success: function(result) {
+            console.log("dark_correction successfully changed");
+        },
+        error: function(request, msg, error) {
+            console.log("dark_correction couldn't be changed");
+        }
+    });
 };
 
 var changeHdfWriteEnable = function()
