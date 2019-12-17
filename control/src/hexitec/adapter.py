@@ -178,7 +178,7 @@ class HexitecAdapter(ApiAdapter):
         # Pass adapter list to Hexitec class:
         self.hexitec.initialize(self.adapters)
 
-        # self.adapters["liveview"] = adapter
+        # logging.debug("\n\n" + "".join(['   {0:16} = {1}\n'.format(k, v) for k, v in self.adapters.iteritems()]))
 
 class HexitecError(Exception):
     """
@@ -210,7 +210,7 @@ class Hexitec():
         self.file_name = options.get("save_file", defaults.save_file)
         self.number_frames = options.get("acquisition_num_frames", defaults.number_frames)
 
-        self.daq = HexitecDAQ(self.file_dir, self.file_name)
+        self.daq = HexitecDAQ(self, self.file_dir, self.file_name)
 
         self.adapters = {}
 
@@ -224,6 +224,7 @@ class Hexitec():
                 logging.debug(fem_dict)
 
                 self.fems.append(HexitecFem(
+                    self,
                     fem_dict.get("ip_addr", defaults.fem["ip_addr"]),
                     fem_dict.get("port", defaults.fem["port"]),
                     fem_dict.get("id", defaults.fem["id"]),
@@ -235,6 +236,7 @@ class Hexitec():
 
         if not self.fems:  # if self.fems is empty
             self.fems.append(HexitecFem(
+                parent=self, 
                 ip_address=defaults.fem["ip_addr"],
                 port=defaults.fem["port"],
                 fem_id=defaults.fem["id"],

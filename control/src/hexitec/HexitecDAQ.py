@@ -11,8 +11,9 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 import h5py
 from datetime import datetime
-# To flatten dictionary of dictionaries into single dictionary
 import collections
+# Check whether file exists:
+import os.path
 
 class HexitecDAQ():
     """
@@ -25,7 +26,9 @@ class HexitecDAQ():
 
     THRESHOLDOPTIONS = ["value", "filename", "none"]
 
-    def __init__(self, save_file_dir="", save_file_name=""):
+    def __init__(self, parent, save_file_dir="", save_file_name=""):
+
+        self.parent = parent
         self.adapters = {}
 
         self.file_dir = save_file_dir
@@ -38,7 +41,6 @@ class HexitecDAQ():
         self.frame_start_acquisition = 0  # number of frames received at start of acq
         self.frame_end_acquisition = 0  # number of frames at end of acq (start + acq number)
 
-        self.process_list = {}
         self.file_writing = False
         self.config_dir = ""
         self.config_files = {
@@ -46,9 +48,8 @@ class HexitecDAQ():
             "fr": ""
         }
 
-        ## Migration from adapter.py ##
-
         # ParameterTree variables
+
         self.sensors_layout = "2x2"
 
         # Note that these four enable(s) are cosmetic only - written as meta data
@@ -92,7 +93,6 @@ class HexitecDAQ():
                 "file_dir": (lambda: self.file_dir, self.set_data_dir)
             },
             "in_progress": (lambda: self.in_progress, None),
-            # Adapter.py migration:
             "config": {
                 "addition": {
                     "enable": (lambda: self.addition_enable, self._set_addition_enable),
@@ -183,7 +183,7 @@ class HexitecDAQ():
             self.stop_acquisition()
             logging.debug("Acquisition Complete")
             # All required frames processed, wait for hdf file to close
-            self.await_hdf_closing()
+            self.hdf_closing_loop()
         else:
             IOLoop.instance().call_later(.5, self.acquisition_check_loop)
 
@@ -191,43 +191,75 @@ class HexitecDAQ():
         """ Disable file writing so the processes can access the save data """
         self.in_progress = False
         self.set_file_writing(False)
-##
-    def await_hdf_closing(self):
 
+    def hdf_closing_loop(self):
         hdf_status = self.get_od_status('fp').get('hdf', {"writing": True})
         if hdf_status['writing']:
-            IOLoop.instance().call_later(0.5, self.await_hdf_closing)
+            IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
             full_path = self.file_dir + self.file_name + '_000001.h5'
-            print("\nlet's writ file: %s\n\n\n\n\n" % full_path)
-            self.meta_file(full_path, "daq", self.param_tree.get(''))
+            self.prepare_hdf_file(full_path)
 
-    def write_metadata(self, metadata_group, ma_dict):
-        print("Adding metadata to file")
-        ma_dict = self.flatten(ma_dict)
-        print(" ma_dict:\n\n%s\n\n\n" % ma_dict)
-        # Build metadata attributes from cached parameters
-        for param, val in ma_dict.items():
-            print("  Adding key %s (%s), value %s (%s)" % (param, type(param), val, type(val)))
-            # print("  key '%s' val '%s')" % (param, val['file_name']))
-            metadata_group.attrs[param] = val#['file_name']
-        # Add additional attribute to record current date
-        metadata_group.attrs['runDate'] = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
-        # Write the XML configuration files into the metadata group
-        # self.xml_ds = {}
-        # str_type = h5py.special_dtype(vlen=str)
-
-    def meta_file(self, filename, meta_group_name, ma_dict):
+    def prepare_hdf_file(self, filename):
         hdf_file_location = filename
         try:
             hdf_file = h5py.File(hdf_file_location, 'r+')
         except IOError as e:
             print("Failed to open HDF file with error: %s" % e)
             raise(e)
-        # Create metadata group and add datasets to it
-        metadata_group = hdf_file.create_group(meta_group_name)
-        self.write_metadata(metadata_group, ma_dict)
+        # Create metadata group, add datasets to it and pass to write function
+        # daq_metadata_group = hdf_file.create_group("daq")
+        # daq_tree_dict = self.param_tree.get('')
+        # self.write_metadata(daq_metadata_group, daq_tree_dict)
+
+        parent_metadata_group = hdf_file.create_group("hexitec")
+        parent_tree_dict = self.parent.param_tree.get('')
+        # fem_tree_dict = self.parent.fem.param_tree.get('')
+        self.write_metadata(parent_metadata_group, parent_tree_dict)
         hdf_file.close()
+
+    def write_metadata(self, metadata_group, param_tree_dict):
+        param_tree_dict = self.flatten(param_tree_dict)
+        # logging.debug(" param_tree_dict:\n\n%s\n\n\n" % param_tree_dict)
+        # Build metadata attributes from cached parameters
+        for param, val in param_tree_dict.items():
+            if val == None:
+                # Replace None or TypeError will be thrown here
+                #   ("Object dtype dtype('O') has no native HDF5 equivalent")
+                val = "N/A"
+            # print("  Adding key %s (%s), value %s (%s)" % (param, type(param), val, type(val)))
+            metadata_group.attrs[param] = val
+        # Add additional attribute to record current date
+        metadata_group.attrs['runDate'] = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
+        # Write the configuration files into the metadata group
+        self.config_ds = {}
+        str_type = h5py.special_dtype(vlen=str)
+
+        # Write contents of config files
+        for param_file in ('detector/fems/fem_0/aspect_config',
+                            'detector/daq/config/calibration/gradients_filename',
+                            'detector/daq/config/calibration/intercepts_filename'):
+            # Only attempt to open file if it exists
+            file_name = param_tree_dict[param_file]
+            if os.path.isfile(file_name):
+
+                self.config_ds[param_file] = metadata_group.create_dataset(param_file, shape=(1,),
+                                                                        dtype=str_type)
+                try:
+                    with open(file_name, 'r') as xml_file:
+                        self.config_ds[param_file][:] = xml_file.read()
+
+                except IOError as e:
+                    print("Failed to read %s XML file %s : %s " % (param_file, 
+                                                                file_name, e))
+                    raise(e)
+                except Exception as e:
+                    print("Got exception trying to create metadata for %s XML file %s : %s " %
+                        (param_file, param_file, e))
+                    raise(e)
+                logging.debug("Key '%s'; Successfully read file '%s'" % (param_file, file_name))
+            else:
+                logging.debug("\n\n Key: %s says file: %s\n Doesn't exist!\n\n\n" % (param_file, file_name))
 
     def flatten(self, d, parent_key='', sep='/'):
         items = []
@@ -238,7 +270,7 @@ class HexitecDAQ():
             else:
                 items.append((new_key, v))
         return dict(items)
-##
+
     def is_od_connected(self, status=None, adapter=""):
         if status is None:
             status = self.get_od_status(adapter)
@@ -257,7 +289,7 @@ class HexitecDAQ():
 
     def get_od_status(self, adapter):
         if not self.is_initialised:
-            return {"Error": "Adapter not Initialised with references yet"}
+            return {"Error": "Adapter not initialised with references yet"}
         try:
             request = ApiAdapterRequest(None, content_type="application/json")
             response = self.adapters[adapter].get("status", request)
@@ -265,7 +297,6 @@ class HexitecDAQ():
         except KeyError:
             logging.warning("%s Adapter Not Found" % adapter)
             response = {"Error": "Adapter {} not found".format(adapter)}
-
         finally:
             return response
 
@@ -285,11 +316,9 @@ class HexitecDAQ():
             else:  # else of for loop: calls if finished loop without hitting break
                 # just return the first config file found
                 return_val = response["{}_config_files".format(adapter)][0]
-
         except KeyError as key_error:
             logging.warning("KeyError when trying to get config file: %s" % key_error)
             return_val = ""
-
         finally:
             self.config_files[adapter] = return_val
             return return_val

@@ -82,11 +82,12 @@ class HexitecFem():
     CHANNEL_3_OFFSET = 10
     CHANNEL_4_OFFSET = 15
 
-    def __init__(self, ip_address='127.0.0.1', port=1232, fem_id=1,
+    def __init__(self, parent, ip_address='127.0.0.1', port=1232, fem_id=1,
                 server_ctrl_ip_addr='10.0.2.2', camera_ctrl_ip_addr='10.0.2.1',
                 server_data_ip_addr='10.0.4.2', camera_data_ip_addr='10.0.4.1',
                 callback_function=None):
-
+        # Give access to parent class (Hexitec) - for potential future use
+        self.parent = parent
         self.ip_address = ip_address
         self.port = port
         self.id = int(fem_id)
@@ -1906,7 +1907,7 @@ class HexitecFem():
                             (descriptor, unscaled_setting, scaled_setting, valid_range[0], valid_range[1]))
                 setting = -1
         except KeyError:
-            logging.error("Error: No '%s' Key defined!" % descriptor)
+            logging.warn("Warn: No '%s' Key defined!" % descriptor)
         return setting
 
     def _extract_integer(self, descriptor, bit_range):
@@ -1921,7 +1922,7 @@ class HexitecFem():
                             (descriptor, setting, valid_range[0], valid_range[1]))
                 setting = -1
         except KeyError:
-            logging.error("Error: No '%s' Key defined!" % descriptor)
+            logging.warn("Warning: No '%s' Key defined!" % descriptor)
         return setting
 
     def _extract_binary_words(self, descriptor, bit_range):
@@ -1948,7 +1949,7 @@ class HexitecFem():
                             (descriptor, setting, valid_range[0], valid_range[1]))
                 setting = [-1, -1, -1, -1, -1]
         except KeyError:
-            logging.error("Error: No '%s' Key defined!" % descriptor)
+            logging.warn("Warn: No '%s' Key defined!" % descriptor)
         return setting
 
     def convert_to_aspect_format(self, value):
