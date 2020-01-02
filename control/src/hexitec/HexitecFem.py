@@ -1263,7 +1263,7 @@ class HexitecFem():
                 value_0C2[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
 
         # Column Read Enable, for ASIC1 (Reg 0x61)
-        col_read_enable1    = [0x23, self.vsr_addr, 0x42, register_061[0], register_061[1], 
+        col_read_enable1    = [0x23, self.vsr_addr, 0x44, register_061[0], register_061[1], 
                                 value_061[0], value_061[1], value_061[2], value_061[3], value_061[4], 
                                 value_061[5], value_061[6], value_061[7], value_061[8], value_061[9], 
                                 value_061[10], value_061[1], value_061[2], value_061[3], value_061[14], 
@@ -1271,7 +1271,7 @@ class HexitecFem():
                                 0x0D]
 
         # Column Read Enable, for ASIC2 (Reg 0xC2)
-        col_read_enable2    = [0x23, self.vsr_addr, 0x42, register_0C2[0], register_0C2[1], 
+        col_read_enable2    = [0x23, self.vsr_addr, 0x44, register_0C2[0], register_0C2[1], 
                                 value_0C2[0], value_0C2[1], value_0C2[2], value_0C2[3], value_0C2[4], 
                                 value_0C2[5], value_0C2[6], value_0C2[7], value_0C2[8], value_0C2[9], 
                                 value_0C2[10], value_0C2[1], value_0C2[2], value_0C2[3], value_0C2[14], 
@@ -1314,7 +1314,7 @@ class HexitecFem():
                 value_0AE[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
 
         # Column Power Enable, for ASIC1 (Reg 0x4D)
-        col_power_enable1    = [0x23, self.vsr_addr, 0x42, register_04D[0], register_04D[1], 
+        col_power_enable1    = [0x23, self.vsr_addr, 0x44, register_04D[0], register_04D[1], 
                                 value_04D[0], value_04D[1], value_04D[2], value_04D[3], value_04D[4], 
                                 value_04D[5], value_04D[6], value_04D[7], value_04D[8], value_04D[9], 
                                 value_04D[10], value_04D[1], value_04D[2], value_04D[3], value_04D[14], 
@@ -1322,7 +1322,7 @@ class HexitecFem():
                                 0x0D]
 
         # Column Power Enable, for ASIAE (Reg 0xAE)
-        col_power_enable2    = [0x23, self.vsr_addr, 0x42, register_0AE[0], register_0AE[1], 
+        col_power_enable2    = [0x23, self.vsr_addr, 0x44, register_0AE[0], register_0AE[1], 
                                 value_0AE[0], value_0AE[1], value_0AE[2], value_0AE[3], value_0AE[4], 
                                 value_0AE[5], value_0AE[6], value_0AE[7], value_0AE[8], value_0AE[9], 
                                 value_0AE[10], value_0AE[1], value_0AE[2], value_0AE[3], value_0AE[14], 
@@ -1365,7 +1365,7 @@ class HexitecFem():
                 value_0B8[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
 
         # Column Calibrate Enable, for ASIC1 (Reg 0x57)
-        col_cal_enable1    = [0x23, self.vsr_addr, 0x42, register_057[0], register_057[1], 
+        col_cal_enable1    = [0x23, self.vsr_addr, 0x44, register_057[0], register_057[1], 
                                 value_057[0], value_057[1], value_057[2], value_057[3], value_057[4], 
                                 value_057[5], value_057[6], value_057[7], value_057[8], value_057[9], 
                                 value_057[10], value_057[1], value_057[2], value_057[3], value_057[14], 
@@ -1373,7 +1373,7 @@ class HexitecFem():
                                 0x0D]
 
         # Column Calibrate Enable, for ASIB8 (Reg 0xB8)
-        col_cal_enable2    = [0x23, self.vsr_addr, 0x42, register_0B8[0], register_0B8[1], 
+        col_cal_enable2    = [0x23, self.vsr_addr, 0x44, register_0B8[0], register_0B8[1], 
                                 value_0B8[0], value_0B8[1], value_0B8[2], value_0B8[3], value_0B8[4], 
                                 value_0B8[5], value_0B8[6], value_0B8[7], value_0B8[8], value_0B8[9], 
                                 value_0B8[10], value_0B8[1], value_0B8[2], value_0B8[3], value_0B8[14], 
@@ -1414,7 +1414,7 @@ class HexitecFem():
                 value_0A4[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
 
         # Row Read Enable, for ASIC1 (Reg 0x43)
-        row_read_enable1    = [0x23, self.vsr_addr, 0x42, register_043[0], register_043[1], 
+        row_read_enable1    = [0x23, self.vsr_addr, 0x44, register_043[0], register_043[1], 
                                 value_043[0], value_043[1], value_043[2], value_043[3], value_043[4], 
                                 value_043[5], value_043[6], value_043[7], value_043[8], value_043[9], 
                                 value_043[10], value_043[1], value_043[2], value_043[3], value_043[14], 
@@ -1422,7 +1422,7 @@ class HexitecFem():
                                 0x0D]
 
         # Row Read Enable, for ASIC2 (Reg 0xA4)
-        row_read_enable2    = [0x23, self.vsr_addr, 0x42, register_0A4[0], register_0A4[1], 
+        row_read_enable2    = [0x23, self.vsr_addr, 0x44, register_0A4[0], register_0A4[1], 
                                 value_0A4[0], value_0A4[1], value_0A4[2], value_0A4[3], value_0A4[4], 
                                 value_0A4[5], value_0A4[6], value_0A4[7], value_0A4[8], value_0A4[9], 
                                 value_0A4[10], value_0A4[1], value_0A4[2], value_0A4[3], value_0A4[14], 
@@ -1465,7 +1465,7 @@ class HexitecFem():
                 value_090[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
 
         # Row Power Enable, for ASIC1 (Reg 0x2F)
-        row_power_enable1    = [0x23, self.vsr_addr, 0x42, register_02F[0], register_02F[1], 
+        row_power_enable1    = [0x23, self.vsr_addr, 0x44, register_02F[0], register_02F[1], 
                                 value_02F[0], value_02F[1], value_02F[2], value_02F[3], value_02F[4], 
                                 value_02F[5], value_02F[6], value_02F[7], value_02F[8], value_02F[9], 
                                 value_02F[10], value_02F[1], value_02F[2], value_02F[3], value_02F[14], 
@@ -1473,7 +1473,7 @@ class HexitecFem():
                                 0x0D]
 
         # Row Power Enable, for ASI90 (Reg 0x90)
-        row_power_enable2    = [0x23, self.vsr_addr, 0x42, register_090[0], register_090[1], 
+        row_power_enable2    = [0x23, self.vsr_addr, 0x44, register_090[0], register_090[1], 
                                 value_090[0], value_090[1], value_090[2], value_090[3], value_090[4], 
                                 value_090[5], value_090[6], value_090[7], value_090[8], value_090[9], 
                                 value_090[10], value_090[1], value_090[2], value_090[3], value_090[14], 
