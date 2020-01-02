@@ -1333,8 +1333,8 @@ class HexitecFem():
 
         register_057 = [0x35, 0x37]   # Column Calibrate Enable ASIC1 (Reg 0x57)
         register_0B8 = [0x42, 0x38]   # Column Calibrate Enable ASIC2 (Reg 0xB8)
-        value_057 = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        value_0B8 = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        value_057 = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+        value_0B8 = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
 
         col1_power = self._extract_binary_words('ColumnCal1stChannel', 2**20)
         if col1_power[0] > -1:
@@ -1484,8 +1484,8 @@ class HexitecFem():
 
         register_039 = [0x33, 0x39]   # Row Calibrate Enable ASIC1 (Reg 0x39)
         register_09A = [0x39, 0x41]   # Row Calibrate Enable ASIC2 (Reg 0x9A)
-        value_039 = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        value_09A = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        value_039 = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+        value_09A = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
 
         row1_power = self._extract_binary_words('RowCal1stBlock', 2**20)
         if row1_power[0] > -1:
@@ -1516,7 +1516,7 @@ class HexitecFem():
                 value_09A[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
 
         # Row Calibrate Enable, for ASIC1 (Reg 0x39)
-        row_cal_enable1    = [0x23, self.vsr_addr, 0x42, register_039[0], register_039[1], 
+        row_cal_enable1    = [0x23, self.vsr_addr, 0x44, register_039[0], register_039[1], 
                                 value_039[0], value_039[1], value_039[2], value_039[3], value_039[4], 
                                 value_039[5], value_039[6], value_039[7], value_039[8], value_039[9], 
                                 value_039[10], value_039[1], value_039[2], value_039[3], value_039[14], 
@@ -1524,7 +1524,7 @@ class HexitecFem():
                                 0x0D]
 
         # Row Calibrate Enable, for ASIC9A (Reg 0x9A)
-        row_cal_enable2    = [0x23, self.vsr_addr, 0x42, register_09A[0], register_09A[1], 
+        row_cal_enable2    = [0x23, self.vsr_addr, 0x44, register_09A[0], register_09A[1], 
                                 value_09A[0], value_09A[1], value_09A[2], value_09A[3], value_09A[4], 
                                 value_09A[5], value_09A[6], value_09A[7], value_09A[8], value_09A[9], 
                                 value_09A[10], value_09A[1], value_09A[2], value_09A[3], value_09A[14], 
@@ -1626,15 +1626,16 @@ class HexitecFem():
             self.send_cmd(row_cal_enable2c)
             self.read_response()
         elif self.test_mode_image == HexitecFem.TESTMODEIMAGE[3]:
+            # Default selection
             logging.debug("Column cal enable D")
-            self.send_cmd(col_cal_enable1d)
+            self.send_cmd(col_cal_enable1)
             self.read_response()
-            self.send_cmd(col_cal_enable2d)
+            self.send_cmd(col_cal_enable2)
             self.read_response()
             logging.debug("Row cal enable D")
-            self.send_cmd(row_cal_enable1d)
+            self.send_cmd(row_cal_enable1)
             self.read_response()
-            self.send_cmd(row_cal_enable2d)
+            self.send_cmd(row_cal_enable2)
             self.read_response()
             
         logging.debug("Column read enable")
