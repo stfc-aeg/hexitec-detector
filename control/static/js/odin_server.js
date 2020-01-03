@@ -1112,6 +1112,25 @@ function hdf_file_name_changed()
     });
 };
 
+//curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/fems/fem_0/ -d '{"aspect_config": "/u/ckd27546/tmp/aspectGigE.ini"}'
+function aspect_config_changed()
+{
+    var aspect_config = $('#aspect-config-text').prop('value');
+    var payload = {"aspect_config": aspect_config};
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/fems/fem_0/',
+        contentType: "application/json",
+        data: JSON.stringify(payload),
+        success: function(result) {
+            $('#aspect-config-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#aspect-config-warning').html(error + ": " + format_error_message(request.responseText));
+        }
+    });
+};
+
 // curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/detector/acquisition -d '{"num_frames": 3}'
 function frames_changed()
 {

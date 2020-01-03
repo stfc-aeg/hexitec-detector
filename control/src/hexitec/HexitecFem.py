@@ -1873,7 +1873,7 @@ class HexitecFem():
             self.aspect_config = filename
             logging.debug("aspect_config: '%s' Filename: '%s'" % (self.aspect_config, filename))
         except IOError as e:
-            logging.error("Cannot open provided aspect file: %s -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-" % e)
+            logging.error("Cannot open provided aspect file: %s" % e)
             raise ParameterTreeError("Error: %s" % e)
         #
         import pprint
