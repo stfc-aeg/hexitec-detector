@@ -181,6 +181,8 @@ class HexitecFem():
             "number_frames": (self._get_number_frames, self._set_number_frames),
             "aspect_config": (lambda: self.aspect_config, self._set_aspect_config),
             "read_sensors": (None, self.read_sensors),
+            "hardware_connected": (lambda: self.hardware_connected, None),
+            "hardware_busy": (lambda: self.hardware_busy, None),
             "vsr1_sensors": {
                 "ambient": (lambda: self.vsr1_ambient, None),
                 "humidity": (lambda: self.vsr1_humidity, None),

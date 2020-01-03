@@ -22,6 +22,11 @@ var fem_error_id = -1;
 
 $( document ).ready(function()
 {
+    document.getElementById("initialiseButton").disabled = true;
+    document.getElementById("acquireButton").disabled = true;
+    document.getElementById("disconnectButton").disabled = true;
+    document.getElementById("offsetsButton").disabled = true;
+ 
     $(".bootstrap-switch").bootstrapSwitch({
         'size': 'midi',
         'onSwitchChange': function(event, state) {
@@ -161,6 +166,8 @@ $( document ).ready(function()
             polling_thread_running = true;
             start_polling_thread();
         }
+        document.getElementById("disconnectButton").disabled = false;
+        document.getElementById("connectButton").disabled = true;
     });
 
     $('#initialiseButton').on('click', function(event) {
@@ -181,6 +188,9 @@ $( document ).ready(function()
         setTimeout(function() {
             polling_thread_running = false;    
         }, 2000);
+
+        document.getElementById("disconnectButton").disabled = true;
+        document.getElementById("connectButton").disabled = false;
     });
 
     $('#offsetsButton').on('click', function(event) {
@@ -207,7 +217,6 @@ function collect_offsets() {
     });
 }
 
-// Functions supporting polling..
 function start_polling_thread() {
 
     poll_fem();
@@ -221,6 +230,31 @@ function poll_fem() {
         var adapter_status = response["detector"]["status"]
 
         var percentage_complete = fems["fem_0"]["operation_percentage_complete"];
+        var hardware_connected = fems["fem_0"]["hardware_connected"];
+        var hardware_busy = fems["fem_0"]["hardware_busy"];
+
+        // Enable buttons when connection completed
+        if (hardware_connected == true)
+        {
+            if (hardware_busy == true)
+            {
+                document.getElementById("initialiseButton").disabled = true;
+                document.getElementById("acquireButton").disabled = true;
+                document.getElementById("offsetsButton").disabled = true;
+            }
+            else
+            {
+                document.getElementById("initialiseButton").disabled = false;
+                document.getElementById("acquireButton").disabled = false;
+                document.getElementById("offsetsButton").disabled = false;
+            }
+        }
+        else
+        {
+            document.getElementById("initialiseButton").disabled = true;
+            document.getElementById("acquireButton").disabled = true;
+            document.getElementById("offsetsButton").disabled = true;
+        }
 
         // http://localhost:8888/api/0.1/hexitec/detector/fems/fem_0/diagnostics/successful_reads
         // Diagnostics:
