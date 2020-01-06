@@ -208,14 +208,17 @@ class HexitecDAQ():
             print("Failed to open HDF file with error: %s" % e)
             raise(e)
         # Create metadata group, add datasets to it and pass to write function
-        # daq_metadata_group = hdf_file.create_group("daq")
-        # daq_tree_dict = self.param_tree.get('')
-        # self.write_metadata(daq_metadata_group, daq_tree_dict)
 
         parent_metadata_group = hdf_file.create_group("hexitec")
         parent_tree_dict = self.parent.param_tree.get('')
         # fem_tree_dict = self.parent.fem.param_tree.get('')
         self.write_metadata(parent_metadata_group, parent_tree_dict)
+
+        #TODO: Hacked until frame_process_adapter updated to use parameter tree
+        hdf_metadata_group = hdf_file.create_group("hdf")
+        hdf_tree_dict = self.adapters['fp']._param
+        self.write_metadata(hdf_metadata_group, hdf_tree_dict)
+
         hdf_file.close()
 
     def write_metadata(self, metadata_group, param_tree_dict):
@@ -229,37 +232,40 @@ class HexitecDAQ():
                 val = "N/A"
             # print("  Adding key %s (%s), value %s (%s)" % (param, type(param), val, type(val)))
             metadata_group.attrs[param] = val
-        # Add additional attribute to record current date
-        metadata_group.attrs['runDate'] = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
-        # Write the configuration files into the metadata group
-        self.config_ds = {}
-        str_type = h5py.special_dtype(vlen=str)
 
-        # Write contents of config files
-        for param_file in ('detector/fems/fem_0/aspect_config',
-                            'detector/daq/config/calibration/gradients_filename',
-                            'detector/daq/config/calibration/intercepts_filename'):
-            # Only attempt to open file if it exists
-            file_name = param_tree_dict[param_file]
-            if os.path.isfile(file_name):
+        # Only write parent's (Hexitec class) parameter tree, config files once
+        if metadata_group.name == u'/hexitec':
+            # Add additional attribute to record current date
+            metadata_group.attrs['runDate'] = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
+            # Write the configuration files into the metadata group
+            self.config_ds = {}
+            str_type = h5py.special_dtype(vlen=str)
 
-                self.config_ds[param_file] = metadata_group.create_dataset(param_file, shape=(1,),
-                                                                        dtype=str_type)
-                try:
-                    with open(file_name, 'r') as xml_file:
-                        self.config_ds[param_file][:] = xml_file.read()
+            # Write contents of config files
+            for param_file in ('detector/fems/fem_0/aspect_config',
+                                'detector/daq/config/calibration/gradients_filename',
+                                'detector/daq/config/calibration/intercepts_filename'):
+                # Only attempt to open file if it exists
+                file_name = param_tree_dict[param_file]
+                if os.path.isfile(file_name):
 
-                except IOError as e:
-                    print("Failed to read %s XML file %s : %s " % (param_file, 
-                                                                file_name, e))
-                    raise(e)
-                except Exception as e:
-                    print("Got exception trying to create metadata for %s XML file %s : %s " %
-                        (param_file, param_file, e))
-                    raise(e)
-                logging.debug("Key '%s'; Successfully read file '%s'" % (param_file, file_name))
-            else:
-                logging.debug("\n\n Key: %s says file: %s\n Doesn't exist!\n\n\n" % (param_file, file_name))
+                    self.config_ds[param_file] = metadata_group.create_dataset(param_file, shape=(1,),
+                                                                            dtype=str_type)
+                    try:
+                        with open(file_name, 'r') as xml_file:
+                            self.config_ds[param_file][:] = xml_file.read()
+
+                    except IOError as e:
+                        print("Failed to read %s XML file %s : %s " % (param_file, 
+                                                                    file_name, e))
+                        raise(e)
+                    except Exception as e:
+                        print("Got exception trying to create metadata for %s XML file %s : %s " %
+                            (param_file, param_file, e))
+                        raise(e)
+                    logging.debug("Key '%s'; Successfully read file '%s'" % (param_file, file_name))
+                else:
+                    logging.debug("\n\n Key: %s says file: %s\n Doesn't exist!\n\n\n" % (param_file, file_name))
 
     def flatten(self, d, parent_key='', sep='/'):
         items = []
