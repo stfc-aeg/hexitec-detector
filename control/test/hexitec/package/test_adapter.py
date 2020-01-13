@@ -21,8 +21,6 @@ class DetectorAdapterTestFixture(object):
         self.options = {
             "fem_0":
                 """
-                ip_addr = 192.168.0.122,
-                port = 8888,
                 id = 0,
                 server_ctrl_ip = 127.0.0.1,
                 camera_ctrl_ip = 127.0.0.1,
@@ -135,8 +133,6 @@ class TestDetector():
             detector = Hexitec({})
 
             mock_fem.assert_called_with(
-                ip_address=defaults.fem["ip_addr"],
-                port=defaults.fem["port"],
                 fem_id=defaults.fem["id"],
                 server_ctrl_ip_addr=defaults.fem["server_ctrl_ip"],
                 camera_ctrl_ip_addr=defaults.fem["camera_ctrl_ip"],
@@ -148,8 +144,6 @@ class TestDetector():
         options = test_detector_adapter.options
 
         options["fem_1"] = """
-                ip_addr = 192.168.0.123,
-                port = 8080,
                 id = 0,
                 server_ctrl_ip = 127.0.0.2,
                 camera_ctrl_ip = 127.0.0.2,

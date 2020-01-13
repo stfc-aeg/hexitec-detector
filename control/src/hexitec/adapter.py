@@ -8,8 +8,6 @@ import logging
 import tornado
 import time
 import os
-#
-import threading
 
 # Making checking for integer type Python2/3 independent
 import sys
@@ -54,7 +52,7 @@ class HexitecAdapter(ApiAdapter):
 
         :param kwargs: keyword arguments specifying options
         """
-        # Intialise superclass
+        # Initialise superclass
         super(HexitecAdapter, self).__init__(**kwargs)
 
         self.hexitec = Hexitec(self.options)
@@ -86,11 +84,9 @@ class HexitecAdapter(ApiAdapter):
             if checkAdapters:
                 for name, adapter in self.adapters.items():
                     if path.startswith(name):
-                        # print "Adapter: ", name, " Let's ask it"
                         relative_path = path.split(name)
                         path = relative_path[1]
                         response = adapter.get(path=path, request=request).data
-                        # print name, " => ", response
                         logging.debug(response)
                         return ApiAdapterResponse(response, content_type=content_type, status_code=status_code)
 
@@ -177,12 +173,12 @@ class HexitecAdapter(ApiAdapter):
         self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
         # Pass adapter list to Hexitec class:
         self.hexitec.initialize(self.adapters)
-
-        # logging.debug("\n\n" + "".join(['   {0:16} = {1}\n'.format(k, v) for k, v in self.adapters.iteritems()]))
+        # Display all loaded adapters:
+        #logging.debug("\n\n" + "".join(['   {0:16} = {1}\n'.format(k, v) for k, v in self.adapters.iteritems()]))
 
 class HexitecError(Exception):
     """
-    Simple exception class for Hexitec to wrap lower-level exceptions.
+    Simple Exception class for Hexitec to wrap lower-level exceptions.
     """
 
     pass
@@ -194,7 +190,6 @@ class Hexitec():
     """
 
     # Thread executor used for background tasks
-    # executor = futures.ThreadPoolExecutor(max_workers=1)
     thread_executor = futures.ThreadPoolExecutor(max_workers=1)
 
     def __init__(self, options):
@@ -204,7 +199,6 @@ class Hexitec():
         This constructor initialises the Hexitec object, building a parameter tree and
         launching a background task if enabled
         """
-        # Begin implementing DAQ code..
         defaults = HexitecDetectorDefaults()
         self.file_dir = options.get("save_dir", defaults.save_dir)
         self.file_name = options.get("save_file", defaults.save_file)
@@ -225,8 +219,6 @@ class Hexitec():
 
                 self.fems.append(HexitecFem(
                     self,
-                    fem_dict.get("ip_addr", defaults.fem["ip_addr"]),
-                    fem_dict.get("port", defaults.fem["port"]),
                     fem_dict.get("id", defaults.fem["id"]),
                     fem_dict.get("server_ctrl_ip_addr", defaults.fem["server_ctrl_ip"]),
                     fem_dict.get("camera_ctrl_ip_addr", defaults.fem["camera_ctrl_ip"]),
@@ -236,9 +228,7 @@ class Hexitec():
 
         if not self.fems:  # if self.fems is empty
             self.fems.append(HexitecFem(
-                parent=self, 
-                ip_address=defaults.fem["ip_addr"],
-                port=defaults.fem["port"],
+                parent=self,
                 fem_id=defaults.fem["id"],
                 server_ctrl_ip_addr=defaults.fem["server_ctrl_ip"],
                 camera_ctrl_ip_addr=defaults.fem["camera_ctrl_ip"],
@@ -270,14 +260,11 @@ class Hexitec():
             "daq": self.daq.param_tree,
             "connect_hardware": (None, self.connect_hardware),
             "initialise_hardware": (None, self.initialise_hardware),
-            "collect_data": (None, self.collect_data),
             "disconnect_hardware": (None, self.disconnect_hardware),
             "collect_offsets": (None, self._collect_offsets),
             "commit_configuration": (None, self.commit_configuration),
-            # "stop_acquisition": (None, self._set_stop_acquisition),
             "vcal": (self._get_vcal, self._set_vcal),
             "debug_count": (self._get_debug_count, self._set_debug_count),
-            # Implement acquisition through daq class:
             "acquisition": {
                 "num_frames": (lambda: self.number_frames, self.set_number_frames),
                 "start_acq": (None, self.acquisition)
@@ -302,12 +289,9 @@ class Hexitec():
 
     @run_on_executor(executor='thread_executor')
     def start_polling(self):
-        IOLoop.instance().add_callback(self.poll_histograms)  # Polling Histogram status
+        IOLoop.instance().add_callback(self.poll_fem)
 
-    def poll_histograms(self):
-        # for t in threading.enumerate():
-        #     logging.debug(" *** thread: %s" % t.getName())
-        # logging.debug("tick-tock!? \n")
+    def poll_fem(self):
         start = time.time()
         for fem in self.fems:
             if fem.acquisition_completed:
@@ -318,23 +302,19 @@ class Hexitec():
                     request = ApiAdapterRequest(self.file_dir, content_type="application/json")
                     request.body = "{}".format(1)
                     self.adapters["fp"].put(command, request)
-                    # Clear fem's Boolean
+                    # Reset fem
                     fem.acquisition_completed = False
             #TODO: Also check sensor values?
             # ..
             health = fem.get_health()
-            # Don't note current id if error already found in another fem
+            # Only note current id if system is in health
             if self.health:
                 self.fem_id = fem.get_id()
                 self.status_error = fem._get_status_error()
                 self.status_message = fem._get_status_message()
                 self.health = self.health and health
-                # print(" Health report; fem id (%s)" % fem.get_id(), "    err: ", self.status_error,"    msg: ", self.status_message)
-            else:
-                pass
-                # print(" ALERT: Don't note fem's id (%s). Existing info:" % fem.get_id(), "    err: ", self.status_error, "    msg: ", self.status_message)
 
-        IOLoop.instance().call_later(1.0, self.poll_histograms)
+        IOLoop.instance().call_later(1.0, self.poll_fem)
 
     def connect_hardware(self, msg):
         for fem in self.fems:
@@ -343,10 +323,6 @@ class Hexitec():
     def initialise_hardware(self, msg):
         for fem in self.fems:
             fem.initialise_hardware(msg)
-
-    def collect_data(self, msg):
-        for fem in self.fems:
-            fem.collect_data(msg)
 
     def disconnect_hardware(self, msg):
         for fem in self.fems:
@@ -358,13 +334,13 @@ class Hexitec():
 
     def set_number_frames(self, frames):
         self.number_frames = frames
-        # Update number of frames in Hardware, and (via DAQ) histogram and hdf plugins
+        # Update number of frames in Hardware, and (via DAQ) in histogram and hdf plugins
         for fem in self.fems:
             fem._set_number_frames(self.number_frames)
 
         self.daq.set_number_frames(self.number_frames)
 
-        # Toggle file writing off/on if current on
+        # Toggle file writing off/on if already on
         if self.daq.file_writing:
             self.daq.set_file_writing(False)
             self.daq.set_file_writing(True)
@@ -394,10 +370,6 @@ class Hexitec():
         self.daq.start_acquisition(self.number_frames)
         for fem in self.fems:
             fem.collect_data()
-
-    # def _set_stop_acquisition(self, stop):
-    #     self.fems._set_stop_acquisition = stop
-
 
     def _get_vcal(self):
         return self.vcal
@@ -451,7 +423,7 @@ class Hexitec():
         """
         Set parameters in the parameter tree.
 
-        This method simply wraps underlying ParameterTree method so that an exceptions can be
+        This method simply wraps underlying ParameterTree method so that an exception can be
         re-raised with an appropriate HexitecError.
 
         :param path: path of parameter tree to set values for
@@ -467,14 +439,8 @@ class HexitecDetectorDefaults():
     def __init__(self):
         self.save_dir = "/tmp/"
         self.save_file = "default_file"
-        # self.vector_file_dir = "/aeg_sw/work/projects/qem/python/03052018/"
-        # self.vector_file = "QEM_D4_198_ADC_10_icbias30_ifbias24.txt"
-        # self.odin_data_dir = "~/develop/projects/odin-demo/install/"
         self.number_frames = 10
-        self.acq_gap = 1
         self.fem = {
-            "ip_addr": "192.168.0.122",
-            "port": "8070",
             "id": 0,
             "server_ctrl_ip": "10.0.2.2",
             "camera_ctrl_ip": "10.0.2.1",

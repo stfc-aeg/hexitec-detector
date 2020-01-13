@@ -1,3 +1,8 @@
+""" 
+HexitecDAQ for Hexitec ODIN control
+
+Christian Angelsen, STFC Detector Systems Software Group
+"""
 import logging
 
 from os import path
@@ -12,16 +17,15 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import h5py
 from datetime import datetime
 import collections
-# Check whether file exists:
 import os.path
 
 class HexitecDAQ():
     """
     Encapsulates all the functionaility to initiate the DAQ.
     
-    TODO: Configures the Frame Receiver and Frame Processor plugins
-    TODO: Configures the HDF File Writer Plugin
-    TODO: Configures the Live View Plugin
+    Configures the Frame Receiver and Frame Processor plugins
+    Configures the HDF File Writer Plugin
+    Configures the Live View Plugin
     """
 
     THRESHOLDOPTIONS = ["value", "filename", "none"]
@@ -32,7 +36,7 @@ class HexitecDAQ():
         self.adapters = {}
 
         self.file_dir = save_file_dir
-        self.file_name = save_file_name     # Unused, but may use in future..?
+        self.file_name = save_file_name
 
         self.in_progress = False
         self.is_initialised = False
@@ -53,7 +57,7 @@ class HexitecDAQ():
         self.sensors_layout = "2x2"
 
         # Note that these four enable(s) are cosmetic only - written as meta data
-        #   actual control is exercises from odin_server.js via sequence config files
+        #   actual control is exercised by odin_server.js via sequence config files
         #   loading select(ed) plugins
         self.addition_enable = False
         self.discrimination_enable = False
@@ -142,9 +146,9 @@ class HexitecDAQ():
         Ensures the odin data FP and FR are configured, and turn on File Writing
         """
         logging.debug("Setting up Acquisition")
+
         fr_status = self.get_od_status("fr")
         fp_status = self.get_od_status("fp")
-
         if self.is_od_connected(fr_status) is False:
             logging.error("Cannot start Acquisition: Frame Receiver not found")
             return
@@ -178,21 +182,28 @@ class HexitecDAQ():
         self.set_file_writing(True)
 
     def acquisition_check_loop(self):
+        """
+        Waits for acquisition to complete without blocking thread
+        """
         hdf_status = self.get_od_status('fp').get('hdf', {"frames_processed": 0})
         if hdf_status['frames_processed'] == self.frame_end_acquisition:
             self.stop_acquisition()
             logging.debug("Acquisition Complete")
-            # All required frames processed, wait for hdf file to close
+            # All required frames acquired, wait for hdf file to close
             self.hdf_closing_loop()
         else:
             IOLoop.instance().call_later(.5, self.acquisition_check_loop)
 
     def stop_acquisition(self):
-        """ Disable file writing so the processes can access the save data """
+        """ Disables file writing so the processes can access the save data """
         self.in_progress = False
         self.set_file_writing(False)
 
     def hdf_closing_loop(self):
+        """
+        Waits for processing to complete without blocking thread,
+        before preparing to write meta data
+        """
         hdf_status = self.get_od_status('fp').get('hdf', {"writing": True})
         if hdf_status['writing']:
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
@@ -201,12 +212,16 @@ class HexitecDAQ():
             self.prepare_hdf_file(full_path)
 
     def prepare_hdf_file(self, filename):
+        """
+        Re-open HDF5 file, prepare meta data
+        """
         hdf_file_location = filename
         try:
             hdf_file = h5py.File(hdf_file_location, 'r+')
         except IOError as e:
             print("Failed to open HDF file with error: %s" % e)
             raise(e)
+
         # Create metadata group, add datasets to it and pass to write function
 
         parent_metadata_group = hdf_file.create_group("hexitec")
@@ -222,18 +237,20 @@ class HexitecDAQ():
         hdf_file.close()
 
     def write_metadata(self, metadata_group, param_tree_dict):
-        param_tree_dict = self.flatten(param_tree_dict)
-        # logging.debug(" param_tree_dict:\n\n%s\n\n\n" % param_tree_dict)
-        # Build metadata attributes from cached parameters
+        """
+        Write parameter tree(s) and config files as meta data
+        """
+        param_tree_dict = self.flatten_dict(param_tree_dict)
+
+        # Build metadata attributes from dictionary
         for param, val in param_tree_dict.items():
             if val == None:
-                # Replace None or TypeError will be thrown here
+                # Replace None or TypeError will be thrown as:
                 #   ("Object dtype dtype('O') has no native HDF5 equivalent")
                 val = "N/A"
-            # print("  Adding key %s (%s), value %s (%s)" % (param, type(param), val, type(val)))
             metadata_group.attrs[param] = val
 
-        # Only write parent's (Hexitec class) parameter tree, config files once
+        # Only write parent's (Hexitec class) parameter tree's config files once
         if metadata_group.name == u'/hexitec':
             # Add additional attribute to record current date
             metadata_group.attrs['runDate'] = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
@@ -249,30 +266,34 @@ class HexitecDAQ():
                 file_name = param_tree_dict[param_file]
                 if os.path.isfile(file_name):
 
-                    self.config_ds[param_file] = metadata_group.create_dataset(param_file, shape=(1,),
+                    self.config_ds[param_file] = metadata_group.create_dataset(param_file, 
+                                                                            shape=(1,),
                                                                             dtype=str_type)
                     try:
                         with open(file_name, 'r') as xml_file:
                             self.config_ds[param_file][:] = xml_file.read()
 
                     except IOError as e:
-                        print("Failed to read %s XML file %s : %s " % (param_file, 
+                        logging.error("Failed to read %s XML file %s : %s " % (param_file, 
                                                                     file_name, e))
                         raise(e)
                     except Exception as e:
-                        print("Got exception trying to create metadata for %s XML file %s : %s " %
+                        logging.error("Exception creating metadata for %s XML file %s : %s " %
                             (param_file, param_file, e))
                         raise(e)
                     logging.debug("Key '%s'; Successfully read file '%s'" % (param_file, file_name))
                 else:
-                    logging.debug("\n\n Key: %s says file: %s\n Doesn't exist!\n\n\n" % (param_file, file_name))
+                    logging.debug("\n\n Key: %s's file: %s\n Doesn't exist!\n\n\n" % (param_file, file_name))
 
-    def flatten(self, d, parent_key='', sep='/'):
+    def flatten_dict(self, d, parent_key='', sep='/'):
+        """
+        Flattens a dictionary with nested dictionary into single dictionary of key-value pairs
+        """
         items = []
         for k, v in d.items():
             new_key = parent_key + sep + k if parent_key else k
             if isinstance(v, collections.MutableMapping):
-                items.extend(self.flatten(v, new_key, sep=sep).items())
+                items.extend(self.flatten_dict(v, new_key, sep=sep).items())
             else:
                 items.append((new_key, v))
         return dict(items)
@@ -319,7 +340,7 @@ class HexitecDAQ():
                 if "hexitec" in config_file.lower():
                     return_val = config_file
                     break
-            else:  # else of for loop: calls if finished loop without hitting break
+            else:  # else of for loop: calls if loop finished without hitting break
                 # just return the first config file found
                 return_val = response["{}_config_files".format(adapter)][0]
         except KeyError as key_error:
@@ -373,11 +394,12 @@ class HexitecDAQ():
 
     def update_rows_columns_pixels(self):
         """
-        Updates rows, columns and pixels from new sensors_layout value
+        Updates rows, columns and pixels from selected sensors_layout value
+        If sensors_layout = "3x2" => 3 rows of sensors by 2 columns of sensors
         """
-        self.rows, self.columns = self.sensors_layout.split("x")
-        self.rows = int(self.rows) * 80
-        self.columns = int(self.columns) * 80
+        self.sensors_rows, self.sensors_columns = self.sensors_layout.split("x")
+        self.rows = int(self.sensors_rows) * 80
+        self.columns = int(self.sensors_columns) * 80
         self.pixels = self.rows * self.columns
 
     def _set_addition_enable(self, addition_enable):
@@ -410,30 +432,29 @@ class HexitecDAQ():
 
     def _set_bin_end(self, bin_end):
         """
-        Updates bin_end, datasets' histograms' dimensions
+        Updates bin_end and datasets' histograms' dimensions
         """
         self.bin_end = bin_end
         self.update_histogram_dimensions()
     
     def _set_bin_start(self, bin_start):
         """
-        Updates bin_start, datasets' histograms' dimensions
+        Updates bin_start and datasets' histograms' dimensions
         """
         self.bin_start = bin_start
         self.update_histogram_dimensions()
     
     def _set_bin_width(self, bin_width):
         """
-        Updates bin_width, datasets' histograms' dimensions
+        Updates bin_width and datasets' histograms' dimensions
         """
         self.bin_width = bin_width
         self.update_histogram_dimensions()
 
     def update_datasets_frame_dimensions(self):
         """
-        Updates frames datasets' dimensions
+        Updates frames' datasets' dimensions
         """
-        # Update data, raw_data datasets
         for dataset in ["data", "raw_frames"]:
             payload = '{"dims": [%s, %s]}' % (self.rows, self.columns)
             command = "config/hdf/dataset/" + dataset
@@ -510,9 +531,11 @@ class HexitecDAQ():
         self.update_datasets_frame_dimensions()
 
     def commit_configuration(self):
-
-        # Loop overall plugins in ParameterTree, updating fp's settings
-        #   Except reorder, until raw_data (i.e. bool) supported
+        """
+        Sends each ParameterTree value to it's counterpart in the FP
+        """
+        # Loop overall plugins in ParameterTree, updating fp's settings except reorder
+        #TODO: Include reorder when odin_control supports raw_data (i.e. bool)
         for plugin in self.param_tree.tree.get("config"):
 
             if plugin != "reorder":
@@ -527,12 +550,3 @@ class HexitecDAQ():
                     request = ApiAdapterRequest(str(payload), content_type="application/json")
                     self.adapters["fp"].put(command, request)
 
-        # Effin' works:
-        # command = "config/threshold/threshold_value"
-        # payload = str(121)
-        # request = ApiAdapterRequest(payload, content_type="application/json")
-        # self.adapters["fp"].put(command, request)
-
-        # What does work:
-        #curl -s -H 'Content-type:application/json' -X PUT http://localhost:8888/api/0.1/hexitec/fp/config/threshold -d 
-        #   '{"threshold_value": 7, "threshold_mode": "none"}' | python -m json.tool

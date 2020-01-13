@@ -15,26 +15,16 @@
     <link href="css/odin-server.css" rel="stylesheet">
 
     <!-- Bootstrap -->
-    <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
     <link href="css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/bootstrap-switch.min.css" rel="stylesheet">   <!-- Comment out & load JSON will change checkboxes as they should -->
+    <link href="css/bootstrap-switch.min.css" rel="stylesheet">
     <link href="js/bootstrap-slider-10.2.1/css/bootstrap-slider.css" rel="stylesheet">
-    <!-- <link href="js/bootstrap-slider-10.2.1/css/bootstrap-slider.min.css" rel="stylesheet"> -->
 
-    <!-- Turn radiobuttons into switches?-->
     <script src="js/bootstrap-switch/highlight.js"></script>
     <script src="js/bootstrap-switch/bootstrap-switch.js"></script>
 
   </head>
   <body>
-    
-    <!-- <div class="container">
-
-      <div class="odin-server">
-      </div>
-
-    </div> -->
-
+    <!-- ODIN header - Not yet in use --> 
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
         <div class="navbar-header">
@@ -59,26 +49,16 @@
     <table class="overall-table" align="center">
       <thead></thead>
       <tbody>
-        <!-- <tr>
-          <td>
-            Test Area.. R3 A progress bar:
-          </td>
-          <td>
-            <div id="progress-bar" class="all-rounded">
-              <div id="progress-bar-percentage" class="all-rounded" style="width: 38%"><span>68/100</span></div>
-            </div>
-          </td>
-        </tr> -->
         <tr>
           <input type="button" class="btn btn-primary" id='storeButton' name="store_enable" data-size="small" value="store">
           <input type="button" class="btn btn-primary" id='testButton' name="store_enable" data-size="small" value="test_stuff">
           Adding Apply button:&nbsp;
           <input type="button" class="btn btn-primary" id='applyButton' name="store_enable" data-size="small" value="apply">
-          <-- These three buttons configure Odin data
         </tr>
       </tbody>
     </table>
-<!-- ---->
+  
+    <!-- HDF plugin settings settings -->
 
     <div class="well sidebar-nav-fixed">
       <table class="overall-table" align="center">
@@ -154,7 +134,7 @@
               &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
             </td>
           </tr>
-
+          <!-- Added aspect ini style config file -->
           <tr>
             <td>
               aSpect config:&nbsp;
@@ -168,18 +148,15 @@
               &nbsp;<td><span id="aspect-config-warning">&nbsp;</span></td>
             </td>
           </tr>
-
-          </tbody>
+        </tbody>
       </table>
-
     </div> <!-- well sidebar-nav-fixed -->
 
-<!-- ---->
+    <!-- Hardware settings section -->
     <div class="well sidebar-nav-fixed">
       <table class="overall-table" align="center">
         <thead></thead>
         <tbody>
-
           <tr>
             <td>
               Sensors Layout:&nbsp;
@@ -188,7 +165,6 @@
               <select onchange="selectChange(this.value)">
                 <option value="1x1">1x1 (80x80)</option>
                 <option selected="selected" value="2x2">2x2 (160x160)</option>
-                <!-- <option value="NxM">NxM (AAAxBBB)</option> -->
               </select>
             </td>
             <td>
@@ -211,22 +187,9 @@
               &nbsp;<td><span id="frames-warning">&nbsp;</span></td>
             </td>
           </tr>
-          <!-- <tr>
-            <td>
-              Dark Correction&nbsp;
-            </td>
-            <td>
-              <div class="row sidebar-row vertical-align">
-                <div class="col-xs-7">
-                  <input type="checkbox" id='darkCorrectionButton' name="dark_correction_enable" data-size="small">
-                </div>
-              </div>
-            </td>
-          </tr> -->
-
           <tr>
             <td>
-              Vcal:&nbsp;
+              Calibration Image:&nbsp;
             </td>
             <td>
               <select onchange="vcalChange(this.value)">
@@ -240,29 +203,25 @@
               &nbsp;<td><span id="vcal-warning">&nbsp;</span></td>
             </td>
           </tr>
-
+          <!-- Single traffic light to indicate system health -->
           <tr>
             <td>
               <div id="trafficLight">
-                <!-- <div>Click to Start and Stop</div> -->
-                <!-- <div class="lamp" id="Red"></div>
-                <div class="lamp" id="Yellow"></div> -->
                 <div class="lamp" id="Green"></div>
               </div>
             </td>
             <td>
-              <input type="button" class="btn btn-primary" id='connectButton' name="dc_connect" data-size="small" value="Connect"><!-- style="background-color:red">-->
+              <input type="button" class="btn btn-primary" id='connectButton' name="dc_connect" data-size="small" value="Connect">
               <input type="button" class="btn btn-primary" id='initialiseButton' name="dc_initialise" data-size="small" value="Initialise">
               <input type="button" class="btn btn-primary" id='acquireButton' name="dc_acquire" data-size="small" value="Acquire">
               <input type="button" class="btn btn-primary" id='disconnectButton' name="dc_disconnect" data-size="small" value="Disconnect">
-
             </td>
           </tr>
           <tr>
             <td>
             </td>
             <td>
-              <input type="button" class="btn btn-primary" id='offsetsButton' name="dc_dark_correction" data-size="small" value="Collect Offsets">
+              <input type="button" class="btn btn-primary" id='offsetsButton' name="dc_offsets_button" data-size="small" value="Collect Offsets">
             </td>
           </tr>
 
@@ -290,7 +249,7 @@
             <td>
             </td>
           </tr>
-
+          <!-- Display VSRs' environmental data -->
           <tr>
             <td>
             </td>
@@ -333,29 +292,23 @@
               <b>&nbsp;adc:&nbsp;</b><span id="vsr2_adc">&nbsp;</span>  
             </td>
           </tr>
-
-
-          </tbody>
+        </tbody>
       </table>
-
     </div> <!-- well sidebar-nav-fixed -->
 
-<!-- ---->
+    <!-- Odin Control settings section -->
     <div class="well sidebar-nav-fixed">
       <table class="overall-table" align="center">
         <thead></thead>
         <tbody>
-
           <tr>  
             <td>  
               <th>Reorder&nbsp;</th>
             </td>
             <td>&nbsp;</td>
             <td>
-
             </td>
           </tr>
-
           <tr>  
             <td>  
               <th>Raw Data&nbsp;</th>
@@ -365,7 +318,6 @@
               <div class="row sidebar-row vertical-align">
                 <div class="col-xs-7">
                   <input type="checkbox" id='rawDataButton' name="raw_data_enable" data-size="small">
-
                 </div>
               </div>
             </td>
@@ -384,7 +336,6 @@
               </div>
             </td>
           </tr>
-
           <tr>  
             <td>  
               Filename:&nbsp;
@@ -402,7 +353,6 @@
           <td>
             &nbsp;<span id="threshold-filename-warning">&nbsp;</span>
           </td>
-
           <tr>
             <td>  
               Value:&nbsp;
@@ -458,7 +408,6 @@
               </div>
             </td>
           </tr>
-
           <tr>
             <td>  
               Gradients:&nbsp;
@@ -494,7 +443,7 @@
             <td>
               <th>CS: None / Add / Dis:&nbsp;</th>
             </td>
-            <td></td>  <!-- Add empty cell or set of three radio buttons will upset Page layout -->
+            <td></td>  <!-- Add empty cell to prevent radio buttons upsetting Page layout -->
             <td>&nbsp;</td>
             <td>
                 <input id="cbox1" name="GroupedSwitches" class="bootstrap-switch" type="radio" data-off-text="OFF" data-on-text="ON" checked="true" value="none">
@@ -529,7 +478,6 @@
               </div>
             </td>
           </tr>
-
           <tr>
             <td>
               Bin Start:&nbsp;
@@ -571,100 +519,101 @@
             </td>
           </tr>
 
-      </tbody>
-    </table>
-
-  </div> <!-- well sidebar-nav-fixed -->
-
-
-<!-- Section nicked from LiveView UI.. -->
-  <div class="container-fluid">
-    <div class="row fluid-row">
-
-      <div class="span3">
-        <div class="well sidebar-nav-fixed">
-          <div class="container-fluid">
-            <div class="row sidebar-title">
-              <h3>Live View Demo</h3>
-            </div>
-            <div class="row sidebar-row vertical-align">
-              <div class="col-xs-5">
-                <b>Auto&#8209;update:</b> 
+        </tbody>
+      </table>
+  
+    </div> <!-- well sidebar-nav-fixed -->
+  
+  
+  <!-- Section nicked from LiveView UI.. -->
+    <div class="container-fluid">
+      <div class="row fluid-row">
+  
+        <div class="span3">
+          <div class="well sidebar-nav-fixed">
+            <div class="container-fluid">
+              <div class="row sidebar-title">
+                <h3>Live View Demo</h3>
               </div>
-              <div class="col-xs-7">
-                <input type="checkbox" name="liveview_enable" data-size="small">
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-5">
+                  <b>Auto&#8209;update:</b> 
+                </div>
+                <div class="col-xs-7">
+                  <input type="checkbox" name="liveview_enable" data-size="small">
+                </div>
               </div>
-            </div>
-            <div class="row sidebar-row vertical-align">
-              <div class="col-xs-5">
-                <b>Colour&nbsp;map:</b> 
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-5">
+                  <b>Colour&nbsp;map:</b> 
+                </div>
+                <div class="col-xs-7">
+                  <select class="form-control" id="colormap_select">
+                  </select>
+                </div>
               </div>
-              <div class="col-xs-7">
-                <select class="form-control" id="colormap_select">
-                </select>
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-5">
+                  <b>Clipping:</b> 
+                </div>
+                <div class="col-xs-7">
+                  <input type="checkbox" name="clip_enable" data-size="small":">
+                </div>
               </div>
-            </div>
-            <div class="row sidebar-row vertical-align">
-              <div class="col-xs-5">
-                <b>Clipping:</b> 
+              <div class="row sidebar-row vertical-align row-bold">
+                <div class="col-xs-3 text-left" id="clip_min">&nbsp;</div>
+                <div class="col-xs-6 text-center">Range</div>
+                <div class="col-xs-3 text-right" id="clip_max">&nbsp;</div>
               </div>
-              <div class="col-xs-7">
-                <input type="checkbox" name="clip_enable" data-size="small":">
+              <div class="row sidebar-row sidebar-row-full">
+                <div class="col-xs12 range-col">
+                  <input id="clip_range"
+                    type="text" value="" data-slider-id="clip-range" 
+                    data-slider-min="0" data-slider-max="100" 
+                    data-slider-step="1" data-slider-value="[0,100]"
+                  />
+                </div>
               </div>
-            </div>
-            <div class="row sidebar-row vertical-align row-bold">
-              <div class="col-xs-3 text-left" id="clip_min">&nbsp;</div>
-              <div class="col-xs-6 text-center">Range</div>
-              <div class="col-xs-3 text-right" id="clip_max">&nbsp;</div>
-            </div>
-            <div class="row sidebar-row sidebar-row-full">
-              <div class="col-xs12 range-col">
-                <input id="clip_range"
-                  type="text" value="" data-slider-id="clip-range" 
-                  data-slider-min="0" data-slider-max="100" 
-                  data-slider-step="1" data-slider-value="[0,100]"
-                />
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-5">
+                  <b>Auto&#8209;sizing:</b> 
+                </div>
+                <div class="col-xs-7">
+                  <input type="checkbox" name="autosize_enable" data-size="small":">
+                </div>
               </div>
-            </div>
-            <div class="row sidebar-row vertical-align">
-              <div class="col-xs-5">
-                <b>Auto&#8209;sizing:</b> 
+              <div class="row sidebar-row vertical-align row-bold">
+                <div class="col-xs-3 text-left" id="clip_min">0%</div>
+                <div class="col-xs-6 text-center">Size</div>
+                <div class="col-xs-3 text-right" id="clip_max">100%</div>
               </div>
-              <div class="col-xs-7">
-                <input type="checkbox" name="autosize_enable" data-size="small":">
+              <div class="row sidebar-row sidebar-row-full">
+                <div class="col-xs12 range-col">
+                  <input id="size_range"
+                    type="text" value="" data-slider-id="size-range" 
+                    data-slider-min="0" data-slider-max="100" 
+                    data-slider-step="1" data-slider-value="100"
+                  />
+                </div>
               </div>
-            </div>
-            <div class="row sidebar-row vertical-align row-bold">
-              <div class="col-xs-3 text-left" id="clip_min">0%</div>
-              <div class="col-xs-6 text-center">Size</div>
-              <div class="col-xs-3 text-right" id="clip_max">100%</div>
-            </div>
-            <div class="row sidebar-row sidebar-row-full">
-              <div class="col-xs12 range-col">
-                <input id="size_range"
-                  type="text" value="" data-slider-id="size-range" 
-                  data-slider-min="0" data-slider-max="100" 
-                  data-slider-step="1" data-slider-value="100"
-                />
-              </div>
-            </div>
-          </div> <!-- container-fluid --> 
-        </div> <!-- well sidebar-nav-fixed -->
-      </div> <!-- span3 -->
-
-      <div class="span9 span-fixed-sidebar">
-        <div id="liveview_container" class="odin-server live-image">
-          <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image'>
-        </div> <!-- odin-server -->
-      </div> <!-- span9 -->
-
-    </div> <!-- row fluid-row -->
-  </div> <!-- container-fluid-->
-
-  <!-- Pinched from live_view example.. -->
-  <script src="js/bootstrap-3.3.6-dist/dist/js/bootstrap-switch.min.js"></script>
-  <script src="js/bootstrap-slider-10.2.1/js/bootstrap-slider.min.js"></script>
-  <script src='js/live_view.js'></script>
-    
-  </body>
-</html>
+            </div> <!-- container-fluid --> 
+          </div> <!-- well sidebar-nav-fixed -->
+        </div> <!-- span3 -->
+  
+        <div class="span9 span-fixed-sidebar">
+          <div id="liveview_container" class="odin-server live-image">
+            <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image'>
+          </div> <!-- odin-server -->
+        </div> <!-- span9 -->
+  
+      </div> <!-- row fluid-row -->
+    </div> <!-- container-fluid-->
+  
+    <!-- Pinched from live_view example.. -->
+    <script src="js/bootstrap-3.3.6-dist/dist/js/bootstrap-switch.min.js"></script>
+    <script src="js/bootstrap-slider-10.2.1/js/bootstrap-slider.min.js"></script>
+    <script src='js/live_view.js'></script>
+      
+    </body>
+  </html>
+  

@@ -1,4 +1,10 @@
-#
+"""
+RdmaUDP 
+
+Read/Write control access to FEM-II via UDP.
+
+James Edwards 2019, Christian Angelsen, STFC Detector Systems Software Group, 2019.
+"""
 
 import socket
 import struct
@@ -7,7 +13,11 @@ import logging
 
 class RdmaUDP(object):
 
-    def __init__(self, MasterTxUDPIPAddress='192.168.0.1', MasterTxUDPIPPort=65535, MasterRxUDPIPAddress='192.168.0.1', MasterRxUDPIPPort=65536,TargetTxUDPIPAddress='192.168.0.2', TargetTxUDPIPPort=65535, TargetRxUDPIPAddress='192.168.0.2', TargetRxUDPIPPort=65536, RxUDPBuf = 1024, UDPMTU=9000, UDPTimeout=10):
+    def __init__(self, MasterTxUDPIPAddress='192.168.0.1', MasterTxUDPIPPort=65535,
+                       MasterRxUDPIPAddress='192.168.0.1', MasterRxUDPIPPort=65536,
+                       TargetTxUDPIPAddress='192.168.0.2', TargetTxUDPIPPort=65535,
+                       TargetRxUDPIPAddress='192.168.0.2', TargetRxUDPIPPort=65536,
+                       RxUDPBuf = 1024, UDPMTU=9000, UDPTimeout=10):
 
         self.txsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.rxsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -27,7 +37,6 @@ class RdmaUDP(object):
             raise socket.error("IP:Port %s:%s Because: %s" % (MasterTxUDPIPAddress, MasterTxUDPIPPort, e))
 
         self.rxsocket.setblocking(1)
-        #self.txsocket.setblocking(1)
 
         self.TgtRxUDPIPAddr = TargetRxUDPIPAddress
         self.TgtRxUDPIPPrt  = TargetRxUDPIPPort
@@ -43,7 +52,13 @@ class RdmaUDP(object):
         self.rxsocket.close()
 
     def read(self, address, comment=''):
+        """
+        Read 64 bits from the address.
 
+        Sends a read command to the target rx UDP address/port and returns the result.
+        @param address: the address to read from
+        @param comment: comment to print out 
+        """
         command = struct.pack('=BBBBIQBBBBIQQQQQ', 1,0,0,3, address, 0, 9,0,0,255, 0, 0,0,0,0,0)
         self.txsocket.sendto(command,(self.TgtRxUDPIPAddr,self.TgtRxUDPIPPrt))
 
@@ -61,7 +76,9 @@ class RdmaUDP(object):
         return data
 
     def write(self, address, data, comment=''):
-
+        """
+        Writes data to address
+        """
         if self.debug:
             logging.debug('W %08X : %08X %s' % (address, data, comment))
 

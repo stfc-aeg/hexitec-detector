@@ -218,10 +218,8 @@ var LiveViewApp = (function()
             img_scaling = Math.min(width_scaling, height_scaling);
             size_slider.data('slider').setValue(Math.floor(img_scaling * 100));
         }
-
         img_elem.width( Math.floor(img_scaling * img_width));
         img_elem.height(Math.floor(img_scaling * img_height));
-
     };
 
     return {
