@@ -68,10 +68,7 @@ class HexitecFem():
     HEX_ASCII_CODE = [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
                     0x41, 0x42, 0x43, 0x44, 0x45, 0x46]
 
-    # VSR, DAC Documentation: 
-    #   VCAL: 0x0111 =: 0.2 V. I.e. 273 = 0.2 or 273/0.2 = 1365
-    #   UMID: 0x0555 =: 1.0 V. i.e. 1365 = 1.0
-    DAC_SCALE_FACTOR = 1365
+    DAC_SCALE_FACTOR = 0.732
 
     CHANNEL_1_OFFSET = 0
     CHANNEL_2_OFFSET = 5
@@ -133,17 +130,23 @@ class HexitecFem():
         self.dark_correction    = HexitecFem.DARKCORRECTION[0]  # "DARK CORRECTION OFF" = 0
         self.test_mode_image    = HexitecFem.TESTMODEIMAGE[3]   # "IMAGE 4" [3]=Uncalibrated image, [0]=vcal on
 
-        self.vsr1_ambient    = 0
-        self.vsr1_humidity   = 0
-        self.vsr1_asic1      = 0
-        self.vsr1_asic2      = 0
-        self.vsr1_adc        = 0
+        self.vsr1_ambient   = 0
+        self.vsr1_humidity  = 0
+        self.vsr1_asic1     = 0
+        self.vsr1_asic2     = 0
+        self.vsr1_adc       = 0
+        self.vsr1_hv        = 0
 
-        self.vsr2_ambient    = 0
-        self.vsr2_humidity   = 0
-        self.vsr2_asic1      = 0
-        self.vsr2_asic2      = 0
-        self.vsr2_adc        = 0
+        self.vsr2_ambient   = 0
+        self.vsr2_humidity  = 0
+        self.vsr2_asic1     = 0
+        self.vsr2_asic2     = 0
+        self.vsr2_adc       = 0
+        self.vsr2_hv        = 0
+
+        self.read_firmware_version = True
+        self.firmware_date = "N/A"
+        self.firmware_time = "N/A"
 
         # Variables supporting handling of ini-style aspect config file
         self.aspect_config  = "(Blank)"
@@ -165,12 +168,15 @@ class HexitecFem():
             "read_sensors": (None, self.read_sensors),
             "hardware_connected": (lambda: self.hardware_connected, None),
             "hardware_busy": (lambda: self.hardware_busy, None),
+            "firmware_date": (lambda: self.firmware_date, None),
+            "firmware_time": (lambda: self.firmware_time, None),
             "vsr1_sensors": {
                 "ambient": (lambda: self.vsr1_ambient, None),
                 "humidity": (lambda: self.vsr1_humidity, None),
                 "asic1": (lambda: self.vsr1_asic1, None),
                 "asic2": (lambda: self.vsr1_asic2, None),
                 "adc": (lambda: self.vsr1_adc, None),
+                "hv": (lambda: self.vsr1_hv, None),
             },
             "vsr2_sensors": {
                 "ambient": (lambda: self.vsr2_ambient, None),
@@ -178,6 +184,7 @@ class HexitecFem():
                 "asic1": (lambda: self.vsr2_asic1, None),
                 "asic2": (lambda: self.vsr2_asic2, None),
                 "adc": (lambda: self.vsr2_adc, None),
+                "hv": (lambda: self.vsr2_hv, None),
             }
         }
 
@@ -203,11 +210,23 @@ class HexitecFem():
         Reads environmental sensors and updates parameter tree with results
         """
         try:
+            # Note when firmware was built, once
+            if self.read_firmware_version:
+                date = self.x10g_rdma.read(0x60000015, 'FIRMWARE DATE')
+                time = self.x10g_rdma.read(0x60000016, 'FIRMWARE TIME')
+                date = format(date, '#010x')
+                time = format(time, '#06x')
+                self.firmware_date = "{0:.2}/{1:.2}/{2:.4}".format(date[2:4], date[4:6], date[6:10])
+                self.firmware_time = "{0:.2}:{1:.2}".format(time[2:4], time[4:6])
+                self.read_firmware_version = False
+                #
             vsr = self.vsr_addr
             self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
             self.read_temperatures_humidity_values()
+            self.read_pwr_voltages()
             self.vsr_addr = HexitecFem.VSR_ADDRESS[1]
             self.read_temperatures_humidity_values()
+            self.read_pwr_voltages()
             self.vsr_addr = vsr
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to read sensors: %s" % str(e))
@@ -1602,10 +1621,18 @@ class HexitecFem():
         umid_value = self._extract_exponential('Uref_mid', bit_range=12)
         if umid_value > -1:
             # Valid value, within range
-            umid_high = umid_value >> 8
+            umid_high = (umid_value >> 8) & 0x0F
             umid_low = umid_value & 0xFF
             umid[0], umid[1] = self.convert_to_aspect_format(umid_high)
             umid[2], umid[3] = self.convert_to_aspect_format(umid_low)
+
+        vcal_value = self._extract_float('VCAL')
+        if vcal_value > -1:
+            # Valid value, within range
+            vcal_high = (vcal_value >> 8) & 0x0F
+            vcal_low = vcal_value & 0xFF
+            vcal[0], vcal[1] = self.convert_to_aspect_format(vcal_high)
+            vcal[2], vcal[3] = self.convert_to_aspect_format(vcal_low)
 
         self.send_cmd([0x23, self.vsr_addr, 0x54, 
                         vcal[0], vcal[1], vcal[2], vcal[3],     # Vcal, e.g. 0x0111 =: 0.2V
@@ -1695,6 +1722,43 @@ class HexitecFem():
         logging.debug("Calibrated sensor returned synchronised status: %s" % synced_status)
         print(" -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=- ")
         self._set_status_message("Initialisation completed. VSR2 and VS1 configured.");
+
+    def read_pwr_voltages(self):
+        """
+        Reads and converts power data into voltages
+        """
+        self.send_cmd([0x23, self.vsr_addr, 0x50, 0x0D], False)
+        sensors_values = self.read_response()
+        sensors_values = sensors_values.strip()
+
+        if self.debug: 
+            logging.debug("VSR: %s Power values: %s len: %s" % \
+                (format(self.vsr_addr, '#02x'), sensors_values, len(sensors_values)))
+
+            if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
+                self.vsr1_hv = self.get_hv_value(sensors_values)
+            else:
+                if (self.vsr_addr == HexitecFem.VSR_ADDRESS[1]):
+                    self.vsr2_hv = self.get_hv_value(sensors_values)
+
+    def get_hv_value(self, sensors_values):
+        """
+        Takes the full string of voltages and extracts the HV value
+        """
+        try:
+            # Calculate V10, the 3.3V reference voltage
+            reference_voltage = int(sensors_values[37:41], 16) * (2.048/4095)
+            # Calculate HV rails
+            u1 = int(sensors_values[1:5], 16) * (reference_voltage / 2**12)
+            # Apply conversion gain
+            hv_monitoring_voltage = u1 * 1621.65-1043.22
+            # Convert from millivolts to volts
+            hv_monitoring_voltage = hv_monitoring_voltage / 1000
+            return hv_monitoring_voltage
+        except ValueError as e:
+            logging.error("VSR %s: Error obtaining HV value: %s" % \
+                                (format(self.vsr_addr, '#02x'), e))
+            return -1
 
     def read_temperatures_humidity_values(self):
         """
@@ -1807,7 +1871,7 @@ class HexitecFem():
         number_string = number_string.replace(",", ".")
         number_float = float(number_string)
         number_int = int(round(number_float))
-        number_scaled = number_int * self.DAC_SCALE_FACTOR
+        number_scaled = int(number_int // self.DAC_SCALE_FACTOR)
         return number_scaled
 
     def _extract_exponential(self, descriptor, bit_range):
@@ -1816,6 +1880,7 @@ class HexitecFem():
         """
         valid_range = [0, 1 << bit_range]
         setting = -1
+
         try:
             unscaled_setting = self.aspect_parameters[descriptor]
             scaled_setting   = self.convert_aspect_exponent_to_dac_value(unscaled_setting)
@@ -1829,10 +1894,41 @@ class HexitecFem():
             logging.warn("Warning: No '%s' Key defined!" % descriptor)
         return setting
 
+    def convert_aspect_float_to_dac_value(self, number_float):
+        ''' 
+        Converts aspect float format to fit dac format
+        Convert float (eg: 1.3V) to mV (*1000), scale to fit DAC range
+        before rounding to nearest int
+        '''
+        milli_volts = number_float * 1000
+        number_scaled = int(round(milli_volts // self.DAC_SCALE_FACTOR))
+        return number_scaled
+
+    def _extract_float(self, descriptor):
+        """
+        Extracts float from the key "descriptor" in aspect parameters,
+        checking it's within range 0.0 - 3.0
+        """
+        valid_range = [0.0, 3.0]
+        setting = -1
+        try:
+            setting = float(self.aspect_parameters[descriptor])
+            if setting >= valid_range[0] and setting <= valid_range[1]:
+                pass
+            else:
+                logging.error("Error parsing parameter %s, got: %s but valid range: %s-%s" % \
+                            (descriptor, setting, valid_range[0], valid_range[1]))
+                setting = -1
+            # Convert from volts to DAQ format
+            setting = self.convert_aspect_float_to_dac_value(setting)
+        except KeyError:
+            logging.warning("Warning: No '%s' Key defined!" % descriptor)
+        return setting
+
     def _extract_integer(self, descriptor, bit_range):
         """
         Extracts integer from the key "descriptor" in aspect parameters,
-        checking they're within range defined by bit_range
+        checking it's within range defined by bit_range
         """
         valid_range = [0, 1 << bit_range]
         setting = -1
