@@ -172,10 +172,10 @@ class HexitecDAQ():
             # just started up and it will be 0
             hdf_status = fp_status.get('hdf', {"frames_processed": 0})
         self.frame_start_acquisition = hdf_status['frames_processed']
-        self.frame_end_acquisition = self.frame_start_acquisition + num_frames
+        self.frame_end_acquisition = num_frames
         logging.info("FRAME START ACQ: %d END ACQ: %d",
                      self.frame_start_acquisition,
-                     self.frame_end_acquisition)
+                     self.frame_start_acquisition+num_frames)
         self.in_progress = True
         IOLoop.instance().add_callback(self.acquisition_check_loop)
         logging.debug("Starting File Writer")
@@ -186,7 +186,7 @@ class HexitecDAQ():
         Waits for acquisition to complete without blocking thread
         """
         hdf_status = self.get_od_status('fp').get('hdf', {"frames_processed": 0})
-        if hdf_status['frames_processed'] == self.frame_end_acquisition:
+        if hdf_status['frames_processed'] == self.frame_end_acquisition: 
             self.stop_acquisition()
             logging.debug("Acquisition Complete")
             # All required frames acquired, wait for hdf file to close
@@ -374,9 +374,13 @@ class HexitecDAQ():
         request.body = "{}".format(writing)
         self.adapters["fp"].put(command, request)
 
-        # Avoid config/histogram/max_frames_received - use own paramTree instead
+        # Target both config/histogram/max_frames_received and own ParameterTree
         self._set_max_frames_received(self.number_frames)
-
+        command = "config/histogram/max_frames_received"
+        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+        request.body = "{}".format(self.number_frames)
+        self.adapters["fp"].put(command, request)
+        
         command = "config/hdf/frames"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         request.body = "{}".format(self.number_frames)

@@ -111,11 +111,11 @@ $( document ).ready(function()
         changeCalibrationEnable();
     });
 
-    $("[name='hdf_write_enable']").bootstrapSwitch({disabled:true});
-    $("[name='hdf_write_enable']").bootstrapSwitch('state', hdf_write_enable, true);
-    $('input[name="hdf_write_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
-        changeHdfWriteEnable();
-    });
+    // $("[name='hdf_write_enable']").bootstrapSwitch({disabled:true});
+    // $("[name='hdf_write_enable']").bootstrapSwitch('state', hdf_write_enable, true);
+    // $('input[name="hdf_write_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
+    //     changeHdfWriteEnable();
+    // });
 
     // Buttons for loading sequence config files, applying settings
 

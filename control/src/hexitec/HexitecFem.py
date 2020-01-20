@@ -104,6 +104,7 @@ class HexitecFem():
 
         self.number_of_frames = 10
 
+        self.first_initialisation = True
         self.hardware_connected = False
         self.hardware_busy = False
 
@@ -395,6 +396,11 @@ class HexitecFem():
             self.operation_percentage_complete = 0
             self.operation_percentage_steps = 108
             self.initialise_system()
+            if self.first_initialisation:
+               # On cold start: Fudge initialisation to include silently capturing data without 
+               #    writing to disk, to enable user to go straight to collecting images with offset data applied
+               
+               self.first_initialisation = False
             self.initialise_progress = 0
             self.hardware_busy = False
         except (HexitecFemError, ParameterTreeError) as e:
