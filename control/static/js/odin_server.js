@@ -317,7 +317,7 @@ function test_iac()
         type: "PUT",
         url: hexitec_url + 'detector',
         contentType: "application/json",
-        data: JSON.stringify({"commit_configuration": ""}),
+        data: JSON.stringify({"check_file": ""}),
         success: function(result) {
             $('#odin-control-warning').html("");
         },

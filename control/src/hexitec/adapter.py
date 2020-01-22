@@ -261,6 +261,7 @@ class Hexitec():
             "connect_hardware": (None, self.connect_hardware),
             "initialise_hardware": (None, self.initialise_hardware),
             "disconnect_hardware": (None, self.disconnect_hardware),
+            "check_file": (None, self.check_file),  # DEBUGGING
             "collect_offsets": (None, self._collect_offsets),
             "commit_configuration": (None, self.commit_configuration),
             "vcal": (self._get_vcal, self._set_vcal),
@@ -331,6 +332,9 @@ class Hexitec():
         self.status_error = ""
         self.status_message = ""
         self.health = True
+
+    def check_file(self, msg):
+        self.daq.check_file_exists()
 
     def set_number_frames(self, frames):
         self.number_frames = frames

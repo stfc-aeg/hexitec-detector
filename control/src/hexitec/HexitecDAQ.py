@@ -18,6 +18,7 @@ import h5py
 from datetime import datetime
 import collections
 import os.path
+import time
 
 class HexitecDAQ():
     """
@@ -43,7 +44,10 @@ class HexitecDAQ():
 
         # these varables used to tell when an acquisiton is completed
         self.frame_start_acquisition = 0  # number of frames received at start of acq
-        self.frame_end_acquisition = 0  # number of frames at end of acq (start + acq number)
+        self.frame_end_acquisition = 0  # number of frames at end of acq (acq number)
+
+        # First initialisation fudges data acquisition (but without writing to disk)
+        self.first_initialisation = True
 
         self.file_writing = False
         self.config_dir = ""
@@ -177,22 +181,41 @@ class HexitecDAQ():
                      self.frame_start_acquisition,
                      self.frame_start_acquisition+num_frames)
         self.in_progress = True
-        IOLoop.instance().add_callback(self.acquisition_check_loop)
         logging.debug("Starting File Writer")
-        self.set_file_writing(True)
+        if self.first_initialisation:
+            # First initialisation captures data without writing to disk
+            #   therefore don't enable file writing here
+            pass
+        else:
+            self.set_file_writing(True)
+        # Wait 2 seconds before begin checking how many frames hdf has processed,
+        #   otherwise HexitecDAQ may stop acquisition before fem(s) sent any data
+        IOLoop.instance().call_later(2.0, self.acquisition_check_loop)
 
     def acquisition_check_loop(self):
         """
-        Waits for acquisition to complete without blocking thread
+        Waits for acquisition to complete without blocking current thread
         """
         hdf_status = self.get_od_status('fp').get('hdf', {"frames_processed": 0})
-        if hdf_status['frames_processed'] == self.frame_end_acquisition: 
+        if hdf_status['frames_processed'] == self.frame_end_acquisition:
             self.stop_acquisition()
             logging.debug("Acquisition Complete")
             # All required frames acquired, wait for hdf file to close
             self.hdf_closing_loop()
         else:
+            if self.first_initialisation:
+                # First initialisation runs without file writing, stop acquisition 
+                #   without reopening (non-existent) file to add meta data
+                self.first_initialisation = False
+                self.stop_acquisition()
+                return
             IOLoop.instance().call_later(.5, self.acquisition_check_loop)
+
+    def check_file_exists(self):
+        full_path = self.file_dir + self.file_name + '_000001.h5'
+        existence = os.path.exists(full_path)
+        print(" *** Exist? %s file: %s " % (existence, full_path))
+        IOLoop.instance().call_later(.5, self.check_file_exists)
 
     def stop_acquisition(self):
         """ Disables file writing so the processes can access the save data """
@@ -218,11 +241,14 @@ class HexitecDAQ():
         hdf_file_location = filename
         try:
             hdf_file = h5py.File(hdf_file_location, 'r+')
+            for fem in self.parent.fems:
+                fem._set_status_message("Reopening file to add meta data..")
         except IOError as e:
-            print("Failed to open HDF file with error: %s" % e)
-            raise(e)
+            logging.error("Failed to open '%s' with error: %s" % (hdf_file_location, e))
+            for fem in self.parent.fems:
+                fem._set_status_error("Error reopening HDF file: %s" % e)
 
-        # Create metadata group, add datasets to it and pass to write function
+        # Create metadata group, add dataset to it and pass to write function
 
         parent_metadata_group = hdf_file.create_group("hexitec")
         parent_tree_dict = self.parent.param_tree.get('')
@@ -234,6 +260,8 @@ class HexitecDAQ():
         hdf_tree_dict = self.adapters['fp']._param
         self.write_metadata(hdf_metadata_group, hdf_tree_dict)
 
+        for fem in self.parent.fems:
+            fem._set_status_message("Meta data added")
         hdf_file.close()
 
     def write_metadata(self, metadata_group, param_tree_dict):

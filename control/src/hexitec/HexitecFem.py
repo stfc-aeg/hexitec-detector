@@ -118,6 +118,7 @@ class HexitecFem():
         # Diagnostics:
         self.exception_triggered = False
         self.successful_reads = 0
+        self.acquisition_duration = ""
 
         self.status_message = ""
         self.status_error = ""
@@ -156,6 +157,7 @@ class HexitecFem():
         param_tree_dict = {
             "diagnostics": {
                 "successful_reads": (lambda: self.successful_reads, None),
+                "acquisition_duration": (lambda: self.acquisition_duration, None),
             },
             "id": (lambda: self.id, None),
             "debug": (self.get_debug, self.set_debug),
@@ -305,7 +307,7 @@ class HexitecFem():
         return self.status_message
 
     def _set_status_message(self, message):
-        self.status_message = message
+            self.status_message = message
 
     def _get_status_error(self):
         return self.status_error
@@ -350,6 +352,11 @@ class HexitecFem():
             self.read_sensors()
         IOLoop.instance().call_later(1.0, self.poll_sensors)
 
+    @run_on_executor(executor='thread_executor')
+    def check_file(self, msg=None):
+        #DEBUGGING
+        self.parent.daq.check_file_exists()
+
     def connect_hardware(self, msg=None):
         """
         Connect with hardware and wait 10 seconds for 
@@ -376,7 +383,7 @@ class HexitecFem():
             self._set_status_error("Uncaught Exception; Failed to establish camera connection: %s" % str(e))
             logging.error("%s" % str(e))
             # Cannot raise error beyond this thread
-        
+
         # Start polling thread
         self.start_polling()
 
@@ -397,10 +404,19 @@ class HexitecFem():
             self.operation_percentage_steps = 108
             self.initialise_system()
             if self.first_initialisation:
-               # On cold start: Fudge initialisation to include silently capturing data without 
-               #    writing to disk, to enable user to go straight to collecting images with offset data applied
-               
-               self.first_initialisation = False
+                # On cold start: Fudge initialisation to include silently capturing data without 
+                #    writing to disk, giving the user option to collect images with offsets 
+                #    without requiring a dummy data collection
+                # Pretend hardware isn't busy otherwise collect_data throws error
+                self.hardware_busy = False
+                if self.parent.daq.in_progress:
+                    logging.warning("Cannot Start Acquistion: Already in progress")
+                else:
+                    # Do token 10 frame acquisition
+                    self.parent.daq.start_acquisition(10)
+                    for fem in self.parent.fems:
+                        fem.collect_data()
+
             self.initialise_progress = 0
             self.hardware_busy = False
         except (HexitecFemError, ParameterTreeError) as e:
@@ -433,6 +449,9 @@ class HexitecFem():
             self.acquisition_completed = True
             self.acquisition_timestamp = time.time()
             self.hardware_busy = False
+            if self.first_initialisation:
+                self._set_status_message("Initialisation from cold completed")
+                self.first_initialisation = False
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to collect data: %s" % str(e))
             logging.error("%s" % str(e))
@@ -870,7 +889,10 @@ class HexitecFem():
             if self.stop_acquisition:
                 break
         logging.debug("Data Capture took " + str(waited) + " seconds")
-        self._set_status_message("Requested %s frame(s), took %s seconds" % (self.number_of_frames, str(waited)))
+        duration = "Requested %s frame(s), took %s seconds" % (self.number_of_frames, str(waited))
+        self._set_status_message(duration)
+        # Save duration to separate parameter to entry:
+        self.acquisition_duration = duration
 
         # Stop the state machine
         self.x10g_rdma.write(0x60000002, 0, 'Dis-Enable State Machine')
