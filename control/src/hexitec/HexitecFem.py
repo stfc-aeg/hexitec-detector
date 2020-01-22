@@ -5,7 +5,7 @@ Christian Angelsen, STFC Detector Systems Software Group, 2019.
 """
 
 import time
-import datetime
+from datetime import datetime
 import logging
 import configparser
 
@@ -74,6 +74,9 @@ class HexitecFem():
     CHANNEL_2_OFFSET = 5
     CHANNEL_3_OFFSET = 10
     CHANNEL_4_OFFSET = 15
+
+    # define a timestamp format you like
+    DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
 
     def __init__(self, parent, fem_id=1,
                 server_ctrl_ip_addr='10.0.2.2', camera_ctrl_ip_addr='10.0.2.1',
@@ -154,10 +157,14 @@ class HexitecFem():
         self.aspect_config  = "(Blank)"
         self.aspect_parameters = {}
 
+        self.acquire_start_time = ""
+        self.acquire_stop_time = ""
+
         param_tree_dict = {
             "diagnostics": {
                 "successful_reads": (lambda: self.successful_reads, None),
-                "acquisition_duration": (lambda: self.acquisition_duration, None),
+                "acquire_start_time": (lambda: self.acquire_start_time, None),
+                "acquire_stop_time": (lambda: self.acquire_stop_time, None),
             },
             "id": (lambda: self.id, None),
             "debug": (self.get_debug, self.set_debug),
@@ -878,7 +885,8 @@ class HexitecFem():
 
         logging.debug("Initiate Data Capture")
         self.data_stream(self.number_of_frames)
-        #
+        self.acquire_start_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
+
         waited = 0.0
         delay = 0.10
         resp = 0
@@ -886,12 +894,14 @@ class HexitecFem():
             resp = self.x10g_rdma.read(0x60000014, 'Check data transfer completed?')
             time.sleep(delay)
             waited += delay
-            if self.stop_acquisition:
+            if (self.stop_acquisition):
                 break
+        self.acquire_stop_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
+
         logging.debug("Data Capture took " + str(waited) + " seconds")
         duration = "Requested %s frame(s), took %s seconds" % (self.number_of_frames, str(waited))
         self._set_status_message(duration)
-        # Save duration to separate parameter to entry:
+        # Save duration to separate parameter tree entry:
         self.acquisition_duration = duration
 
         # Stop the state machine
