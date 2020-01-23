@@ -1244,12 +1244,12 @@ class HexitecFem():
         disable_sm    = [0x23, self.vsr_addr, 0x43, 0x30, 0x31, 0x30, 0x31, 0x0D]
         diff_cal      = [0x23, self.vsr_addr, 0x42, 0x38, 0x46, 0x30, 0x31, 0x0D]
 
-        which_vsr = -1
+        vsr = -1
         if self.vsr_addr == HexitecFem.VSR_ADDRESS[0]:  # 0x90
-            which_vsr = 1
+            vsr = 1
         else:
             if self.vsr_addr == HexitecFem.VSR_ADDRESS[1]:  # 0x91
-                which_vsr = 2
+                vsr = 2
             else:
                 raise HexitecFemError("Unknown VSR address! (%s)" % self.vsr_addr)
 
@@ -1258,7 +1258,7 @@ class HexitecFem():
         value_061 = list_of_46s
         value_0C2 = list_of_46s
 
-        s1_col1_read = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnEn_1stChannel' % which_vsr, 2**20)
+        s1_col1_read = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnEn_1stChannel' % vsr, 2**20)
         if s1_col1_read[0] > -1:
             for idx in range(len(s1_col1_read)):
                 # convert_to_aspect_format() turns any value < 16 into a tuple of two
@@ -1266,31 +1266,34 @@ class HexitecFem():
                 reg_value = self.convert_to_aspect_format(s1_col1_read[idx])
                 value_061[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
 
-        s2_col1_read = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnEn_1stChannel' % which_vsr, 2**20)
+        s2_col1_read = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnEn_1stChannel' % vsr, 2**20)
         if s2_col1_read[0] > -1:
             for idx in range(len(s2_col1_read)):
                 reg_value = self.convert_to_aspect_format(s2_col1_read[idx])
                 value_0C2[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
 
-        col2_read = self._extract_binary_words('Sensor-Config_Vx_Sx/ColumnEn_2ndChannel', 2**20)
-        if col2_read[0] > -1:
-            for idx in range(len(col2_read)):
-                reg_value = self.convert_to_aspect_format(col2_read[idx])
+        s1_col2_read = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnEn_2ndChannel' % vsr, 2**20)
+        if s1_col2_read[0] > -1:
+            for idx in range(len(s1_col2_read)):
+                reg_value = self.convert_to_aspect_format(s1_col2_read[idx])
                 value_061[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
+
                 value_0C2[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
 
-        col3_read = self._extract_binary_words('Sensor-Config_Vx_Sx/ColumnEn_3rdChannel', 2**20)
-        if col3_read[0] > -1:
-            for idx in range(len(col3_read)):
-                reg_value = self.convert_to_aspect_format(col3_read[idx])
+        s1_col3_read = self._extract_binary_words('Sensor-Config_V%_Sx/ColumnEn_3rdChannel' % vsr, 2**20)
+        if s1_col3_read[0] > -1:
+            for idx in range(len(s1_col3_read)):
+                reg_value = self.convert_to_aspect_format(s1_col3_read[idx])
                 value_061[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
+                
                 value_0C2[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
 
-        col4_read = self._extract_binary_words('Sensor-Config_Vx_Sx/ColumnEn_4thChannel', 2**20)
-        if col4_read[0] > -1:
-            for idx in range(len(col4_read)):
-                reg_value = self.convert_to_aspect_format(col4_read[idx])
+        s1_col4_read = self._extract_binary_words('Sensor-Config_V%_Sx/ColumnEn_4thChannel' % vsr, 2**20)
+        if s1_col4_read[0] > -1:
+            for idx in range(len(s1_col4_read)):
+                reg_value = self.convert_to_aspect_format(s1_col4_read[idx])
                 value_061[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
+                
                 value_0C2[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
 
         # Column Read Enable, for ASIC1 (Reg 0x61)
@@ -1316,28 +1319,28 @@ class HexitecFem():
         value_04D = list_of_46s
         value_0AE = list_of_46s
 
-        col1_power = self._extract_binary_words('Sensor-Config_Vx_Sx/ColumnPwr1stChannel', 2**20)
+        col1_power = self._extract_binary_words('Sensor-Config_V%_Sx/ColumnPwr1stChannel' % vsr, 2**20)
         if col1_power[0] > -1:
             for idx in range(len(col1_power)):
                 reg_value = self.convert_to_aspect_format(col1_power[idx])
                 value_04D[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
                 value_0AE[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
 
-        col2_power = self._extract_binary_words('Sensor-Config_Vx_Sx/ColumnPwr2ndChannel', 2**20)
+        col2_power = self._extract_binary_words('Sensor-Config_V%_Sx/ColumnPwr2ndChannel' % vsr, 2**20)
         if col2_power[0] > -1:
             for idx in range(len(col2_power)):
                 reg_value = self.convert_to_aspect_format(col2_power[idx])
                 value_04D[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
                 value_0AE[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
 
-        col3_power = self._extract_binary_words('Sensor-Config_Vx_Sx/ColumnPwr3rdChannel', 2**20)
+        col3_power = self._extract_binary_words('Sensor-Config_V%_Sx/ColumnPwr3rdChannel' % vsr, 2**20)
         if col3_power[0] > -1:
             for idx in range(len(col3_power)):
                 reg_value = self.convert_to_aspect_format(col3_power[idx])
                 value_04D[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
                 value_0AE[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
 
-        col4_power = self._extract_binary_words('Sensor-Config_Vx_Sx/ColumnPwr4thChannel', 2**20)
+        col4_power = self._extract_binary_words('Sensor-Config_V%_Sx/ColumnPwr4thChannel' % vsr, 2**20)
         if col4_power[0] > -1:
             for idx in range(len(col4_power)):
                 reg_value = self.convert_to_aspect_format(col4_power[idx])
@@ -1367,28 +1370,28 @@ class HexitecFem():
         value_057 = list_of_30s
         value_0B8 = list_of_30s
 
-        col1_power = self._extract_binary_words('Sensor-Config_Vx_Sx/ColumnCal1stChannel', 2**20)
+        col1_power = self._extract_binary_words('Sensor-Config_V%_Sx/ColumnCal1stChannel' % vsr, 2**20)
         if col1_power[0] > -1:
             for idx in range(len(col1_power)):
                 reg_value = self.convert_to_aspect_format(col1_power[idx])
                 value_057[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
                 value_0B8[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
 
-        col2_power = self._extract_binary_words('Sensor-Config_Vx_Sx/ColumnCal2ndChannel', 2**20)
+        col2_power = self._extract_binary_words('Sensor-Config_V%_Sx/ColumnCal2ndChannel' % vsr, 2**20)
         if col2_power[0] > -1:
             for idx in range(len(col2_power)):
                 reg_value = self.convert_to_aspect_format(col2_power[idx])
                 value_057[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
                 value_0B8[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
 
-        col3_power = self._extract_binary_words('Sensor-Config_Vx_Sx/ColumnCal3rdChannel', 2**20)
+        col3_power = self._extract_binary_words('Sensor-Config_V%_Sx/ColumnCal3rdChannel' % vsr, 2**20)
         if col3_power[0] > -1:
             for idx in range(len(col3_power)):
                 reg_value = self.convert_to_aspect_format(col3_power[idx])
                 value_057[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
                 value_0B8[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
 
-        col4_power = self._extract_binary_words('Sensor-Config_Vx_Sx/ColumnCal4thChannel', 2**20)
+        col4_power = self._extract_binary_words('Sensor-Config_V%_Sx/ColumnCal4thChannel' % vsr, 2**20)
         if col4_power[0] > -1:
             for idx in range(len(col4_power)):
                 reg_value = self.convert_to_aspect_format(col4_power[idx])
@@ -1416,31 +1419,31 @@ class HexitecFem():
         value_043 = list_of_46s
         value_0A4 = list_of_46s
 
-        row1_read = self._extract_binary_words('Sensor-Config_Vx_Sx/RowEn_1stBlock', 2**20)
+        row1_read = self._extract_binary_words('Sensor-Config_V%_Sx/RowEn_1stBlock' % vsr, 2**20)
         if row1_read[0] > -1:
             for idx in range(len(row1_read)):
                 reg_value = self.convert_to_aspect_format(row1_read[idx])
                 value_043[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
                 value_0A4[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
 
-        col2_read = self._extract_binary_words('Sensor-Config_Vx_Sx/RowEn_2ndBlock', 2**20)
-        if col2_read[0] > -1:
-            for idx in range(len(col2_read)):
-                reg_value = self.convert_to_aspect_format(col2_read[idx])
+        s1_row2_read = self._extract_binary_words('Sensor-Config_V%_Sx/RowEn_2ndBlock' % vsr, 2**20)
+        if s1_row2_read[0] > -1:
+            for idx in range(len(s1_row2_read)):
+                reg_value = self.convert_to_aspect_format(s1_row2_read[idx])
                 value_043[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
                 value_0A4[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
 
-        col3_read = self._extract_binary_words('Sensor-Config_Vx_Sx/RowEn_3rdBlock', 2**20)
-        if col3_read[0] > -1:
-            for idx in range(len(col3_read)):
-                reg_value = self.convert_to_aspect_format(col3_read[idx])
+        s1_row3_read = self._extract_binary_words('Sensor-Config_V%_Sx/RowEn_3rdBlock' % vsr, 2**20)
+        if s1_row3_read[0] > -1:
+            for idx in range(len(s1_row3_read)):
+                reg_value = self.convert_to_aspect_format(s1_row3_read[idx])
                 value_043[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
                 value_0A4[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
 
-        col4_read = self._extract_binary_words('Sensor-Config_Vx_Sx/RowEn_4thBlock', 2**20)
-        if col4_read[0] > -1:
-            for idx in range(len(col4_read)):
-                reg_value = self.convert_to_aspect_format(col4_read[idx])
+        s1_row4_read = self._extract_binary_words('Sensor-Config_V%_Sx/RowEn_4thBlock' % vsr, 2**20)
+        if s1_row4_read[0] > -1:
+            for idx in range(len(s1_row4_read)):
+                reg_value = self.convert_to_aspect_format(s1_row4_read[idx])
                 value_043[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
                 value_0A4[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
 
@@ -1467,28 +1470,28 @@ class HexitecFem():
         value_02F = list_of_46s
         value_090 = list_of_46s
 
-        row1_power = self._extract_binary_words('Sensor-Config_Vx_Sx/RowPwr1stBlock', 2**20)
+        row1_power = self._extract_binary_words('Sensor-Config_V%_Sx/RowPwr1stBlock' % vsr, 2**20)
         if row1_power[0] > -1:
             for idx in range(len(row1_power)):
                 reg_value = self.convert_to_aspect_format(row1_power[idx])
                 value_02F[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
                 value_090[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
 
-        row2_power = self._extract_binary_words('Sensor-Config_Vx_Sx/RowPwr2ndBlock', 2**20)
+        row2_power = self._extract_binary_words('Sensor-Config_V%_Sx/RowPwr2ndBlock' % vsr, 2**20)
         if row2_power[0] > -1:
             for idx in range(len(row2_power)):
                 reg_value = self.convert_to_aspect_format(row2_power[idx])
                 value_02F[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
                 value_090[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
 
-        row3_power = self._extract_binary_words('Sensor-Config_Vx_Sx/RowPwr3rdBlock', 2**20)
+        row3_power = self._extract_binary_words('Sensor-Config_V%_Sx/RowPwr3rdBlock' % vsr, 2**20)
         if row3_power[0] > -1:
             for idx in range(len(row3_power)):
                 reg_value = self.convert_to_aspect_format(row3_power[idx])
                 value_02F[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
                 value_090[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
 
-        row4_power = self._extract_binary_words('Sensor-Config_Vx_Sx/RowPwr4thBlock', 2**20)
+        row4_power = self._extract_binary_words('Sensor-Config_V%_Sx/RowPwr4thBlock' % vsr, 2**20)
         if row4_power[0] > -1:
             for idx in range(len(row4_power)):
                 reg_value = self.convert_to_aspect_format(row4_power[idx])
@@ -1518,28 +1521,28 @@ class HexitecFem():
         value_039 = list_of_30s
         value_09A = list_of_30s
 
-        row1_power = self._extract_binary_words('Sensor-Config_Vx_Sx/RowCal1stBlock', 2**20)
+        row1_power = self._extract_binary_words('Sensor-Config_V%_Sx/RowCal1stBlock' % vsr, 2**20)
         if row1_power[0] > -1:
             for idx in range(len(row1_power)):
                 reg_value = self.convert_to_aspect_format(row1_power[idx])
                 value_039[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
                 value_09A[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
 
-        row2_power = self._extract_binary_words('Sensor-Config_Vx_Sx/RowCal2ndBlock', 2**20)
+        row2_power = self._extract_binary_words('Sensor-Config_V%_Sx/RowCal2ndBlock' % vsr, 2**20)
         if row2_power[0] > -1:
             for idx in range(len(row2_power)):
                 reg_value = self.convert_to_aspect_format(row2_power[idx])
                 value_039[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
                 value_09A[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
 
-        row3_power = self._extract_binary_words('Sensor-Config_Vx_Sx/RowCal3rdBlock', 2**20)
+        row3_power = self._extract_binary_words('Sensor-Config_V%_Sx/RowCal3rdBlock' % vsr, 2**20)
         if row3_power[0] > -1:
             for idx in range(len(row3_power)):
                 reg_value = self.convert_to_aspect_format(row3_power[idx])
                 value_039[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
                 value_09A[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
 
-        row4_power = self._extract_binary_words('Sensor-Config_Vx_Sx/RowCal4thBlock', 2**20)
+        row4_power = self._extract_binary_words('Sensor-Config_V%_Sx/RowCal4thBlock' % vsr, 2**20)
         if row4_power[0] > -1:
             for idx in range(len(row4_power)):
                 reg_value = self.convert_to_aspect_format(row4_power[idx])
