@@ -1792,11 +1792,11 @@ class HexitecFem():
             logging.debug("VSR: %s Power values: %s len: %s" % \
                 (format(self.vsr_addr, '#02x'), sensors_values, len(sensors_values)))
 
-            if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
-                self.vsr1_hv = self.get_hv_value(sensors_values)
-            else:
-                if (self.vsr_addr == HexitecFem.VSR_ADDRESS[1]):
-                    self.vsr2_hv = self.get_hv_value(sensors_values)
+        if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
+            self.vsr1_hv = self.get_hv_value(sensors_values)
+        else:
+            if (self.vsr_addr == HexitecFem.VSR_ADDRESS[1]):
+                self.vsr2_hv = self.get_hv_value(sensors_values)
 
     def get_hv_value(self, sensors_values):
         """
