@@ -1244,12 +1244,21 @@ class HexitecFem():
         disable_sm    = [0x23, self.vsr_addr, 0x43, 0x30, 0x31, 0x30, 0x31, 0x0D]
         diff_cal      = [0x23, self.vsr_addr, 0x42, 0x38, 0x46, 0x30, 0x31, 0x0D]
 
+        which_vsr = -1
+        if self.vsr_addr == HexitecFem.VSR_ADDRESS[0]:  # 0x90
+            which_vsr = 1
+        else:
+            if self.vsr_addr == HexitecFem.VSR_ADDRESS[1]:  # 0x91
+                which_vsr = 2
+            else:
+                raise HexitecFemError("Unknown VSR address! (%s)" % self.vsr_addr)
+
         register_061 = [0x36, 0x31]   # Column Read Enable ASIC1
         register_0C2 = [0x43, 0x32]   # Column Read Enable ASIC2
         value_061 = list_of_46s
         value_0C2 = list_of_46s
 
-        s1_col1_read = self._extract_binary_words('Sensor-Config_V1_S1/ColumnEn_1stChannel', 2**20)
+        s1_col1_read = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnEn_1stChannel' % which_vsr, 2**20)
         if s1_col1_read[0] > -1:
             for idx in range(len(s1_col1_read)):
                 # convert_to_aspect_format() turns any value < 16 into a tuple of two
@@ -1257,7 +1266,7 @@ class HexitecFem():
                 reg_value = self.convert_to_aspect_format(s1_col1_read[idx])
                 value_061[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
 
-        s2_col1_read = self._extract_binary_words('Sensor-Config_V1_S2/ColumnEn_1stChannel', 2**20)
+        s2_col1_read = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnEn_1stChannel' % which_vsr, 2**20)
         if s2_col1_read[0] > -1:
             for idx in range(len(s2_col1_read)):
                 reg_value = self.convert_to_aspect_format(s2_col1_read[idx])
