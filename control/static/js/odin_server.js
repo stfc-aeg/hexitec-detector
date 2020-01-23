@@ -258,14 +258,14 @@ function poll_fem()
             $('#vsr1_asic1').html(fems[fem]["vsr1_sensors"]["asic1"].toFixed(2));
             $('#vsr1_asic2').html(fems[fem]["vsr1_sensors"]["asic2"].toFixed(2));
             $('#vsr1_adc').html(fems[fem]["vsr1_sensors"]["adc"].toFixed(2));
-            $('#vsr1_hv').html(fems[fem]["vsr1_sensors"]["hv"].toFixed(2));
+            $('#vsr1_hv').html(fems[fem]["vsr1_sensors"]["hv"].toFixed(3));
 
             $('#vsr2_humidity').html(fems[fem]["vsr2_sensors"]["humidity"].toFixed(2));
             $('#vsr2_ambient').html(fems[fem]["vsr2_sensors"]["ambient"].toFixed(2));
             $('#vsr2_asic1').html(fems[fem]["vsr2_sensors"]["asic1"].toFixed(2));
             $('#vsr2_asic2').html(fems[fem]["vsr2_sensors"]["asic2"].toFixed(2));
             $('#vsr2_adc').html(fems[fem]["vsr2_sensors"]["adc"].toFixed(2));
-            $('#vsr2_hv').html(fems[fem]["vsr2_sensors"]["hv"].toFixed(2));
+            $('#vsr2_hv').html(fems[fem]["vsr2_sensors"]["hv"].toFixed(3));
 
             // console.log("fem id: '" + fems[fem]["id"] + "' health: '" + fems[fem]["health"] + "' stat msg: '" + fems[fem]["status_message"] + "'.");
         }
