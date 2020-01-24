@@ -207,14 +207,15 @@ class HexitecDAQ():
                 # First initialisation runs without file writing, stop acquisition 
                 #   without reopening (non-existent) file to add meta data
                 self.first_initialisation = False
-                self.stop_acquisition()
+                # Don't call stop_acquisition immediately, in case fem slow to react
+                IOLoop.instance().call_later(2.0, self.stop_acquisition)
                 return
             IOLoop.instance().call_later(.5, self.acquisition_check_loop)
 
     def check_file_exists(self):
         full_path = self.file_dir + self.file_name + '_000001.h5'
         existence = os.path.exists(full_path)
-        print(" *** Exist? %s file: %s " % (existence, full_path))
+        logging.debug(" *** Exist? %s file: %s " % (existence, full_path))
         IOLoop.instance().call_later(.5, self.check_file_exists)
 
     def stop_acquisition(self):
@@ -232,7 +233,12 @@ class HexitecDAQ():
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
             full_path = self.file_dir + self.file_name + '_000001.h5'
-            self.prepare_hdf_file(full_path)
+            # Check file exists before reopening to add metadata
+            if os.path.exists(full_path):
+                self.prepare_hdf_file(full_path)
+            else:
+                for fem in self.parent.fems:
+                    fem._set_status_error("Cannot add meta data; No such File: %s" % full_path)
 
     def prepare_hdf_file(self, filename):
         """
