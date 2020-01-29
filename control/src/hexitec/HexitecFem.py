@@ -110,6 +110,7 @@ class HexitecFem():
         self.first_initialisation = True
         self.hardware_connected = False
         self.hardware_busy = False
+        self.ignore_busy = False
 
         self.health = True
 
@@ -414,18 +415,20 @@ class HexitecFem():
                 # On cold start: Fudge initialisation to include silently capturing data without 
                 #    writing to disk, giving the user option to collect images with offsets 
                 #    without requiring a dummy data collection
-                # Pretend hardware isn't busy otherwise collect_data throws error
-                self.hardware_busy = False
+                # "Tell" collect_data function hardware isn't busy, or it'll throw error
+                self.ignore_busy = True
                 if self.parent.daq.in_progress:
                     logging.warning("Cannot Start Acquistion: Already in progress")
                 else:
-                    # Do token 10 frame acquisition
+                    # Collect 10 token frames
                     self.parent.daq.start_acquisition(10)
                     for fem in self.parent.fems:
                         fem.collect_data()
+            else:
+                # Not cold initialisation, clear hardware_busy here
+                self.hardware_busy = False
 
             self.initialise_progress = 0
-            self.hardware_busy = False
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to initialise camera: %s" % str(e))
             logging.error("%s" % str(e))
@@ -441,10 +444,13 @@ class HexitecFem():
         try:
             if self.hardware_connected != True:
                 raise ParameterTreeError("No connection established")
-            if self.hardware_busy:
+            if self.hardware_busy and (self.ignore_busy == False):
                 raise HexitecFemError("Hardware sensors busy initialising")
             else:
                 self._set_status_error("")
+            # Clear ignore_busy if set
+            if self.ignore_busy:
+                self.ignore_busy = False
             self.hardware_busy = True
             self.operation_percentage_complete = 0
             self.operation_percentage_steps = 100
@@ -455,7 +461,7 @@ class HexitecFem():
             # Acquisition completed, note completion
             self.acquisition_completed = True
             self.acquisition_timestamp = time.time()
-            self.hardware_busy = False
+            # Don't clear hardware_busy, wait for acquire_data() to clear it 
             if self.first_initialisation:
                 self._set_status_message("Initialisation from cold completed")
                 self.first_initialisation = False
@@ -1004,6 +1010,9 @@ class HexitecFem():
         logging.debug("frame trigger count: %s" % m0)
         m0 = self.x10g_rdma.read(0x9000001A, 'frame in progress flag')
         logging.debug("frame in progress flag: %s" % m0)    
+
+        # Fem finished sending data/monitoring info, clear hardware busy
+        self.hardware_busy = False
 
     def set_up_state_machine(self):
         """
@@ -2148,7 +2157,7 @@ class HexitecFem():
         parser.optionxform=str
         parser.read(filename)
         for sect in parser.sections():
-            print('Section:', sect)
+            #print('Section:', sect)
             for k,v in parser.items(sect):
                 self.aspect_parameters[sect+"/"+k] = v.encode("utf-8").strip("\"")
                 # Support per ASIC Sensor-Config settings

@@ -56,6 +56,9 @@ class HexitecDAQ():
             "fr": ""
         }
 
+        self.hdf_file_location = ""
+        self.hdf_retry = 0
+
         # ParameterTree variables
 
         self.sensors_layout = "2x2"
@@ -187,16 +190,32 @@ class HexitecDAQ():
             #   therefore don't enable file writing here
             pass
         else:
+            # print("   ***   start_acquisition - not first initialisation, let's set that File writing to TRUE !")
             self.set_file_writing(True)
-        # Wait 2 seconds before begin checking how many frames hdf has processed,
-        #   otherwise HexitecDAQ may stop acquisition before fem(s) sent any data
-        IOLoop.instance().call_later(2.0, self.acquisition_check_loop)
+        # Wait while fem(s) finish sending data
+        IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
 
     def acquisition_check_loop(self):
         """
         Waits for acquisition to complete without blocking current thread
         """
+        #TODO: Handle multiple fems more gracefully
+        bBusy = True
+        for fem in self.parent.fems:
+            bBusy = fem.hardware_busy
+            # print("   ***   bBusy: %s " % bBusy)
+        if bBusy:
+            IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
+        else:
+            IOLoop.instance().call_later(0.5, self.processing_check_loop)
+
+    def processing_check_loop(self):
+        """
+        Checks that the processing has completed
+        """
         hdf_status = self.get_od_status('fp').get('hdf', {"frames_processed": 0})
+        # print("   ***   proc vs frm_end_acq: %s v %s " % \
+        #     (hdf_status['frames_processed'], self.frame_end_acquisition))
         if hdf_status['frames_processed'] == self.frame_end_acquisition:
             self.stop_acquisition()
             logging.debug("Acquisition Complete")
@@ -204,22 +223,24 @@ class HexitecDAQ():
             self.hdf_closing_loop()
         else:
             if self.first_initialisation:
-                # First initialisation runs without file writing, stop acquisition 
+                #print("   ***   Processing_check_loop - this is the first initialisation")
+                # First initialisation runs without file writing, stopping acquisition 
                 #   without reopening (non-existent) file to add meta data
                 self.first_initialisation = False
                 # Don't call stop_acquisition immediately, in case fem slow to react
                 IOLoop.instance().call_later(2.0, self.stop_acquisition)
                 return
-            IOLoop.instance().call_later(.5, self.acquisition_check_loop)
+            # print("   ***   Processing_check_loop - DEFINITELY NOT the first initialisation")
+            IOLoop.instance().call_later(.5, self.processing_check_loop)
 
     def check_file_exists(self):
         full_path = self.file_dir + self.file_name + '_000001.h5'
         existence = os.path.exists(full_path)
-        logging.debug(" *** Exist? %s file: %s " % (existence, full_path))
+        print(" *** Exist? %s file: %s " % (existence, full_path))
         IOLoop.instance().call_later(.5, self.check_file_exists)
 
     def stop_acquisition(self):
-        """ Disables file writing so the processes can access the save data """
+        """ Disables file writing so the processes can access the saved data """
         self.in_progress = False
         self.set_file_writing(False)
 
@@ -230,29 +251,40 @@ class HexitecDAQ():
         """
         hdf_status = self.get_od_status('fp').get('hdf', {"writing": True})
         if hdf_status['writing']:
+            # print("   hdf_clo_loo, writ still TRUE")
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
-            full_path = self.file_dir + self.file_name + '_000001.h5'
+            # print("   hdf_clo_loo, writ FALSE so LET's GOGOGO")
+            self.hdf_file_location = self.file_dir + self.file_name + '_000001.h5'
             # Check file exists before reopening to add metadata
-            if os.path.exists(full_path):
-                self.prepare_hdf_file(full_path)
+            if os.path.exists(self.hdf_file_location):
+                self.prepare_hdf_file()
             else:
                 for fem in self.parent.fems:
-                    fem._set_status_error("Cannot add meta data; No such File: %s" % full_path)
+                    fem._set_status_error("Cannot add meta data; No such File: %s" % \
+                                                                self.hdf_file_location)
 
-    def prepare_hdf_file(self, filename):
+    def prepare_hdf_file(self):
         """
         Re-open HDF5 file, prepare meta data
         """
-        hdf_file_location = filename
         try:
-            hdf_file = h5py.File(hdf_file_location, 'r+')
+            hdf_file = h5py.File(self.hdf_file_location, 'r+')
             for fem in self.parent.fems:
                 fem._set_status_message("Reopening file to add meta data..")
+            self.hdf_retry= 0
         except IOError as e:
+            # Let's retry a couple of times in case file just temporary busy
+            if self.hdf_retry < 3:
+                self.hdf_retry += 1
+                # print("   *** Re-trying: %s because: %s" % (self.hdf_retry, e))
+                IOLoop.instance().call_later(1.0, self.hdf_closing_loop)
+                return
+            #....?
             logging.error("Failed to open '%s' with error: %s" % (hdf_file_location, e))
             for fem in self.parent.fems:
                 fem._set_status_error("Error reopening HDF file: %s" % e)
+            return
 
         # Create metadata group, add dataset to it and pass to write function
 
