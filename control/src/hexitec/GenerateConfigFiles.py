@@ -5,14 +5,15 @@ temp_file.py - Testing creating a temporary file to replace 12 Configuration fil
 import tempfile
 from collections import OrderedDict
 
-class GenerateConfigFiles():
+class GenerateConfigFile():
     """
     Accepts Parameter tree from hexitecDAQ's "/config" branch to generate json file
     """
 
     def __init__(self, param_tree):
 
-        self.param_tree = param_tree
+        self.main(param_tree)
+
 
     def boolean_to_string(self, bBool):
         string = "false"
@@ -59,7 +60,7 @@ class GenerateConfigFiles():
         return histogram_config
 
 
-    def generate_config_files(self):
+    def main(self, param_tree):
 
         # ---------------- Section for the store sequence ---------------- #
 
@@ -104,20 +105,20 @@ class GenerateConfigFiles():
         nonstandard_path["live_view"] = ["live_view", "LiveView", "LiveView"]
         nonstandard_path['hdf']       = ["hdf", "FileWriter", "Hdf5"]
 
-        sensors_layout = self.param_tree['sensors_layout']
-        d = self.param_tree['config']
-
         # Let's put together a sample chain of plugin paths
 
         # Sort parameter tree dict into R, T, N, C, A, D, H plugin order
+        d = param_tree['config']
         keyorder = ['reorder', 'threshold',  'next_frame', 'calibration', 'addition', 'discrimination', 'histogram']
-        config = OrderedDict(sorted(d.items(), key=lambda i:keyorder.index(i[0])))
+        od = OrderedDict(sorted(d.items(), key=lambda i:keyorder.index(i[0])))
+        config = od
 
         # Check parameter tree if next/calib/CS plugins to be added:
 
         list_optional_plugins = ["next_frame", "calibration", "addition", "discrimination"]
         sample_plugins = ["reorder", "threshold"]
-        
+        # sample_plugins = ["reorder"]
+
         for key in config:
             if key not in list_optional_plugins:
                 continue
@@ -132,8 +133,8 @@ class GenerateConfigFiles():
                 # KeyError thrown if plugin doesn't have "enable" key
                 pass #print("%s doesn't 'enable' ANYTHING" % key)
 
-        sample_plugins += ["histogram", "live_view", "hdf"]
-        # sample_plugins += ["histogram", "hdf"]
+        # sample_plugins += ["histogram", "live_view", "hdf"]
+        sample_plugins += ["histogram", "hdf"]
         # sample_plugins += ["hdf"]
         
         # print(sample_plugins) # DEBUGGING INFO
@@ -209,22 +210,22 @@ class GenerateConfigFiles():
                 store_plugin_config += ''',
                 {
                     "%s": {%s
-            		"sensors_layout": "%s"
+            		"sensors_layout": "3x2"
                     }
-                }''' % (plugin, unique_setting, sensors_layout)
+                }''' % (plugin, unique_setting)
                 unique_setting = ""
 
-        # live_view, hdf have different settings (no sensors_layout..)
-        store_plugin_config += ''',
-                {
-                    "live_view": 
-                    {
-                        "frame_frequency": 50,
-                        "per_second": 0,
-                        "live_view_socket_addr": "tcp://127.0.0.1:5020",
-                        "dataset_name": "raw_frames"
-                    }
-                }'''
+        # # live_view, hdf have different settings (no sensors_layout..)
+        # store_plugin_config += ''',
+        #         {
+        #             "live_view": 
+        #             {
+        #                 "frame_frequency": 50,
+        #                 "per_second": 0,
+        #                 "live_view_socket_addr": "tcp://127.0.0.1:5020",
+        #                 "dataset_name": "raw_frames"
+        #             }
+        #         }'''
 
         store_plugin_config += ''',
                 {
@@ -296,66 +297,59 @@ class GenerateConfigFiles():
 
         # Put together the store sequence file
         try:
-            print("Store file is:   %s (%s)" % (store_temp.name, type(store_temp.name)))
+            # print("Created file is:", store_temp)
+            print("Store file is:", store_temp.name)
+            # store_temp.writelines("[\n")
+            # store_temp.writelines("   Hello?\n")
+            # store_temp.writelines("]\n")
+
 
             store_temp.writelines(store_sequence_preamble)
             store_temp.writelines(store_plugin_paths)
             store_temp.writelines(store_plugin_connect)
             store_temp.writelines(store_plugin_config)
         finally:
+            print("Closing store's temp file")
             store_temp.close()
 
 
-        # The execute_config file is used to wipe any existing config, then load user config
-        execute_config = '''
-[
-    {
-        "plugin": 
-        {
-            "disconnect": "all"
-        }
-    },
-    {
-        "execute": 
-        {
-            "index": "temp"
-        }
-    }
-]'''
+#         # The execute_config file is used to wipe any existing config, then load user config
+#         execute_config = '''
+# [
+#     {
+#         "plugin": 
+#         {
+#             "disconnect": "all"
+#         }
+#     },
+#     {
+#         "execute": 
+#         {
+#             "index": "temp"
+#         }
+#     }
+# ]'''
 
+#         print("Creating execute config sequence, temporary file...")
 
-        execute_temp = tempfile.NamedTemporaryFile(mode='w+t')
-        execute_temp.delete = False
+#         execute_temp = tempfile.NamedTemporaryFile(mode='w+t')
+#         execute_temp.delete = False
 
-        # Put together the execute sequence file 
-        try:
-            print("Execute file is: %s (%s)" % (execute_temp.name, type(execute_temp.name)))
-
-            execute_temp.writelines(execute_config)
-        finally:
-            execute_temp.close()
-
-        return store_temp.name, execute_temp.name
+#         # Put together the execute sequence file 
+#         try:
+#             print("Execute config file:", execute_temp)
+#             print("Execute file is:", execute_temp.name)
+#             execute_temp.writelines(execute_config)
+#         finally:
+#             print("Closing execute's temp file")
+#             execute_temp.close()
 
 if __name__ == '__main__':
-    # param_tree = {'config': {'calibration': {'enable': True, 
-    #     'intercepts_filename': '/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/c_2018_01_001_400V_20C.txt', 
-    #     'gradients_filename': '/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/m_2018_01_001_400V_20C.txt'}, 
-    #     'addition': {'enable': False, 'pixel_grid_size': 3}, 'discrimination': {'enable': True, 'pixel_grid_size': 5}, 
-    #     'histogram': {'max_frames_received': 109, 'bin_end': 8100, 'bin_width': 8, 'bin_start': 100}, 'next_frame': {'enable': True}, 
-    #     'threshold': {'threshold_value': 69, 'threshold_filename': '/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/t_threshold_file.txt', 'threshold_mode': 'filename'}, 'reorder': {'raw_data': True}}}
-    param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'}, 'sensors_layout': '8x9', 
-        'receiver': {'config_file': '', 'configured': False, 'connected': False}, 'in_progress': False, 
-        'config': {'calibration': 
-        {
-            'enable': False, 'intercepts_filename': '', 'gradients_filename': ''}, 'addition': {'enable': False, 'pixel_grid_size': 3}, 
-            'discrimination': {'enable': False, 'pixel_grid_size': 3}, 'histogram': {'max_frames_received': 10, 'bin_end': 8000, 
-            'bin_width': 10.0, 'bin_start': 0}, 'next_frame': {'enable': False}, 'threshold': {'threshold_value': 100, 
-            'threshold_filename': '', 'threshold_mode': 'value'}, 'reorder': {'raw_data': False}
-        }, 
-        'processor': {'config_file': '', 'configured': False, 'connected': False}}
+    param_tree = {'config': {'calibration': {'enable': True, 
+        'intercepts_filename': '/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/c_2018_01_001_400V_20C.txt', 
+        'gradients_filename': '/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/m_2018_01_001_400V_20C.txt'}, 
+        'addition': {'enable': False, 'pixel_grid_size': 5}, 'discrimination': {'enable': False, 'pixel_grid_size': 3}, 
+        'histogram': {'max_frames_received': 109, 'bin_end': 8100, 'bin_width': 8, 'bin_start': 100}, 'next_frame': {'enable': True}, 
+        'threshold': {'threshold_value': 69, 'threshold_filename': '/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/t_threshold_file.txt', 'threshold_mode': 'filename'}, 'reorder': {'raw_data': True}}}
 
-    gcf = GenerateConfigFiles(param_tree)
-    s, e = gcf.generate_config_files()
-
-    print("GFC returned\n s: %s\n e: %s\n" % (s, e))
+    GenerateConfigFile(param_tree)
