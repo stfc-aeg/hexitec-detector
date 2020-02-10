@@ -10,9 +10,14 @@ from functools import partial
 
 from odin.adapters.adapter import ApiAdapterRequest
 from odin.adapters.parameter_tree import ParameterTree
+
+# from concurrent import futures
 from tornado.ioloop import IOLoop
+# from tornado.concurrent import run_on_executor
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+
+from hexitec.GenerateConfigFiles import GenerateConfigFiles
 
 import h5py
 from datetime import datetime
@@ -28,6 +33,7 @@ class HexitecDAQ():
     Configures the HDF File Writer Plugin
     Configures the Live View Plugin
     """
+    # thread_executor = futures.ThreadPoolExecutor(max_workers=1)
 
     THRESHOLDOPTIONS = ["value", "filename", "none"]
 
@@ -77,6 +83,8 @@ class HexitecDAQ():
         self.bin_end = 8000
         self.bin_start = 0
         self.bin_width = 10.0
+        self.number_of_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
+
         self.max_frames_received = 10
         self.raw_data = False
         self.threshold_filename = ""
@@ -139,6 +147,8 @@ class HexitecDAQ():
             "sensors_layout": (self._get_sensors_layout, self._set_sensors_layout)
         })
         self.update_rows_columns_pixels()
+        # Placeholder for GenerateConfigFiles instance generating json files
+        self.gcf = None
 
     def initialize(self, adapters):
         self.adapters["fp"] = adapters['fp']
@@ -535,21 +545,24 @@ class HexitecDAQ():
         """
         Updates histograms' dimensions in the relevant datasets
         """
-        number_of_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
+        self.number_of_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
         # energy_bins dataset
-        payload = '{"dims": [%s]}' % (number_of_histograms)
+        payload = '{"dims": [%s], "chunks": [1, %s]}' % \
+            (self.number_of_histograms, self.number_of_histograms)
         command = "config/hdf/dataset/" + "energy_bins"
         request = ApiAdapterRequest(str(payload), content_type="application/json")
         self.adapters["fp"].put(command, request)
 
         # pixel_histograms dataset
-        payload = '{"dims": [%s, %s]}' % (self.pixels, number_of_histograms)
+        payload = '{"dims": [%s, %s], "chunks": [1, %s, %s]}' % \
+            (self.pixels, self.number_of_histograms, self.pixels, self.number_of_histograms)
         command = "config/hdf/dataset/" + "pixel_histograms"
         request = ApiAdapterRequest(str(payload), content_type="application/json")
         self.adapters["fp"].put(command, request)
 
         # summed_histograms dataset
-        payload = '{"dims": [%s]}' % (number_of_histograms)
+        payload = '{"dims": [%s], "chunks": [1, %s]}' % \
+            (self.number_of_histograms, self.number_of_histograms)
         command = "config/hdf/dataset/" + "summed_histograms"
         request = ApiAdapterRequest(str(payload), content_type="application/json")
         self.adapters["fp"].put(command, request)
@@ -599,13 +612,29 @@ class HexitecDAQ():
 
         self.update_rows_columns_pixels()
         self.update_datasets_frame_dimensions()
+        self.update_histogram_dimensions()
 
     def commit_configuration(self):
         """
         Sends each ParameterTree value to it's counterpart in the FP
         """
+        # Generate JSON config file from parameter tree's settings
+        parameter_tree = self.param_tree.get('')
+        
+        self.gcf = GenerateConfigFiles(parameter_tree, self.number_of_histograms, 
+                                        bDeleteFileOnClose=False)
+
+        store_config, execute_config = self.gcf.generate_config_files()
+
+        command = "config/config_file/"
+        request = ApiAdapterRequest(store_config, content_type="application/json")
+        self.adapters["fp"].put(command, request)
+
+        request = ApiAdapterRequest(execute_config, content_type="application/json")
+        self.adapters["fp"].put(command, request)
+
         # Loop overall plugins in ParameterTree, updating fp's settings except reorder
-        #TODO: Include reorder when odin_control supports raw_data (i.e. bool)
+        #TODO: Include reorder when odin control supports raw_data (i.e. bool)
         for plugin in self.param_tree.tree.get("config"):
 
             if plugin != "reorder":
@@ -619,4 +648,14 @@ class HexitecDAQ():
                     payload = self.param_tree.tree['config'][plugin][param_key].get()
                     request = ApiAdapterRequest(str(payload), content_type="application/json")
                     self.adapters["fp"].put(command, request)
+
+        #TODO: Cannot implement delayed file deletion, forced to keep them alive past closure..!
+    #     logging.debug("\n\n\tWaiting three seconds before closing temporary files..\n\n")
+    #     IOLoop.instance().call_later(3.0, self.close_temporary_files)
+
+    # @run_on_executor(executor='thread_executor')
+    # def close_temporary_files(self):
+    #     logging.debug("\n\n\tI ain't waiting no more, close them files!!!!!\n\n")
+    #     # Cleanup by closing temporary files
+    #     self.gcf.close_files()
 

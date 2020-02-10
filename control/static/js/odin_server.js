@@ -10,11 +10,6 @@ var next_frame_enable = false;
 var calibration_enable = false;
 var hdf_write_enable = false;
 
-var base_path = "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/config/"
-var store_filename = "store_sequence_";
-var execute_filename = "execute_sequence_";
-var sensors_layout = "2x2";
-
 var polling_thread_running = false;
 var system_health = true;
 var fem_error_id = -1;
@@ -409,34 +404,7 @@ function commit_configuration()
 
 function store_sequence_files()
 {
-    // Sends Odin control the 12 configuration sequence files covering 
-    //  all possible plug-in permutations
-
-    var sequence_file_1 =  base_path + store_filename + "1_" + sensors_layout + ".json";
-    var sequence_file_2 =  base_path + store_filename + "2_" + sensors_layout + ".json";
-    var sequence_file_3 =  base_path + store_filename + "3_" + sensors_layout + ".json";
-    var sequence_file_4 =  base_path + store_filename + "4_" + sensors_layout + ".json";
-    var sequence_file_5 =  base_path + store_filename + "5_" + sensors_layout + ".json";
-    var sequence_file_6 =  base_path + store_filename + "6_" + sensors_layout + ".json";
-    var sequence_file_7 =  base_path + store_filename + "7_" + sensors_layout + ".json";
-    var sequence_file_8 =  base_path + store_filename + "8_" + sensors_layout + ".json";
-    var sequence_file_9 =  base_path + store_filename + "9_" + sensors_layout + ".json";
-    var sequence_file_10 =  base_path + store_filename + "10_" + sensors_layout + ".json";
-    var sequence_file_11 =  base_path + store_filename + "11_" + sensors_layout + ".json";
-    var sequence_file_12 =  base_path + store_filename + "12_" + sensors_layout + ".json";
-
-    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_1);
-    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_2);
-    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_3);
-    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_4);
-    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_5);
-    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_6);
-    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_7);
-    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_8);
-    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_9);
-    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_10);
-    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_11);
-    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_12);
+    console.log("Not doing nothing..");
 }
 
 function send_sequence_file(path, file)
@@ -457,115 +425,6 @@ function send_sequence_file(path, file)
 //  load the sequence of plugins corresponding to UI settings
 function apply_ui_values()
 {
-    // Disconnects existing sequence of plugins, loads the sequence of plugins
-    //  selected through the UI
-
-    var sequence_file_1 =  base_path + execute_filename + "1.json";
-    var sequence_file_2 =  base_path + execute_filename + "2.json";
-    var sequence_file_3 =  base_path + execute_filename + "3.json";
-    var sequence_file_4 =  base_path + execute_filename + "4.json";
-    var sequence_file_5 =  base_path + execute_filename + "5.json";
-    var sequence_file_6 =  base_path + execute_filename + "6.json";
-    var sequence_file_7 =  base_path + execute_filename + "7.json";
-    var sequence_file_8 =  base_path + execute_filename + "8.json";
-    var sequence_file_9 =  base_path + execute_filename + "9.json";
-    var sequence_file_10 =  base_path + execute_filename + "10.json";
-    var sequence_file_11 =  base_path + execute_filename + "11.json";
-    var sequence_file_12 =  base_path + execute_filename + "12.json";
-    
-    // Load (execute) the JSON config file matching UI selections
-    //   (disconnects loaded plugins, connects up selected plugins)
-    if (next_frame_enable == true) 
-    {
-        if (calibration_enable  == true) 
-        {
-            // Next = true, calibration = true
-            if (charged_sharing_enable == true)
-            {
-                // Next = true, calibration = true, CS = true
-                // Addition or Discrimination?
-                if (addition_enable == true)
-                {
-                    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_8);
-                }
-                if (discrimination_enable == true)
-                {
-                    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_12);
-                }
-            }
-            else
-            {
-                // Next = true, calibration = true, CS = false
-                send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_4);
-            }
-        }
-        else
-        {
-            // Next = true, calibration = false
-            if (charged_sharing_enable == true)
-            {
-                // Next = true, calibration = false, CS == true
-                if (addition_enable == true)
-                {
-                    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_6);
-                }
-                if (discrimination_enable == true)
-                {
-                    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_10);
-                }
-            }
-            else
-            {
-                // Next = true, calibration = false, CS = false
-                send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_2);
-            }
-        }
-    }
-    else    // next_frame not selected
-    {
-        if (calibration_enable == true)
-        {
-            // Next = false, Calibration = true
-            if (charged_sharing_enable == true)
-            {
-                // Next = false, calibration = true, CS = true
-                if (addition_enable == true)
-                {
-                    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_7);
-                }
-                if (discrimination_enable == true)
-                {
-                    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_11);
-                }
-            }
-            else
-            {
-                // Next = false calibration = true, CS = false
-                send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_3);
-            }
-        }
-        else    // next_frame, calibration not selected
-        {
-            if (charged_sharing_enable == true) 
-            {
-                // Next = false, calibration = false, CS = true
-                if (addition_enable == true)
-                {
-                    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_5);
-                }
-                if (discrimination_enable == true)
-                {
-                    send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_9);
-                }
-            }
-            else
-            {
-                // Next = False, calibration = False, charged_sharing = False
-                send_sequence_file(hexitec_url + 'fp/config/config_file', sequence_file_1);
-            }
-        }
-    }
-
     // Load all UI settings into HexitecDAQ's ParameterTree
 
     changeRawDataEnable();
@@ -588,15 +447,8 @@ function apply_ui_values()
     hdf_file_path_changed();
     hdf_file_name_changed();
 
-    // TODO: Redundant while file writing is controlled through the GUI (may change)
-    // If hdf write already enabled, toggle off and on so hdf settings sent
-    if ( $("[name='hdf_write_enable']").prop('checked') == true)
-    {
-        setTimeout(setHdfWrite(false), 400);
-        setTimeout(setHdfWrite(true), 800);
-    }
-
-    // Push HexitecDAQ's ParameterTree settings to FP's plugins
+    // Push HexitecDAQ's ParameterTree settings to FP's plugins,
+    //  generate temporary config files loading plugins chain
     commit_configuration();
 }
 
