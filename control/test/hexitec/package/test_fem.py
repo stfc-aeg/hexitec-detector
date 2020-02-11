@@ -36,7 +36,7 @@ class FemTestFixture(object):
         }
 
         with patch("hexitec.HexitecFem.RdmaUDP"):
-            self.fem = HexitecFem(self.ip, self.port, self.id,
+            self.fem = HexitecFem(None, self.id,
                                 self.ip, self.ip, self.ip, self.ip)
 
             self.fem.connect()
@@ -53,12 +53,12 @@ class TestFem():
 
     def test_init(self, test_fem):
         """Assert the initilisation of the Fem class works"""
-        assert test_fem.fem.ip_address == test_fem.ip
         assert test_fem.fem.id == test_fem.id
 
     def test_nonzero_id(self, test_fem):
         """Assert the vector file is ignored if ID is not 0"""
-        fem = HexitecFem(test_fem.ip, test_fem.port, 1,
+        id = 1
+        fem = HexitecFem(None, id,
                      test_fem.ip, test_fem.ip, test_fem.ip, test_fem.ip)
         assert fem.id == 1
 
@@ -182,7 +182,7 @@ class TestFem():
             test_fem.fem.connect_hardware()
             time.sleep(0.1)
             assert test_fem.fem._get_status_error() == "Failed to connect with camera: "
-            assert test_fem.fem._get_status_message() == "Is camera powered?"
+            assert test_fem.fem._get_status_message() == "Is the camera powered?"
 
             # Fein unexpected Exception connecting to camera
             test_fem.fem.hardware_connected = False
@@ -277,6 +277,7 @@ class TestFem():
         test_fem.fem.hardware_initialising = True
         test_fem.fem.collect_data("test")
 
+        #TODO: Fix why it fails as "No connection" rather than hardware busy?
         time.sleep(0.1)
         assert test_fem.fem._get_status_error() == "Failed to collect data: Hardware sensors busy initialising"
 

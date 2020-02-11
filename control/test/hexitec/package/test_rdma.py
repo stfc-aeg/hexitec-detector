@@ -14,6 +14,7 @@ else:                         # pragma: no cover
 
 from hexitec.RdmaUDP import RdmaUDP
 
+from socket import error as socket_error
 
 class RdmaUDPTestFixture(object):
 
@@ -63,6 +64,21 @@ class TestRdmaUDP():
             (test_rdma.master_ip, test_rdma.master_port)
         )
 
+    def test_connect_fails(self, test_rdma):
+        """Assert the connect method Exception handling works"""
+
+        with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
+            
+            rdma_mock.side_effect = socket_error()
+            with pytest.raises(socket_error) as exc_info:
+                self.rdma = RdmaUDP(test_rdma.master_ip, test_rdma.master_port,
+                                    test_rdma.master_ip, test_rdma.master_port,
+                                    test_rdma.target_ip, test_rdma.target_port,
+                                    test_rdma.target_ip, test_rdma.target_port,
+                                    UDPMTU=test_rdma.UDPMTU)
+            assert exc_info.type is socket_error
+            assert exc_info.value.args[0] == "IP:Port 127.0.0.1:8888 Because: [Errno 98] Address already in use"
+
     def test_read(self, test_rdma):
         """Test that the read method calls the relevant socket methods correctly"""
         test_address = 256
@@ -81,3 +97,5 @@ class TestRdmaUDP():
 
         test_rdma.rdma.write(test_address, test_data)
         test_rdma.tx_socket.sendto.assert_called_with(write_command, (test_rdma.target_ip, test_rdma.target_port))
+
+        assert test_rdma.rdma.ack == True

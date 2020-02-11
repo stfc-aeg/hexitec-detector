@@ -43,7 +43,6 @@ class DetectorAdapterTestFixture(object):
                 body=self.put_data
             )
 
-
 @pytest.fixture
 def test_detector_adapter():
 
@@ -65,7 +64,7 @@ class TestDetectorAdapter():
     def test_adapter_get(self, test_detector_adapter):
         """Test that a call to the GET method of the detector adapter returns the correct response"""
         expected_response = {
-            'num_frames': 20
+            'num_frames': 10
         }
         response = test_detector_adapter.adapter.get(
             test_detector_adapter.path,
@@ -134,6 +133,7 @@ class TestDetector():
 
             mock_fem.assert_called_with(
                 fem_id=defaults.fem["id"],
+                parent = detector,
                 server_ctrl_ip_addr=defaults.fem["server_ctrl_ip"],
                 camera_ctrl_ip_addr=defaults.fem["camera_ctrl_ip"],
                 server_data_ip_addr=defaults.fem["server_data_ip"],

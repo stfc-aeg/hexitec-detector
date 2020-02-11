@@ -91,10 +91,11 @@ class RdmaUDP(object):
         if self.ack:
             #receive acknowledge packet
             response = self.rxsocket.recv(self.UDPMaxRx)
-            #time.sleep(10)
-            if len(response) == 48:
-                decoded = struct.unpack('=IIIIQQQQ', response)
-                #logging.debug(decoded)
+            #TODO: Remove as redundant?
+            # #time.sleep(10)
+            # if len(response) == 48:
+            #     decoded = struct.unpack('=IIIIQQQQ', response)
+            #     #logging.debug(decoded)
 
         return
 
