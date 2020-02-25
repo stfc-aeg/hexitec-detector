@@ -13,6 +13,7 @@ namespace FrameProcessor
   const std::string HexitecReorderPlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
   const std::string HexitecReorderPlugin::CONFIG_RAW_DATA 			 = "raw_data";
   const std::string HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT  = "sensors_layout";
+  const std::string HexitecReorderPlugin::CONFIG_FRAME_NUMBER		 = "frame_number";
 
   /**
    * The constructor sets up logging used within the class.
@@ -23,7 +24,8 @@ namespace FrameProcessor
       image_height_(Hexitec::pixel_rows_per_sensor),
       image_pixels_(image_width_ * image_height_),
       packets_lost_(0),
-			write_raw_data_(true)
+      frame_number_(0),
+      write_raw_data_(true)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecReorderPlugin");
@@ -98,7 +100,13 @@ namespace FrameProcessor
     {
       write_raw_data_ = config.get_param<bool>(HexitecReorderPlugin::CONFIG_RAW_DATA);
     }
-  }
+
+    if (config.has_param(HexitecReorderPlugin::CONFIG_FRAME_NUMBER))
+    {
+      frame_number_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_FRAME_NUMBER);
+      LOG4CXX_DEBUG(logger_, " *** RESET frame_number to be " << frame_number_);
+    }
+}
 
   void HexitecReorderPlugin::requestConfiguration(OdinData::IpcMessage& reply)
   {
@@ -107,6 +115,7 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_DROPPED_PACKETS, packets_lost_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_RAW_DATA, write_raw_data_);
+    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_FRAME_NUMBER, frame_number_);
   }
 
   /**
@@ -121,6 +130,7 @@ namespace FrameProcessor
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/packets_lost", packets_lost_);
     status.set_param(get_name() + "/raw_data", write_raw_data_);
+    status.set_param(get_name() + "/frame_number", frame_number_);
   }
 
   /**
@@ -165,6 +175,13 @@ namespace FrameProcessor
         static_cast<Hexitec::FrameHeader*>(frame->get_data_ptr());
 
     this->process_lost_packets(frame);
+
+    //TODO: Interrim fix: (until F/W amended)
+    //	Changes header's frame number.
+    hdr_ptr->frame_number = frame_number_;
+    // Change frame's frame number otherwise FP's will erroneously
+    //	display actual Hardware frame number
+    frame->set_frame_number(frame_number_);
 
     LOG4CXX_TRACE(logger_, "Raw frame number: " << hdr_ptr->frame_number);
 
@@ -228,7 +245,7 @@ namespace FrameProcessor
                                             static_cast<float *>(output_ptr));
 
 					LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: " <<
-                        frame->get_frame_number());
+                        raw_frame->get_frame_number());
 					this->push(raw_frame);
       	}
 
@@ -249,8 +266,10 @@ namespace FrameProcessor
                                           static_cast<float *>(output_ptr));
 
 				LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: " <<
-                      frame->get_frame_number());
+                      data_frame->get_frame_number());
 				this->push(data_frame);
+				// Manually update frame_number (until fixed in firmware)
+				frame_number_++;
 			}
     }
     catch (const std::exception& e)

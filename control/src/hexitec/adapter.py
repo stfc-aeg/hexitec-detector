@@ -303,7 +303,8 @@ class Hexitec():
                     request = ApiAdapterRequest(self.file_dir, content_type="application/json")
                     request.body = "{}".format(1)
                     self.adapters["fp"].put(command, request)
-                    # Reset fem
+
+                    # Reset fem's acquisiton status ahead of future acquisition
                     fem.acquisition_completed = False
             #TODO: Also check sensor values?
             # ..
@@ -322,6 +323,7 @@ class Hexitec():
             fem.connect_hardware(msg)
 
     def initialise_hardware(self, msg):
+
         for fem in self.fems:
             fem.initialise_hardware(msg)
 
@@ -371,6 +373,14 @@ class Hexitec():
         if self.daq.in_progress:
             logging.warning("Cannot Start Acquistion: Already in progress")
             return
+
+        #TODO: Remove once Firmware made to reset on each new acquisition
+        # Issue reset frame_number (to 0) to reorder plugin
+        command = "config/reorder/frame_number"
+        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+        request.body = "{}".format(0)
+        self.adapters["fp"].put(command, request)
+
         self.daq.start_acquisition(self.number_frames)
         for fem in self.fems:
             fem.collect_data()

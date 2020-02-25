@@ -1910,51 +1910,51 @@ class HexitecFem():
         print(" -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=- ")
         self._set_status_message("Initialisation completed. VSR2 and VS1 configured.");
 
-        ###TODO: Make ASIC1 set by ASIC1's settings, ASIC2 by ASIC2's
-        #       Frank: Must stop and start state machine for settings to be shifted into each 
-        #             detector/sensor - Cannot get this to work
+        # ###TODO: Make ASIC1 set by ASIC1's settings, ASIC2 by ASIC2's
+        # #       Frank: Must stop and start state machine for settings to be shifted into each 
+        # #             detector/sensor - Cannot get this to work
 
-        # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
-        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x40, 0x38, 0x46, 0x0D])
-        vsr2_before = self.read_response()
-        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x42, 0x38, 0x46, 0x30, 0x31, 0x0D])
-        self.read_response()
-        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x40, 0x38, 0x46, 0x0D])
-        vsr2_after = self.read_response()
+        # # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
+        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x40, 0x38, 0x46, 0x0D])
+        # vsr2_before = self.read_response()
+        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x42, 0x38, 0x46, 0x30, 0x31, 0x0D])
+        # self.read_response()
+        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x40, 0x38, 0x46, 0x0D])
+        # vsr2_after = self.read_response()
 
-        # Repeat with other VSR board
-        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x40, 0x38, 0x46, 0x0D])
-        vsr1_before = self.read_response()
-        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x42, 0x38, 0x46, 0x30, 0x31, 0x0D])
-        self.read_response()
-        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x40, 0x38, 0x46, 0x0D])
-        vsr1_after = self.read_response()
+        # # Repeat with other VSR board
+        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x40, 0x38, 0x46, 0x0D])
+        # vsr1_before = self.read_response()
+        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x42, 0x38, 0x46, 0x30, 0x31, 0x0D])
+        # self.read_response()
+        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x40, 0x38, 0x46, 0x0D])
+        # vsr1_after = self.read_response()
 
-        # Stop the state machine
+        # # Stop the state machine
 
-        self.send_cmd(disable_sm_vsr1)
-        self.read_response()
-        self.send_cmd(disable_sm_vsr2)
-        self.read_response()
+        # self.send_cmd(disable_sm_vsr1)
+        # self.read_response()
+        # self.send_cmd(disable_sm_vsr2)
+        # self.read_response()
 
-        # Re-Start the state machine
+        # # Re-Start the state machine
 
-        self.send_cmd(enable_sm_vsr1)
-        self.read_response()
-        self.send_cmd(enable_sm_vsr2)
-        self.read_response()
+        # self.send_cmd(enable_sm_vsr1)
+        # self.read_response()
+        # self.send_cmd(enable_sm_vsr2)
+        # self.read_response()
         
-        ###
+        # ###
 
-        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x40, 0x38, 0x46, 0x0D])
-        vsr2_after = self.read_response()
+        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x40, 0x38, 0x46, 0x0D])
+        # vsr2_after = self.read_response()
 
-        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x40, 0x38, 0x46, 0x0D])
-        vsr1_after = self.read_response()
+        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x40, 0x38, 0x46, 0x0D])
+        # vsr1_after = self.read_response()
 
-        logging.debug("VERIFICATION Reading Register 0x8F -+-+-+-+-+-+-+-+-+-+- ____________________________________________________________________________________________________________________")
-        logging.debug("VSR2 after: %s" % (vsr2_after))
-        logging.debug("VSR1 after: %s" % (vsr1_after))
+        # logging.debug("VERIFICATION Reading Register 0x8F -+-+-+-+-+-+-+-+-+-+- ____________________________________________________________________________________________________________________")
+        # logging.debug("VSR2 after: %s" % (vsr2_after))
+        # logging.debug("VSR1 after: %s" % (vsr1_after))
 
 
     def read_pwr_voltages(self):

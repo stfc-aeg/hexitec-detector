@@ -60,6 +60,8 @@ namespace FrameProcessor
       static const std::string CONFIG_RAW_DATA;
       /** Configuration constant for Hardware sensors **/
       static const std::string CONFIG_SENSORS_LAYOUT;
+      /** Configuration constant for setting frame number **/
+      static const std::string CONFIG_FRAME_NUMBER;
 
       void process_lost_packets(boost::shared_ptr<Frame>& frame);
       void process_frame(boost::shared_ptr<Frame> frame);
@@ -88,6 +90,9 @@ namespace FrameProcessor
       int image_pixels_;
       /** Packet loss counter **/
       int packets_lost_;
+      /** Overwrite UDP frame number until firmware resets
+       * it before each acquisition **/
+      uint32_t frame_number_;
 
       int fem_pixels_per_rows_;
       int fem_pixels_per_columns_;
