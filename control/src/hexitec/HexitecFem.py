@@ -8,6 +8,7 @@ import time
 from datetime import datetime
 import logging
 import configparser
+import numpy as np
 
 from hexitec.RdmaUDP import RdmaUDP
 
@@ -154,9 +155,11 @@ class HexitecFem():
         self.firmware_date = "N/A"
         self.firmware_time = "N/A"
 
-        # Variables supporting handling of ini-style aspect config file
+        # Variables supporting handling of ini-style aspect, hexitec config files
         self.aspect_config  = "(Blank)"
         self.aspect_parameters = {}
+        self.hexitec_config = "(Blank)"
+        self.hexitec_parameters = {}
 
         self.acquire_start_time = ""
         self.acquire_stop_time = ""
@@ -176,6 +179,7 @@ class HexitecFem():
             "operation_percentage_complete": (self._get_operation_percentage_complete, None),
             "number_frames": (self._get_number_frames, self._set_number_frames),
             "aspect_config": (lambda: self.aspect_config, self._set_aspect_config),
+            "hexitec_config": (lambda: self.hexitec_config, self._set_hexitec_config),
             "read_sensors": (None, self.read_sensors),
             "hardware_connected": (lambda: self.hardware_connected, None),
             "hardware_busy": (lambda: self.hardware_busy, None),
@@ -1061,7 +1065,7 @@ class HexitecFem():
         value_014 = 0x30, 0x31  # Start SM on '1' falling edge ('0' = rising edge) of ADC-CLK
 
         # # TODO: Find/Determine settings name in aspect file?
-        # unnamed = self._extract_integer('Control-Settings/?????', bit_range=2)
+        # unnamed = self._extract_integer(self.aspect_parameters, 'Control-Settings/?????', bit_range=2)
         # if unnamed > -1:
         #     value_007 = self.convert_to_aspect_format(unnamed)
         # Send unnamed (Enable PPL, ADC PPL) to Register 0x07 (Accepts 2 bits)
@@ -1069,7 +1073,7 @@ class HexitecFem():
                         value_007[0], value_007[1], 0x0D])
         self.read_response()
 
-        row_s1 = self._extract_integer('Control-Settings/Row -> S1', bit_range=14)
+        row_s1 = self._extract_integer(self.aspect_parameters, 'Control-Settings/Row -> S1', bit_range=14)
         if row_s1 > -1:
             # Valid value, within range
             row_s1_low = row_s1 & 0xFF
@@ -1085,7 +1089,7 @@ class HexitecFem():
                         value_003[0], value_003[1], 0x0D])
         self.read_response()
 
-        s1_sph = self._extract_integer('Control-Settings/S1 -> Sph', bit_range=6)
+        s1_sph = self._extract_integer(self.aspect_parameters, 'Control-Settings/S1 -> Sph', bit_range=6)
         if s1_sph > -1:
             value_004 = self.convert_to_aspect_format(s1_sph)
         # Send S1SPH to Register 0x04 (Accepts 6 bits)
@@ -1093,7 +1097,7 @@ class HexitecFem():
                         value_004[0], value_004[1], 0x0D])
         self.read_response()
 
-        sph_s2 = self._extract_integer('Control-Settings/Sph -> S2', bit_range=6)
+        sph_s2 = self._extract_integer(self.aspect_parameters, 'Control-Settings/Sph -> S2', bit_range=6)
         if sph_s2 > -1:
             value_004 = self.convert_to_aspect_format(sph_s2)
         # Send SphS2  to Register 0x05 (Accepts 6 Bits)
@@ -1102,7 +1106,7 @@ class HexitecFem():
         self.read_response()
 
         #TODO: What should default value be? (not set by JE previously!)
-        gain = self._extract_integer('Control-Settings/Gain', bit_range=1)
+        gain = self._extract_integer(self.aspect_parameters, 'Control-Settings/Gain', bit_range=1)
         if gain > -1:
             value_006 = self.convert_to_aspect_format(gain)
         # Send Gain to Register 0x06 (Accepts 1 Bit)
@@ -1110,7 +1114,7 @@ class HexitecFem():
                         value_006[0], value_006[1], 0x0D])
         self.read_response()
 
-        adc1_delay = self._extract_integer('Control-Settings/ADC1 Delay', bit_range=2)
+        adc1_delay = self._extract_integer(self.aspect_parameters, 'Control-Settings/ADC1 Delay', bit_range=2)
         if adc1_delay > -1:
             value_009 = self.convert_to_aspect_format(adc1_delay)
         # Send ADC1 Delay to Register 0x09 (Accepts 2 Bits)
@@ -1118,7 +1122,7 @@ class HexitecFem():
                         value_009[0], value_009[1], 0x0D])
         self.read_response()
 
-        delay_sync_signals = self._extract_integer('Control-Settings/delay sync signals', bit_range=8)
+        delay_sync_signals = self._extract_integer(self.aspect_parameters, 'Control-Settings/delay sync signals', bit_range=8)
         if delay_sync_signals > -1:
             value_00E = self.convert_to_aspect_format(delay_sync_signals)
         # Send delay sync signals to Register 0x0E (Accepts 8 Bits)
@@ -1127,7 +1131,7 @@ class HexitecFem():
         self.read_response()
 
         #TODO: Name for this setting in .ini file ??
-        # wait_clock_row = self._extract_integer('Control-Settings/???', bit_range=8)
+        # wait_clock_row = self._extract_integer(self.aspect_parameters, 'Control-Settings/???', bit_range=8)
         # if wait_clock_row > -1:
         #     value_01B = self.convert_to_aspect_format(wait_clock_row)
         # Send wait clock wait to Register 01B (Accepts 8 Bits)
@@ -1139,7 +1143,7 @@ class HexitecFem():
                         value_014[0], value_014[1], 0x0D])
         self.read_response()
 
-        vcal2_vcal1 = self._extract_integer('Control-Settings/VCAL2 -> VCAL1', bit_range=15)
+        vcal2_vcal1 = self._extract_integer(self.aspect_parameters, 'Control-Settings/VCAL2 -> VCAL1', bit_range=15)
         if vcal2_vcal1 > -1:
             vcal2_vcal1_low = vcal2_vcal1 & 0xFF
             vcal2_vcal1_high = vcal2_vcal1 >> 8
@@ -1264,7 +1268,6 @@ class HexitecFem():
                        0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
         enable_sm     = [0x23, self.vsr_addr, 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
         disable_sm    = [0x23, self.vsr_addr, 0x43, 0x30, 0x31, 0x30, 0x31, 0x0D]
-        diff_cal      = [0x23, self.vsr_addr, 0x42, 0x38, 0x46, 0x30, 0x31, 0x0D]
 
         vsr = -1
         if self.vsr_addr == HexitecFem.VSR_ADDRESS[0]:  # 0x90
@@ -1280,71 +1283,41 @@ class HexitecFem():
         value_061 = list_of_46s
         value_0C2 = list_of_46s
 
-        s1_col1_read = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnEn_1stChannel' % vsr, 2**20)
-        if s1_col1_read[0] > -1:
-            for idx in range(len(s1_col1_read)):
-                # convert_to_aspect_format() turns any value < 16 into a tuple of two
-                #   eg: 0x0F -> 30, 48. Only need second value, hence idx [1]
-                reg_value = self.convert_to_aspect_format(s1_col1_read[idx])
-                value_061[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
+        asic1_read_enable = self._extract_80_bits(self.aspect_parameters, "ColumnEn_", vsr, 1, "Channel")
+        # Check list of (-1, -1) tuples wasn't returned
+        if asic1_read_enable[0][0] > 0:
+            asic1_command = [0x23, self.vsr_addr,  0x44, register_061[0], register_061[1]]
+            for msb, lsb in asic1_read_enable:
+                asic1_command.append(msb)
+                asic1_command.append(lsb)
+            asic1_command.append(0x0D)
+            # Column Read Enable, for ASIC1 (Reg 0x61)
+            col_read_enable1 = asic1_command
+        else:
+            # No ini file loaded, use defaul values
+            col_read_enable1 = [0x23, self.vsr_addr, 0x44, register_061[0], register_061[1], 
+                                value_061[0], value_061[1], value_061[2], value_061[3], value_061[4], 
+                                value_061[5], value_061[6], value_061[7], value_061[8], value_061[9], 
+                                value_061[10], value_061[1], value_061[2], value_061[3], value_061[14], 
+                                value_061[15], value_061[1], value_061[2], value_061[3], value_061[19],
+                                0x0D]
 
-        s2_col1_read = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnEn_1stChannel' % vsr, 2**20)
-        if s2_col1_read[0] > -1:
-            for idx in range(len(s2_col1_read)):
-                reg_value = self.convert_to_aspect_format(s2_col1_read[idx])
-                value_0C2[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
-
-        s1_col2_read = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnEn_2ndChannel' % vsr, 2**20)
-        if s1_col2_read[0] > -1:
-            for idx in range(len(s1_col2_read)):
-                reg_value = self.convert_to_aspect_format(s1_col2_read[idx])
-                value_061[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
-
-        s2_col2_read = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnEn_2ndChannel' % vsr, 2**20)
-        if s2_col2_read[0] > -1:
-            for idx in range(len(s2_col2_read)):
-                reg_value = self.convert_to_aspect_format(s2_col2_read[idx])
-                value_0C2[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
-
-        s1_col3_read = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnEn_3rdChannel' % vsr, 2**20)
-        if s1_col3_read[0] > -1:
-            for idx in range(len(s1_col3_read)):
-                reg_value = self.convert_to_aspect_format(s1_col3_read[idx])
-                value_061[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
-                
-        s2_col3_read = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnEn_3rdChannel' % vsr, 2**20)
-        if s2_col3_read[0] > -1:
-            for idx in range(len(s2_col3_read)):
-                reg_value = self.convert_to_aspect_format(s2_col3_read[idx])
-                value_0C2[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
-
-        s1_col4_read = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnEn_4thChannel' % vsr, 2**20)
-        if s1_col4_read[0] > -1:
-            for idx in range(len(s1_col4_read)):
-                reg_value = self.convert_to_aspect_format(s1_col4_read[idx])
-                value_061[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
-                
-        s2_col4_read = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnEn_4thChannel' % vsr, 2**20)
-        if s2_col4_read[0] > -1:
-            for idx in range(len(s2_col4_read)):
-                reg_value = self.convert_to_aspect_format(s2_col4_read[idx])
-                value_0C2[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
-
-        # Column Read Enable, for ASIC1 (Reg 0x61)
-        col_read_enable1 = [0x23, self.vsr_addr, 0x44, register_061[0], register_061[1], 
-                            value_061[0], value_061[1], value_061[2], value_061[3], value_061[4], 
-                            value_061[5], value_061[6], value_061[7], value_061[8], value_061[9], 
-                            value_061[10], value_061[1], value_061[2], value_061[3], value_061[14], 
-                            value_061[15], value_061[1], value_061[2], value_061[3], value_061[19],
-                            0x0D]
-
-        # Column Read Enable, for ASIC2 (Reg 0xC2)
-        col_read_enable2 = [0x23, self.vsr_addr, 0x44, register_0C2[0], register_0C2[1],
-                            value_0C2[0], value_0C2[1], value_0C2[2], value_0C2[3], value_0C2[4], 
-                            value_0C2[5], value_0C2[6], value_0C2[7], value_0C2[8], value_0C2[9],
-                            value_0C2[10], value_0C2[1], value_0C2[2], value_0C2[3], value_0C2[14],
-                            value_0C2[15], value_0C2[1], value_0C2[2], value_0C2[3], value_0C2[19],
-                            0x0D]
+        asic2_read_enable = self._extract_80_bits(self.aspect_parameters, "ColumnEn_", vsr, 2, "Channel")
+        if asic2_read_enable[0][0] > 0:
+            asic2_command = [0x23, self.vsr_addr,  0x44, register_0C2[0], register_0C2[1]]
+            for msb, lsb in asic2_read_enable:
+                asic2_command.append(msb)
+                asic2_command.append(lsb)
+            asic2_command.append(0x0D)
+            col_read_enable2 = asic2_command
+        else:
+            # Column Read Enable, for ASIC2 (Reg 0xC2)
+            col_read_enable2 = [0x23, self.vsr_addr, 0x44, register_0C2[0], register_0C2[1],
+                                value_0C2[0], value_0C2[1], value_0C2[2], value_0C2[3], value_0C2[4], 
+                                value_0C2[5], value_0C2[6], value_0C2[7], value_0C2[8], value_0C2[9],
+                                value_0C2[10], value_0C2[1], value_0C2[2], value_0C2[3], value_0C2[14],
+                                value_0C2[15], value_0C2[1], value_0C2[2], value_0C2[3], value_0C2[19],
+                                0x0D]
 
         # Column Power Enable
 
@@ -1353,65 +1326,39 @@ class HexitecFem():
         value_04D = list_of_46s
         value_0AE = list_of_46s
 
-        s1_col1_power = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnPwr1stChannel' % vsr, 2**20)
-        if s1_col1_power[0] > -1:
-            for idx in range(len(s1_col1_power)):
-                reg_value = self.convert_to_aspect_format(s1_col1_power[idx])
-                value_04D[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
-        s2_col1_power = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnPwr1stChannel' % vsr, 2**20)
-        if s2_col1_power[0] > -1:
-            for idx in range(len(s2_col1_power)):
-                reg_value = self.convert_to_aspect_format(s2_col1_power[idx])
-                value_0AE[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
+        asic1_power_enable = self._extract_80_bits(self.aspect_parameters, "ColumnPwr", vsr, 1, "Channel")
+        if asic1_power_enable[0][0] > 0:
+            asic1_command = [0x23, self.vsr_addr,  0x44, register_04D[0], register_04D[1]]
+            for msb, lsb in asic1_power_enable:
+                asic1_command.append(msb)
+                asic1_command.append(lsb)
+            asic1_command.append(0x0D)
+            col_power_enable1 = asic1_command
+        else:
+            # Column Power Enable, for ASIC1 (Reg 0x4D)
+            col_power_enable1 = [0x23, self.vsr_addr, 0x44, register_04D[0], register_04D[1],
+                                value_04D[0], value_04D[1], value_04D[2], value_04D[3], value_04D[4],
+                                value_04D[5], value_04D[6], value_04D[7], value_04D[8], value_04D[9],
+                                value_04D[10], value_04D[1], value_04D[2], value_04D[3], value_04D[14],
+                                value_04D[15], value_04D[1], value_04D[2], value_04D[3], value_04D[19],
+                                0x0D]
 
-        s1_col2_power = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnPwr2ndChannel' % vsr, 2**20)
-        if s1_col2_power[0] > -1:
-            for idx in range(len(s1_col2_power)):
-                reg_value = self.convert_to_aspect_format(s1_col2_power[idx])
-                value_04D[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
-        s2_col2_power = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnPwr2ndChannel' % vsr, 2**20)
-        if s2_col2_power[0] > -1:
-            for idx in range(len(s2_col2_power)):
-                reg_value = self.convert_to_aspect_format(s2_col2_power[idx])
-                value_0AE[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
-
-        s1_col3_power = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnPwr3rdChannel' % vsr, 2**20)
-        if s1_col3_power[0] > -1:
-            for idx in range(len(s1_col3_power)):
-                reg_value = self.convert_to_aspect_format(s1_col3_power[idx])
-                value_04D[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
-        s2_col3_power = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnPwr3rdChannel' % vsr, 2**20)
-        if s2_col3_power[0] > -1:
-            for idx in range(len(s2_col3_power)):
-                reg_value = self.convert_to_aspect_format(s2_col3_power[idx])
-                value_0AE[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
-
-        s1_col4_power = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnPwr4thChannel' % vsr, 2**20)
-        if s1_col4_power[0] > -1:
-            for idx in range(len(s1_col4_power)):
-                reg_value = self.convert_to_aspect_format(s1_col4_power[idx])
-                value_04D[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
-        s2_col4_power = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnPwr4thChannel' % vsr, 2**20)
-        if s2_col4_power[0] > -1:
-            for idx in range(len(s2_col4_power)):
-                reg_value = self.convert_to_aspect_format(s2_col4_power[idx])
-                value_0AE[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
-
-        # Column Power Enable, for ASIC1 (Reg 0x4D)
-        col_power_enable1 = [0x23, self.vsr_addr, 0x44, register_04D[0], register_04D[1],
-                            value_04D[0], value_04D[1], value_04D[2], value_04D[3], value_04D[4],
-                            value_04D[5], value_04D[6], value_04D[7], value_04D[8], value_04D[9],
-                            value_04D[10], value_04D[1], value_04D[2], value_04D[3], value_04D[14],
-                            value_04D[15], value_04D[1], value_04D[2], value_04D[3], value_04D[19],
-                            0x0D]
-
-        # Column Power Enable, for ASIAE (Reg 0xAE)
-        col_power_enable2 = [0x23, self.vsr_addr, 0x44, register_0AE[0], register_0AE[1],
-                            value_0AE[0], value_0AE[1], value_0AE[2], value_0AE[3], value_0AE[4],
-                            value_0AE[5], value_0AE[6], value_0AE[7], value_0AE[8], value_0AE[9],
-                            value_0AE[10], value_0AE[1], value_0AE[2], value_0AE[3], value_0AE[14],
-                            value_0AE[15], value_0AE[1], value_0AE[2], value_0AE[3], value_0AE[19],
-                            0x0D]
+        asic2_power_enable = self._extract_80_bits(self.aspect_parameters, "ColumnPwr", vsr, 2, "Channel")
+        if asic2_power_enable[0][0] > 0:
+            asic2_command = [0x23, self.vsr_addr,  0x44, register_0AE[0], register_0AE[1]]
+            for msb, lsb in asic2_power_enable:
+                asic2_command.append(msb)
+                asic2_command.append(lsb)
+            asic2_command.append(0x0D)
+            col_power_enable2 = asic2_command
+        else:
+            # Column Power Enable, for ASIAE (Reg 0xAE)
+            col_power_enable2 = [0x23, self.vsr_addr, 0x44, register_0AE[0], register_0AE[1],
+                                value_0AE[0], value_0AE[1], value_0AE[2], value_0AE[3], value_0AE[4],
+                                value_0AE[5], value_0AE[6], value_0AE[7], value_0AE[8], value_0AE[9],
+                                value_0AE[10], value_0AE[1], value_0AE[2], value_0AE[3], value_0AE[14],
+                                value_0AE[15], value_0AE[1], value_0AE[2], value_0AE[3], value_0AE[19],
+                                0x0D]
 
         # Column Calibration Enable
 
@@ -1420,68 +1367,39 @@ class HexitecFem():
         value_057 = list_of_30s
         value_0B8 = list_of_30s
 
-        # ASIC 1
-        s1_col1_calib = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnCal1stChannel' % vsr, 2**20)
-        if s1_col1_calib[0] > -1:
-            for idx in range(len(s1_col1_calib)):
-                reg_value = self.convert_to_aspect_format(s1_col1_calib[idx])
-                value_057[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
-        s1_col2_calib = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnCal2ndChannel' % vsr, 2**20)
-        if s1_col2_calib[0] > -1:
-            for idx in range(len(s1_col2_calib)):
-                reg_value = self.convert_to_aspect_format(s1_col2_calib[idx])
-                value_057[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
-        s1_col3_calib = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnCal3rdChannel' % vsr, 2**20)
-        if s1_col3_calib[0] > -1:
-            for idx in range(len(s1_col3_calib)):
-                reg_value = self.convert_to_aspect_format(s1_col3_calib[idx])
-                value_057[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
-        s1_col4_calib = self._extract_binary_words('Sensor-Config_V%s_S1/ColumnCal4thChannel' % vsr, 2**20)
-        if s1_col4_calib[0] > -1:
-            for idx in range(len(s1_col4_calib)):
-                reg_value = self.convert_to_aspect_format(s1_col4_calib[idx])
-                value_057[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
+        asic1_cal_enable = self._extract_80_bits(self.aspect_parameters, "ColumnCal", vsr, 1, "Channel")
+        if asic1_cal_enable[0][0] > 0:
+            asic1_command = [0x23, self.vsr_addr,  0x44, register_057[0], register_057[1]]
+            for msb, lsb in asic1_cal_enable:
+                asic1_command.append(msb)
+                asic1_command.append(lsb)
+            asic1_command.append(0x0D)
+            col_cal_enable1 = asic1_command
+        else:
+            # Column Calibrate Enable, for ASIC1 (Reg 0x57)
+            col_cal_enable1 = [0x23, self.vsr_addr, 0x44, register_057[0], register_057[1], 
+                                value_057[0], value_057[1], value_057[2], value_057[3], value_057[4],
+                                value_057[5], value_057[6], value_057[7], value_057[8], value_057[9],
+                                value_057[10], value_057[1], value_057[2], value_057[3], value_057[14],
+                                value_057[15], value_057[1], value_057[2], value_057[3], value_057[19],
+                                0x0D]
 
-        # ASIC 2
-        s2_col1_calib = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnCal1stChannel' % vsr, 2**20)
-        if s2_col1_calib[0] > -1:
-            for idx in range(len(s2_col1_calib)):
-                reg_value = self.convert_to_aspect_format(s2_col1_calib[idx])
-                value_0B8[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
-
-        s2_col2_calib = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnCal2ndChannel' % vsr, 2**20)
-        if s2_col2_calib[0] > -1:
-            for idx in range(len(s2_col2_calib)):
-                reg_value = self.convert_to_aspect_format(s2_col2_calib[idx])
-                value_0B8[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
-
-        s2_col3_calib = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnCal3rdChannel' % vsr, 2**20)
-        if s2_col3_calib[0] > -1:
-            for idx in range(len(s2_col3_calib)):
-                reg_value = self.convert_to_aspect_format(s2_col3_calib[idx])
-                value_0B8[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
-
-        s2_col4_calib = self._extract_binary_words('Sensor-Config_V%s_S2/ColumnCal4thChannel' % vsr, 2**20)
-        if s2_col4_calib[0] > -1:
-            for idx in range(len(s2_col4_calib)):
-                reg_value = self.convert_to_aspect_format(s2_col4_calib[idx])
-                value_0B8[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
-
-        # Column Calibrate Enable, for ASIC1 (Reg 0x57)
-        col_cal_enable1 = [0x23, self.vsr_addr, 0x44, register_057[0], register_057[1], 
-                            value_057[0], value_057[1], value_057[2], value_057[3], value_057[4],
-                            value_057[5], value_057[6], value_057[7], value_057[8], value_057[9],
-                            value_057[10], value_057[1], value_057[2], value_057[3], value_057[14],
-                            value_057[15], value_057[1], value_057[2], value_057[3], value_057[19],
-                            0x0D]
-
-        # Column Calibrate Enable, for ASIB8 (Reg 0xB8)
-        col_cal_enable2 = [0x23, self.vsr_addr, 0x44, register_0B8[0], register_0B8[1], 
-                            value_0B8[0], value_0B8[1], value_0B8[2], value_0B8[3], value_0B8[4],
-                            value_0B8[5], value_0B8[6], value_0B8[7], value_0B8[8], value_0B8[9],
-                            value_0B8[10], value_0B8[1], value_0B8[2], value_0B8[3], value_0B8[14],
-                            value_0B8[15], value_0B8[1], value_0B8[2], value_0B8[3], value_0B8[19],
-                            0x0D]
+        asic2_cal_enable = self._extract_80_bits(self.aspect_parameters, "ColumnCal", vsr, 2, "Channel")
+        if asic2_cal_enable[0][0] > 0:
+            asic2_command = [0x23, self.vsr_addr,  0x44, register_0B8[0], register_0B8[1]]
+            for msb, lsb in asic2_cal_enable:
+                asic2_command.append(msb)
+                asic2_command.append(lsb)
+            asic2_command.append(0x0D)
+            col_cal_enable2 = asic2_command
+        else:
+            # Column Calibrate Enable, for ASIB8 (Reg 0xB8)
+            col_cal_enable2 = [0x23, self.vsr_addr, 0x44, register_0B8[0], register_0B8[1], 
+                                value_0B8[0], value_0B8[1], value_0B8[2], value_0B8[3], value_0B8[4],
+                                value_0B8[5], value_0B8[6], value_0B8[7], value_0B8[8], value_0B8[9],
+                                value_0B8[10], value_0B8[1], value_0B8[2], value_0B8[3], value_0B8[14],
+                                value_0B8[15], value_0B8[1], value_0B8[2], value_0B8[3], value_0B8[19],
+                                0x0D]
 
         # Row Read Enable
 
@@ -1490,65 +1408,39 @@ class HexitecFem():
         value_043 = list_of_46s
         value_0A4 = list_of_46s
 
-        s1_row1_read = self._extract_binary_words('Sensor-Config_V%s_S1/RowEn_1stBlock' % vsr, 2**20)
-        if s1_row1_read[0] > -1:
-            for idx in range(len(s1_row1_read)):
-                reg_value = self.convert_to_aspect_format(s1_row1_read[idx])
-                value_043[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
-        s2_row1_read = self._extract_binary_words('Sensor-Config_V%s_S2/RowEn_1stBlock' % vsr, 2**20)
-        if s2_row1_read[0] > -1:
-            for idx in range(len(s2_row1_read)):
-                reg_value = self.convert_to_aspect_format(s2_row1_read[idx])
-                value_0A4[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
+        asic1_cal_enable = self._extract_80_bits(self.aspect_parameters, "RowEn_", vsr, 1, "Block")
+        if asic1_cal_enable[0][0] > 0:
+            asic1_command = [0x23, self.vsr_addr,  0x44, register_043[0], register_043[1]]
+            for msb, lsb in asic1_cal_enable:
+                asic1_command.append(msb)
+                asic1_command.append(lsb)
+            asic1_command.append(0x0D)
+            row_read_enable1 = asic1_command
+        else:
+            # Row Read Enable, for ASIC1 (Reg 0x43)
+            row_read_enable1 = [0x23, self.vsr_addr, 0x44, register_043[0], register_043[1], 
+                                value_043[0], value_043[1], value_043[2], value_043[3], value_043[4],
+                                value_043[5], value_043[6], value_043[7], value_043[8], value_043[9],
+                                value_043[10], value_043[1], value_043[2], value_043[3], value_043[14],
+                                value_043[15], value_043[1], value_043[2], value_043[3], value_043[19],
+                                0x0D]
 
-        s1_row2_read = self._extract_binary_words('Sensor-Config_V%s_S1/RowEn_2ndBlock' % vsr, 2**20)
-        if s1_row2_read[0] > -1:
-            for idx in range(len(s1_row2_read)):
-                reg_value = self.convert_to_aspect_format(s1_row2_read[idx])
-                value_043[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
-        s2_row2_read = self._extract_binary_words('Sensor-Config_V%s_S2/RowEn_2ndBlock' % vsr, 2**20)
-        if s2_row2_read[0] > -1:
-            for idx in range(len(s2_row2_read)):
-                reg_value = self.convert_to_aspect_format(s2_row2_read[idx])
-                value_0A4[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
-
-        s1_row3_read = self._extract_binary_words('Sensor-Config_V%s_S1/RowEn_3rdBlock' % vsr, 2**20)
-        if s1_row3_read[0] > -1:
-            for idx in range(len(s1_row3_read)):
-                reg_value = self.convert_to_aspect_format(s1_row3_read[idx])
-                value_043[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
-        s2_row3_read = self._extract_binary_words('Sensor-Config_V%s_S2/RowEn_3rdBlock' % vsr, 2**20)
-        if s2_row3_read[0] > -1:
-            for idx in range(len(s2_row3_read)):
-                reg_value = self.convert_to_aspect_format(s2_row3_read[idx])
-                value_0A4[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
-
-        s1_row4_read = self._extract_binary_words('Sensor-Config_V%s_S1/RowEn_4thBlock' % vsr, 2**20)
-        if s1_row4_read[0] > -1:
-            for idx in range(len(s1_row4_read)):
-                reg_value = self.convert_to_aspect_format(s1_row4_read[idx])
-                value_043[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
-        s2_row4_read = self._extract_binary_words('Sensor-Config_V%s_S2/RowEn_4thBlock' % vsr, 2**20)
-        if s2_row4_read[0] > -1:
-            for idx in range(len(s2_row4_read)):
-                reg_value = self.convert_to_aspect_format(s2_row4_read[idx])
-                value_0A4[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
-
-        # Row Read Enable, for ASIC1 (Reg 0x43)
-        row_read_enable1 = [0x23, self.vsr_addr, 0x44, register_043[0], register_043[1], 
-                            value_043[0], value_043[1], value_043[2], value_043[3], value_043[4],
-                            value_043[5], value_043[6], value_043[7], value_043[8], value_043[9],
-                            value_043[10], value_043[1], value_043[2], value_043[3], value_043[14],
-                            value_043[15], value_043[1], value_043[2], value_043[3], value_043[19],
-                            0x0D]
-
-        # Row Read Enable, for ASIC2 (Reg 0xA4)
-        row_read_enable2 = [0x23, self.vsr_addr, 0x44, register_0A4[0], register_0A4[1],
-                            value_0A4[0], value_0A4[1], value_0A4[2], value_0A4[3], value_0A4[4],
-                            value_0A4[5], value_0A4[6], value_0A4[7], value_0A4[8], value_0A4[9],
-                            value_0A4[10], value_0A4[1], value_0A4[2], value_0A4[3], value_0A4[14],
-                            value_0A4[15], value_0A4[1], value_0A4[2], value_0A4[3], value_0A4[19],
-                            0x0D]
+        asic2_cal_enable = self._extract_80_bits(self.aspect_parameters, "RowEn_", vsr, 2, "Block")
+        if asic2_cal_enable[0][0] > 0:
+            asic2_command = [0x23, self.vsr_addr,  0x44, register_0A4[0], register_0A4[1]]
+            for msb, lsb in asic2_cal_enable:
+                asic2_command.append(msb)
+                asic2_command.append(lsb)
+            asic2_command.append(0x0D)
+            row_read_enable2 = asic2_command
+        else:
+            # Row Read Enable, for ASIC2 (Reg 0xA4)
+            row_read_enable2 = [0x23, self.vsr_addr, 0x44, register_0A4[0], register_0A4[1],
+                                value_0A4[0], value_0A4[1], value_0A4[2], value_0A4[3], value_0A4[4],
+                                value_0A4[5], value_0A4[6], value_0A4[7], value_0A4[8], value_0A4[9],
+                                value_0A4[10], value_0A4[1], value_0A4[2], value_0A4[3], value_0A4[14],
+                                value_0A4[15], value_0A4[1], value_0A4[2], value_0A4[3], value_0A4[19],
+                                0x0D]
 
         # Row Power Enable
 
@@ -1557,65 +1449,39 @@ class HexitecFem():
         value_02F = list_of_46s
         value_090 = list_of_46s
 
-        s1_row1_power = self._extract_binary_words('Sensor-Config_V%s_S1/RowPwr1stBlock' % vsr, 2**20)
-        if s1_row1_power[0] > -1:
-            for idx in range(len(s1_row1_power)):
-                reg_value = self.convert_to_aspect_format(s1_row1_power[idx])
-                value_02F[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
-        s2_row1_power = self._extract_binary_words('Sensor-Config_V%s_S2/RowPwr1stBlock' % vsr, 2**20)
-        if s2_row1_power[0] > -1:
-            for idx in range(len(s2_row1_power)):
-                reg_value = self.convert_to_aspect_format(s2_row1_power[idx])
-                value_090[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
+        asic1_pwr_enable = self._extract_80_bits(self.aspect_parameters, "RowPwr", vsr, 1, "Block")
+        if asic1_pwr_enable[0][0] > 0:
+            asic1_command = [0x23, self.vsr_addr,  0x44, register_02F[0], register_02F[1]]
+            for msb, lsb in asic1_pwr_enable:
+                asic1_command.append(msb)
+                asic1_command.append(lsb)
+            asic1_command.append(0x0D)
+            row_power_enable1 = asic1_command
+        else:
+            # Row Power Enable, for ASIC1 (Reg 0x2F)
+            row_power_enable1 = [0x23, self.vsr_addr, 0x44, register_02F[0], register_02F[1], 
+                                value_02F[0], value_02F[1], value_02F[2], value_02F[3], value_02F[4],
+                                value_02F[5], value_02F[6], value_02F[7], value_02F[8], value_02F[9],
+                                value_02F[10], value_02F[1], value_02F[2], value_02F[3], value_02F[14],
+                                value_02F[15], value_02F[1], value_02F[2], value_02F[3], value_02F[19],
+                                0x0D]
 
-        s1_row2_power = self._extract_binary_words('Sensor-Config_V%s_S1/RowPwr2ndBlock' % vsr, 2**20)
-        if s1_row2_power[0] > -1:
-            for idx in range(len(s1_row2_power)):
-                reg_value = self.convert_to_aspect_format(s1_row2_power[idx])
-                value_02F[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
-        s2_row2_power = self._extract_binary_words('Sensor-Config_V%s_S2/RowPwr2ndBlock' % vsr, 2**20)
-        if s2_row2_power[0] > -1:
-            for idx in range(len(s2_row2_power)):
-                reg_value = self.convert_to_aspect_format(s2_row2_power[idx])
-                value_090[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
-
-        s1_row3_power = self._extract_binary_words('Sensor-Config_V%s_S1/RowPwr3rdBlock' % vsr, 2**20)
-        if s1_row3_power[0] > -1:
-            for idx in range(len(s1_row3_power)):
-                reg_value = self.convert_to_aspect_format(s1_row3_power[idx])
-                value_02F[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
-        s2_row3_power = self._extract_binary_words('Sensor-Config_V%s_S2/RowPwr3rdBlock' % vsr, 2**20)
-        if s2_row3_power[0] > -1:
-            for idx in range(len(s2_row3_power)):
-                reg_value = self.convert_to_aspect_format(s2_row3_power[idx])
-                value_090[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
-
-        s1_row4_power = self._extract_binary_words('Sensor-Config_V%s_S1/RowPwr4thBlock' % vsr, 2**20)
-        if s1_row4_power[0] > -1:
-            for idx in range(len(s1_row4_power)):
-                reg_value = self.convert_to_aspect_format(s1_row4_power[idx])
-                value_02F[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
-        s2_row4_power = self._extract_binary_words('Sensor-Config_V%s_S2/RowPwr4thBlock' % vsr, 2**20)
-        if s2_row4_power[0] > -1:
-            for idx in range(len(s2_row4_power)):
-                reg_value = self.convert_to_aspect_format(s2_row4_power[idx])
-                value_090[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
-
-        # Row Power Enable, for ASIC1 (Reg 0x2F)
-        row_power_enable1 = [0x23, self.vsr_addr, 0x44, register_02F[0], register_02F[1], 
-                            value_02F[0], value_02F[1], value_02F[2], value_02F[3], value_02F[4],
-                            value_02F[5], value_02F[6], value_02F[7], value_02F[8], value_02F[9],
-                            value_02F[10], value_02F[1], value_02F[2], value_02F[3], value_02F[14],
-                            value_02F[15], value_02F[1], value_02F[2], value_02F[3], value_02F[19],
-                            0x0D]
-
-        # Row Power Enable, for ASI90 (Reg 0x90)
-        row_power_enable2 = [0x23, self.vsr_addr, 0x44, register_090[0], register_090[1],
-                            value_090[0], value_090[1], value_090[2], value_090[3], value_090[4],
-                            value_090[5], value_090[6], value_090[7], value_090[8], value_090[9],
-                            value_090[10], value_090[1], value_090[2], value_090[3], value_090[14],
-                            value_090[15], value_090[1], value_090[2], value_090[3], value_090[19],
-                            0x0D]
+        asic2_pwr_enable = self._extract_80_bits(self.aspect_parameters, "RowPwr", vsr, 2, "Block")
+        if asic2_pwr_enable[0][0] > 0:
+            asic2_command = [0x23, self.vsr_addr,  0x44, register_090[0], register_090[1]]
+            for msb, lsb in asic2_pwr_enable:
+                asic2_command.append(msb)
+                asic2_command.append(lsb)
+            asic2_command.append(0x0D)
+            row_power_enable2 = asic2_command
+        else:
+            # Row Power Enable, for ASI90 (Reg 0x90)
+            row_power_enable2 = [0x23, self.vsr_addr, 0x44, register_090[0], register_090[1],
+                                value_090[0], value_090[1], value_090[2], value_090[3], value_090[4],
+                                value_090[5], value_090[6], value_090[7], value_090[8], value_090[9],
+                                value_090[10], value_090[1], value_090[2], value_090[3], value_090[14],
+                                value_090[15], value_090[1], value_090[2], value_090[3], value_090[19],
+                                0x0D]
 
         # Row Calibration Enable
 
@@ -1624,68 +1490,40 @@ class HexitecFem():
         value_039 = list_of_30s
         value_09A = list_of_30s
 
-        # ASIC1
-        s1_row1_calib = self._extract_binary_words('Sensor-Config_V%s_S1/RowCal1stBlock' % vsr, 2**20)
-        if s1_row1_calib[0] > -1:
-            for idx in range(len(s1_row1_calib)):
-                reg_value = self.convert_to_aspect_format(s1_row1_calib[idx])
-                value_039[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
-        s1_row2_calib = self._extract_binary_words('Sensor-Config_V%s_S1/RowCal2ndBlock' % vsr, 2**20)
-        if s1_row2_calib[0] > -1:
-            for idx in range(len(s1_row2_calib)):
-                reg_value = self.convert_to_aspect_format(s1_row2_calib[idx])
-                value_039[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
-        s1_row3_calib = self._extract_binary_words('Sensor-Config_V%s_S1/RowCal3rdBlock' % vsr, 2**20)
-        if s1_row3_calib[0] > -1:
-            for idx in range(len(s1_row3_calib)):
-                reg_value = self.convert_to_aspect_format(s1_row3_calib[idx])
-                value_039[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
-        s1_row4_calib = self._extract_binary_words('Sensor-Config_V%s_S1/RowCal4thBlock' % vsr, 2**20)
-        if s1_row4_calib[0] > -1:
-            for idx in range(len(s1_row4_calib)):
-                reg_value = self.convert_to_aspect_format(s1_row4_calib[idx])
-                value_039[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
+        asic1_cal_enable = self._extract_80_bits(self.aspect_parameters, "RowCal", vsr, 1, "Block")
+        if asic1_cal_enable[0][0] > 0:
+            asic1_command = [0x23, self.vsr_addr,  0x44, register_039[0], register_039[1]]
+            for msb, lsb in asic1_cal_enable:
+                asic1_command.append(msb)
+                asic1_command.append(lsb)
+            asic1_command.append(0x0D)
+            row_cal_enable1 = asic1_command
+        else:
+            # Row Calibrate Enable, for ASIC1 (Reg 0x39)
+            row_cal_enable1 = [0x23, self.vsr_addr, 0x44, register_039[0], register_039[1], 
+                            value_039[0], value_039[1], value_039[2], value_039[3], value_039[4],
+                            value_039[5], value_039[6], value_039[7], value_039[8], value_039[9],
+                            value_039[10], value_039[1], value_039[2], value_039[3], value_039[14],
+                            value_039[15], value_039[1], value_039[2], value_039[3], value_039[19],
+                            0x0D]
 
-        # ASIC2
-        s2_row1_calib = self._extract_binary_words('Sensor-Config_V%s_S2/RowCal1stBlock' % vsr, 2**20)
-        if s2_row1_calib[0] > -1:
-            for idx in range(len(s2_row1_calib)):
-                reg_value = self.convert_to_aspect_format(s2_row1_calib[idx])
-                value_09A[idx + self.CHANNEL_1_OFFSET] = reg_value[1]
+        asic2_cal_enable = self._extract_80_bits(self.aspect_parameters, "RowCal", vsr, 2, "Block")
+        if asic2_cal_enable[0][0] > 0:
+            asic2_command = [0x23, self.vsr_addr,  0x44, register_09A[0], register_09A[1]]
+            for msb, lsb in asic2_cal_enable:
+                asic2_command.append(msb)
+                asic2_command.append(lsb)
+            asic2_command.append(0x0D)
+            row_cal_enable2 = asic2_command
+        else:
+            # Row Calibrate Enable, for ASIC2 (Reg 0x9A)
+            row_cal_enable2 = [0x23, self.vsr_addr, 0x44, register_09A[0], register_09A[1], 
+                            value_09A[0], value_09A[1], value_09A[2], value_09A[3], value_09A[4],
+                            value_09A[5], value_09A[6], value_09A[7], value_09A[8], value_09A[9],
+                            value_09A[10], value_09A[1], value_09A[2], value_09A[3], value_09A[14],
+                            value_09A[15], value_09A[1], value_09A[2], value_09A[3], value_09A[19],
+                            0x0D]
 
-        s2_row2_calib = self._extract_binary_words('Sensor-Config_V%s_S2/RowCal2ndBlock' % vsr, 2**20)
-        if s2_row2_calib[0] > -1:
-            for idx in range(len(s2_row2_calib)):
-                reg_value = self.convert_to_aspect_format(s2_row2_calib[idx])
-                value_09A[idx + self.CHANNEL_2_OFFSET] = reg_value[1]
-
-        s2_row3_calib = self._extract_binary_words('Sensor-Config_V%s_S2/RowCal3rdBlock' % vsr, 2**20)
-        if s2_row3_calib[0] > -1:
-            for idx in range(len(s2_row3_calib)):
-                reg_value = self.convert_to_aspect_format(s2_row3_calib[idx])
-                value_09A[idx + self.CHANNEL_3_OFFSET] = reg_value[1]
-
-        s2_row4_calib = self._extract_binary_words('Sensor-Config_V%s_S2/RowCal4thBlock' % vsr, 2**20)
-        if s2_row4_calib[0] > -1:
-            for idx in range(len(s2_row4_calib)):
-                reg_value = self.convert_to_aspect_format(s2_row4_calib[idx])
-                value_09A[idx + self.CHANNEL_4_OFFSET] = reg_value[1]
-
-        # Row Calibrate Enable, for ASIC1 (Reg 0x39)
-        row_cal_enable1 = [0x23, self.vsr_addr, 0x44, register_039[0], register_039[1], 
-                        value_039[0], value_039[1], value_039[2], value_039[3], value_039[4],
-                        value_039[5], value_039[6], value_039[7], value_039[8], value_039[9],
-                        value_039[10], value_039[1], value_039[2], value_039[3], value_039[14],
-                        value_039[15], value_039[1], value_039[2], value_039[3], value_039[19],
-                        0x0D]
-
-        # Row Calibrate Enable, for ASIC9A (Reg 0x9A)
-        row_cal_enable2 = [0x23, self.vsr_addr, 0x44, register_09A[0], register_09A[1], 
-                        value_09A[0], value_09A[1], value_09A[2], value_09A[3], value_09A[4],
-                        value_09A[5], value_09A[6], value_09A[7], value_09A[8], value_09A[9],
-                        value_09A[10], value_09A[1], value_09A[2], value_09A[3], value_09A[14],
-                        value_09A[15], value_09A[1], value_09A[2], value_09A[3], value_09A[19],
-                        0x0D]
 
         col_cal_enable1a = [0x23, self.vsr_addr, 0x44, 0x35, 0x37, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
         col_cal_enable1b = [0x23, self.vsr_addr, 0x44, 0x35, 0x37, 0x30, 0x30, 0x30, 0x30, 0x46, 0x30, 0x30, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
@@ -1703,22 +1541,18 @@ class HexitecFem():
         row_cal_enable2b = [0x23, self.vsr_addr, 0x44, 0x39, 0x41, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
         row_cal_enable2c = [0x23, self.vsr_addr, 0x44, 0x39, 0x41, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
 
-        logging.debug("Use different CAL data")
-        self.send_cmd(diff_cal)
-        self.read_response()
-
         self.send_cmd(disable_sm)
         self.read_response()
 
         logging.debug("Loading Power, Cal and Read Enables")
         logging.debug("Column power enable")
-        self.send_cmd(col_power_enable1)
+        self.send_cmd(col_power_enable1)    # 0x4D
         self.read_response()
         self.send_cmd(col_power_enable2)
         self.read_response()
 
         logging.debug("Row power enable")
-        self.send_cmd(row_power_enable1)
+        self.send_cmd(row_power_enable1)    # 0x2F
         self.read_response()
 
         self.send_cmd(row_power_enable2)
@@ -1760,24 +1594,24 @@ class HexitecFem():
         elif self.test_mode_image == HexitecFem.TESTMODEIMAGE[3]:
             # Default selection
             logging.debug("Column cal enable D")
-            self.send_cmd(col_cal_enable1)
+            self.send_cmd(col_cal_enable1)      # 0x57
             self.read_response()
             self.send_cmd(col_cal_enable2)
             self.read_response()
             logging.debug("Row cal enable D")
-            self.send_cmd(row_cal_enable1)
+            self.send_cmd(row_cal_enable1)      # 0x39
             self.read_response()
             self.send_cmd(row_cal_enable2)
             self.read_response()
             
         logging.debug("Column read enable")
-        self.send_cmd(col_read_enable1)
+        self.send_cmd(col_read_enable1)     # 0x61
         self.read_response()
         self.send_cmd(col_read_enable2)
         self.read_response()
     
         logging.debug("Row read enable")
-        self.send_cmd(row_read_enable1)
+        self.send_cmd(row_read_enable1)     # 0x43
         self.read_response()
         self.send_cmd(row_read_enable2)
         self.read_response()
@@ -1786,7 +1620,7 @@ class HexitecFem():
         
         self.send_cmd(enable_sm)
         self.read_response()
-        
+
     def write_dac_values(self):
         """
         Writes values to DAC, optionally provided by aspect file
@@ -1798,7 +1632,7 @@ class HexitecFem():
         dctrl = [0x30, 0x30, 0x30, 0x30]
         rsrv2 = [0x30, 0x38, 0x45, 0x38]
 
-        umid_value = self._extract_exponential('Uref_mid', bit_range=12)
+        umid_value = self._extract_exponential(self.aspect_parameters, 'Uref_mid', bit_range=12)
         if umid_value > -1:
             # Valid value, within range
             umid_high = (umid_value >> 8) & 0x0F
@@ -1806,7 +1640,7 @@ class HexitecFem():
             umid[0], umid[1] = self.convert_to_aspect_format(umid_high)
             umid[2], umid[3] = self.convert_to_aspect_format(umid_low)
 
-        vcal_value = self._extract_float('VCAL')
+        vcal_value = self._extract_float(self.aspect_parameters, 'VCAL')
         if vcal_value > -1:
             # Valid value, within range
             vcal_high = (vcal_value >> 8) & 0x0F
@@ -1860,102 +1694,195 @@ class HexitecFem():
         Configures in full VSR2, VSR1 each in the sequence:
         Initialises, loads enables, sets up state machine, writes to DAC and enables ADCs
         """
-
-        # Vars to start, stop state machine
         enable_sm_vsr1  = [0x23, HexitecFem.VSR_ADDRESS[0], 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
         enable_sm_vsr2  = [0x23, HexitecFem.VSR_ADDRESS[1], 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
         disable_sm_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], 0x43, 0x30, 0x31, 0x30, 0x30, 0x0D]
         disable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], 0x43, 0x30, 0x31, 0x30, 0x30, 0x0D]
 
+        # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x41, 0x38, 0x46, 0x0D])
+        vsr2_before = self.read_response()
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x42, 0x38, 0x46, 0x30, 0x31, 0x0D])
+        self.read_response()
+
+        # Repeat with other VSR board
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x41, 0x38, 0x46, 0x0D])
+        vsr1_before = self.read_response()
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x42, 0x38, 0x46, 0x30, 0x31, 0x0D])
+        self.read_response()
+
+        # Stop the state machine
+
+        self.send_cmd(disable_sm_vsr1)
+        self.read_response()
+        self.send_cmd(disable_sm_vsr2)
+        self.read_response()
+
+        # Re-Start the state machine
+
+        self.send_cmd(enable_sm_vsr1)
+        self.read_response()
+        self.send_cmd(enable_sm_vsr2)
+        self.read_response()
+
+        ###
+
+        # print("\n\n     THIS IS THE TOP OF INITIALISER_SYSTEM BEFORE ANY CONFIGURATION CHANGES HAVE BEEN MADE\n\n")
+        # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[1])
+        # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[0])
+
+        # logging.debug("VERIFICATION Reading Register 0x8F -+-+-+-+-+-+-+-+-+-+- ____________________________________________________________________________________________________________________")
+
         self._set_status_message("Configuring VSR2");
         self.selected_sensor = HexitecFem.OPTIONS[2]
+
         self.initialise_sensor()
-        
         self._set_status_message("VSR2: Sensors initialised.")
-        self.load_pwr_cal_read_enables()
 
-        self._set_status_message("VSR2: Loaded Power, Calibrate, Read Enables")
         self.set_up_state_machine()
-        
         self._set_status_message("VSR2: State Machine setup")
+        
         self.write_dac_values()
-
         self._set_status_message("VSR2: DAC values written")
-        self.enable_adc()
 
+        self.enable_adc()
         self._set_status_message("VSR2: ADC enabled")
+
+        self.load_pwr_cal_read_enables()
+        self._set_status_message("VSR2: Loaded Power, Calibrate, Read Enables")
+
         synced_status = self.calibrate_sensor()
         logging.debug("Calibrated sensor returned synchronised status: %s" % synced_status)
+
+        # print("\n\n     AT THIS POINT JUST FINISHED CONFIGURING VSR2 \n\n")
+        # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[1])
+        # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[0])
 
         self._set_status_message("Configuring VSR1");
         self.selected_sensor = HexitecFem.OPTIONS[0]
         
         self.initialise_sensor()
-        
         self._set_status_message("VSR1: Sensors initialised")
-        self.load_pwr_cal_read_enables()
 
-        self._set_status_message("VSR1: Loaded Power, Calibrate, Read Enables")
         self.set_up_state_machine()
-        
         self._set_status_message("VSR1: State Machine setup")
-        self.write_dac_values()
 
+        self.write_dac_values()
         self._set_status_message("VSR1: DAC values written")
+
         self.enable_adc()
-        
         self._set_status_message("VSR1: ADC enabled")
+        
+        self.load_pwr_cal_read_enables()
+        self._set_status_message("VSR1: Loaded Power, Calibrate, Read Enables")
+
         synced_status = self.calibrate_sensor()
         logging.debug("Calibrated sensor returned synchronised status: %s" % synced_status)
-        print(" -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=- ")
+
         self._set_status_message("Initialisation completed. VSR2 and VS1 configured.");
+        print(" -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=- ")
 
-        # ###TODO: Make ASIC1 set by ASIC1's settings, ASIC2 by ASIC2's
-        # #       Frank: Must stop and start state machine for settings to be shifted into each 
-        # #             detector/sensor - Cannot get this to work
+        # print("\n\n     VSR1 HAS NOW BEEN FINISHED CONFIGURING COMPLETELY\n\n")
+        # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[1])
+        # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[0])
 
-        # # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
-        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x40, 0x38, 0x46, 0x0D])
-        # vsr2_before = self.read_response()
-        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x42, 0x38, 0x46, 0x30, 0x31, 0x0D])
-        # self.read_response()
-        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x40, 0x38, 0x46, 0x0D])
+        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x41, 0x38, 0x46, 0x0D])
         # vsr2_after = self.read_response()
 
-        # # Repeat with other VSR board
-        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x40, 0x38, 0x46, 0x0D])
-        # vsr1_before = self.read_response()
-        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x42, 0x38, 0x46, 0x30, 0x31, 0x0D])
-        # self.read_response()
-        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x40, 0x38, 0x46, 0x0D])
+        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x41, 0x38, 0x46, 0x0D])
         # vsr1_after = self.read_response()
 
-        # # Stop the state machine
-
-        # self.send_cmd(disable_sm_vsr1)
-        # self.read_response()
-        # self.send_cmd(disable_sm_vsr2)
-        # self.read_response()
-
-        # # Re-Start the state machine
-
-        # self.send_cmd(enable_sm_vsr1)
-        # self.read_response()
-        # self.send_cmd(enable_sm_vsr2)
-        # self.read_response()
-        
-        # ###
-
-        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x40, 0x38, 0x46, 0x0D])
-        # vsr2_after = self.read_response()
-
-        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x40, 0x38, 0x46, 0x0D])
-        # vsr1_after = self.read_response()
-
-        # logging.debug("VERIFICATION Reading Register 0x8F -+-+-+-+-+-+-+-+-+-+- ____________________________________________________________________________________________________________________")
+        # logging.debug("VERIFICATION after function complete, Reading Register 0x8F -+-+-+-+-+-+-+-+-+-+- ____________________________________________________________________________________________________________________")
         # logging.debug("VSR2 after: %s" % (vsr2_after))
         # logging.debug("VSR1 after: %s" % (vsr1_after))
 
+    def print_vcal_registers(self, vsr_addr):
+        """
+        Debugging function: Prints all VCAL (Power, calibrate & read enables) registers
+        """
+
+        print("---------------------------------------------------------------------------------------------")
+        # ROW, ASIC 1
+
+        rpe1 = [0x2F, 0x38]
+        row_power_enable1 = self.read_back_register(vsr_addr, rpe1)
+        rce1 = [0x39, 0x42]
+        row_cal_enable1 = self.read_back_register(vsr_addr, rce1)
+        rre1 = [0x43, 0x4c]
+        row_read_enable1 = self.read_back_register(vsr_addr, rre1)
+
+        print("\t\tRow Power Enable ASIC1: ")
+        print(row_power_enable1)
+        print("\t\tRow Cal Enable ASIC1: ")
+        print(row_cal_enable1)
+        print("\t\tRow Read Enable ASIC1: ")
+        print(row_read_enable1)
+
+        # COLUMN, ASIC 1
+
+        cpe1 = [0x4d, 0x56]
+        col_power_enable1 = self.read_back_register(vsr_addr, cpe1)
+        cce1 = [0x57, 0x60]
+        col_cal_enable1 = self.read_back_register(vsr_addr, cce1)
+        cre1 = [0x61, 0x6a]
+        col_read_enable1 = self.read_back_register(vsr_addr, cre1)
+
+        print("\t\tCol Power Enable ASIC1: ")
+        print(row_power_enable1)
+        print("\t\tCol Cal Enable ASIC1: ")
+        print(row_cal_enable1)
+        print("\t\tCol Read Enable ASIC1: ")
+        print(row_read_enable1)
+
+        print("---------------------------------------------------------------------------------------------")
+        # ROW, ASIC 2
+
+        rpe2 = [0x90, 0x99]
+        row_power_enable2 = self.read_back_register(vsr_addr, rpe2)
+        rce2 = [0x9A, 0xA3]
+        row_cal_enable2 = self.read_back_register(vsr_addr, rce2)
+        rre2 = [0xA4, 0xAD]
+        row_read_enable2 = self.read_back_register(vsr_addr, rre2)
+
+        print("\t\tRow Power Enable ASIC2: ")
+        print(row_power_enable2)
+        print("\t\tRow Cal Enable ASIC2: ")
+        print(row_cal_enable2)
+        print("\t\tRow Read Enable ASIC2: ")
+        print(row_read_enable2)
+
+        # COLUMN, ASIC 2
+
+        cpe2 = [0xAE, 0xB7]
+        col_power_enable2 = self.read_back_register(vsr_addr, cpe2)
+        cce2 = [0xB8, 0xC1]
+        col_cal_enable2 = self.read_back_register(vsr_addr, cce2)
+        cre2 = [0xC2, 0xCB]
+        col_read_enable2 = self.read_back_register(vsr_addr, cre2)
+
+        print("\t\tCol Power Enable ASIC2: ")
+        print(col_power_enable2)
+        print("\t\tCol Cal Enable ASIC2: ")
+        print(col_cal_enable2)
+        print("\t\tCol Read Enable ASIC2: ")
+        print(col_read_enable2)
+        print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+        
+    def read_back_register(self, vsr_addr, boundaries):
+        """
+        Debugging function: Actual hardware interaction with VCAL registers
+        """
+        register_reply = []
+        for idx in range(boundaries[0], boundaries[1]+1, 1):
+            formatted_address = self.convert_to_aspect_format(idx)
+            command = [0x23, vsr_addr, 0x41, formatted_address[0], formatted_address[1], 0x0D]
+            self.send_cmd(command)
+            # A typical reply: "\x90FF\r\r\r\r"
+            # After strip() -> "\x90FF"
+            # After [1:]    -> "FF"
+            # register_reply.append(self.read_response().strip()[1:])
+            register_reply.append(self.read_response().strip())
+        return register_reply
 
     def read_pwr_voltages(self):
         """
@@ -2091,8 +2018,25 @@ class HexitecFem():
             raise ParameterTreeError("Error: %s" % e)
         #TODO: Remove display of file contents when no longer needed
         import pprint
-        self.read_ini_file(self.aspect_config)
+        self.read_ini_file(self.aspect_config, self.aspect_parameters)
         pprint.pprint(self.aspect_parameters)
+
+    def _set_hexitec_config(self, filename):
+        """
+        Checks whether file exists, load parameters from file
+        """
+        try:
+            with open(filename, 'r') as f:
+                pass
+            self.hexitec_config = filename
+            logging.debug("hexitec_config: '%s' Filename: '%s'" % (self.hexitec_config, filename))
+        except IOError as e:
+            logging.error("Cannot open provided hexitec file: %s" % e)
+            raise ParameterTreeError("Error: %s" % e)
+        #TODO: Remove display of file contents when no longer needed
+        import pprint
+        self.read_ini_file(self.hexitec_config, self.hexitec_parameters, debug=True)
+        pprint.pprint(self.hexitec_parameters)
 
     def convert_aspect_exponent_to_dac_value(self, exponent):
         ''' 
@@ -2108,15 +2052,16 @@ class HexitecFem():
         number_scaled = int(number_int // self.DAC_SCALE_FACTOR)
         return number_scaled
 
-    def _extract_exponential(self, descriptor, bit_range):
+    def _extract_exponential(self, parameter_dict, descriptor, bit_range):
         """
-        Extracts exponential from aspect parameters
+        Extracts exponential descriptor from parameter_dict,
+        checking it's within bit_range range
         """
         valid_range = [0, 1 << bit_range]
         setting = -1
 
         try:
-            unscaled_setting = self.aspect_parameters[descriptor]
+            unscaled_setting = parameter_dict[descriptor]
             scaled_setting   = self.convert_aspect_exponent_to_dac_value(unscaled_setting)
             if scaled_setting >= valid_range[0] and scaled_setting <= valid_range[1]:
                 setting = scaled_setting
@@ -2138,15 +2083,15 @@ class HexitecFem():
         number_scaled = int(round(milli_volts // self.DAC_SCALE_FACTOR))
         return number_scaled
 
-    def _extract_float(self, descriptor):
+    def _extract_float(self, parameter_dict, descriptor):
         """
-        Extracts float from the key "descriptor" in aspect parameters,
-        checking it's within range 0.0 - 3.0
+        Extracts float descriptor from parameter_dict,
+        checking it's within 0.0 - 3.0 (hardcoded) range
         """
         valid_range = [0.0, 3.0]
         setting = -1
         try:
-            setting = float(self.aspect_parameters[descriptor])
+            setting = float(parameter_dict[descriptor])
             if setting >= valid_range[0] and setting <= valid_range[1]:
                 pass
             else:
@@ -2159,15 +2104,15 @@ class HexitecFem():
             logging.warning("Warning: No '%s' Key defined!" % descriptor)
         return setting
 
-    def _extract_integer(self, descriptor, bit_range):
+    def _extract_integer(self, parameter_dict, descriptor, bit_range):
         """
-        Extracts integer from the key "descriptor" in aspect parameters,
-        checking it's within range defined by bit_range
+        Extracts integer descriptor from parameter_dict,
+        checking it's within bit_range range
         """
         valid_range = [0, 1 << bit_range]
         setting = -1
         try:
-            setting = int(self.aspect_parameters[descriptor])
+            setting = int(parameter_dict[descriptor])
             if setting >= valid_range[0] and setting <= valid_range[1]:
                 pass
             else:
@@ -2178,16 +2123,16 @@ class HexitecFem():
             logging.warn("Warning: No '%s' Key defined!" % descriptor)
         return setting
 
-    def _extract_binary_words(self, descriptor, bit_range):
+    def _extract_binary_words(self, parameter_dict, descriptor, bit_range):
         """
-        Extracts binary words from the key "descriptor" in aspect parameters,
+        Extracts binary words in descriptor from parameter_dict,
         checking they're within range defined by bit_range
         """
         valid_range = [0, (1 << bit_range) - 1]
         hex_words = []
         setting = [-1, -1, -1, -1, -1]
         try:
-            parameter = self.aspect_parameters[descriptor]
+            parameter = parameter_dict[descriptor]
             setting = int(parameter, 2)
             if setting >= valid_range[0] and setting <= valid_range[1]:
                 # Split into 5 hexidecimal words (4 bits/word)
@@ -2209,6 +2154,61 @@ class HexitecFem():
             logging.warn("Warn: No '%s' Key defined!" % descriptor)
         return setting
 
+    def _extract_80_bits(self, parameter_dict, key, vsr, asic, channel_or_block):
+        """
+        Extracts 80 bits from four (20 bit) channels, assembling one ASIC's row/column.
+        """
+        # key = "ColumnEn_"
+        # vsr = 1
+        # asic = 1
+        # channel_or_block = "Channel"
+        # Example Column variable: 'Sensor-Config_V1_S1/ColumnEn_1stChannel'
+        # Examples Row variable:   'Sensor-Config_V1_S1/RowPwr4thBlock'
+
+        bDebug = False
+        # if key == "ColumnCal":
+        #     bDebug = True
+        try:
+            first_channel = parameter_dict['Sensor-Config_V%s_S%s/%s1st%s' % (vsr, asic, key, channel_or_block)]
+            second_channel = parameter_dict['Sensor-Config_V%s_S%s/%s2nd%s' % (vsr, asic, key, channel_or_block)]
+            third_channel = parameter_dict['Sensor-Config_V%s_S%s/%s3rd%s' % (vsr, asic, key, channel_or_block)]
+            fourth_channel = parameter_dict['Sensor-Config_V%s_S%s/%s4th%s' % (vsr, asic, key, channel_or_block)]
+        except KeyError:
+            logging.debug("WARNING: Couldn't find aspect parameters - has .ini file been loaded?")
+            #TODO: Bit clunky returning so many -1 tuples. Find better solution to signal no ini file loaded?
+            return [(-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1)]
+
+        entirety = first_channel + second_channel + third_channel + fourth_channel
+        if bDebug:
+            print("   1st: %s" % first_channel)
+            print("   2nd: %s" % second_channel)
+            print("   3rd: %s" % third_channel)
+            print("   4th: %s" % fourth_channel)
+            print("   entirety: %s" % entirety)
+        
+        # Pixels appear in 8 bit reverse order, reverse bit order accordingly
+        # More info: https://docs.scipy.org/doc/numpy/user/basics.byteswapping.html
+        big_end_arr = np.ndarray(shape=(10,), dtype='>i8', buffer=entirety)
+        rev_order = big_end_arr.byteswap()
+        entirety = rev_order.tobytes()
+
+        byte_list = []
+        for index in range(0, len(entirety), 8):
+            byte_list.append(entirety[index:index+8])
+
+        aspect_list = []
+        for binary in byte_list:
+            decimal = int(binary, 2)
+            aspect = self.convert_to_aspect_format(decimal)
+            aspect_list.append(aspect)
+            if bDebug:
+                print("         VSR: %s   bin: %s dec: %s" % (vsr, binary, "{:02x}".format(decimal)) )
+
+        # Turns aspect_list into tupples of (MSB, LSB), e.g.
+        # [(70, 70), (70, 70), (70, 70), (70, 70), (70, 70), (70, 70), (70, 70), (69, 55), (57, 53), (51, 49)]
+        
+        return aspect_list
+
     def convert_to_aspect_format(self, value):
         '''  Converts integer to Aspect's hexadecimal notation
                 e.g. 31 (0x1F) -> 0x31, 0x46
@@ -2222,7 +2222,7 @@ class HexitecFem():
         low_encoded = self.HEX_ASCII_CODE[low_int]
         return high_encoded, low_encoded
 
-    def read_ini_file(self, filename):
+    def read_ini_file(self, filename, parameter_dict, debug=False):
         ''' 
         Read filename, parsing case sensitive keys decoded as strings
         '''
@@ -2231,9 +2231,12 @@ class HexitecFem():
         parser.optionxform=str
         parser.read(filename)
         for sect in parser.sections():
-            #print('Section:', sect)
+            if debug:
+                print('Section:', sect)
             for k,v in parser.items(sect):
-                self.aspect_parameters[sect+"/"+k] = v.encode("utf-8").strip("\"")
+                parameter_dict[sect+"/"+k] = v.encode("utf-8").strip("\"")
+                if debug:
+                    print("   " + sect+"/"+k + " => " + v.encode("utf-8").strip("\""))
                 # Support per ASIC Sensor-Config settings
 
 

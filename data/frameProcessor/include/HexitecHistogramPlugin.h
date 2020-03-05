@@ -60,9 +60,9 @@ namespace FrameProcessor
     /** Configuration constant for bin width **/
     static const std::string CONFIG_BIN_WIDTH;
     /** Configuration constant for flush_histograms **/
-		static const std::string CONFIG_FLUSH_HISTOS;
-		/** Configuration constant for Hardware sensors **/
-		static const std::string CONFIG_SENSORS_LAYOUT;
+    static const std::string CONFIG_FLUSH_HISTOS;
+    /** Configuration constant for Hardware sensors **/
+    static const std::string CONFIG_SENSORS_LAYOUT;
 
     std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
     std::string sensors_layout_str_;

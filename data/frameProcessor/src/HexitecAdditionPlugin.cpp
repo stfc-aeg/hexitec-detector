@@ -10,8 +10,8 @@
 
 namespace FrameProcessor
 {
-  const std::string HexitecAdditionPlugin::CONFIG_PIXEL_GRID_SIZE	= "pixel_grid_size";
-  const std::string HexitecAdditionPlugin::CONFIG_SENSORS_LAYOUT	= "sensors_layout";
+  const std::string HexitecAdditionPlugin::CONFIG_PIXEL_GRID_SIZE = "pixel_grid_size";
+  const std::string HexitecAdditionPlugin::CONFIG_SENSORS_LAYOUT  = "sensors_layout";
 
   /**
    * The constructor sets up logging used within the class.
@@ -19,7 +19,7 @@ namespace FrameProcessor
   HexitecAdditionPlugin::HexitecAdditionPlugin() :
       image_width_(Hexitec::pixel_columns_per_sensor),
       image_height_(Hexitec::pixel_rows_per_sensor),
-    pixel_grid_size_(3)
+      pixel_grid_size_(3)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecAdditionPlugin");
@@ -87,7 +87,7 @@ namespace FrameProcessor
     if (config.has_param(HexitecAdditionPlugin::CONFIG_SENSORS_LAYOUT))
     {
       sensors_layout_str_= config.get_param<std::string>(HexitecAdditionPlugin::CONFIG_SENSORS_LAYOUT);
-        parse_sensors_layout_map(sensors_layout_str_);
+      parse_sensors_layout_map(sensors_layout_str_);
     }
 
     if (config.has_param(HexitecAdditionPlugin::CONFIG_PIXEL_GRID_SIZE))
@@ -140,7 +140,7 @@ namespace FrameProcessor
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-      static_cast<const char*>(frame->get_data_ptr()));
+    static_cast<const char*>(frame->get_data_ptr()));
 
     // Check datasets name
     FrameMetaData &frame_meta = frame->meta_data();
@@ -183,7 +183,6 @@ namespace FrameProcessor
    *
    * \param[in] input_frame - Pointer to the image data to be processed.
    * \param[in] output_frame - Pointer to the process image data.
-   *
    */
   void HexitecAdditionPlugin::prepare_charged_sharing(float *frame)
   {
@@ -232,9 +231,9 @@ namespace FrameProcessor
     rowPtr = frame;
     for (int i = startPosn; i < endPosn; )
     {
-        memcpy(rowPtr, &(extendedFrame[i]), number_columns_ * sizeof(float));
-        rowPtr = rowPtr + number_columns_;
-        i = i + increment;
+      memcpy(rowPtr, &(extendedFrame[i]), number_columns_ * sizeof(float));
+      rowPtr = rowPtr + number_columns_;
+      i = i + increment;
     }
 
     free(extendedFrame);
@@ -244,13 +243,11 @@ namespace FrameProcessor
   /**
    * Perform charged sharing algorithm
    *
-   * \param[in] extended_frame - Pointer to the image data, surrounded by a frame
-   *																			 of zeros
-    * \param[in] extended_frame_rows - Number of rows of the extended frame
-    * \param[in] start_position - The first pixel in the frame
-    * \param[in] end_position - The final pixel in the frame
-    *
-    */
+   * \param[in] extended_frame - Pointer to the image data, surrounded by a frame of zeros
+   * \param[in] extended_frame_rows - Number of rows of the extended frame
+   * \param[in] start_position - The first pixel in the frame
+   * \param[in] end_position - The final pixel in the frame
+   */
   void HexitecAdditionPlugin::process_addition(float *extended_frame,
       int extended_frame_rows, int start_position, int end_position)
   {
@@ -296,15 +293,16 @@ namespace FrameProcessor
     }
   }
 
-  //! Parse the number of sensors map configuration string.
-  //!
-  //! This method parses a configuration string containing number of sensors mapping information,
-  //! which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
-  //! variable.
-  //!
-  //! \param[in] sensors_layout_str - string of number of sensors configured
-  //! \return number of valid map entries parsed from string
-  //!
+  /**
+   * Parse the number of sensors map configuration string.
+   * 
+   * This method parses a configuration string containing number of sensors mapping information,
+   * which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
+   * variable.
+   * 
+   * \param[in] sensors_layout_str - string of number of sensors configured
+   * \return number of valid map entries parsed from string
+   */ 
   std::size_t HexitecAdditionPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
   {
     // Clear the current map
@@ -337,7 +335,8 @@ namespace FrameProcessor
     return sensors_layout_.size();
   }
 
-  // 		DEBUGGING FUNCTIONS:
+  // DEBUGGING FUNCTIONS:
+  
   void  HexitecAdditionPlugin::print_nonzero_pixels(float *in, int numberRows, int numberCols)
   {
     LOG4CXX_TRACE(logger_, " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
@@ -347,15 +346,15 @@ namespace FrameProcessor
     {
       for (int col = 0; col < numberCols; col++ )
       {
-  //				/// Print the final 4 lines (so we can check 5x5 grid size)
-  //				if ((row > (numberRows-5)))
-  //				{
-          index = numberRows*row + col;
-          pixel = in[index];
-          if (pixel > 0.0)
-            LOG4CXX_TRACE(logger_, "" << &(in[index]) << " [" << index << "] I.e. [" << row <<
-                "][" << col << "] = " << pixel );
-  //				}
+        // /// Print the final 4 lines (so we can check 5x5 grid size)
+        // if ((row > (numberRows-5)))
+        // {
+        index = numberRows*row + col;
+        pixel = in[index];
+        if (pixel > 0.0)
+          LOG4CXX_TRACE(logger_, "" << &(in[index]) << " [" << index << "] I.e. ["
+                                    << row << "][" << col << "] = " << pixel);
+        // }
       }
     }
   }

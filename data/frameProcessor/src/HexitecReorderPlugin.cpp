@@ -10,10 +10,10 @@
 
 namespace FrameProcessor
 {
-  const std::string HexitecReorderPlugin::CONFIG_DROPPED_PACKETS = "packets_lost";
-  const std::string HexitecReorderPlugin::CONFIG_RAW_DATA 			 = "raw_data";
-  const std::string HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT  = "sensors_layout";
-  const std::string HexitecReorderPlugin::CONFIG_FRAME_NUMBER		 = "frame_number";
+  const std::string HexitecReorderPlugin::CONFIG_DROPPED_PACKETS  = "packets_lost";
+  const std::string HexitecReorderPlugin::CONFIG_RAW_DATA         = "raw_data";
+  const std::string HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT   = "sensors_layout";
+  const std::string HexitecReorderPlugin::CONFIG_FRAME_NUMBER     = "frame_number";
 
   /**
    * The constructor sets up logging used within the class.
@@ -31,7 +31,7 @@ namespace FrameProcessor
     logger_ = Logger::getLogger("FP.HexitecReorderPlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecReorderPlugin version " <<
-    												this->get_version_long() << " loaded.");
+                  this->get_version_long() << " loaded.");
 
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
@@ -74,22 +74,22 @@ namespace FrameProcessor
 
   /**
    * Configure the Hexitec plugin.  This receives an IpcMessage which should be processed
-   * to configure the plugin, and any response can be added to the reply IpcMessage.  This
+   * to configure the plugin, and any response can be added to the reply IpcMessage. This
    * plugin supports the following configuration parameters:
    * 
-   * - sensors_layout_str_      <=> sensors_layout
-   * - write_raw_data_ 					<=> raw_data
+   * - sensors_layout_str_  <=> sensors_layout
+   * - write_raw_data_      <=> raw_data
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
    */
   void HexitecReorderPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
- 	  if (config.has_param(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT))
-		{
- 		  sensors_layout_str_= config.get_param<std::string>(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT);
+    if (config.has_param(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT))
+    {
+      sensors_layout_str_= config.get_param<std::string>(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
-		}
+    }
 
     if (config.has_param(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS))
     {
@@ -106,7 +106,7 @@ namespace FrameProcessor
       frame_number_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_FRAME_NUMBER);
       LOG4CXX_DEBUG(logger_, " *** RESET frame_number to be " << frame_number_);
     }
-}
+  }
 
   void HexitecReorderPlugin::requestConfiguration(OdinData::IpcMessage& reply)
   {
@@ -171,8 +171,7 @@ namespace FrameProcessor
     LOG4CXX_TRACE(logger_, "Reordering frame.");
     LOG4CXX_TRACE(logger_, "Frame size: " << frame->get_data_size());
 
-    Hexitec::FrameHeader* hdr_ptr =
-        static_cast<Hexitec::FrameHeader*>(frame->get_data_ptr());
+    Hexitec::FrameHeader* hdr_ptr = static_cast<Hexitec::FrameHeader*>(frame->get_data_ptr());
 
     this->process_lost_packets(frame);
 
@@ -191,7 +190,7 @@ namespace FrameProcessor
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data_ptr()) + sizeof(Hexitec::FrameHeader)
+      static_cast<const char*>(frame->get_data_ptr()) + sizeof(Hexitec::FrameHeader)
     );
 
     // Define pointer to the input image data
@@ -213,64 +212,64 @@ namespace FrameProcessor
 
       if (raw_image)
       {
-				// Frame modification now available
-				FrameMetaData frame_meta;
+        // Frame modification now available
+        FrameMetaData frame_meta;
 
-				// Setup of the frame dimensions
-				dimensions_t dims(2);
-				dims[0] = image_height_;
-				dims[1] = image_width_;
-				frame_meta.set_dimensions(dims);
+        // Setup of the frame dimensions
+        dimensions_t dims(2);
+        dims[0] = image_height_;
+        dims[1] = image_width_;
+        frame_meta.set_dimensions(dims);
 
-				frame_meta.set_compression_type(no_compression);
+        frame_meta.set_compression_type(no_compression);
 
-				frame_meta.set_data_type(raw_float);
-				frame_meta.set_frame_number(hdr_ptr->frame_number);
+        frame_meta.set_data_type(raw_float);
+        frame_meta.set_frame_number(hdr_ptr->frame_number);
 
-				// Only construct raw data frame if configured
-      	if (write_raw_data_)
-      	{
-  				// Set the dataset name
-  				frame_meta.set_dataset_name("raw_frames");
+        // Only construct raw data frame if configured
+        if (write_raw_data_)
+        {
+          // Set the dataset name
+          frame_meta.set_dataset_name("raw_frames");
 
-					boost::shared_ptr<Frame> raw_frame;
-					raw_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
-																																	output_image_size));
+          boost::shared_ptr<Frame> raw_frame;
+          raw_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
+                                                                  output_image_size));
 
-					// Get a pointer to the data buffer in the output frame
-					void* output_ptr = raw_frame->get_data_ptr();
+          // Get a pointer to the data buffer in the output frame
+          void* output_ptr = raw_frame->get_data_ptr();
 
           // Turn unsigned short raw pixel data into float data type
           convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
-                                            static_cast<float *>(output_ptr));
+            static_cast<float *>(output_ptr));
 
-					LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: " <<
+          LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: " <<
                         raw_frame->get_frame_number());
-					this->push(raw_frame);
-      	}
+          this->push(raw_frame);
+        }
 
-      	// For data dataset, reuse existing meta data as only the dataset name will differ
+        // For data dataset, reuse existing meta data as only the dataset name will differ
 
-      	// Set the dataset name
-				frame_meta.set_dataset_name("data");
+        // Set the dataset name
+        frame_meta.set_dataset_name("data");
 
-				boost::shared_ptr<Frame> data_frame;
-				data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
-																																 output_image_size));
+        boost::shared_ptr<Frame> data_frame;
+        data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
+          output_image_size));
 
-				// Get a pointer to the data buffer in the output frame
-				void* output_ptr = data_frame->get_data_ptr();
+        // Get a pointer to the data buffer in the output frame
+        void* output_ptr = data_frame->get_data_ptr();
 
         // Turn unsigned short raw pixel data into float data type
         convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
                                           static_cast<float *>(output_ptr));
 
-				LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: " <<
+        LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: " <<
                       data_frame->get_frame_number());
-				this->push(data_frame);
-				// Manually update frame_number (until fixed in firmware)
-				frame_number_++;
-			}
+        this->push(data_frame);
+        // Manually update frame_number (until fixed in firmware)
+        frame_number_++;
+      }
     }
     catch (const std::exception& e)
     {
@@ -301,22 +300,21 @@ namespace FrameProcessor
 
     for (int i=0; i<image_pixels_; i++)
     {
-				// Do not reorder pixels:
-				out[i] = (float)in[i];
+      // Do not reorder pixels:
+      out[i] = (float)in[i];
     }
   }
 
-	//! Parse the number of sensors map configuration string.
-	//!
-	//! This method parses a configuration string containing number of sensors mapping information,
-	//! which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
-	//! variable.
-	//!
-	//! \param[in] sensors_layout_str - string of number of sensors configured
-	//! \return number of valid map entries parsed from string
-	//!
-	std::size_t HexitecReorderPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
-	{
+  /** Parse the number of sensors map configuration string.
+   * 
+   * This method parses a configuration string containing number of sensors mapping information,
+   * which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member variable.
+   * 
+   * \param[in] sensors_layout_str - string of number of sensors configured
+   * \return number of valid map entries parsed from string
+   */
+  std::size_t HexitecReorderPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
+  {
     // Clear the current map
     sensors_layout_.clear();
 
@@ -342,25 +340,25 @@ namespace FrameProcessor
 
     // Return the number of valid entries parsed
     return sensors_layout_.size();
-	}
+  }
 
   /// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
-	void HexitecReorderPlugin::writeFile(std::string filePrefix, float *frame)
-	{
+  void HexitecReorderPlugin::writeFile(std::string filePrefix, float *frame)
+  {
     std::ostringstream hitPixelsStream;
     hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-		for (int i = 0; i < image_pixels_; i++ )
-		{
-			if(frame[i] > 0)
-				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
-		}
-		std::string hitPixelsString  = hitPixelsStream.str();
-		std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
-			 + std::string("_ODIN_Reorder_detailed.txt");
-		outFile.open(fname.c_str(), std::ofstream::app);
-		outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
-		outFile.close();
-	}
+    for (int i = 0; i < image_pixels_; i++ )
+    {
+      if(frame[i] > 0)
+        hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
+    }
+    std::string hitPixelsString  = hitPixelsStream.str();
+    std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
+      + std::string("_ODIN_Reorder_detailed.txt");
+    outFile.open(fname.c_str(), std::ofstream::app);
+    outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
+    outFile.close();
+  }
 
 } /* namespace FrameProcessor */
 

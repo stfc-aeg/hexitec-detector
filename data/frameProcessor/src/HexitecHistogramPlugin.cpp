@@ -12,8 +12,8 @@ namespace FrameProcessor
 {
   const std::string HexitecHistogramPlugin::CONFIG_MAX_FRAMES     = "max_frames_received";
   const std::string HexitecHistogramPlugin::CONFIG_BIN_START      = "bin_start";
-  const std::string HexitecHistogramPlugin::CONFIG_BIN_END 		    = "bin_end";
-  const std::string HexitecHistogramPlugin::CONFIG_BIN_WIDTH 		  = "bin_width";
+  const std::string HexitecHistogramPlugin::CONFIG_BIN_END        = "bin_end";
+  const std::string HexitecHistogramPlugin::CONFIG_BIN_WIDTH      = "bin_width";
   const std::string HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS   = "flush_histograms";
   const std::string HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT = "sensors_layout";
 
@@ -24,9 +24,9 @@ namespace FrameProcessor
       image_width_(Hexitec::pixel_columns_per_sensor),
       image_height_(Hexitec::pixel_rows_per_sensor),
       image_pixels_(image_width_ * image_height_),
-			max_frames_received_(0),
-			frames_counter_(0),
-			flush_histograms_(0)
+      max_frames_received_(0),
+      frames_counter_(0),
+      flush_histograms_(0)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecHistogramPlugin");
@@ -140,11 +140,11 @@ namespace FrameProcessor
       pHxtBin++;
     }
 
-		// Clear histogram values
-		float *pixels = static_cast<float *>(pixel_histograms_->get_data_ptr());
-		float *summed = static_cast<float *>(summed_histograms_->get_data_ptr());
-		memset(pixels, 0, (number_bins_ * image_pixels_) * sizeof(float));
-		memset(summed, 0, number_bins_ * sizeof(uint64_t));
+    // Clear histogram values
+    float *pixels = static_cast<float *>(pixel_histograms_->get_data_ptr());
+    float *summed = static_cast<float *>(summed_histograms_->get_data_ptr());
+    memset(pixels, 0, (number_bins_ * image_pixels_) * sizeof(float));
+    memset(summed, 0, number_bins_ * sizeof(uint64_t));
   }
 
   /**
@@ -152,76 +152,76 @@ namespace FrameProcessor
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
    * 
-   * - sensors_layout_str_      <=> sensors_layout
-   * - max_frames_received_			<=> max_frames_received
-   * - bin_start_								<=> bin_start
-   * - bin_end_									<=> bin_end
-   * - bin_width_								<=> bin_width
-   * - flush_histograms_				<=> flush_histograms
+   * - sensors_layout_str_  <=> sensors_layout
+   * - max_frames_received_ <=> max_frames_received
+   * - bin_start_           <=> bin_start
+   * - bin_end_             <=> bin_end
+   * - bin_width_           <=> bin_width
+   * - flush_histograms_    <=> flush_histograms
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
    */
   void HexitecHistogramPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
- 	  if (config.has_param(HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT))
-		{
- 		  sensors_layout_str_= config.get_param<std::string>(HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT);
+    if (config.has_param(HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT))
+    {
+      sensors_layout_str_= config.get_param<std::string>(HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
-		}
+    }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_MAX_FRAMES))
     {
-    	max_frames_received_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_MAX_FRAMES);
+      max_frames_received_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_MAX_FRAMES);
     }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_START))
     {
-    	bin_start_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_START);
-		}
+      bin_start_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_START);
+    }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_END))
     {
-    	bin_end_ = config.get_param<long>(HexitecHistogramPlugin::CONFIG_BIN_END);
+      bin_end_ = config.get_param<long>(HexitecHistogramPlugin::CONFIG_BIN_END);
     }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_WIDTH))
-		{
-    	bin_width_ = config.get_param<double>(HexitecHistogramPlugin::CONFIG_BIN_WIDTH);
-		}
+    {
+      bin_width_ = config.get_param<double>(HexitecHistogramPlugin::CONFIG_BIN_WIDTH);
+    }
 
     number_bins_  = (int)(((bin_end_ - bin_start_) / bin_width_) + 0.5);
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS))
     {
-    	flush_histograms_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS);
+      flush_histograms_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS);
 
-    	if (flush_histograms_ == 1)
-    	{
-				/// Time to push current histogram data
-				writeHistogramsToDisk();
+      if (flush_histograms_ == 1)
+      {
+        /// Time to push current histogram data
+        writeHistogramsToDisk();
 
-				frames_counter_ = 0;
+        frames_counter_ = 0;
 
-    		// Clear flush_histograms_
-    		flush_histograms_ = 0;
-    	}
+        // Clear flush_histograms_
+        flush_histograms_ = 0;
+      }
     }
 
     // (Re-)Initialise memory
     initialiseHistograms();
-  }
+    }
 
   void HexitecHistogramPlugin::requestConfiguration(OdinData::IpcMessage& reply)
   {
-  	// Return the configuration of the histogram plugin
-  	std::string base_str = get_name() + "/";
+    // Return the configuration of the histogram plugin
+    std::string base_str = get_name() + "/";
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
-		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_MAX_FRAMES , max_frames_received_);
-		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_START, bin_start_);
-		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_END , bin_end_);
-		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_WIDTH, bin_width_);
-		reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS, flush_histograms_);
+    reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_MAX_FRAMES , max_frames_received_);
+    reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_START, bin_start_);
+    reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_END , bin_end_);
+    reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_WIDTH, bin_width_);
+    reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS, flush_histograms_);
   }
 
   /**
@@ -254,8 +254,8 @@ namespace FrameProcessor
   /**
    * Perform processing on the frame.  Calculate histograms based upon
    * each frame, writing resulting datasets to file when configured
-	 * maximum number of frames received.
-   *
+   * maximum number of frames received.
+   * 
    * \param[in] frame - Pointer to a Frame object.
    */
   void HexitecHistogramPlugin::process_frame(boost::shared_ptr<Frame> frame)
@@ -270,138 +270,138 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
- 														 " dataset, frame number: " << frame->get_frame_number());
-			this->push(frame);
+      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+                                        << frame->get_frame_number());
+      this->push(frame);
     }
     else if (dataset.compare(std::string("data")) == 0)
     {
-			try
-			{
-				frames_counter_++;
+      try
+      {
+        frames_counter_++;
 
-				// Define pointer to the input image data
-				void* input_ptr = static_cast<void *>(
-						static_cast<char *>(const_cast<void *>(data_ptr)));
+        // Define pointer to the input image data
+        void* input_ptr = static_cast<void *>(
+          static_cast<char *>(const_cast<void *>(data_ptr)));
 
-				// Add this frame's contribution onto histograms
-				add_frame_data_to_histogram_with_sum(static_cast<float *>(input_ptr));
+        // Add this frame's contribution onto histograms
+        add_frame_data_to_histogram_with_sum(static_cast<float *>(input_ptr));
 
-				// Write histograms to disc when maximum number of frames received
-				if ( ((frames_counter_ % max_frames_received_) == 0) &&
-						(frames_counter_ != 0) )
-				{
-					/// Time to push current histogram data to file
-					writeHistogramsToDisk();
-				}
+        // Write histograms to disc when maximum number of frames received
+        if ( ((frames_counter_ % max_frames_received_) == 0) &&
+              (frames_counter_ != 0) )
+        {
+          /// Time to push current histogram data to file
+          writeHistogramsToDisk();
+        }
 
-				/// Histogram will access data dataset but not change it in any way
-				/// 	Therefore do not need to check frame dimensions, etc
+        /// Histogram will access data dataset but not change it in any way
+        /// Therefore do not need to check frame dimensions, etc
 
-				// Pass on data dataset unmodified:
-				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-                      " dataset, frame number: " << frame->get_frame_number());
-				this->push(frame);
-			}
-			catch (const std::exception& e)
-			{
-				LOG4CXX_ERROR(logger_, "HexitecHistogramPlugin failed: " << e.what());
-			}
-		}
+        // Pass on data dataset unmodified:
+        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+                                          << frame->get_frame_number());
+        this->push(frame);
+      }
+      catch (const std::exception& e)
+      {
+        LOG4CXX_ERROR(logger_, "HexitecHistogramPlugin failed: " << e.what());
+      }
+    }
     else
     {
-    	LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
+      LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
     }
-	}
+  }
 
   /**
    * Write Histogram data to disk.
    */
   void HexitecHistogramPlugin::writeHistogramsToDisk()
   {
-		LOG4CXX_TRACE(logger_, "Pushing " << energy_bins_->get_meta_data().get_dataset_name() << " dataset");
-		this->push(energy_bins_);
+    LOG4CXX_TRACE(logger_, "Pushing " << energy_bins_->get_meta_data().get_dataset_name() << " dataset");
+    this->push(energy_bins_);
 
-		LOG4CXX_TRACE(logger_, "Pushing " << summed_histograms_->get_meta_data().get_dataset_name() << " dataset");
-		this->push(summed_histograms_);
+    LOG4CXX_TRACE(logger_, "Pushing " << summed_histograms_->get_meta_data().get_dataset_name() << " dataset");
+    this->push(summed_histograms_);
 
-		LOG4CXX_TRACE(logger_, "Pushing " << pixel_histograms_->get_meta_data().get_dataset_name() << " dataset");
-		this->push(pixel_histograms_);
+    LOG4CXX_TRACE(logger_, "Pushing " << pixel_histograms_->get_meta_data().get_dataset_name() << " dataset");
+    this->push(pixel_histograms_);
   }
 
   /**
    * Perform processing on the frame.  Calculate histograms based upon
    * each frame.
-   *
+   * 
    * \param[frame] frame - Pointer to a frame object.
    */
   void HexitecHistogramPlugin::add_frame_data_to_histogram_with_sum(float *frame)
   {
-		const void* pixel_ptr = static_cast<const void*>(
+    const void* pixel_ptr = static_cast<const void*>(
       static_cast<const char*>(pixel_histograms_->get_data_ptr()));
-		void* pixel_input_ptr = static_cast<void *>(
+    void* pixel_input_ptr = static_cast<void *>(
       static_cast<char *>(const_cast<void *>(pixel_ptr)));
 
-		const void* summed_ptr = static_cast<const void*>(
+    const void* summed_ptr = static_cast<const void*>(
       static_cast<const char*>(summed_histograms_->get_data_ptr()));
-		void* summed_input_ptr = static_cast<void *>(
+    void* summed_input_ptr = static_cast<void *>(
       static_cast<char *>(const_cast<void *>(summed_ptr)));
 
-		float *currentHistogram = static_cast<float *>(pixel_input_ptr);
-		uint64_t *summed = static_cast<uint64_t *>(summed_input_ptr);
+    float *currentHistogram = static_cast<float *>(pixel_input_ptr);
+    uint64_t *summed = static_cast<uint64_t *>(summed_input_ptr);
 
-		float thisEnergy;
-		int bin;
-		int pixel;
-		for (int i = 0; i < image_pixels_; i++)
-		{
-			pixel = i;
-			thisEnergy = frame[i];
+    float thisEnergy;
+    int bin;
+    int pixel;
+    for (int i = 0; i < image_pixels_; i++)
+    {
+      pixel = i;
+      thisEnergy = frame[i];
 
-			if (thisEnergy <= 0.0)
-				continue;
-			bin = (int)((thisEnergy / bin_width_));
-			if (bin <= number_bins_)
-			{
-				(*(currentHistogram + (pixel * number_bins_) + bin))++;
-				(*(summed + bin)) ++;
-			}
-		}
+      if (thisEnergy <= 0.0)
+        continue;
+      bin = (int)((thisEnergy / bin_width_));
+      if (bin <= number_bins_)
+      {
+        (*(currentHistogram + (pixel * number_bins_) + bin))++;
+        (*(summed + bin)) ++;
+      }
+    }
   }
 
   // Called when the user NOT selected spectrum option
   void HexitecHistogramPlugin::addFrameDataToHistogram(float *frame)
   {
-		float *currentHistogram = static_cast<float *>(pixel_histograms_->get_data_ptr());
-		float thisEnergy;
-		int bin;
-		int pixel;
+    float *currentHistogram = static_cast<float *>(pixel_histograms_->get_data_ptr());
+    float thisEnergy;
+    int bin;
+    int pixel;
 
-		for (int i = 0; i < image_pixels_; i++)
-		{
-			pixel = i;
-			thisEnergy = frame[i];
-			if (thisEnergy == 0)
-				continue;
-			bin = (int)((thisEnergy / bin_width_));
-			if (bin <= number_bins_)
-			{
-				(*(currentHistogram + (pixel * number_bins_) + bin))++;
-			}
-		}
+    for (int i = 0; i < image_pixels_; i++)
+    {
+      pixel = i;
+      thisEnergy = frame[i];
+      if (thisEnergy == 0)
+        continue;
+      bin = (int)((thisEnergy / bin_width_));
+      if (bin <= number_bins_)
+      {
+        (*(currentHistogram + (pixel * number_bins_) + bin))++;
+      }
+    }
   }
 
-	//! Parse the number of sensors map configuration string.
-	//!
-	//! This method parses a configuration string containing number of sensors mapping information,
-	//! which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
-	//! variable.
-	//!
-	//! \param[in] sensors_layout_str - string of number of sensors configured
-	//! \return number of valid map entries parsed from string
-	//!
-	std::size_t HexitecHistogramPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
-	{
+  /** Parse the number of sensors map configuration string.
+   * 
+   * This method parses a configuration string containing number of sensors mapping information,
+   * which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
+   * variable.
+   * 
+   * \param[in] sensors_layout_str - string of number of sensors configured
+   * \return number of valid map entries parsed from string
+   */
+  std::size_t HexitecHistogramPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
+  {
     // Clear the current map
     sensors_layout_.clear();
 
@@ -427,6 +427,6 @@ namespace FrameProcessor
 
     // Return the number of valid entries parsed
     return sensors_layout_.size();
-	}
+  }
 
 } /* namespace FrameProcessor */

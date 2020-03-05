@@ -1,5 +1,6 @@
 """
-temp_file.py - Testing creating a temporary file to replace 12 Configuration files
+GenerateConfigFiles.py - Creates a temporary file according to user UI selections 
+                        (to replace 12 Configuration files)
 """
 
 import tempfile

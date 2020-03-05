@@ -134,7 +134,7 @@
               &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
             </td>
           </tr>
-          <!-- Added aspect ini style config file -->
+          <!-- Added aspect.ini config file -->
           <tr>
             <td>
               aSpect config:&nbsp;
@@ -146,6 +146,20 @@
             </td>
             <td>
               &nbsp;<td><span id="aspect-config-warning">&nbsp;</span></td>
+            </td>
+          </tr>
+          <!-- Added hexitec.ini config file -->
+          <tr>
+            <td>
+              Hexitec config:&nbsp;
+            </td>
+            <td>
+              <div class="text-columns">
+                <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' value= "">
+              </div>
+            </td>
+            <td>
+              &nbsp;<td><span id="hexitec-config-warning">&nbsp;</span></td>
             </td>
           </tr>
         </tbody>
@@ -187,6 +201,19 @@
               &nbsp;<td><span id="frames-warning">&nbsp;</span></td>
             </td>
           </tr>
+          <!-- <tr>
+            <td>
+              Duration&nbsp;
+            </td>
+            <td>
+              <div class="text-duration">
+                <input type="text" id="duration-text" onChange='duration_changed()' maxlength="40" size="7" value= "10">
+              </div>
+            </td>
+            <td>
+              &nbsp;<td><span id="frames-warning">&nbsp;</span></td>
+            </td>
+          </tr> -->
           <tr>
             <td>
               Test Mode:&nbsp;

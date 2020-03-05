@@ -356,6 +356,7 @@ function initialise_hardware()
 
 function collect_data()
 {
+    console.log("Muttah");
     $.ajax({
         type: "PUT",
         url: hexitec_url + 'detector/acquisition',
@@ -863,6 +864,24 @@ function aspect_config_changed()
         },
         error: function(request, msg, error) {
             $('#aspect-config-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+};
+
+function hexitec_config_changed()
+{
+    var hexitec_config = $('#hexitec-config-text').prop('value');
+    var payload = {"hexitec_config": hexitec_config};
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/fems/fem_0/',
+        contentType: "application/json",
+        data: JSON.stringify(payload),
+        success: function(result) {
+            $('#hexitec-config-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#hexitec-config-warning').html(error + ": " + format_error(request.responseText));
         }
     });
 };

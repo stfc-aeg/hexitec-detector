@@ -21,12 +21,12 @@ namespace FrameProcessor
       image_width_(Hexitec::pixel_columns_per_sensor),
       image_height_(Hexitec::pixel_rows_per_sensor),
       image_pixels_(image_width_ * image_height_),
-			gradients_status_(false),
-			intercepts_status_(false),
-			gradient_values_(NULL),
-			intercept_values_(NULL),
-			gradients_filename_(""),
-			intercepts_filename_("")
+      gradients_status_(false),
+      intercepts_status_(false),
+      gradient_values_(NULL),
+      intercept_values_(NULL),
+      gradients_filename_(""),
+      intercepts_filename_("")
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecCalibrationPlugin");
@@ -34,11 +34,11 @@ namespace FrameProcessor
     LOG4CXX_TRACE(logger_, "HexitecCalibrationPlugin version " <<
     												this->get_version_long() << " loaded.");
 
-		gradient_values_ = (float *) calloc(image_pixels_, sizeof(float));
-		intercept_values_ = (float *) calloc(image_pixels_, sizeof(float));
+    gradient_values_ = (float *) calloc(image_pixels_, sizeof(float));
+    intercept_values_ = (float *) calloc(image_pixels_, sizeof(float));
 
-		*gradient_values_ = 1;
-		*intercept_values_ = 0;
+    *gradient_values_ = 1;
+    *intercept_values_ = 0;
 
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
@@ -87,20 +87,20 @@ namespace FrameProcessor
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
    * 
-   * - sensors_layout_str_      <=> sensors_layout
- 	 * - gradients_filename 			<=> gradients_file
- 	 * - intercepts_filename 			<=> intercepts_file
-   *
+   * - sensors_layout_str_  <=> sensors_layout
+   * - gradients_filename   <=> gradients_file
+   * - intercepts_filename  <=> intercepts_file
+   * 
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
    */
   void HexitecCalibrationPlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
- 	  if (config.has_param(HexitecCalibrationPlugin::CONFIG_SENSORS_LAYOUT))
-		{
- 		  sensors_layout_str_= config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_SENSORS_LAYOUT);
+    if (config.has_param(HexitecCalibrationPlugin::CONFIG_SENSORS_LAYOUT))
+    {
+      sensors_layout_str_= config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
-		}
+    }
 
     // Parsing sensors may update width and height members
     if (image_width_ * image_height_ != image_pixels_)
@@ -110,16 +110,16 @@ namespace FrameProcessor
     }
 
     if (config.has_param(HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE))
-		{
-			gradients_filename_ = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE);
-			setGradients(gradients_filename_.c_str());
-		}
+    {
+      gradients_filename_ = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_GRADIENTS_FILE);
+      setGradients(gradients_filename_.c_str());
+    }
 
     if (config.has_param(HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE))
-		{
-	    intercepts_filename_ = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE);
-			setIntercepts(intercepts_filename_.c_str());
-		}
+    {
+      intercepts_filename_ = config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_INTERCEPTS_FILE);
+      setIntercepts(intercepts_filename_.c_str());
+    }
  
   }
 
@@ -157,8 +157,8 @@ namespace FrameProcessor
   }
 
   /**
-   * Perform processing on the frame.  Each pixel is calibrated with the gradient and intercept values
-   *  provided by the two corresponding files.
+   * Perform processing on the frame. Each pixel is calibrated with the gradient and intercept
+   * values provided by the two corresponding files.
    *
    * \param[in] frame - Pointer to a Frame object.
    */
@@ -176,32 +176,32 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
- 														 " dataset, frame number: " << frame->get_frame_number());
-			this->push(frame);
+      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: " 
+                                        << frame->get_frame_number());
+      this->push(frame);
     }
     else if (dataset.compare(std::string("data")) == 0)
     {
-			try
-			{
-				// Define pointer to the input image data
-				void* input_ptr = static_cast<void *>(
-						static_cast<char *>(const_cast<void *>(data_ptr)));
+      try
+      {
+        // Define pointer to the input image data
+        void* input_ptr = static_cast<void *>(
+            static_cast<char *>(const_cast<void *>(data_ptr)));
 
-				calibrate_pixels(static_cast<float *>(input_ptr));
+        calibrate_pixels(static_cast<float *>(input_ptr));
 
-				this->push(frame);
-			}
-			catch (const std::exception& e)
-			{
-				std::stringstream ss;
-				ss << "HEXITEC frame decode failed: " << e.what();
-				LOG4CXX_ERROR(logger_, ss.str());
-			}
+        this->push(frame);
+      }
+      catch (const std::exception& e)
+      {
+        std::stringstream ss;
+        ss << "HEXITEC frame decode failed: " << e.what();
+        LOG4CXX_ERROR(logger_, ss.str());
+      }
 		}
     else
     {
-    	LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
+      LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
     }
   }
 
@@ -214,10 +214,10 @@ namespace FrameProcessor
   {
     for (int i=0; i<image_pixels_; i++)
     {
-     	if (image[i] > 0)
-     	{
-     		image[i] = (image[i] * gradient_values_[i])  + intercept_values_[i];
-     	}
+      if (image[i] > 0)
+      {
+        image[i] = (image[i] * gradient_values_[i])  + intercept_values_[i];
+      }
     }
   }
 
@@ -232,11 +232,11 @@ namespace FrameProcessor
     gradients_status_ = getData(gradientFilename, gradient_values_, defaultValue);
     if (gradients_status_)
     {
-    	LOG4CXX_TRACE(logger_, "Setting Gradients Successful, used file: " << gradientFilename);
+      LOG4CXX_TRACE(logger_, "Setting Gradients Successful, used file: " << gradientFilename);
     }
     else
     {
-    	LOG4CXX_ERROR(logger_, "setGradients() Failed (using default value instead)");
+      LOG4CXX_ERROR(logger_, "setGradients() Failed (using default value instead)");
     }
   }
 
@@ -251,31 +251,30 @@ namespace FrameProcessor
     intercepts_status_ = getData(interceptFilename, intercept_values_, defaultValue);
     if (intercepts_status_)
     {
-    	LOG4CXX_TRACE(logger_, "Setting Intercepts Successful, used file: " << interceptFilename);
+      LOG4CXX_TRACE(logger_, "Setting Intercepts Successful, used file: " << interceptFilename);
     }
     else
     {
-    	LOG4CXX_ERROR(logger_, "setIntercepts() Failed (using default value instead)");
+      LOG4CXX_ERROR(logger_, "setIntercepts() Failed (using default value instead)");
     }
   }
 
   /**
    * Read all the values from the provided file.  If the file is too short, pad missing
-   * 	values using the provided default value.
+   * values using the provided default value.
    *
    * \param[in] filename - The name of the file to be read.
    * \param[in] dataValue - Array that will receive values read from file.
-   * \param[in] defaultValue - The default value used if filename is too short to
-   * 	(provide image_pixels_ number of values).
-   *
+   * \param[in] defaultValue - The default value used if filename is too short (to
+   *    provide image_pixels_ number of values).
    * \return bool indicating success of reading file
    */
   bool HexitecCalibrationPlugin::getData(const char *filename, float *dataValue, float defaultValue)
   {
-  	int i = 0;
-		std::ifstream inFile;
-		bool success = false;
-    
+    int i = 0;
+    std::ifstream inFile;
+    bool success = false;
+
     /// Count number of floats in file:
     std::ifstream   file(filename);
     int file_values = std::distance(std::istream_iterator<double>(file),
@@ -287,94 +286,95 @@ namespace FrameProcessor
       LOG4CXX_ERROR(logger_, "Expected " << image_pixels_ << " values but read " << file_values
                           << " values from file: " << filename);
 
-			LOG4CXX_WARN(logger_, "Using default values instead");
-			for (int val = 0; val < image_pixels_; val ++)
-			{
-				dataValue[val] = defaultValue;
-			}
+      LOG4CXX_WARN(logger_, "Using default values instead");
+      for (int val = 0; val < image_pixels_; val ++)
+      {
+        dataValue[val] = defaultValue;
+      }
 
       return success;
     }
 
     inFile.open(filename);
 
-		while (inFile >> dataValue[i])
-		{
-			i++;
-		}
-		inFile.close();
+    while (inFile >> dataValue[i])
+    {
+      i++;
+    }
+    inFile.close();
     success = true;
 
-		return success;
+    return success;
   }
 
-	//! Parse the number of sensors map configuration string.
-	//!
-	//! This method parses a configuration string containing number of sensors mapping information,
-	//! which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
-	//! variable.
-	//!
-	//! \param[in] sensors_layout_str - string of number of sensors configured
-	//! \return number of valid map entries parsed from string
-	//!
-	std::size_t HexitecCalibrationPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
-	{
-	    // Clear the current map
-	    sensors_layout_.clear();
+  /**
+   * Parse the number of sensors map configuration string.
+   * 
+   * This method parses a configuration string containing number of sensors mapping information,
+   * which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
+   * variable.
+   * 
+   * \param[in] sensors_layout_str - string of number of sensors configured
+   * \return number of valid map entries parsed from string
+   */
+  std::size_t HexitecCalibrationPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
+  {
+    // Clear the current map
+    sensors_layout_.clear();
 
-	    // Define entry and port:idx delimiters
-	    const std::string entry_delimiter("x");
+    // Define entry and port:idx delimiters
+    const std::string entry_delimiter("x");
 
-	    // Vector to hold entries split from map
-	    std::vector<std::string> map_entries;
+    // Vector to hold entries split from map
+    std::vector<std::string> map_entries;
 
-	    // Split into entries
-	    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
+    // Split into entries
+    boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
 
-	    // If a valid entry is found, save into the map
-	    if (map_entries.size() == 2) {
-	        int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
-	        int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
-	        sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
-	    }
+    // If a valid entry is found, save into the map
+    if (map_entries.size() == 2) {
+      int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
+      int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
+      sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+    }
 
-      image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
-      image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+    image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+    image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
 
-	    // Return the number of valid entries parsed
-	    return sensors_layout_.size();
-	}
+    // Return the number of valid entries parsed
+    return sensors_layout_.size();
+  }
 
-	//! Reset arrays used to store calibration values.
-	//!
-	//! This method is called when the number of sensors is changed,
-	//! to prevent accessing unassigned memory
-	//!
+  /**
+   * Reset arrays used to store calibration values.
+   * 
+   * This method is called when the number of sensors is changed,
+   * to prevent accessing unassigned memory
+   */
   void HexitecCalibrationPlugin::reset_calibration_values()
   {
     free(gradient_values_);
     free(intercept_values_);
-		gradient_values_ = (float *) calloc(image_pixels_, sizeof(float));
-		intercept_values_ = (float *) calloc(image_pixels_, sizeof(float));
+    gradient_values_ = (float *) calloc(image_pixels_, sizeof(float));
+    intercept_values_ = (float *) calloc(image_pixels_, sizeof(float));
   }
   
   //// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
-	void HexitecCalibrationPlugin::writeFile(std::string filePrefix, float *frame)
-	{
+  void HexitecCalibrationPlugin::writeFile(std::string filePrefix, float *frame)
+  {
     std::ostringstream hitPixelsStream;
     hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-		for (int i = 0; i < image_pixels_; i++)
-		{
-			if(frame[i] > 0)
-				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
-		}
-		std::string hitPixelsString  = hitPixelsStream.str();
-		std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
-			 + std::string("_ODIN_Cal_detailed.txt");
-		outFile.open(fname.c_str(), std::ofstream::app);
-		outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
-		outFile.close();
-	}
+    for (int i = 0; i < image_pixels_; i++)
+    {
+      if(frame[i] > 0)
+        hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
+    }
+    std::string hitPixelsString  = hitPixelsStream.str();
+    std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
+        + std::string("_ODIN_Cal_detailed.txt");
+    outFile.open(fname.c_str(), std::ofstream::app);
+    outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
+    outFile.close();
+  }
 
 } /* namespace FrameProcessor */
-

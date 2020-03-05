@@ -24,7 +24,7 @@ namespace FrameProcessor
     logger_ = Logger::getLogger("FP.HexitecTemplatePlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecTemplatePlugin version " <<
-    												this->get_version_long() << " loaded.");
+                  this->get_version_long() << " loaded.");
 
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
@@ -75,11 +75,11 @@ namespace FrameProcessor
    */
   void HexitecTemplatePlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
- 	  if (config.has_param(HexitecTemplatePlugin::CONFIG_SENSORS_LAYOUT))
-		{
- 		  sensors_layout_str_= config.get_param<std::string>(HexitecTemplatePlugin::CONFIG_SENSORS_LAYOUT);
+    if (config.has_param(HexitecTemplatePlugin::CONFIG_SENSORS_LAYOUT))
+    {
+      sensors_layout_str_= config.get_param<std::string>(HexitecTemplatePlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
-		}
+    }
   }
 
   void HexitecTemplatePlugin::requestConfiguration(OdinData::IpcMessage& reply)
@@ -131,47 +131,47 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
- 														 " dataset, frame number: " << frame->get_frame_number());
-			this->push(frame);
+      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+                                        << frame->get_frame_number());
+      this->push(frame);
     }
     else if (dataset.compare(std::string("data")) == 0)
     {
-			try
-			{
-				// Define pointer to the input image data
-				void* input_ptr = static_cast<void *>(
-						static_cast<char *>(const_cast<void *>(data_ptr)));
+      try
+      {
+        // Define pointer to the input image data
+        void* input_ptr = static_cast<void *>(
+          static_cast<char *>(const_cast<void *>(data_ptr)));
 
-				///TODO: This function do not exist; Design it to match requirements
+        ///TODO: This function do not exist; Design it to match requirements
         // some_function(static_cast<float *>(input_ptr));
 
-				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-															 " dataset, frame number: " << frame->get_frame_number());
-				this->push(frame);
-			}
-			catch (const std::exception& e)
-			{
-				LOG4CXX_ERROR(logger_, "HexitecTemplatePluginfailed: " << e.what());
-			}
-		}
+        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+                                          << frame->get_frame_number());
+        this->push(frame);
+      }
+      catch (const std::exception& e)
+      {
+        LOG4CXX_ERROR(logger_, "HexitecTemplatePluginfailed: " << e.what());
+      }
+    }
     else
     {
-    	LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
+      LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
     }
   }
 
-	//! Parse the number of sensors map configuration string.
-	//!
-	//! This method parses a configuration string containing number of sensors mapping information,
-	//! which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
-	//! variable.
-	//!
-	//! \param[in] sensors_layout_str - string of number of sensors configured
-	//! \return number of valid map entries parsed from string
-	//!
-	std::size_t HexitecTemplatePlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
-	{
+  /**
+   * Parse the number of sensors map configuration string.
+   * 
+   * This method parses a configuration string containing number of sensors mapping information,
+   * which is expected to be of the format "NxN" e.g, 2x2. The map's saved in a member variable.
+   * 
+   * \param[in] sensors_layout_str - string of number of sensors configured
+   * \return number of valid map entries parsed from string
+   */
+  std::size_t HexitecTemplatePlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
+  {
     // Clear the current map
     sensors_layout_.clear();
 
@@ -197,6 +197,6 @@ namespace FrameProcessor
 
     // Return the number of valid entries parsed
     return sensors_layout_.size();
-	}
+  }
 
 } /* namespace FrameProcessor */

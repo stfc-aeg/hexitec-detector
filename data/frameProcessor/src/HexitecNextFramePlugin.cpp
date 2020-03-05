@@ -19,13 +19,13 @@ namespace FrameProcessor
       image_width_(Hexitec::pixel_columns_per_sensor),
       image_height_(Hexitec::pixel_rows_per_sensor),
       image_pixels_(image_width_ * image_height_),
-			last_frame_number_(-1)
+      last_frame_number_(-1)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecNextFramePlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecNextFramePlugin version " <<
-    												this->get_version_long() << " loaded.");
+                  this->get_version_long() << " loaded.");
 
     last_frame_ = (float *) calloc(image_pixels_, sizeof(float));
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
@@ -74,18 +74,18 @@ namespace FrameProcessor
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
    * 
-   * - sensors_layout_str_      <=> sensors_layout
+   * - sensors_layout_str_  <=> sensors_layout
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
    */
   void HexitecNextFramePlugin::configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply)
   {
- 	  if (config.has_param(HexitecNextFramePlugin::CONFIG_SENSORS_LAYOUT))
-		{
- 		  sensors_layout_str_= config.get_param<std::string>(HexitecNextFramePlugin::CONFIG_SENSORS_LAYOUT);
+    if (config.has_param(HexitecNextFramePlugin::CONFIG_SENSORS_LAYOUT))
+    {
+      sensors_layout_str_= config.get_param<std::string>(HexitecNextFramePlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
-		}
+    }
 
     // Parsing sensors above may update width, height members
     if (image_pixels_ != image_width_ * image_height_)
@@ -126,7 +126,7 @@ namespace FrameProcessor
 
   /**
    * Perform processing on the frame.  If same pixel hit in current frame as in the previous,
-   * 	set pixel in current frame to zero.
+   *  set pixel in current frame to zero.
    *
    * \param[in] frame - Pointer to a Frame object.
    */
@@ -146,89 +146,87 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-			LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-                    " dataset, frame number: " << current_frame_number);
-			this->push(frame);
+      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+                                        << current_frame_number);
+      this->push(frame);
     }
     else if (dataset.compare(std::string("data")) == 0)
     {
-			try
-			{
-				// Define pointer to the input image data
-				void* input_ptr = static_cast<void *>(
+      try
+      {
+        // Define pointer to the input image data
+        void* input_ptr = static_cast<void *>(
           static_cast<char *>(const_cast<void *>(data_ptr)));
 
-				// Don't compare current against last frame if not adjacent
-				if ((last_frame_number_+1) != current_frame_number)
-				{
-					LOG4CXX_TRACE(logger_, "Not correcting current frame; last frame number: " <<
-                        last_frame_number_ << " versus current_frame_number: "
-                        << current_frame_number);
-				}
-				else
-				{
-					// Compare current frame versus last frame, if same pixel hit in both
-					// 	then clear current pixel
-					apply_algorithm(static_cast<float *>(input_ptr));
-				}
+        // Don't compare current against last frame if not adjacent
+        if ((last_frame_number_+1) != current_frame_number)
+        {
+          LOG4CXX_TRACE(logger_, "Not correcting current frame; last frame number: " <<
+                                  last_frame_number_ << " versus current_frame_number: "
+                                  << current_frame_number);
+        }
+        else
+        {
+          // Compare current frame versus last frame, if same pixel hit in both
+          // 	then clear current pixel
+          apply_algorithm(static_cast<float *>(input_ptr));
+        }
 
-				LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-                      " dataset, frame number: " << current_frame_number);
+        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+                                          << current_frame_number);
 
-				last_frame_number_ = current_frame_number;
+        last_frame_number_ = current_frame_number;
 
-				// Copy current frame into last frame's place - regardless of any correection
-				//	taking place, as we'll always need the current frame to compare against
-				// 	the previous frame
-				// 		Will this work (static_cast'ing..) ???
-				memcpy(last_frame_, static_cast<float *>(input_ptr), image_pixels_ * sizeof(float));
+        // Copy current frame into last frame's place - regardless of any correction
+        //	taking place, as we'll always need the current frame to compare against
+        // 	the previous frame
+        // 		Will this work (static_cast'ing..) ???
+        memcpy(last_frame_, static_cast<float *>(input_ptr), image_pixels_ * sizeof(float));
 
-				this->push(frame);
-			}
-			catch (const std::exception& e)
-			{
-				LOG4CXX_ERROR(logger_, "HexitecNextFramePlugin failed: " << e.what());
-			}
-		}
+        this->push(frame);
+      }
+      catch (const std::exception& e)
+      {
+        LOG4CXX_ERROR(logger_, "HexitecNextFramePlugin failed: " << e.what());
+      }
+    }
     else
     {
-    	LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
+      LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
     }
   }
 
   /**
-   * Compare current against last frame, zero Pixel in current frame if hit
-   * 		in the last frame.
-   *
+   * Compare current against last frame, zero Pixel in current frame if hit in the last frame.
+   * 
    * \param[in] in - Pointer to the incoming image data.
    * \param[in] out - Pointer to the allocated memory for the corrected image.
-   *
+   * 
    */
   void HexitecNextFramePlugin::apply_algorithm(float *in)
   {
     for (int i=0; i<image_pixels_; i++)
     {
-    	// If pixel in last frame is nonzero, clear it from current frame
-    	// 	(whether hit or not), otherwise don't clear pixel frame current frame
-    	if (last_frame_[i] > 0.0)
-    	{
-    		in[i] = 0.0;
-    	}
+      // If pixel in last frame is nonzero, clear it from current frame
+      // 	(whether hit or not), otherwise don't clear pixel frame current frame
+      if (last_frame_[i] > 0.0)
+      {
+        in[i] = 0.0;
+      }
     }
-
   }
 
-	//! Parse the number of sensors map configuration string.
-	//!
-	//! This method parses a configuration string containing number of sensors mapping information,
-	//! which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
-	//! variable.
-	//!
-	//! \param[in] sensors_layout_str - string of number of sensors configured
-	//! \return number of valid map entries parsed from string
-	//!
-	std::size_t HexitecNextFramePlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
-	{
+  /** Parse the number of sensors map configuration string.
+   * 
+   * This method parses a configuration string containing number of sensors mapping information,
+   * which is expected to be of the format "NxN" e.g, 2x2. The map is saved in a member
+   * variable.
+   * 
+   * \param[in] sensors_layout_str - string of number of sensors configured
+   * \return number of valid map entries parsed from string
+   */
+  std::size_t HexitecNextFramePlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
+  {
     // Clear the current map
     sensors_layout_.clear();
 
@@ -253,13 +251,13 @@ namespace FrameProcessor
 
     // Return the number of valid entries parsed
     return sensors_layout_.size();
-	}
+  }
 
-	//! Reset array used to store last_frame values.
-	//!
-	//! This method is called when the number of sensors is changed,
-	//! to prevent accessing unassigned memory
-	//!
+  /** Reset array used to store last_frame values.
+   * 
+   * This method is called when the number of sensors is changed,
+   *  to prevent accessing unassigned memory
+   */
   void HexitecNextFramePlugin::reset_last_frame_values()
   {
     free(last_frame_);
@@ -267,21 +265,21 @@ namespace FrameProcessor
   }
 
   //// Debug function: Takes a file prefix and frame, and writes all nonzero pixels to a file
-	void HexitecNextFramePlugin::writeFile(std::string filePrefix, float *frame)
-	{
+  void HexitecNextFramePlugin::writeFile(std::string filePrefix, float *frame)
+  {
     std::ostringstream hitPixelsStream;
     hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-		for (int i = 0; i < image_pixels_; i++ )
-		{
-			if(frame[i] > 0)
-				hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
-		}
-		std::string hitPixelsString  = hitPixelsStream.str();
-		std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
-			 + std::string("_ODIN_Cal_detailed.txt");
-		outFile.open(fname.c_str(), std::ofstream::app);
-		outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
-		outFile.close();
-	}
+    for (int i = 0; i < image_pixels_; i++ )
+    {
+      if(frame[i] > 0)
+        hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
+    }
+    std::string hitPixelsString  = hitPixelsStream.str();
+    std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
+        + std::string("_ODIN_Cal_detailed.txt");
+    outFile.open(fname.c_str(), std::ofstream::app);
+    outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
+    outFile.close();
+  }
 
 } /* namespace FrameProcessor */

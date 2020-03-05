@@ -53,8 +53,8 @@ namespace FrameProcessor
     bool reset_statistics(void);
 
   private:
-		/** Configuration constant for Hardware sensors **/
-		static const std::string CONFIG_SENSORS_LAYOUT;
+    /** Configuration constant for Hardware sensors **/
+    static const std::string CONFIG_SENSORS_LAYOUT;
 
     std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
     std::string sensors_layout_str_;

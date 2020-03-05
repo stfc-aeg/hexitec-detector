@@ -30,7 +30,7 @@ namespace FrameProcessor
 {
   typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
-	enum ThresholdMode {NONE, SINGLE_VALUE, THRESHOLD_FILE};
+  enum ThresholdMode {NONE, SINGLE_VALUE, THRESHOLD_FILE};
 
   /** Processing of Hexitec Frame objects.
    *
