@@ -256,11 +256,11 @@ class TestDAQ():
 
         test_daq.fake_fp.put.assert_has_calls([
             # TODO: REPLACE ANY WITH ApiAdapterRequest
+            call("config/hdf/frames", ANY),
             call("config/hdf/file/path", ANY),
             call("config/hdf/file/name", ANY),
             call("config/hdf/write", ANY),
-            call("config/histogram/max_frames_received", ANY),
-            call("config/hdf/frames", ANY)
+            call("config/histogram/max_frames_received", ANY)
         ])
         assert test_daq.daq.file_writing is True
 

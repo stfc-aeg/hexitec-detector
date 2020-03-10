@@ -4,11 +4,17 @@ HexitecFEM for Hexitec ODIN control
 Christian Angelsen, STFC Detector Systems Software Group, 2019.
 """
 
+#division required by calculate_frame_rate
+from __future__ import division
+#numpy required by _extract_80_bits
+import numpy as np
+# Required to convert str into bool:
+import distutils.util
+
 import time
 from datetime import datetime
 import logging
 import configparser
-import numpy as np
 
 from hexitec.RdmaUDP import RdmaUDP
 
@@ -71,11 +77,6 @@ class HexitecFem():
 
     DAC_SCALE_FACTOR = 0.732
 
-    CHANNEL_1_OFFSET = 0
-    CHANNEL_2_OFFSET = 5
-    CHANNEL_3_OFFSET = 10
-    CHANNEL_4_OFFSET = 15
-
     # define a timestamp format you like
     DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
 
@@ -106,7 +107,7 @@ class HexitecFem():
 
         self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
 
-        self.number_of_frames = 10
+        self.number_frames = 10
 
         self.first_initialisation = True
         self.hardware_connected = False
@@ -114,6 +115,23 @@ class HexitecFem():
         self.ignore_busy = False
 
         self.health = True
+
+        # Variables supporting frames to duration conversion
+        self.row_s1 = 135
+        self.s1_sph = 1
+        self.sph_s2 = 5
+        self.frame_rate = 1589.33958
+        self.calculate_frame_rate()
+        # Duration is to run acquisition to obtain self.number_frames frames
+        #   (The user may specify either number of frames or duration; But the fem
+        #   only accepts number of frames so must convert duration into frames if 
+        #   the user specify duration)
+        self.duration = self.number_frames / self.frame_rate
+
+        self.bias_refresh_interval = 60000
+        self.bias_voltage_refresh = False
+        self.time_refresh_voltage_held = 3000
+        self.bias_voltage_settle_time = 2000
 
         # Acquisition completed, note completion
         self.acquisition_completed = False
@@ -177,7 +195,8 @@ class HexitecFem():
             "status_error": (self._get_status_error, None),
             "initialise_progress": (self._get_initialise_progress, None),
             "operation_percentage_complete": (self._get_operation_percentage_complete, None),
-            "number_frames": (self._get_number_frames, self._set_number_frames),
+            "number_frames": (self.get_number_frames, self.set_number_frames),
+            "duration": (self.get_duration, self.set_duration),
             "aspect_config": (lambda: self.aspect_config, self._set_aspect_config),
             "hexitec_config": (lambda: self.hexitec_config, self._set_hexitec_config),
             "read_sensors": (None, self.read_sensors),
@@ -334,11 +353,24 @@ class HexitecFem():
     def _set_dark_correction(self, correction):
         self.dark_correction = correction
 
-    def _get_number_frames(self):
-        return self.number_of_frames
+    def get_number_frames(self):
+        return self.number_frames
     
-    def _set_number_frames(self, frames):
-        self.number_of_frames = frames
+    def set_number_frames(self, frames):
+        # Calculate duration if number of frames changed
+        if self.number_frames != frames:
+            self.number_frames = frames
+            self.duration = self.number_frames / self.frame_rate
+
+    def get_duration(self):
+        return self.duration
+
+    def set_duration(self, duration):
+        # Change number_frames if duration changed
+        if self.duration != duration:
+            self.duration = duration
+            frames = self.duration * self.frame_rate
+            self.number_frames = int(round(frames))
 
     def _set_test_mode_image(self, image):
         self.test_mode_image = image
@@ -687,11 +719,11 @@ class HexitecFem():
         logging.debug("Communicating with - %s" % self.vsr_addr)
         # Set Frame Gen Mux Frame Gate
         self.x10g_rdma.write(0x60000001, 2, 'Set Frame Gen Mux Frame Gate - works set to 2')
-        self.x10g_rdma.write(0xD0000001, self.number_of_frames-1, 'Frame Gate set to \
-                                                                self.number_of_frames')
+        self.x10g_rdma.write(0xD0000001, self.number_frames-1, 'Frame Gate set to \
+                                                                self.number_frames')
 
         # Send this command to Enable Test Pattern in my VSR design
-        logging.debug("Setting Number of Frames to %s" % self.number_of_frames)
+        logging.debug("Setting Number of Frames to %s" % self.number_frames)
         logging.debug("Enable Test Pattern in my VSR design")
         # Use Sync clock from DAQ board
         logging.debug("Use Sync clock from DAQ board")
@@ -859,13 +891,13 @@ class HexitecFem():
         """
         # If called as part of cold initialisation, only need one frame so
         #   temporarily overwrite UI's number of frames for this call only
-        number_frames = self.number_of_frames
+        number_frames = self.number_frames
         if self.first_initialisation:
             # Don't set to 1, as rdma write subtracts 1 (and 0 = continuous readout!)
-            self.number_of_frames = 2 
+            self.number_frames = 2 
 
-        self.x10g_rdma.write(0xD0000001, self.number_of_frames-1, 'Frame Gate set to \
-                                                                self.number_of_frames')
+        self.x10g_rdma.write(0xD0000001, self.number_frames-1, 'Frame Gate set to \
+                                                                self.number_frames')
             
         full_empty = self.x10g_rdma.read(0x60000011,  'Check FULL EMPTY Signals')
         logging.debug("Check EMPTY Signals: %s" % full_empty)
@@ -901,10 +933,10 @@ class HexitecFem():
             self.x10g_rdma.write(0x60000002, 4, 'Enable State Machine')
             
         if self.debug:
-            logging.debug("number of Frames := %s" % self.number_of_frames)
+            logging.debug("number of Frames := %s" % self.number_frames)
 
         logging.debug("Initiate Data Capture")
-        self.data_stream(self.number_of_frames)
+        self.data_stream(self.number_frames)
         self.acquire_start_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
 
         waited = 0.0
@@ -919,7 +951,7 @@ class HexitecFem():
         self.acquire_stop_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
 
         logging.debug("Data Capture took " + str(waited) + " seconds")
-        duration = "Requested %s frame(s), took %s seconds" % (self.number_of_frames, str(waited))
+        duration = "Requested %s frame(s), took %s seconds" % (self.number_frames, str(waited))
         self._set_status_message(duration)
         # Save duration to separate parameter tree entry:
         self.acquisition_duration = duration
@@ -1029,7 +1061,7 @@ class HexitecFem():
         self.hardware_busy = False
 
         if self.first_initialisation:
-            self.number_of_frames = number_frames
+            self.number_frames = number_frames
 
     def set_up_state_machine(self):
         """
@@ -1073,13 +1105,13 @@ class HexitecFem():
                         value_007[0], value_007[1], 0x0D])
         self.read_response()
 
-        row_s1 = self._extract_integer(self.aspect_parameters, 'Control-Settings/Row -> S1', bit_range=14)
-        if row_s1 > -1:
+        self.row_s1 = self._extract_integer(self.aspect_parameters, 'Control-Settings/Row -> S1', bit_range=14)
+        if self.row_s1 > -1:
             # Valid value, within range
-            row_s1_low = row_s1 & 0xFF
-            row_s1_high = row_s1 >> 8
-            value_002 = self.convert_to_aspect_format(row_s1_low)
-            value_003 = self.convert_to_aspect_format(row_s1_high)
+            self.row_s1_low = self.row_s1 & 0xFF
+            self.row_s1_high = self.row_s1 >> 8
+            value_002 = self.convert_to_aspect_format(self.row_s1_low)
+            value_003 = self.convert_to_aspect_format(self.row_s1_high)
         # Send RowS1 low byte to Register 0x02 (Accepts 8 bits)
         self.send_cmd([0x23, self.vsr_addr, 0x42, register_002[0], register_002[1],
                         value_002[0], value_002[1], 0x0D])
@@ -1089,17 +1121,17 @@ class HexitecFem():
                         value_003[0], value_003[1], 0x0D])
         self.read_response()
 
-        s1_sph = self._extract_integer(self.aspect_parameters, 'Control-Settings/S1 -> Sph', bit_range=6)
-        if s1_sph > -1:
-            value_004 = self.convert_to_aspect_format(s1_sph)
+        self.s1_sph = self._extract_integer(self.aspect_parameters, 'Control-Settings/S1 -> Sph', bit_range=6)
+        if self.s1_sph > -1:
+            value_004 = self.convert_to_aspect_format(self.s1_sph)
         # Send S1SPH to Register 0x04 (Accepts 6 bits)
         self.send_cmd([0x23, self.vsr_addr, 0x42, register_004[0], register_004[1],
                         value_004[0], value_004[1], 0x0D])
         self.read_response()
 
-        sph_s2 = self._extract_integer(self.aspect_parameters, 'Control-Settings/Sph -> S2', bit_range=6)
-        if sph_s2 > -1:
-            value_004 = self.convert_to_aspect_format(sph_s2)
+        self.sph_s2 = self._extract_integer(self.aspect_parameters, 'Control-Settings/Sph -> S2', bit_range=6)
+        if self.sph_s2 > -1:
+            value_004 = self.convert_to_aspect_format(self.sph_s2)
         # Send SphS2  to Register 0x05 (Accepts 6 Bits)
         self.send_cmd([0x23, self.vsr_addr, 0x42, register_005[0], register_005[1],
                         value_005[0], value_005[1], 0x0D])
@@ -1782,6 +1814,34 @@ class HexitecFem():
         self._set_status_message("Initialisation completed. VSR2 and VS1 configured.");
         print(" -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=- ")
 
+    def calculate_frame_rate(self):
+        """
+        Calculate variables to determine frame rate 
+        (as defined by spreadsheet ASICTimingRateDefault.xlsx)
+        """
+        # Calculate RowReadClks
+        ADC_Clk     = 21250000      # B2
+        ASIC_Clk1   = ADC_Clk * 2   # B3 = B2 * 2
+        ASIC_Clk2   = 1 / ASIC_Clk1 # B4 = 1 / B3
+        Rows        = 80            # B6; Hard coded yes?
+        Columns     = 20            # B7; Hard coded too?
+        WaitCol     = 1             # B9; Hard coded too?
+        WaitRow     = 8             # B10
+        # self.row_s1               # B12 from hexitecVSR file
+        # self.s1_sph               # B13 from file
+        # self.sph_s2               # B14 from file
+        RowReadClks     = ((Columns + WaitCol + self.row_s1 + self.s1_sph + self.sph_s2) \
+                                                            * 2) + 10   # B16 = ((B7 + B9 + B12 + B13 + B14) * 2) + 10
+        frameReadClks   = (Rows * RowReadClks) + 4 + (WaitRow * 2)      # B18 = B6 * B16 + 4 + (B10 * 2)
+
+        frame_time      = ((frameReadClks * 3) + 2) * (ASIC_Clk2 / 3)   # B20 = (B18 * 3) + 2) * (B4 / 3)
+        frame_rate      = 1 / frame_time                                # B21 = 1 / B20
+        
+        self.frame_rate = frame_rate
+
+        ###
+
+
         # print("\n\n     VSR1 HAS NOW BEEN FINISHED CONFIGURING COMPLETELY\n\n")
         # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[1])
         # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[0])
@@ -2038,6 +2098,32 @@ class HexitecFem():
         self.read_ini_file(self.hexitec_config, self.hexitec_parameters, debug=True)
         pprint.pprint(self.hexitec_parameters)
 
+        ### DEBUGGING: Testing reading hexitecVSR.ini config file ###
+        bias_refresh_interval = self._extract_integer(self.hexitec_parameters, \
+            'Bias_Voltage/Bias_Refresh_Interval', bit_range=32)
+        if bias_refresh_interval > -1:
+            self.bias_refresh_interval = bias_refresh_interval
+
+        bias_voltage_refresh = self._extract_boolean(self.hexitec_parameters, \
+            'Bias_Voltage/Bias_Voltage_Refresh')
+        if bias_voltage_refresh > -1:
+            self.bias_voltage_refresh = bias_voltage_refresh
+
+        time_refresh_voltage_held = self._extract_integer(self.hexitec_parameters, \
+            'Bias_Voltage/Time_Refresh_Voltage_Held', bit_range=32)
+        if time_refresh_voltage_held > -1:
+            self.time_refresh_voltage_held = time_refresh_voltage_held
+        
+        bias_voltage_settle_time = self._extract_integer(self.hexitec_parameters, \
+            'Bias_Voltage/Bias_Voltage_Settle_Time', bit_range=32)
+        if bias_voltage_settle_time > -1:
+            self.bias_voltage_settle_time = bias_voltage_settle_time
+
+        print("                 bias refresh interval: %s (%s)" % (bias_refresh_interval, type(bias_refresh_interval)))
+        print("                 bias voltage settle time: %s (%s)" % (bias_voltage_settle_time, type(bias_voltage_settle_time)))
+        print("                 time refresh voltage held: %s (%s)" % (time_refresh_voltage_held, type(time_refresh_voltage_held)))
+        print("                 bias voltage refresh: %s (%s)\n\n\n\n\n" % (bias_voltage_refresh, type(bias_voltage_refresh)))
+
     def convert_aspect_exponent_to_dac_value(self, exponent):
         ''' 
         Converts aspect formats to fit dac format
@@ -2152,6 +2238,20 @@ class HexitecFem():
                 setting = [-1, -1, -1, -1, -1]
         except KeyError:
             logging.warn("Warn: No '%s' Key defined!" % descriptor)
+        return setting
+
+    def _extract_boolean(self, parameter_dict, descriptor):
+        """
+        Extract boolean in descriptor from parameter_dict,
+        True values: y, yes, t, true, on and 1; 
+        False values: n, no, f, false, off and 0;
+        """
+        try:
+            parameter = parameter_dict[descriptor]
+            setting = bool(distutils.util.strtobool(parameter))
+        except ValueError:
+            logging.error("ERROR: Invalid choice for %s!" % descriptor)
+            setting = -1
         return setting
 
     def _extract_80_bits(self, parameter_dict, key, vsr, asic, channel_or_block):

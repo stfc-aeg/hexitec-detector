@@ -203,6 +203,7 @@ class Hexitec():
         self.file_dir = options.get("save_dir", defaults.save_dir)
         self.file_name = options.get("save_file", defaults.save_file)
         self.number_frames = options.get("acquisition_num_frames", defaults.number_frames)
+        self.duration = 1
 
         self.daq = HexitecDAQ(self, self.file_dir, self.file_name)
 
@@ -267,7 +268,8 @@ class Hexitec():
             "vcal": (self._get_vcal, self._set_vcal),
             "debug_count": (self._get_debug_count, self._set_debug_count),
             "acquisition": {
-                "num_frames": (lambda: self.number_frames, self.set_number_frames),
+                "number_frames": (lambda: self.number_frames, self.set_number_frames),
+                "duration": (lambda: self.duration, self.set_duration),
                 "start_acq": (None, self.acquisition)
             },
             "status": {
@@ -342,14 +344,30 @@ class Hexitec():
         self.number_frames = frames
         # Update number of frames in Hardware, and (via DAQ) in histogram and hdf plugins
         for fem in self.fems:
-            fem._set_number_frames(self.number_frames)
+            fem.set_number_frames(self.number_frames)
+
+        self._update_daq()
+
+    def _update_daq(self):
 
         self.daq.set_number_frames(self.number_frames)
 
+        #TODO: Redundant??
         # Toggle file writing off/on if already on
         if self.daq.file_writing:
             self.daq.set_file_writing(False)
             self.daq.set_file_writing(True)
+
+    def set_duration(self, duration):
+        self.duration = duration
+
+        number_frames = 0
+        for fem in self.fems:
+            fem.set_duration(self.duration)
+            number_frames = fem.get_number_frames()
+        
+        self.number_frames = number_frames
+        self._update_daq()
         
     def _get_debug_count(self):
         return self.dbgCount

@@ -158,7 +158,7 @@ class HexitecDAQ():
         self.get_config_file("fr")
         self.is_initialised = True
 
-    def start_acquisition(self, num_frames):
+    def start_acquisition(self, number_frames):
         """
         Ensures the odin data FP and FR are configured, and turn on File Writing
         """
@@ -189,10 +189,10 @@ class HexitecDAQ():
             # just started up and it will be 0
             hdf_status = fp_status.get('hdf', {"frames_processed": 0})
         self.frame_start_acquisition = hdf_status['frames_processed']
-        self.frame_end_acquisition = num_frames
+        self.frame_end_acquisition = number_frames
         logging.info("FRAME START ACQ: %d END ACQ: %d",
                      self.frame_start_acquisition,
-                     self.frame_start_acquisition+num_frames)
+                     self.frame_start_acquisition+number_frames)
         self.in_progress = True
         logging.debug("Starting File Writer")
         if self.first_initialisation:
@@ -209,6 +209,7 @@ class HexitecDAQ():
         """
         Waits for acquisition to complete without blocking current thread
         """
+        logging.debug("      acq_chek_loop")
         #TODO: Handle multiple fems more gracefully
         bBusy = True
         for fem in self.parent.fems:
@@ -224,6 +225,7 @@ class HexitecDAQ():
         Checks that the processing has completed
         """
         hdf_status = self.get_od_status('fp').get('hdf', {"frames_processed": 0})
+        logging.debug("      process_chek_loop, hdf stat vs frm_end_acq %s v %s" % (hdf_status['frames_processed'], self.frame_end_acquisition))
         # print("   ***   proc vs frm_end_acq: %s v %s " % \
         #     (hdf_status['frames_processed'], self.frame_end_acquisition))
         if hdf_status['frames_processed'] == self.frame_end_acquisition:
@@ -251,6 +253,7 @@ class HexitecDAQ():
 
     def stop_acquisition(self):
         """ Disables file writing so the processes can access the saved data """
+        logging.debug("      stop_acq()")
         self.in_progress = False
         self.set_file_writing(False)
 
@@ -260,6 +263,7 @@ class HexitecDAQ():
         before preparing to write meta data
         """
         hdf_status = self.get_od_status('fp').get('hdf', {"writing": True})
+        logging.debug("      hdf_clos_loop, hdf stat: %s" % hdf_status)
         if hdf_status['writing']:
             # print("   hdf_clo_loo, writ still TRUE")
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
@@ -278,6 +282,7 @@ class HexitecDAQ():
         """
         Re-open HDF5 file, prepare meta data
         """
+        logging.debug("      prep_hdf_file")
         try:
             hdf_file = h5py.File(self.hdf_file_location, 'r+')
             for fem in self.parent.fems:
@@ -431,11 +436,23 @@ class HexitecDAQ():
 
     def set_number_frames(self, number_frames):
         self.number_frames = number_frames
+        # print("\n\n")
+        # logging.debug("hexitecDAQ set_number_frames(%s)" % self.number_frames)
+        # print("\n\n")
 
     def set_file_name(self, name):
         self.file_name = name
 
     def set_file_writing(self, writing):
+        # print("\n\n")
+        # logging.debug("hexitecDAQ set_number_frames(%s) number_frames: %s" % (writing, self.number_frames))
+        # print("\n\n")
+        
+        command = "config/hdf/frames"
+        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+        request.body = "{}".format(self.number_frames)
+        self.adapters["fp"].put(command, request)
+
         self.file_writing = writing
         # send command to Odin Data
         command = "config/hdf/file/path"
@@ -453,11 +470,6 @@ class HexitecDAQ():
         # Target both config/histogram/max_frames_received and own ParameterTree
         self._set_max_frames_received(self.number_frames)
         command = "config/histogram/max_frames_received"
-        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-        request.body = "{}".format(self.number_frames)
-        self.adapters["fp"].put(command, request)
-        
-        command = "config/hdf/frames"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         request.body = "{}".format(self.number_frames)
         self.adapters["fp"].put(command, request)

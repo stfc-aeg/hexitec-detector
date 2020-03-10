@@ -35,7 +35,7 @@ class DetectorAdapterTestFixture(object):
 
             self.adapter = HexitecAdapter(**self.options)
             self.detector = self.adapter.hexitec  # shortcut, makes assert lines shorter
-            self.path = "detector/acquisition/num_frames"
+            self.path = "detector/acquisition/number_frames"
             self.put_data = 1024
             self.request = Mock()
             self.request.configure_mock(
@@ -64,7 +64,7 @@ class TestDetectorAdapter():
     def test_adapter_get(self, test_detector_adapter):
         """Test that a call to the GET method of the detector adapter returns the correct response"""
         expected_response = {
-            'num_frames': 10
+            'number_frames': 10
         }
         response = test_detector_adapter.adapter.get(
             test_detector_adapter.path,
@@ -86,7 +86,7 @@ class TestDetectorAdapter():
     # def test_adapter_put(self, test_detector_adapter):
     #     """Test that a normal call to the PUT method returns as expected"""
     #     expected_response = {
-    #         'num_frames': test_detector_adapter.put_data
+    #         'number_frames': test_detector_adapter.put_data
     #     }
 
     #     response = test_detector_adapter.adapter.put(

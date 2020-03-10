@@ -13,6 +13,7 @@ var hdf_write_enable = false;
 var polling_thread_running = false;
 var system_health = true;
 var fem_error_id = -1;
+var ui_frames = 10;
 
 $( document ).ready(function()
 {
@@ -187,6 +188,20 @@ function start_polling_thread()
     poll_fem();
 }
 
+function toggle_ui_elements(bBool)
+{
+    document.getElementById("initialiseButton").disabled = bBool;
+    document.getElementById("acquireButton").disabled = bBool;
+    document.getElementById("offsetsButton").disabled = bBool;
+    document.getElementById("applyButton").disabled = bBool;
+    document.getElementById("fp-config-text").disabled = bBool;
+    document.getElementById("fr-config-text").disabled = bBool;
+    document.getElementById("hdf-file-path-text").disabled = bBool;
+    document.getElementById("hdf-file-name-text").disabled = bBool;
+    document.getElementById("aspect-config-text").disabled = bBool;
+    document.getElementById("hexitec-config-text").disabled = bBool;
+}
+
 function poll_fem()
 {
     // Polls the fem(s) for  hardware status, environmental data, etc
@@ -199,28 +214,37 @@ function poll_fem()
         var percentage_complete = fems["fem_0"]["operation_percentage_complete"];
         var hardware_connected = fems["fem_0"]["hardware_connected"];
         var hardware_busy = fems["fem_0"]["hardware_busy"];
+        // console.log("frames: " + fems["fem_0"]["number_frames"]);
+        
+        var polled_frames = fems["fem_0"]["number_frames"];
+        
+
+        // if (polled_frames != ui_frames)
+        // {
+        //     console.log("polled_frames (" + polled_frames + ") != ui_frames (" + ui_frames + ") UPDATE TIME!");
+        //     // $('#frames-text').html(polled_frames);      // DOESN'T work
+        //     $('#frames-warning').html(polled_frames);   // DOES work, but different type of field
+        //     document.getElementById("frames-text").value = polled_frames;
+        //     ui_frames = polled_frames;
+        // }
+        // console.log("frames-text: " + $('#frames-text').val() );
+        // // $('#frames-text').html(status_message);
 
         // Enable buttons when connection completed
         if (hardware_connected == true)
         {
             if (hardware_busy == true)
             {
-                document.getElementById("initialiseButton").disabled = true;
-                document.getElementById("acquireButton").disabled = true;
-                document.getElementById("offsetsButton").disabled = true;
+                toggle_ui_elements(true);
             }
             else
             {
-                document.getElementById("initialiseButton").disabled = false;
-                document.getElementById("acquireButton").disabled = false;
-                document.getElementById("offsetsButton").disabled = false;
+                toggle_ui_elements(false);
             }
         }
         else
         {
-            document.getElementById("initialiseButton").disabled = true;
-            document.getElementById("acquireButton").disabled = true;
-            document.getElementById("offsetsButton").disabled = true;
+            toggle_ui_elements(true);
         }
 
         // http://localhost:8888/api/0.1/hexitec/detector/fems/fem_0/diagnostics/successful_reads
@@ -356,7 +380,6 @@ function initialise_hardware()
 
 function collect_data()
 {
-    console.log("Muttah");
     $.ajax({
         type: "PUT",
         url: hexitec_url + 'detector/acquisition',
@@ -447,6 +470,9 @@ function apply_ui_values()
 
     hdf_file_path_changed();
     hdf_file_name_changed();
+
+    aspect_config_changed();
+    hexitec_config_changed();
 
     // Push HexitecDAQ's ParameterTree settings to FP's plugins,
     //  generate temporary config files loading plugins chain
@@ -888,17 +914,36 @@ function hexitec_config_changed()
 
 function frames_changed()
 {
-    var frames = $('#frames-text').prop('value');
+    console.log("frames_changed() CHANGED!");
+    // var ui_frames = $('#frames-text').val();
+    ui_frames = $('#frames-text').prop('value');
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/acquisition/num_frames',
+        url: hexitec_url + 'detector/acquisition/number_frames',
         contentType: "application/json",
-        data: (frames),
+        data: (ui_frames),
         success: function(result) {
             $('#frames-warning').html("");
         },
         error: function(request, msg, error) {
             $('#frames-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+};
+
+function duration_changed()
+{
+    var duration = $('#duration-text').prop('value');
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/acquisition/duration',
+        contentType: "application/json",
+        data: (duration),
+        success: function(result) {
+            $('#duration-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#duration-warning').html(error + ": " + format_error(request.responseText));
         }
     });
 };

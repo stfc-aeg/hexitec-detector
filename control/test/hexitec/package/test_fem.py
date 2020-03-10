@@ -284,8 +284,8 @@ class TestFem():
     def test_accessor_functions(self, test_fem):
 
         number_frames = 1001
-        test_fem.fem._set_number_frames(number_frames)
-        assert test_fem.fem._get_number_frames() == number_frames
+        test_fem.fem.set_number_frames(number_frames)
+        assert test_fem.fem.get_number_frames() == number_frames
 
         for bEnabled in True, False:
             test_fem.fem._set_dark_correction(bEnabled)
