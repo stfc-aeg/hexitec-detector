@@ -205,6 +205,13 @@ class Hexitec():
         self.number_frames = options.get("acquisition_num_frames", defaults.number_frames)
         self.duration = 1
 
+        ## bias (clock) tracking variables ##
+        self.bias_clock_running = False
+        self.bias_init_time = 0         # Placeholder
+        self.bias_blocking_acquisition = False
+
+        ## ##
+
         self.daq = HexitecDAQ(self, self.file_dir, self.file_name)
 
         self.adapters = {}
@@ -296,6 +303,7 @@ class Hexitec():
 
     def poll_fem(self):
         start = time.time()
+        #TODO: Needs reworking, reset must be issued to all fem(s) once triggered
         for fem in self.fems:
             if fem.acquisition_completed:
                 timeout = time.time() - fem.acquisition_timestamp
@@ -321,8 +329,55 @@ class Hexitec():
         IOLoop.instance().call_later(1.0, self.poll_fem)
 
     def connect_hardware(self, msg):
+
+        # Start bias clock if not running
+        if not self.bias_clock_running:
+            IOLoop.instance().add_callback(self.start_bias_clock)
+            
+
         for fem in self.fems:
             fem.connect_hardware(msg)
+
+    #TODO: Rename this func... :-p
+    @run_on_executor(executor='thread_executor')
+    def start_bias_clock(self):
+        """ Sets up bias "clock" """
+        if not self.bias_clock_running:
+            self.bias_init_time = time.time()
+            self.bias_clock_running = True
+        
+        self.poll_bias_clock()
+        
+    def poll_bias_clock(self):
+        """ Called periodically (0.1 seconds often enough??) to check
+            if we're in bias refresh intv /  refresh volt held / Settle time
+            Example: 60000 / 3000 / 2000: Collect for 60s, pause for 3+2 secs """
+        current_time = time.time()
+        time_elapsed = current_time - self.bias_init_time
+        print(time_elapsed < self.fems[0].bias_refresh_interval)
+        if (time_elapsed < self.fems[0].bias_refresh_interval):
+            # Still within bias - acquiring data is possible
+            self.bias_blocking_acquisition = False
+            print("!\n Within bias ; lapsed: %s v interval: %s\n!" % (time_elapsed, self.fems[0].bias_refresh_interval))
+        else:
+            if (time_elapsed < (self.fems[0].bias_refresh_interval +
+                                self.fems[0].bias_voltage_refresh + 
+                                self.fems[0].time_refresh_voltage_held)):
+                # Blackout period - Await for electrons to replenish/voltage to stabilise
+                self.bias_blocking_acquisition = True
+                print("!\n Blackout Period ; lapsed: %s v interval: %s\n!" % (time_elapsed, (self.fems[0].bias_refresh_interval +
+                                self.fems[0].bias_voltage_refresh + 
+                                self.fems[0].time_refresh_voltage_held)))
+            else:
+                # Beyond blackout period - Back within bias
+                # Reset bias clock
+                self.bias_clock_running = current_time
+                self.bias_blocking_acquisition = False
+                print("!\n BEYOND THE BLACKOUT PERIODIC, RESETTING THE BIAS TO GO BACK TO BIAS\n!")
+
+
+        IOLoop.instance().call_later(1.0, self.poll_bias_clock)
+
 
     def initialise_hardware(self, msg):
 
@@ -336,6 +391,9 @@ class Hexitec():
         self.status_error = ""
         self.status_message = ""
         self.health = True
+        # Stop bias clock
+        if self.bias_clock_running:
+            self.bias_clock_running = False
 
     def check_file(self, msg):
         self.daq.check_file_exists()
@@ -392,7 +450,11 @@ class Hexitec():
             logging.warning("Cannot Start Acquistion: Already in progress")
             return
 
+        print("\n\n\n\n")
+        print(put_data)
+        print("\n\n\n\n")
         #TODO: Remove once Firmware made to reset on each new acquisition
+        #TODO: WILL BE NON 0 VALUE IN THE FUTURE - TO SUPPORT BIAS REFRESH INTV
         # Issue reset frame_number (to 0) to reorder plugin
         command = "config/reorder/frame_number"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")

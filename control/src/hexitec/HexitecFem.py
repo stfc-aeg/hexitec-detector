@@ -456,8 +456,9 @@ class HexitecFem():
                 if self.parent.daq.in_progress:
                     logging.warning("Cannot Start Acquistion: Already in progress")
                 else:
-                    # Collect 10 token frames
-                    self.parent.daq.start_acquisition(10)
+                    # Start daq, expecting to collect 2 token frames
+                    #   Token gesture as file writing disabled
+                    self.parent.daq.start_acquisition(2)
                     for fem in self.parent.fems:
                         fem.collect_data()
             else:
@@ -1190,6 +1191,9 @@ class HexitecFem():
                         value_019[0], value_019[1], 0x0D])
         self.read_response()
 
+        # Recalculate frame_rate, et cetera if new clock values read from hexitecVSR
+        self.calculate_frame_rate()
+        
         logging.debug("Finished Setting up state machine")
 
     @run_on_executor(executor='thread_executor')
