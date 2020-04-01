@@ -128,10 +128,10 @@ class HexitecFem():
         #   the user specify duration)
         self.duration = self.number_frames / self.frame_rate
 
-        self.bias_refresh_interval = 60000
+        self.bias_refresh_interval = 60.0
         self.bias_voltage_refresh = False
-        self.time_refresh_voltage_held = 3000
-        self.bias_voltage_settle_time = 2000
+        self.time_refresh_voltage_held = 3.0
+        self.bias_voltage_settle_time = 2.0
 
         # Acquisition completed, note completion
         self.acquisition_completed = False
@@ -395,11 +395,6 @@ class HexitecFem():
         if self.hardware_connected and (self.hardware_busy == False):
             self.read_sensors()
         IOLoop.instance().call_later(1.0, self.poll_sensors)
-
-    @run_on_executor(executor='thread_executor')
-    def check_file(self, msg=None):
-        #DEBUGGING
-        self.parent.daq.check_file_exists()
 
     def connect_hardware(self, msg=None):
         """
@@ -720,11 +715,11 @@ class HexitecFem():
         logging.debug("Communicating with - %s" % self.vsr_addr)
         # Set Frame Gen Mux Frame Gate
         self.x10g_rdma.write(0x60000001, 2, 'Set Frame Gen Mux Frame Gate - works set to 2')
-        self.x10g_rdma.write(0xD0000001, self.number_frames-1, 'Frame Gate set to \
-                                                                self.number_frames')
+        # self.x10g_rdma.write(0xD0000001, self.number_frames-1, 'Frame Gate set to \
+        #                                                         self.number_frames')
 
-        # Send this command to Enable Test Pattern in my VSR design
-        logging.debug("Setting Number of Frames to %s" % self.number_frames)
+        # # Send this command to Enable Test Pattern in my VSR design
+        # logging.debug("Setting Number of Frames to %s" % self.number_frames)
         logging.debug("Enable Test Pattern in my VSR design")
         # Use Sync clock from DAQ board
         logging.debug("Use Sync clock from DAQ board")
@@ -924,7 +919,6 @@ class HexitecFem():
         # Flush the input FIFO buffers
         self.x10g_rdma.write(0x60000002, 32, 'Clear Input Buffers')
         self.x10g_rdma.write(0x60000002, 0, 'Clear Input Buffers')
-        time.sleep(1)   # Delay set by JE
         full_empty = self.x10g_rdma.read(0x60000011,  'Check EMPTY Signals')
         logging.debug("Check EMPTY Signals: %s" % full_empty)
         full_empty = self.x10g_rdma.read(0x60000012,  'Check FULL Signals')
@@ -951,12 +945,6 @@ class HexitecFem():
                 break
         self.acquire_stop_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
 
-        logging.debug("Data Capture took " + str(waited) + " seconds")
-        duration = "Requested %s frame(s), took %s seconds" % (self.number_frames, str(waited))
-        self._set_status_message(duration)
-        # Save duration to separate parameter tree entry:
-        self.acquisition_duration = duration
-
         # Stop the state machine
         self.x10g_rdma.write(0x60000002, 0, 'Dis-Enable State Machine')
 
@@ -969,6 +957,12 @@ class HexitecFem():
             self._set_status_message("User interrupted acquisition")
             self.stop_acquisition = False
             raise HexitecFemError("User interrupted acquisition")
+        else:
+            logging.debug("Capturing " + str(self.number_frames) + " frames took " + str(waited) + " seconds")
+            duration = "Requested %s frame(s), took %s seconds" % (self.number_frames, str(waited))
+            self._set_status_message(duration)
+            # Save duration to separate parameter tree entry:
+            self.acquisition_duration = duration
 
         logging.debug("Acquisition Completed, enable signal cleared")
         
@@ -1193,7 +1187,7 @@ class HexitecFem():
 
         # Recalculate frame_rate, et cetera if new clock values read from hexitecVSR
         self.calculate_frame_rate()
-        
+
         logging.debug("Finished Setting up state machine")
 
     @run_on_executor(executor='thread_executor')
@@ -1763,12 +1757,6 @@ class HexitecFem():
 
         ###
 
-        # print("\n\n     THIS IS THE TOP OF INITIALISER_SYSTEM BEFORE ANY CONFIGURATION CHANGES HAVE BEEN MADE\n\n")
-        # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[1])
-        # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[0])
-
-        # logging.debug("VERIFICATION Reading Register 0x8F -+-+-+-+-+-+-+-+-+-+- ____________________________________________________________________________________________________________________")
-
         self._set_status_message("Configuring VSR2");
         self.selected_sensor = HexitecFem.OPTIONS[2]
 
@@ -1789,10 +1777,6 @@ class HexitecFem():
 
         synced_status = self.calibrate_sensor()
         logging.debug("Calibrated sensor returned synchronised status: %s" % synced_status)
-
-        # print("\n\n     AT THIS POINT JUST FINISHED CONFIGURING VSR2 \n\n")
-        # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[1])
-        # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[0])
 
         self._set_status_message("Configuring VSR1");
         self.selected_sensor = HexitecFem.OPTIONS[0]
@@ -1875,12 +1859,8 @@ class HexitecFem():
         rre1 = [0x43, 0x4c]
         row_read_enable1 = self.read_back_register(vsr_addr, rre1)
 
-        print("\t\tRow Power Enable ASIC1: ")
-        print(row_power_enable1)
-        print("\t\tRow Cal Enable ASIC1: ")
-        print(row_cal_enable1)
-        print("\t\tRow Read Enable ASIC1: ")
-        print(row_read_enable1)
+        print("\t\tRow Power Enable ASIC1:  %s \t\tRow Cal Enable ASIC1: %s \t\tRow Read Enable ASIC1: %s" \
+            % (row_power_enable1, row_cal_enable1, row_read_enable1))
 
         # COLUMN, ASIC 1
 
@@ -1891,12 +1871,8 @@ class HexitecFem():
         cre1 = [0x61, 0x6a]
         col_read_enable1 = self.read_back_register(vsr_addr, cre1)
 
-        print("\t\tCol Power Enable ASIC1: ")
-        print(row_power_enable1)
-        print("\t\tCol Cal Enable ASIC1: ")
-        print(row_cal_enable1)
-        print("\t\tCol Read Enable ASIC1: ")
-        print(row_read_enable1)
+        print("\t\tCol Power Enable ASIC1: %s \t\tCol Cal Enable ASIC1: %s \t\tCol Read Enable ASIC1: %s" \
+            % (row_power_enable1, row_cal_enable1, row_read_enable1))
 
         print("---------------------------------------------------------------------------------------------")
         # ROW, ASIC 2
@@ -1908,12 +1884,8 @@ class HexitecFem():
         rre2 = [0xA4, 0xAD]
         row_read_enable2 = self.read_back_register(vsr_addr, rre2)
 
-        print("\t\tRow Power Enable ASIC2: ")
-        print(row_power_enable2)
-        print("\t\tRow Cal Enable ASIC2: ")
-        print(row_cal_enable2)
-        print("\t\tRow Read Enable ASIC2: ")
-        print(row_read_enable2)
+        print("\t\tRow Power Enable ASIC2: %s \t\tRow Cal Enable ASIC2:  %s \t\tRow Read Enable ASIC2: %s" \
+            % (row_power_enable2, row_cal_enable2, row_read_enable2))
 
         # COLUMN, ASIC 2
 
@@ -1924,12 +1896,9 @@ class HexitecFem():
         cre2 = [0xC2, 0xCB]
         col_read_enable2 = self.read_back_register(vsr_addr, cre2)
 
-        print("\t\tCol Power Enable ASIC2: ")
-        print(col_power_enable2)
-        print("\t\tCol Cal Enable ASIC2: ")
-        print(col_cal_enable2)
-        print("\t\tCol Read Enable ASIC2: ")
-        print(col_read_enable2)
+        print("\t\tCol Power Enable ASIC2: %s \t\tCol Cal Enable ASIC2: %s \t\tCol Read Enable ASIC2: %s" \
+            % (col_power_enable2, col_cal_enable2, col_read_enable2))
+            
         print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
         
     def read_back_register(self, vsr_addr, boundaries):
@@ -2106,7 +2075,7 @@ class HexitecFem():
         bias_refresh_interval = self._extract_integer(self.hexitec_parameters, \
             'Bias_Voltage/Bias_Refresh_Interval', bit_range=32)
         if bias_refresh_interval > -1:
-            self.bias_refresh_interval = bias_refresh_interval
+            self.bias_refresh_interval = bias_refresh_interval / 1000.0
 
         bias_voltage_refresh = self._extract_boolean(self.hexitec_parameters, \
             'Bias_Voltage/Bias_Voltage_Refresh')
@@ -2116,17 +2085,17 @@ class HexitecFem():
         time_refresh_voltage_held = self._extract_integer(self.hexitec_parameters, \
             'Bias_Voltage/Time_Refresh_Voltage_Held', bit_range=32)
         if time_refresh_voltage_held > -1:
-            self.time_refresh_voltage_held = time_refresh_voltage_held
+            self.time_refresh_voltage_held = time_refresh_voltage_held / 1000.0
         
         bias_voltage_settle_time = self._extract_integer(self.hexitec_parameters, \
             'Bias_Voltage/Bias_Voltage_Settle_Time', bit_range=32)
         if bias_voltage_settle_time > -1:
-            self.bias_voltage_settle_time = bias_voltage_settle_time
+            self.bias_voltage_settle_time = bias_voltage_settle_time / 1000.0
 
-        print("                 bias refresh interval: %s (%s)" % (bias_refresh_interval, type(bias_refresh_interval)))
-        print("                 bias voltage settle time: %s (%s)" % (bias_voltage_settle_time, type(bias_voltage_settle_time)))
-        print("                 time refresh voltage held: %s (%s)" % (time_refresh_voltage_held, type(time_refresh_voltage_held)))
-        print("                 bias voltage refresh: %s (%s)\n\n\n\n\n" % (bias_voltage_refresh, type(bias_voltage_refresh)))
+        print("                 bias refresh interval: %s (%s)" % (self.bias_refresh_interval, type(self.bias_refresh_interval)))
+        print("                 bias voltage settle time: %s (%s)" % (self.bias_voltage_settle_time, type(self.bias_voltage_settle_time)))
+        print("                 time refresh voltage held: %s (%s)" % (self.time_refresh_voltage_held, type(self.time_refresh_voltage_held)))
+        print("                 bias voltage refresh: %s (%s)\n\n\n\n\n" % (self.bias_voltage_refresh, type(self.bias_voltage_refresh)))
 
     def convert_aspect_exponent_to_dac_value(self, exponent):
         ''' 

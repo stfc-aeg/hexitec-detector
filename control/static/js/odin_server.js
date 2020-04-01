@@ -245,6 +245,14 @@ function poll_fem()
         else
         {
             toggle_ui_elements(true);
+            // Unlock configuration related UI elements
+            document.getElementById("applyButton").disabled = false;
+            document.getElementById("fp-config-text").disabled = false;
+            document.getElementById("fr-config-text").disabled = false;
+            document.getElementById("hdf-file-path-text").disabled = false;
+            document.getElementById("hdf-file-name-text").disabled = false;
+            document.getElementById("aspect-config-text").disabled = false;
+            document.getElementById("hexitec-config-text").disabled = false;        
         }
 
         // http://localhost:8888/api/0.1/hexitec/detector/fems/fem_0/diagnostics/successful_reads

@@ -210,11 +210,10 @@ class HexitecDAQ():
         Waits for acquisition to complete without blocking current thread
         """
         logging.debug("      acq_chek_loop")
-        #TODO: Handle multiple fems more gracefully
+        #TODO: Handle multiple fems more gracefully ?
         bBusy = True
         for fem in self.parent.fems:
             bBusy = fem.hardware_busy
-            # print("   ***   bBusy: %s " % bBusy)
         if bBusy:
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
@@ -226,8 +225,6 @@ class HexitecDAQ():
         """
         hdf_status = self.get_od_status('fp').get('hdf', {"frames_processed": 0})
         logging.debug("      process_chek_loop, hdf stat vs frm_end_acq %s v %s" % (hdf_status['frames_processed'], self.frame_end_acquisition))
-        # print("   ***   proc vs frm_end_acq: %s v %s " % \
-        #     (hdf_status['frames_processed'], self.frame_end_acquisition))
         if hdf_status['frames_processed'] == self.frame_end_acquisition:
             self.stop_acquisition()
             logging.debug("Acquisition Complete")
@@ -235,17 +232,16 @@ class HexitecDAQ():
             self.hdf_closing_loop()
         else:
             if self.first_initialisation:
-                #print("   ***   Processing_check_loop - this is the first initialisation")
                 # First initialisation runs without file writing, stopping acquisition 
                 #   without reopening (non-existent) file to add meta data
                 self.first_initialisation = False
-                # Don't call stop_acquisition immediately, in case fem slow to react
+                # Delay calling stop_acquisition, otherwise software may beat fem to it
                 IOLoop.instance().call_later(2.0, self.stop_acquisition)
                 return
-            # print("   ***   Processing_check_loop - DEFINITELY NOT the first initialisation")
             IOLoop.instance().call_later(.5, self.processing_check_loop)
 
     def check_file_exists(self):
+        # DEBUGGING
         full_path = self.file_dir + self.file_name + '_000001.h5'
         existence = os.path.exists(full_path)
         print(" *** Exist? %s file: %s " % (existence, full_path))
