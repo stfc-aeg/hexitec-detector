@@ -1186,6 +1186,11 @@ class HexitecFem():
                         value_019[0], value_019[1], 0x0D])
         self.read_response()
 
+        print("\n\n")
+        print("   value_018: ", self.make_list_hexadecimal(value_018))
+        print("   value_019: ", self.make_list_hexadecimal(value_019))
+        print("\n\n")
+
         # Recalculate frame_rate, et cetera if new clock values read from hexitecVSR
         self.calculate_frame_rate()
 
@@ -1680,7 +1685,12 @@ class HexitecFem():
             vcal_low = vcal_value & 0xFF
             vcal[0], vcal[1] = self.convert_to_aspect_format(vcal_high)
             vcal[2], vcal[3] = self.convert_to_aspect_format(vcal_low)
-
+        
+        print("\n\n")
+        print("   vcal: ", self.make_list_hexadecimal(vcal))
+        print("   umid: ", self.make_list_hexadecimal(umid))
+        print("\n\n")
+        
         self.send_cmd([0x23, self.vsr_addr, 0x54, 
                         vcal[0], vcal[1], vcal[2], vcal[3],     # Vcal, e.g. 0x0111 =: 0.2V
                         umid[0], umid[1], umid[2], umid[3],     # Umid, e.g. 0x0555 =: 1.0V
@@ -1691,6 +1701,12 @@ class HexitecFem():
         self.read_response()
         logging.debug("DAC values set")
         
+    def make_list_hexadecimal(self, value):        
+        value_hexadecimal = []
+        for val in value:
+            value_hexadecimal.append("0x%x" % val)
+        return value_hexadecimal
+            
     def enable_adc(self):
         """
         Enables the ADCs
