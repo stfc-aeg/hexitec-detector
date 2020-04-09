@@ -134,28 +134,13 @@
               &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
             </td>
           </tr>
-          <!-- Added aspect.ini config file -->
-          <tr>
-            <td>
-              aSpect config:&nbsp;
-            </td>
-            <td>
-              <div class="text-columns">
-                <input type="text" id="aspect-config-text" onChange='aspect_config_changed()' value= "/u/ckd27546/tmp/win_2x2/aspectVSR_testing_unique.ini">
-              </div>
-            </td>
-            <td>
-              &nbsp;<td><span id="aspect-config-warning">&nbsp;</span></td>
-            </td>
-          </tr>
-          <!-- Added hexitec.ini config file -->
           <tr>
             <td>
               Hexitec config:&nbsp;
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' value= "/u/ckd27546/tmp/win_2x2/hexitecVSR.ini">
+                <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' value= "/u/ckd27546/tmp/win_2x2/hexitec_blankly.ini">
               </div>
             </td>
             <td>
@@ -188,6 +173,23 @@
           <tr>
             <th>Camera&nbsp;</th>
           </tr>
+
+          <!--  -->
+          <tr>  
+            <th>Duration&nbsp;<br>On=in Seconds</th>
+            <!-- <td>&nbsp;</td> -->
+            <td>
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
+                  <input type="checkbox" id='durationButton' name="duration_enable" data-size="small">
+                </div>
+              </div>
+            </td>  
+            <td>&nbsp;On = Duration in second, Off = number of frames</td>
+            </td>
+          </tr>
+
+
           <tr>
             <td>
               Frames&nbsp;
@@ -207,7 +209,7 @@
             </td>
             <td>
               <div class="text-duration">
-                <input type="text" id="duration-text" onChange='duration_changed()' maxlength="40" size="7" value= "10">
+                <input type="text" id="duration-text" onChange='duration_changed()' maxlength="40" size="7" value= "1" disabled="true">
               </div>
             </td>
             <td>

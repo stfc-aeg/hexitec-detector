@@ -121,12 +121,10 @@ class HexitecFem():
         self.s1_sph = 1
         self.sph_s2 = 5
         self.frame_rate = 1589.33958
+        self.duration = 1
+        self.duration_enabled = False
+
         self.calculate_frame_rate()
-        # Duration is to run acquisition to obtain self.number_frames frames
-        #   (The user may specify either number of frames or duration; But the fem
-        #   only accepts number of frames so must convert duration into frames if 
-        #   the user specify duration)
-        self.duration = self.number_frames / self.frame_rate
 
         self.bias_refresh_interval = 60.0
         self.bias_voltage_refresh = False
@@ -173,9 +171,7 @@ class HexitecFem():
         self.firmware_date = "N/A"
         self.firmware_time = "N/A"
 
-        # Variables supporting handling of ini-style aspect, hexitec config files
-        self.aspect_config  = "(Blank)"
-        self.aspect_parameters = {}
+        # Variables supporting handling of ini-style hexitec config file
         self.hexitec_config = "(Blank)"
         self.hexitec_parameters = {}
 
@@ -197,7 +193,6 @@ class HexitecFem():
             "operation_percentage_complete": (self._get_operation_percentage_complete, None),
             "number_frames": (self.get_number_frames, self.set_number_frames),
             "duration": (self.get_duration, self.set_duration),
-            "aspect_config": (lambda: self.aspect_config, self._set_aspect_config),
             "hexitec_config": (lambda: self.hexitec_config, self._set_hexitec_config),
             "read_sensors": (None, self.read_sensors),
             "hardware_connected": (lambda: self.hardware_connected, None),
@@ -353,6 +348,10 @@ class HexitecFem():
     def _set_dark_correction(self, correction):
         self.dark_correction = correction
 
+    def set_duration_enable(self, duration_enabled):
+        # print("\n   HxtFEM set_duration_enable; duration_enabled: %s \n" % duration_enabled)
+        self.duration_enabled = duration_enabled
+
     def get_number_frames(self):
         return self.number_frames
     
@@ -361,16 +360,16 @@ class HexitecFem():
         if self.number_frames != frames:
             self.number_frames = frames
             self.duration = self.number_frames / self.frame_rate
+        # print("\n    HxtFEM fem.set_number_frames(%s), so duration: %s\n" % (frames, self.duration))
 
     def get_duration(self):
         return self.duration
 
     def set_duration(self, duration):
-        # Change number_frames if duration changed
-        if self.duration != duration:
-            self.duration = duration
-            frames = self.duration * self.frame_rate
-            self.number_frames = int(round(frames))
+        self.duration = duration
+        frames = self.duration * self.frame_rate
+        self.number_frames = int(round(frames))
+        # print("\n    HxtFEM fem.set_duration(%s), so number_frames: %s\n  !!" % (self.duration, self.number_frames))
 
     def _set_test_mode_image(self, image):
         self.test_mode_image = image
@@ -422,9 +421,10 @@ class HexitecFem():
             self._set_status_error("Uncaught Exception; Failed to establish camera connection: %s" % str(e))
             logging.error("%s" % str(e))
             # Cannot raise error beyond this thread
-
-        # Start polling thread
-        self.start_polling()
+        
+        # Start polling thread (connect successfully set up)
+        if len(self.status_error) == 0:
+            self.start_polling()
 
     @run_on_executor(executor='thread_executor')
     def initialise_hardware(self, msg=None):
@@ -942,6 +942,7 @@ class HexitecFem():
             time.sleep(delay)
             waited += delay
             if (self.stop_acquisition):
+                print(" \n HxtFEM YOU PULLED THE EMERGENCY BRAKE !!!!! \n")
                 break
         self.acquire_stop_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
 
@@ -1060,7 +1061,7 @@ class HexitecFem():
 
     def set_up_state_machine(self):
         """
-        Sets up state machine, optionally with values from aspect file
+        Sets up state machine, optionally with values from hexitec ini file
         """
         logging.debug("Setting up state machine")
 
@@ -1091,8 +1092,8 @@ class HexitecFem():
         value_01B = 0x30, 0x38  # Wait Clock Row, 8 bits
         value_014 = 0x30, 0x31  # Start SM on '1' falling edge ('0' = rising edge) of ADC-CLK
 
-        # # TODO: Find/Determine settings name in aspect file?
-        # unnamed = self._extract_integer(self.aspect_parameters, 'Control-Settings/?????', bit_range=2)
+        # # TODO: Find/Determine settings name in hexitec file?
+        # unnamed = self._extract_integer(self.hexitec_parameters, 'Control-Settings/?????', bit_range=2)
         # if unnamed > -1:
         #     value_007 = self.convert_to_aspect_format(unnamed)
         # Send unnamed (Enable PPL, ADC PPL) to Register 0x07 (Accepts 2 bits)
@@ -1100,7 +1101,7 @@ class HexitecFem():
                         value_007[0], value_007[1], 0x0D])
         self.read_response()
 
-        self.row_s1 = self._extract_integer(self.aspect_parameters, 'Control-Settings/Row -> S1', bit_range=14)
+        self.row_s1 = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Row -> S1', bit_range=14)
         if self.row_s1 > -1:
             # Valid value, within range
             self.row_s1_low = self.row_s1 & 0xFF
@@ -1116,7 +1117,7 @@ class HexitecFem():
                         value_003[0], value_003[1], 0x0D])
         self.read_response()
 
-        self.s1_sph = self._extract_integer(self.aspect_parameters, 'Control-Settings/S1 -> Sph', bit_range=6)
+        self.s1_sph = self._extract_integer(self.hexitec_parameters, 'Control-Settings/S1 -> Sph', bit_range=6)
         if self.s1_sph > -1:
             value_004 = self.convert_to_aspect_format(self.s1_sph)
         # Send S1SPH to Register 0x04 (Accepts 6 bits)
@@ -1124,7 +1125,7 @@ class HexitecFem():
                         value_004[0], value_004[1], 0x0D])
         self.read_response()
 
-        self.sph_s2 = self._extract_integer(self.aspect_parameters, 'Control-Settings/Sph -> S2', bit_range=6)
+        self.sph_s2 = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Sph -> S2', bit_range=6)
         if self.sph_s2 > -1:
             value_004 = self.convert_to_aspect_format(self.sph_s2)
         # Send SphS2  to Register 0x05 (Accepts 6 Bits)
@@ -1133,7 +1134,7 @@ class HexitecFem():
         self.read_response()
 
         #TODO: What should default value be? (not set by JE previously!)
-        gain = self._extract_integer(self.aspect_parameters, 'Control-Settings/Gain', bit_range=1)
+        gain = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Gain', bit_range=1)
         if gain > -1:
             value_006 = self.convert_to_aspect_format(gain)
         # Send Gain to Register 0x06 (Accepts 1 Bit)
@@ -1141,7 +1142,7 @@ class HexitecFem():
                         value_006[0], value_006[1], 0x0D])
         self.read_response()
 
-        adc1_delay = self._extract_integer(self.aspect_parameters, 'Control-Settings/ADC1 Delay', bit_range=2)
+        adc1_delay = self._extract_integer(self.hexitec_parameters, 'Control-Settings/ADC1 Delay', bit_range=2)
         if adc1_delay > -1:
             value_009 = self.convert_to_aspect_format(adc1_delay)
         # Send ADC1 Delay to Register 0x09 (Accepts 2 Bits)
@@ -1149,7 +1150,7 @@ class HexitecFem():
                         value_009[0], value_009[1], 0x0D])
         self.read_response()
 
-        delay_sync_signals = self._extract_integer(self.aspect_parameters, 'Control-Settings/delay sync signals', bit_range=8)
+        delay_sync_signals = self._extract_integer(self.hexitec_parameters, 'Control-Settings/delay sync signals', bit_range=8)
         if delay_sync_signals > -1:
             value_00E = self.convert_to_aspect_format(delay_sync_signals)
         # Send delay sync signals to Register 0x0E (Accepts 8 Bits)
@@ -1158,7 +1159,7 @@ class HexitecFem():
         self.read_response()
 
         #TODO: Name for this setting in .ini file ??
-        # wait_clock_row = self._extract_integer(self.aspect_parameters, 'Control-Settings/???', bit_range=8)
+        # wait_clock_row = self._extract_integer(self.hexitec_parameters, 'Control-Settings/???', bit_range=8)
         # if wait_clock_row > -1:
         #     value_01B = self.convert_to_aspect_format(wait_clock_row)
         # Send wait clock wait to Register 01B (Accepts 8 Bits)
@@ -1170,7 +1171,7 @@ class HexitecFem():
                         value_014[0], value_014[1], 0x0D])
         self.read_response()
 
-        vcal2_vcal1 = self._extract_integer(self.aspect_parameters, 'Control-Settings/VCAL2 -> VCAL1', bit_range=15)
+        vcal2_vcal1 = self._extract_integer(self.hexitec_parameters, 'Control-Settings/VCAL2 -> VCAL1', bit_range=15)
         if vcal2_vcal1 > -1:
             vcal2_vcal1_low = vcal2_vcal1 & 0xFF
             vcal2_vcal1_high = vcal2_vcal1 >> 8
@@ -1187,6 +1188,8 @@ class HexitecFem():
 
         # Recalculate frame_rate, et cetera if new clock values read from hexitecVSR
         self.calculate_frame_rate()
+
+        # print("\n   HxtFEM self.row_s1 %s self.s1_sph %s self.sph_s2 %s\n" % (self.row_s1, self.s1_sph, self.sph_s2))
 
         logging.debug("Finished Setting up state machine")
 
@@ -1288,7 +1291,7 @@ class HexitecFem():
 
     def load_pwr_cal_read_enables(self):
         """
-        Load power, calibration and read enables - optionally from aspect file
+        Load power, calibration and read enables - optionally from hexitec file
         """
         # The default values are either 20 times 0 (0x30), or 20 times F (0x46)
         #   Make a list for each of these scenarios: (and use where needed)
@@ -1313,7 +1316,7 @@ class HexitecFem():
         value_061 = list_of_46s
         value_0C2 = list_of_46s
 
-        asic1_read_enable = self._extract_80_bits(self.aspect_parameters, "ColumnEn_", vsr, 1, "Channel")
+        asic1_read_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnEn_", vsr, 1, "Channel")
         # Check list of (-1, -1) tuples wasn't returned
         if asic1_read_enable[0][0] > 0:
             asic1_command = [0x23, self.vsr_addr,  0x44, register_061[0], register_061[1]]
@@ -1332,7 +1335,7 @@ class HexitecFem():
                                 value_061[15], value_061[1], value_061[2], value_061[3], value_061[19],
                                 0x0D]
 
-        asic2_read_enable = self._extract_80_bits(self.aspect_parameters, "ColumnEn_", vsr, 2, "Channel")
+        asic2_read_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnEn_", vsr, 2, "Channel")
         if asic2_read_enable[0][0] > 0:
             asic2_command = [0x23, self.vsr_addr,  0x44, register_0C2[0], register_0C2[1]]
             for msb, lsb in asic2_read_enable:
@@ -1356,7 +1359,7 @@ class HexitecFem():
         value_04D = list_of_46s
         value_0AE = list_of_46s
 
-        asic1_power_enable = self._extract_80_bits(self.aspect_parameters, "ColumnPwr", vsr, 1, "Channel")
+        asic1_power_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnPwr", vsr, 1, "Channel")
         if asic1_power_enable[0][0] > 0:
             asic1_command = [0x23, self.vsr_addr,  0x44, register_04D[0], register_04D[1]]
             for msb, lsb in asic1_power_enable:
@@ -1373,7 +1376,7 @@ class HexitecFem():
                                 value_04D[15], value_04D[1], value_04D[2], value_04D[3], value_04D[19],
                                 0x0D]
 
-        asic2_power_enable = self._extract_80_bits(self.aspect_parameters, "ColumnPwr", vsr, 2, "Channel")
+        asic2_power_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnPwr", vsr, 2, "Channel")
         if asic2_power_enable[0][0] > 0:
             asic2_command = [0x23, self.vsr_addr,  0x44, register_0AE[0], register_0AE[1]]
             for msb, lsb in asic2_power_enable:
@@ -1397,7 +1400,7 @@ class HexitecFem():
         value_057 = list_of_30s
         value_0B8 = list_of_30s
 
-        asic1_cal_enable = self._extract_80_bits(self.aspect_parameters, "ColumnCal", vsr, 1, "Channel")
+        asic1_cal_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnCal", vsr, 1, "Channel")
         if asic1_cal_enable[0][0] > 0:
             asic1_command = [0x23, self.vsr_addr,  0x44, register_057[0], register_057[1]]
             for msb, lsb in asic1_cal_enable:
@@ -1414,7 +1417,7 @@ class HexitecFem():
                                 value_057[15], value_057[1], value_057[2], value_057[3], value_057[19],
                                 0x0D]
 
-        asic2_cal_enable = self._extract_80_bits(self.aspect_parameters, "ColumnCal", vsr, 2, "Channel")
+        asic2_cal_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnCal", vsr, 2, "Channel")
         if asic2_cal_enable[0][0] > 0:
             asic2_command = [0x23, self.vsr_addr,  0x44, register_0B8[0], register_0B8[1]]
             for msb, lsb in asic2_cal_enable:
@@ -1438,7 +1441,7 @@ class HexitecFem():
         value_043 = list_of_46s
         value_0A4 = list_of_46s
 
-        asic1_cal_enable = self._extract_80_bits(self.aspect_parameters, "RowEn_", vsr, 1, "Block")
+        asic1_cal_enable = self._extract_80_bits(self.hexitec_parameters, "RowEn_", vsr, 1, "Block")
         if asic1_cal_enable[0][0] > 0:
             asic1_command = [0x23, self.vsr_addr,  0x44, register_043[0], register_043[1]]
             for msb, lsb in asic1_cal_enable:
@@ -1455,7 +1458,7 @@ class HexitecFem():
                                 value_043[15], value_043[1], value_043[2], value_043[3], value_043[19],
                                 0x0D]
 
-        asic2_cal_enable = self._extract_80_bits(self.aspect_parameters, "RowEn_", vsr, 2, "Block")
+        asic2_cal_enable = self._extract_80_bits(self.hexitec_parameters, "RowEn_", vsr, 2, "Block")
         if asic2_cal_enable[0][0] > 0:
             asic2_command = [0x23, self.vsr_addr,  0x44, register_0A4[0], register_0A4[1]]
             for msb, lsb in asic2_cal_enable:
@@ -1479,7 +1482,7 @@ class HexitecFem():
         value_02F = list_of_46s
         value_090 = list_of_46s
 
-        asic1_pwr_enable = self._extract_80_bits(self.aspect_parameters, "RowPwr", vsr, 1, "Block")
+        asic1_pwr_enable = self._extract_80_bits(self.hexitec_parameters, "RowPwr", vsr, 1, "Block")
         if asic1_pwr_enable[0][0] > 0:
             asic1_command = [0x23, self.vsr_addr,  0x44, register_02F[0], register_02F[1]]
             for msb, lsb in asic1_pwr_enable:
@@ -1496,7 +1499,7 @@ class HexitecFem():
                                 value_02F[15], value_02F[1], value_02F[2], value_02F[3], value_02F[19],
                                 0x0D]
 
-        asic2_pwr_enable = self._extract_80_bits(self.aspect_parameters, "RowPwr", vsr, 2, "Block")
+        asic2_pwr_enable = self._extract_80_bits(self.hexitec_parameters, "RowPwr", vsr, 2, "Block")
         if asic2_pwr_enable[0][0] > 0:
             asic2_command = [0x23, self.vsr_addr,  0x44, register_090[0], register_090[1]]
             for msb, lsb in asic2_pwr_enable:
@@ -1520,7 +1523,7 @@ class HexitecFem():
         value_039 = list_of_30s
         value_09A = list_of_30s
 
-        asic1_cal_enable = self._extract_80_bits(self.aspect_parameters, "RowCal", vsr, 1, "Block")
+        asic1_cal_enable = self._extract_80_bits(self.hexitec_parameters, "RowCal", vsr, 1, "Block")
         if asic1_cal_enable[0][0] > 0:
             asic1_command = [0x23, self.vsr_addr,  0x44, register_039[0], register_039[1]]
             for msb, lsb in asic1_cal_enable:
@@ -1537,7 +1540,7 @@ class HexitecFem():
                             value_039[15], value_039[1], value_039[2], value_039[3], value_039[19],
                             0x0D]
 
-        asic2_cal_enable = self._extract_80_bits(self.aspect_parameters, "RowCal", vsr, 2, "Block")
+        asic2_cal_enable = self._extract_80_bits(self.hexitec_parameters, "RowCal", vsr, 2, "Block")
         if asic2_cal_enable[0][0] > 0:
             asic2_command = [0x23, self.vsr_addr,  0x44, register_09A[0], register_09A[1]]
             for msb, lsb in asic2_cal_enable:
@@ -1653,7 +1656,7 @@ class HexitecFem():
 
     def write_dac_values(self):
         """
-        Writes values to DAC, optionally provided by aspect file
+        Writes values to DAC, optionally provided by hexitec file
         """
         logging.debug("Writing DAC values")
         vcal  = [0x30, 0x32, 0x41, 0x41]
@@ -1662,7 +1665,7 @@ class HexitecFem():
         dctrl = [0x30, 0x30, 0x30, 0x30]
         rsrv2 = [0x30, 0x38, 0x45, 0x38]
 
-        umid_value = self._extract_exponential(self.aspect_parameters, 'Uref_mid', bit_range=12)
+        umid_value = self._extract_exponential(self.hexitec_parameters, 'Control-Settings/Uref_mid', bit_range=12)
         if umid_value > -1:
             # Valid value, within range
             umid_high = (umid_value >> 8) & 0x0F
@@ -1670,7 +1673,7 @@ class HexitecFem():
             umid[0], umid[1] = self.convert_to_aspect_format(umid_high)
             umid[2], umid[3] = self.convert_to_aspect_format(umid_low)
 
-        vcal_value = self._extract_float(self.aspect_parameters, 'VCAL')
+        vcal_value = self._extract_float(self.hexitec_parameters, 'Control-Settings/VCAL')
         if vcal_value > -1:
             # Valid value, within range
             vcal_high = (vcal_value >> 8) & 0x0F
@@ -1827,22 +1830,13 @@ class HexitecFem():
         
         self.frame_rate = frame_rate
 
+        if self.duration_enabled:
+            # With duration enabled, recalculate number of frames in case clocks changed 
+            self.set_duration(self.duration)
+            self.parent.set_number_frames(self.number_frames)
+        # print(" \n  HxtFEM duration_enabled: %s frame_rate: %s \n" % (self.duration_enabled, frame_rate))
+
         ###
-
-
-        # print("\n\n     VSR1 HAS NOW BEEN FINISHED CONFIGURING COMPLETELY\n\n")
-        # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[1])
-        # self.print_vcal_registers(HexitecFem.VSR_ADDRESS[0])
-
-        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x41, 0x38, 0x46, 0x0D])
-        # vsr2_after = self.read_response()
-
-        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x41, 0x38, 0x46, 0x0D])
-        # vsr1_after = self.read_response()
-
-        # logging.debug("VERIFICATION after function complete, Reading Register 0x8F -+-+-+-+-+-+-+-+-+-+- ____________________________________________________________________________________________________________________")
-        # logging.debug("VSR2 after: %s" % (vsr2_after))
-        # logging.debug("VSR1 after: %s" % (vsr1_after))
 
     def print_vcal_registers(self, vsr_addr):
         """
@@ -2037,23 +2031,6 @@ class HexitecFem():
             logging.error("Error converting ADC temperature: %s" % e)
             return -1
 
-    def _set_aspect_config(self, filename):
-        """
-        Checks whether file exists, load parameters from file
-        """
-        try:
-            with open(filename, 'r') as f:
-                pass
-            self.aspect_config = filename
-            logging.debug("aspect_config: '%s' Filename: '%s'" % (self.aspect_config, filename))
-        except IOError as e:
-            logging.error("Cannot open provided aspect file: %s" % e)
-            raise ParameterTreeError("Error: %s" % e)
-        #TODO: Remove display of file contents when no longer needed
-        import pprint
-        self.read_ini_file(self.aspect_config, self.aspect_parameters)
-        pprint.pprint(self.aspect_parameters)
-
     def _set_hexitec_config(self, filename):
         """
         Checks whether file exists, load parameters from file
@@ -2067,9 +2044,7 @@ class HexitecFem():
             logging.error("Cannot open provided hexitec file: %s" % e)
             raise ParameterTreeError("Error: %s" % e)
         #TODO: Remove display of file contents when no longer needed
-        import pprint
         self.read_ini_file(self.hexitec_config, self.hexitec_parameters, debug=True)
-        pprint.pprint(self.hexitec_parameters)
 
         ### DEBUGGING: Testing reading hexitecVSR.ini config file ###
         bias_refresh_interval = self._extract_integer(self.hexitec_parameters, \
@@ -2095,7 +2070,7 @@ class HexitecFem():
         print("                 bias refresh interval: %s (%s)" % (self.bias_refresh_interval, type(self.bias_refresh_interval)))
         print("                 bias voltage settle time: %s (%s)" % (self.bias_voltage_settle_time, type(self.bias_voltage_settle_time)))
         print("                 time refresh voltage held: %s (%s)" % (self.time_refresh_voltage_held, type(self.time_refresh_voltage_held)))
-        print("                 bias voltage refresh: %s (%s)\n\n\n\n\n" % (self.bias_voltage_refresh, type(self.bias_voltage_refresh)))
+        print("                 bias voltage refresh: %s (%s)\n\n" % (self.bias_voltage_refresh, type(self.bias_voltage_refresh)))
 
     def convert_aspect_exponent_to_dac_value(self, exponent):
         ''' 
@@ -2227,7 +2202,7 @@ class HexitecFem():
             setting = -1
         return setting
 
-    def _extract_80_bits(self, parameter_dict, key, vsr, asic, channel_or_block):
+    def _extract_80_bits(self, parameter_dict, param, vsr, asic, channel_or_block):
         """
         Extracts 80 bits from four (20 bit) channels, assembling one ASIC's row/column.
         """
@@ -2241,15 +2216,37 @@ class HexitecFem():
         bDebug = False
         # if key == "ColumnCal":
         #     bDebug = True
+
+        #TODO: Bit clunky returning so many -1 tuples. Find better solution to signal no ini file loaded?
+        aspect_list = [(-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1)]
+
+        key = 'Sensor-Config_V%s_S%s/%s1st%s' % (vsr, asic, param, channel_or_block)
         try:
-            first_channel = parameter_dict['Sensor-Config_V%s_S%s/%s1st%s' % (vsr, asic, key, channel_or_block)]
-            second_channel = parameter_dict['Sensor-Config_V%s_S%s/%s2nd%s' % (vsr, asic, key, channel_or_block)]
-            third_channel = parameter_dict['Sensor-Config_V%s_S%s/%s3rd%s' % (vsr, asic, key, channel_or_block)]
-            fourth_channel = parameter_dict['Sensor-Config_V%s_S%s/%s4th%s' % (vsr, asic, key, channel_or_block)]
+            first_channel = self.extract_channel_data(parameter_dict, key)
         except KeyError:
-            logging.debug("WARNING: Couldn't find aspect parameters - has .ini file been loaded?")
-            #TODO: Bit clunky returning so many -1 tuples. Find better solution to signal no ini file loaded?
-            return [(-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1)]
+            logging.debug("WARNING: Missing key %s - was .ini file loaded?" % key)
+            return aspect_list
+
+        key = 'Sensor-Config_V%s_S%s/%s2nd%s' % (vsr, asic, param, channel_or_block)
+        try:
+            second_channel = self.extract_channel_data(parameter_dict, key)
+        except KeyError:
+            logging.debug("WARNING: Missing key %s - was .ini file loaded?" % key)
+            return aspect_list
+
+        key = 'Sensor-Config_V%s_S%s/%s3rd%s' % (vsr, asic, param, channel_or_block)
+        try:
+            third_channel = self.extract_channel_data(parameter_dict, key)
+        except KeyError:
+            logging.debug("WARNING: Missing key %s - was .ini file loaded?" % key)
+            return aspect_list
+
+        key = 'Sensor-Config_V%s_S%s/%s4th%s' % (vsr, asic, param, channel_or_block)
+        try:
+            fourth_channel = self.extract_channel_data(parameter_dict, key)
+        except KeyError:
+            logging.debug("WARNING: Missing key %s - was .ini file loaded?" % key)
+            return aspect_list
 
         entirety = first_channel + second_channel + third_channel + fourth_channel
         if bDebug:
@@ -2269,7 +2266,6 @@ class HexitecFem():
         for index in range(0, len(entirety), 8):
             byte_list.append(entirety[index:index+8])
 
-        aspect_list = []
         for binary in byte_list:
             decimal = int(binary, 2)
             aspect = self.convert_to_aspect_format(decimal)
@@ -2281,6 +2277,14 @@ class HexitecFem():
         # [(70, 70), (70, 70), (70, 70), (70, 70), (70, 70), (70, 70), (70, 70), (69, 55), (57, 53), (51, 49)]
         
         return aspect_list
+
+    def extract_channel_data(self, parameter_dict, key):
+        channel = parameter_dict[key]
+        if len(channel) != 20:
+            logging.error("Invalid length (%s != 20) detected in key: %s" % \
+                (len(channel), key))
+            raise HexitecFemError("Invalid length of value in '%s'" % key)
+        return channel
 
     def convert_to_aspect_format(self, value):
         '''  Converts integer to Aspect's hexadecimal notation
@@ -2300,6 +2304,8 @@ class HexitecFem():
         Read filename, parsing case sensitive keys decoded as strings
         '''
         parser = configparser.ConfigParser()
+        if debug:
+            print("---------------------------------------------------------------------")
         # Maintain case-sensitivity:
         parser.optionxform=str
         parser.read(filename)
@@ -2310,11 +2316,10 @@ class HexitecFem():
                 parameter_dict[sect+"/"+k] = v.encode("utf-8").strip("\"")
                 if debug:
                     print("   " + sect+"/"+k + " => " + v.encode("utf-8").strip("\""))
-                # Support per ASIC Sensor-Config settings
-
+        if debug:
+            print("---------------------------------------------------------------------")
 
 class HexitecFemError(Exception):
     """Simple exception class for HexitecFem to wrap lower-level exceptions."""
 
     pass
-

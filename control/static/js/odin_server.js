@@ -10,6 +10,8 @@ var next_frame_enable = false;
 var calibration_enable = false;
 var hdf_write_enable = false;
 
+var duration_enable = false;
+
 var polling_thread_running = false;
 var system_health = true;
 var fem_error_id = -1;
@@ -76,6 +78,13 @@ $( document ).ready(function()
     })
 
     /// Style checkboxes into ON/OFF sliders
+
+    $("[name='duration_enable']").bootstrapSwitch();
+    $("[name='duration_enable']").bootstrapSwitch('state', duration_enable, true);
+    $('input[name="duration_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
+        changeDurationEnable();
+    });
+
 
     $("[name='raw_data_enable']").bootstrapSwitch();
     $("[name='raw_data_enable']").bootstrapSwitch('state', raw_data_enable, true);
@@ -198,7 +207,6 @@ function toggle_ui_elements(bBool)
     document.getElementById("fr-config-text").disabled = bBool;
     document.getElementById("hdf-file-path-text").disabled = bBool;
     document.getElementById("hdf-file-name-text").disabled = bBool;
-    document.getElementById("aspect-config-text").disabled = bBool;
     document.getElementById("hexitec-config-text").disabled = bBool;
 }
 
@@ -251,7 +259,6 @@ function poll_fem()
             document.getElementById("fr-config-text").disabled = false;
             document.getElementById("hdf-file-path-text").disabled = false;
             document.getElementById("hdf-file-name-text").disabled = false;
-            document.getElementById("aspect-config-text").disabled = false;
             document.getElementById("hexitec-config-text").disabled = false;        
         }
 
@@ -328,7 +335,7 @@ function poll_fem()
 
         if (polling_thread_running == true)
         {
-            window.setTimeout(poll_fem, 950);
+            window.setTimeout(poll_fem, 850);
         }
         else
         {
@@ -479,7 +486,6 @@ function apply_ui_values()
     hdf_file_path_changed();
     hdf_file_name_changed();
 
-    aspect_config_changed();
     hexitec_config_changed();
 
     // Push HexitecDAQ's ParameterTree settings to FP's plugins,
@@ -663,6 +669,32 @@ function bin_width_changed()
         }
     });
 }
+
+var changeDurationEnable = function ()
+{
+    // Change whether duration/frame selected
+    duration_enable = $("[name='duration_enable']").bootstrapSwitch('state');
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/acquisition/duration_enable',
+        contentType: "application/json",
+        data: JSON.stringify(duration_enable),
+        error: function(request, msg, error) {
+            console.log("Duration enable couldn't be changed");
+        }
+    });
+
+    if (duration_enable)
+    {
+        $('#duration-text').prop('disabled', false);
+        $('#frames-text').prop('disabled', true);
+    }
+    else
+    {
+        $('#duration-text').prop('disabled', true);
+        $('#frames-text').prop('disabled', false);
+    }
+};
 
 var changeRawDataEnable = function ()
 {
@@ -884,24 +916,6 @@ function hdf_file_name_changed()
     });
 };
 
-function aspect_config_changed()
-{
-    var aspect_config = $('#aspect-config-text').prop('value');
-    var payload = {"aspect_config": aspect_config};
-    $.ajax({
-        type: "PUT",
-        url: hexitec_url + 'detector/fems/fem_0/',
-        contentType: "application/json",
-        data: JSON.stringify(payload),
-        success: function(result) {
-            $('#aspect-config-warning').html("");
-        },
-        error: function(request, msg, error) {
-            $('#aspect-config-warning').html(error + ": " + format_error(request.responseText));
-        }
-    });
-};
-
 function hexitec_config_changed()
 {
     var hexitec_config = $('#hexitec-config-text').prop('value');
@@ -922,7 +936,6 @@ function hexitec_config_changed()
 
 function frames_changed()
 {
-    console.log("frames_changed() CHANGED!");
     // var ui_frames = $('#frames-text').val();
     ui_frames = $('#frames-text').prop('value');
     $.ajax({

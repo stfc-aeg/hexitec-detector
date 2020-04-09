@@ -336,7 +336,7 @@ class HexitecDAQ():
             str_type = h5py.special_dtype(vlen=str)
 
             # Write contents of config files
-            for param_file in ('detector/fems/fem_0/aspect_config',
+            for param_file in ('detector/fems/fem_0/hexitec_config',
                                 'detector/daq/config/calibration/gradients_filename',
                                 'detector/daq/config/calibration/intercepts_filename'):
                 # Only attempt to open file if it exists
@@ -432,18 +432,11 @@ class HexitecDAQ():
 
     def set_number_frames(self, number_frames):
         self.number_frames = number_frames
-        # print("\n\n")
-        # logging.debug("hexitecDAQ set_number_frames(%s)" % self.number_frames)
-        # print("\n\n")
 
     def set_file_name(self, name):
         self.file_name = name
 
     def set_file_writing(self, writing):
-        # print("\n\n")
-        # logging.debug("hexitecDAQ set_number_frames(%s) number_frames: %s" % (writing, self.number_frames))
-        # print("\n\n")
-        
         command = "config/hdf/frames"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         request.body = "{}".format(self.number_frames)
