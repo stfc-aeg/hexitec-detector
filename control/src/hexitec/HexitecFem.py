@@ -349,18 +349,15 @@ class HexitecFem():
         self.dark_correction = correction
 
     def set_duration_enable(self, duration_enabled):
-        # print("\n   HxtFEM set_duration_enable; duration_enabled: %s \n" % duration_enabled)
         self.duration_enabled = duration_enabled
 
     def get_number_frames(self):
         return self.number_frames
     
     def set_number_frames(self, frames):
-        # Calculate duration if number of frames changed
         if self.number_frames != frames:
             self.number_frames = frames
             self.duration = self.number_frames / self.frame_rate
-        # print("\n    HxtFEM fem.set_number_frames(%s), so duration: %s\n" % (frames, self.duration))
 
     def get_duration(self):
         return self.duration
@@ -369,7 +366,6 @@ class HexitecFem():
         self.duration = duration
         frames = self.duration * self.frame_rate
         self.number_frames = int(round(frames))
-        # print("\n    HxtFEM fem.set_duration(%s), so number_frames: %s\n  !!" % (self.duration, self.number_frames))
 
     def _set_test_mode_image(self, image):
         self.test_mode_image = image
@@ -1186,11 +1182,6 @@ class HexitecFem():
                         value_019[0], value_019[1], 0x0D])
         self.read_response()
 
-        print("\n\n")
-        print("   value_018: ", self.make_list_hexadecimal(value_018))
-        print("   value_019: ", self.make_list_hexadecimal(value_019))
-        print("\n\n")
-
         # Recalculate frame_rate, et cetera if new clock values read from hexitecVSR
         self.calculate_frame_rate()
 
@@ -1685,11 +1676,6 @@ class HexitecFem():
             vcal_low = vcal_value & 0xFF
             vcal[0], vcal[1] = self.convert_to_aspect_format(vcal_high)
             vcal[2], vcal[3] = self.convert_to_aspect_format(vcal_low)
-        
-        print("\n\n")
-        print("   vcal: ", self.make_list_hexadecimal(vcal))
-        print("   umid: ", self.make_list_hexadecimal(umid))
-        print("\n\n")
         
         self.send_cmd([0x23, self.vsr_addr, 0x54, 
                         vcal[0], vcal[1], vcal[2], vcal[3],     # Vcal, e.g. 0x0111 =: 0.2V
@@ -2230,7 +2216,7 @@ class HexitecFem():
         # Examples Row variable:   'Sensor-Config_V1_S1/RowPwr4thBlock'
 
         bDebug = False
-        # if key == "ColumnCal":
+        # if param == "ColumnCal":
         #     bDebug = True
 
         #TODO: Bit clunky returning so many -1 tuples. Find better solution to signal no ini file loaded?
@@ -2282,6 +2268,7 @@ class HexitecFem():
         for index in range(0, len(entirety), 8):
             byte_list.append(entirety[index:index+8])
 
+        aspect_list = []
         for binary in byte_list:
             decimal = int(binary, 2)
             aspect = self.convert_to_aspect_format(decimal)
