@@ -77,6 +77,19 @@ class HexitecFem():
 
     DAC_SCALE_FACTOR = 0.732
 
+    # 
+    SEND_REG_VALUE = 0x40
+    READ_REG_VALUE = 0x41
+    SET_REG_BIT = 0x42
+    CLEAR_REG_BIT = 0x43
+    SEND_REG_BURST = 0x44
+    SEND_REG_STREAM = 0x46  # Currently unused
+    READ_PWR_VOLT = 0x50
+    WRITE_REG_VAL = 0x53
+    WRITE_DAC_VAL = 0x54
+    CTRL_ADC_DAC = 0x55    
+    
+
     # define a timestamp format you like
     DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
 
@@ -588,7 +601,8 @@ class HexitecFem():
         FIFO_EMPTY_FLAG = 1
         empty_count = 0
         daty = RETURN_START_CHR
-        #Example: daty will contain: 0x23, self.vsr_addr, 0x40, 0x30, 0x41, 0x30, 0x30, 0x0D
+        #Example: daty will contain: 
+        # 0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x30, 0x41, 0x30, 0x30, 0x0D
 
         # JE mods
         daty1, daty2, daty3, daty4 = RETURN_START_CHR, RETURN_START_CHR, RETURN_START_CHR, RETURN_START_CHR
@@ -699,12 +713,12 @@ class HexitecFem():
 
         if self.sensors_layout == HexitecFem.READOUTMODE[0]:
             logging.debug("Disable synchronisation SM start")
-            self.send_cmd([0x23, self.vsr_addr, 0x40, 0x30, 0x41, 0x30, 0x30, 0x0D])
+            self.send_cmd([0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x30, 0x41, 0x30, 0x30, 0x0D])
             self.read_response()
             logging.debug("Reading out single sensor")
         elif self.sensors_layout == HexitecFem.READOUTMODE[1]:
             logging.debug("Enable synchronisation SM start via trigger 1")
-            self.send_cmd([0x23, self.vsr_addr, 0x42, 0x30, 0x41, 0x30, 0x31, 0x0D])
+            self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x41, 0x30, 0x31, 0x0D])
             self.read_response()
             logging.debug("Reading out 2x2 sensors")
 
@@ -719,31 +733,33 @@ class HexitecFem():
         logging.debug("Enable Test Pattern in my VSR design")
         # Use Sync clock from DAQ board
         logging.debug("Use Sync clock from DAQ board")
-        self.send_cmd([0x23, self.vsr_addr, 0x42, 0x30, 0x31, 0x31, 0x30, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x31, 0x30, 0x0D])
         self.read_response()
 
         logging.debug("Enable LVDS outputs")
-        set_register_vsr1_command  = [0x23, HexitecFem.VSR_ADDRESS[0], 0x42, 0x30, 0x31, 0x32, 0x30, 0x0D]
-        set_register_vsr2_command  = [0x23, HexitecFem.VSR_ADDRESS[1], 0x42, 0x30, 0x31, 0x32, 0x30, 0x0D]
+        set_register_vsr1_command  = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x32, 0x30, 0x0D]
+        set_register_vsr2_command  = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x32, 0x30, 0x0D]
         self.send_cmd(set_register_vsr1_command)
         self.read_response()
         self.send_cmd(set_register_vsr2_command)
         self.read_response()
         logging.debug("LVDS outputs enabled")
-        logging.debug("Read LO IDLE")
 
-        self.send_cmd([0x23, self.vsr_addr, 0x40, 0x46, 0x45, 0x41, 0x41, 0x0D])
+        #TODO: Did James mean "0x45" rather than "0x4E"..? 
+        #       The register is called "Serial Training Pattern" in documentation
+        logging.debug("Read LO IDLE")
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x46, 0x45, 0x41, 0x41, 0x0D])
         self.read_response()
         logging.debug("Read HI IDLE")
-        self.send_cmd([0x23, self.vsr_addr, 0x40, 0x46, 0x46, 0x4E, 0x41, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x46, 0x46, 0x4E, 0x41, 0x0D])
         self.read_response()
 
         # This sets up test pattern on LVDS outputs
         logging.debug("Set up LVDS test pattern")
-        self.send_cmd([0x23, self.vsr_addr, 0x43, 0x30, 0x31, 0x43, 0x30, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLEAR_REG_BIT, 0x30, 0x31, 0x43, 0x30, 0x0D])
         self.read_response()
         # Use default test pattern of 1000000000000000
-        self.send_cmd([0x23, self.vsr_addr, 0x42, 0x30, 0x31, 0x38, 0x30, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x38, 0x30, 0x0D])
         self.read_response()
         
         full_empty = self.x10g_rdma.read(0x60000011,  'Check EMPTY Signals')
@@ -766,22 +782,25 @@ class HexitecFem():
             logging.debug("Reading out 2x2 sensors")
 
         # Set VCAL
-        self.send_cmd([0x23, self.vsr_addr, 0x42, 0x31, 0x38, 0x30, 0x31, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x31, 0x38, 0x30, 0x31, 0x0D])
         self.read_response()
         logging.debug("Clear bit 5")
-        self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x32, 0x30, 0x0D])
+        # Clear bit; Register 0x24, bit5: disable VCAL
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
         self.read_response()
     
-        # Set bit 4 of Reg24
-        self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x31, 0x30, 0x0D])
+        # Set bit 4 of Reg24: send average picture
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
         self.read_response()
         
         logging.debug("Set bit 6")
-        self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x34, 0x30, 0x0D])
+        # Clear bit; Register 0x24, bit6: test mode
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x34, 0x30, 0x0D])
         self.read_response()
-        self.send_cmd([0x23, self.vsr_addr, 0x41, 0x30, 0x31, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x30, 0x31, 0x0D])
         self.read_response()
-        self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x32, 0x32, 0x0D])
+        # Set bit; Register 0x24, bit5, bit1: capture average picture
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x32, 0x32, 0x0D])
         self.read_response()
 
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
@@ -816,31 +835,34 @@ class HexitecFem():
             logging.debug(synced)
         
         # Clear training enable
-        self.send_cmd([0x23, self.vsr_addr, 0x43, 0x30, 0x31, 0x43, 0x30, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLEAR_REG_BIT, 0x30, 0x31, 0x43, 0x30, 0x0D])
         self.read_response()
 
         logging.debug("Clear bit 5 - VCAL ENABLED")
-        self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x32, 0x30, 0x0D])
+        # Clear bit; Register 0x24, bit5: disable VCAL
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D]) 
         self.read_response()
 
         if self.dark_correction == HexitecFem.DARKCORRECTION[0]:
             logging.debug("DARK CORRECTION OFF")
-            self.send_cmd([0x23, self.vsr_addr, 0x43, 0x32, 0x34, 0x30, 0x38, 0x0D])
+            # Clear bit; Register 0x24, bit3: enable DC spectroscopic mode
+            self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x30, 0x38, 0x0D])
             self.read_response()
         elif self.dark_correction == HexitecFem.DARKCORRECTION[1]:
             logging.debug("DARK CORRECTION ON")
-            self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x30, 0x38, 0x0D])
+            # Set bit; Register 0x24, bit3: enable DC spectroscopic mode
+            self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x30, 0x38, 0x0D])
             self.read_response()
         
         # Read Reg24
-        self.send_cmd([0x23, self.vsr_addr, 0x41, 0x32, 0x34, 0x0D])
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x32, 0x34, 0x0D])
         if self.debug: 
             logging.debug("Reading Register 0x24")
             logging.debug(self.read_response())
         else:
             self.read_response()
 
-        self.send_cmd([0x23, self.vsr_addr, 0x41, 0x38, 0x39,  0x0D])
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x38, 0x39,  0x0D])
         self.read_response()
 
         if self.debug: logging.debug("Poll register 0x89")
@@ -848,7 +870,7 @@ class HexitecFem():
         bPolling = True
         time_taken = 0
         while bPolling:
-            self.send_cmd([0x23, self.vsr_addr, 0x41, 0x38, 0x39,  0x0D])
+            self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x38, 0x39,  0x0D])
             reply = self.read_response()
             reply = reply.strip()
             Bit1 = int(reply[-1], 16)
@@ -866,7 +888,7 @@ class HexitecFem():
         if self.debug: logging.debug("Bit 1 should be 1")
         if self.debug: logging.debug(reply)
         if self.debug: logging.debug("Read reg 1")
-        self.send_cmd([0x23, self.vsr_addr, 0x41, 0x30, 0x31,  0x0D])
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x30, 0x31,  0x0D])
         self.read_response()
 
         full_empty = self.x10g_rdma.read(0x60000011,  'Check FULL EMPTY Signals')
@@ -1093,7 +1115,7 @@ class HexitecFem():
         # if unnamed > -1:
         #     value_007 = self.convert_to_aspect_format(unnamed)
         # Send unnamed (Enable PPL, ADC PPL) to Register 0x07 (Accepts 2 bits)
-        self.send_cmd([0x23, self.vsr_addr, 0x42, register_007[0], register_007[1],
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_007[0], register_007[1],
                         value_007[0], value_007[1], 0x0D])
         self.read_response()
 
@@ -1105,11 +1127,11 @@ class HexitecFem():
             value_002 = self.convert_to_aspect_format(self.row_s1_low)
             value_003 = self.convert_to_aspect_format(self.row_s1_high)
         # Send RowS1 low byte to Register 0x02 (Accepts 8 bits)
-        self.send_cmd([0x23, self.vsr_addr, 0x42, register_002[0], register_002[1],
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_002[0], register_002[1],
                         value_002[0], value_002[1], 0x0D])
         self.read_response()
         # Send RowS1 high byte to Register 0x03 (Accepts 6 bits)
-        self.send_cmd([0x23, self.vsr_addr, 0x42, register_003[0], register_003[1],
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_003[0], register_003[1],
                         value_003[0], value_003[1], 0x0D])
         self.read_response()
 
@@ -1117,7 +1139,7 @@ class HexitecFem():
         if self.s1_sph > -1:
             value_004 = self.convert_to_aspect_format(self.s1_sph)
         # Send S1SPH to Register 0x04 (Accepts 6 bits)
-        self.send_cmd([0x23, self.vsr_addr, 0x42, register_004[0], register_004[1],
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_004[0], register_004[1],
                         value_004[0], value_004[1], 0x0D])
         self.read_response()
 
@@ -1125,7 +1147,7 @@ class HexitecFem():
         if self.sph_s2 > -1:
             value_004 = self.convert_to_aspect_format(self.sph_s2)
         # Send SphS2  to Register 0x05 (Accepts 6 Bits)
-        self.send_cmd([0x23, self.vsr_addr, 0x42, register_005[0], register_005[1],
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_005[0], register_005[1],
                         value_005[0], value_005[1], 0x0D])
         self.read_response()
 
@@ -1134,7 +1156,7 @@ class HexitecFem():
         if gain > -1:
             value_006 = self.convert_to_aspect_format(gain)
         # Send Gain to Register 0x06 (Accepts 1 Bit)
-        self.send_cmd([0x23, self.vsr_addr, 0x42, register_006[0], register_006[1],
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_006[0], register_006[1],
                         value_006[0], value_006[1], 0x0D])
         self.read_response()
 
@@ -1142,7 +1164,7 @@ class HexitecFem():
         if adc1_delay > -1:
             value_009 = self.convert_to_aspect_format(adc1_delay)
         # Send ADC1 Delay to Register 0x09 (Accepts 2 Bits)
-        self.send_cmd([0x23, self.vsr_addr, 0x42, register_009[0], register_009[1],
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_009[0], register_009[1],
                         value_009[0], value_009[1], 0x0D])
         self.read_response()
 
@@ -1150,7 +1172,7 @@ class HexitecFem():
         if delay_sync_signals > -1:
             value_00E = self.convert_to_aspect_format(delay_sync_signals)
         # Send delay sync signals to Register 0x0E (Accepts 8 Bits)
-        self.send_cmd([0x23, self.vsr_addr, 0x42, register_00E[0], register_00E[1],
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_00E[0], register_00E[1],
                         value_00E[0], value_00E[1], 0x0D])
         self.read_response()
 
@@ -1159,11 +1181,11 @@ class HexitecFem():
         # if wait_clock_row > -1:
         #     value_01B = self.convert_to_aspect_format(wait_clock_row)
         # Send wait clock wait to Register 01B (Accepts 8 Bits)
-        self.send_cmd([0x23, self.vsr_addr, 0x42, register_01B[0], register_01B[1],
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_01B[0], register_01B[1],
                         value_01B[0], value_01B[1], 0x0D])
         self.read_response()
 
-        self.send_cmd([0x23, self.vsr_addr, 0x42, register_014[0], register_014[1],
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_014[0], register_014[1],
                         value_014[0], value_014[1], 0x0D])
         self.read_response()
 
@@ -1174,18 +1196,18 @@ class HexitecFem():
             value_018 = self.convert_to_aspect_format(vcal2_vcal1_low)
             value_019 = self.convert_to_aspect_format(vcal2_vcal1_high)
         # Send VCAL2 -> VCAL1 low byte to Register 0x02 (Accepts 8 bits)
-        self.send_cmd([0x23, self.vsr_addr, 0x42, register_018[0], register_018[1],
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_018[0], register_018[1],
                         value_018[0], value_018[1], 0x0D])
         self.read_response()
         # Send VCAL2 -> VCAL1 high byte to Register 0x03 (Accepts 7 bits)
-        self.send_cmd([0x23, self.vsr_addr, 0x42, register_019[0], register_019[1],
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_019[0], register_019[1],
                         value_019[0], value_019[1], 0x0D])
         self.read_response()
 
-        # Recalculate frame_rate, et cetera if new clock values read from hexitecVSR
+        # Recalculate frame_rate, et cetera if new clock values provided by .ini
         self.calculate_frame_rate()
 
-        # print("\n   HxtFEM self.row_s1 %s self.s1_sph %s self.sph_s2 %s\n" % (self.row_s1, self.s1_sph, self.sph_s2))
+        #print("\n   HxtFEM self.row_s1 %s self.s1_sph %s self.sph_s2 %s\n" % (self.row_s1, self.s1_sph, self.sph_s2))
 
         logging.debug("Finished Setting up state machine")
 
@@ -1206,24 +1228,27 @@ class HexitecFem():
             self.operation_percentage_complete = 0
             self.operation_percentage_steps = 15
 
-            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x41, 0x32, 0x34, 0x0D])
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34, 0x0D])
             vsr1 = self.read_response()
-            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x41, 0x32, 0x34, 0x0D])
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34, 0x0D])
             vsr2 = self.read_response()
             logging.debug("Reading back register 24; VSR1: '%s' VSR2: '%s'" % \
                                 (vsr1.replace('\r', ''), vsr2.replace('\r','')))
 
-            self.send_cmd([0x23, self.vsr_addr, 0x42, 0x32, 0x34, 0x31, 0x30, 0x0D])
+            # Set bit; Register 0x24, bit3: enable DC spectroscopic mode
+            self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
             self.read_response()
 
-            enable_dc_vsr1  = [0x23, HexitecFem.VSR_ADDRESS[0], 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]
-            enable_dc_vsr2  = [0x23, HexitecFem.VSR_ADDRESS[1], 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]
-            disable_dc_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]
-            disable_dc_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]
-            enable_sm_vsr1  = [0x23, HexitecFem.VSR_ADDRESS[0], 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
-            enable_sm_vsr2  = [0x23, HexitecFem.VSR_ADDRESS[1], 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
-            disable_sm_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], 0x43, 0x30, 0x31, 0x30, 0x30, 0x0D]
-            disable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], 0x43, 0x30, 0x31, 0x30, 0x30, 0x0D]
+            # Send reg value; Register 0x24, bits1,5: capture average picture, disable VCAL:
+            enable_dc_vsr1  = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]
+            enable_dc_vsr2  = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]
+            # Send reg value; Register 0x24, bits3,5: enable spectroscopic mode, disable VCAL:
+            disable_dc_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]
+            disable_dc_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]
+            enable_sm_vsr1  = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
+            enable_sm_vsr2  = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
+            disable_sm_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.CLEAR_REG_BIT, 0x30, 0x31, 0x30, 0x30, 0x0D]
+            disable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.CLEAR_REG_BIT, 0x30, 0x31, 0x30, 0x30, 0x0D]
 
             # 1. System is fully initialised (Done already)
 
@@ -1275,6 +1300,12 @@ class HexitecFem():
             self.send_cmd(enable_sm_vsr2)
             self.read_response()
 
+            logging.debug("Ensure VCAL remains on")
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
+            self.read_response()
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
+            self.read_response()
+
             self.operation_percentage_complete = 100
             self._set_status_message("Offsets collections operation completed.")
             self.hardware_busy = False
@@ -1295,8 +1326,8 @@ class HexitecFem():
                        0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
         list_of_30s = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                        0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        enable_sm     = [0x23, self.vsr_addr, 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
-        disable_sm    = [0x23, self.vsr_addr, 0x43, 0x30, 0x31, 0x30, 0x31, 0x0D]
+        enable_sm   = [0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
+        disable_sm  = [0x23, self.vsr_addr, HexitecFem.CLEAR_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
 
         vsr = -1
         if self.vsr_addr == HexitecFem.VSR_ADDRESS[0]:  # 0x90
@@ -1315,7 +1346,7 @@ class HexitecFem():
         asic1_read_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnEn_", vsr, 1, "Channel")
         # Check list of (-1, -1) tuples wasn't returned
         if asic1_read_enable[0][0] > 0:
-            asic1_command = [0x23, self.vsr_addr,  0x44, register_061[0], register_061[1]]
+            asic1_command = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_061[0], register_061[1]]
             for msb, lsb in asic1_read_enable:
                 asic1_command.append(msb)
                 asic1_command.append(lsb)
@@ -1324,7 +1355,7 @@ class HexitecFem():
             col_read_enable1 = asic1_command
         else:
             # No ini file loaded, use defaul values
-            col_read_enable1 = [0x23, self.vsr_addr, 0x44, register_061[0], register_061[1], 
+            col_read_enable1 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_061[0], register_061[1], 
                                 value_061[0], value_061[1], value_061[2], value_061[3], value_061[4], 
                                 value_061[5], value_061[6], value_061[7], value_061[8], value_061[9], 
                                 value_061[10], value_061[1], value_061[2], value_061[3], value_061[14], 
@@ -1333,7 +1364,7 @@ class HexitecFem():
 
         asic2_read_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnEn_", vsr, 2, "Channel")
         if asic2_read_enable[0][0] > 0:
-            asic2_command = [0x23, self.vsr_addr,  0x44, register_0C2[0], register_0C2[1]]
+            asic2_command = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_0C2[0], register_0C2[1]]
             for msb, lsb in asic2_read_enable:
                 asic2_command.append(msb)
                 asic2_command.append(lsb)
@@ -1341,7 +1372,7 @@ class HexitecFem():
             col_read_enable2 = asic2_command
         else:
             # Column Read Enable, for ASIC2 (Reg 0xC2)
-            col_read_enable2 = [0x23, self.vsr_addr, 0x44, register_0C2[0], register_0C2[1],
+            col_read_enable2 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_0C2[0], register_0C2[1],
                                 value_0C2[0], value_0C2[1], value_0C2[2], value_0C2[3], value_0C2[4], 
                                 value_0C2[5], value_0C2[6], value_0C2[7], value_0C2[8], value_0C2[9],
                                 value_0C2[10], value_0C2[1], value_0C2[2], value_0C2[3], value_0C2[14],
@@ -1357,7 +1388,7 @@ class HexitecFem():
 
         asic1_power_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnPwr", vsr, 1, "Channel")
         if asic1_power_enable[0][0] > 0:
-            asic1_command = [0x23, self.vsr_addr,  0x44, register_04D[0], register_04D[1]]
+            asic1_command = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_04D[0], register_04D[1]]
             for msb, lsb in asic1_power_enable:
                 asic1_command.append(msb)
                 asic1_command.append(lsb)
@@ -1365,7 +1396,7 @@ class HexitecFem():
             col_power_enable1 = asic1_command
         else:
             # Column Power Enable, for ASIC1 (Reg 0x4D)
-            col_power_enable1 = [0x23, self.vsr_addr, 0x44, register_04D[0], register_04D[1],
+            col_power_enable1 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_04D[0], register_04D[1],
                                 value_04D[0], value_04D[1], value_04D[2], value_04D[3], value_04D[4],
                                 value_04D[5], value_04D[6], value_04D[7], value_04D[8], value_04D[9],
                                 value_04D[10], value_04D[1], value_04D[2], value_04D[3], value_04D[14],
@@ -1374,7 +1405,7 @@ class HexitecFem():
 
         asic2_power_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnPwr", vsr, 2, "Channel")
         if asic2_power_enable[0][0] > 0:
-            asic2_command = [0x23, self.vsr_addr,  0x44, register_0AE[0], register_0AE[1]]
+            asic2_command = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_0AE[0], register_0AE[1]]
             for msb, lsb in asic2_power_enable:
                 asic2_command.append(msb)
                 asic2_command.append(lsb)
@@ -1382,7 +1413,7 @@ class HexitecFem():
             col_power_enable2 = asic2_command
         else:
             # Column Power Enable, for ASIAE (Reg 0xAE)
-            col_power_enable2 = [0x23, self.vsr_addr, 0x44, register_0AE[0], register_0AE[1],
+            col_power_enable2 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_0AE[0], register_0AE[1],
                                 value_0AE[0], value_0AE[1], value_0AE[2], value_0AE[3], value_0AE[4],
                                 value_0AE[5], value_0AE[6], value_0AE[7], value_0AE[8], value_0AE[9],
                                 value_0AE[10], value_0AE[1], value_0AE[2], value_0AE[3], value_0AE[14],
@@ -1398,7 +1429,7 @@ class HexitecFem():
 
         asic1_cal_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnCal", vsr, 1, "Channel")
         if asic1_cal_enable[0][0] > 0:
-            asic1_command = [0x23, self.vsr_addr,  0x44, register_057[0], register_057[1]]
+            asic1_command = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_057[0], register_057[1]]
             for msb, lsb in asic1_cal_enable:
                 asic1_command.append(msb)
                 asic1_command.append(lsb)
@@ -1406,7 +1437,7 @@ class HexitecFem():
             col_cal_enable1 = asic1_command
         else:
             # Column Calibrate Enable, for ASIC1 (Reg 0x57)
-            col_cal_enable1 = [0x23, self.vsr_addr, 0x44, register_057[0], register_057[1], 
+            col_cal_enable1 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_057[0], register_057[1], 
                                 value_057[0], value_057[1], value_057[2], value_057[3], value_057[4],
                                 value_057[5], value_057[6], value_057[7], value_057[8], value_057[9],
                                 value_057[10], value_057[1], value_057[2], value_057[3], value_057[14],
@@ -1415,7 +1446,7 @@ class HexitecFem():
 
         asic2_cal_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnCal", vsr, 2, "Channel")
         if asic2_cal_enable[0][0] > 0:
-            asic2_command = [0x23, self.vsr_addr,  0x44, register_0B8[0], register_0B8[1]]
+            asic2_command = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_0B8[0], register_0B8[1]]
             for msb, lsb in asic2_cal_enable:
                 asic2_command.append(msb)
                 asic2_command.append(lsb)
@@ -1423,7 +1454,7 @@ class HexitecFem():
             col_cal_enable2 = asic2_command
         else:
             # Column Calibrate Enable, for ASIB8 (Reg 0xB8)
-            col_cal_enable2 = [0x23, self.vsr_addr, 0x44, register_0B8[0], register_0B8[1], 
+            col_cal_enable2 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_0B8[0], register_0B8[1], 
                                 value_0B8[0], value_0B8[1], value_0B8[2], value_0B8[3], value_0B8[4],
                                 value_0B8[5], value_0B8[6], value_0B8[7], value_0B8[8], value_0B8[9],
                                 value_0B8[10], value_0B8[1], value_0B8[2], value_0B8[3], value_0B8[14],
@@ -1439,7 +1470,7 @@ class HexitecFem():
 
         asic1_cal_enable = self._extract_80_bits(self.hexitec_parameters, "RowEn_", vsr, 1, "Block")
         if asic1_cal_enable[0][0] > 0:
-            asic1_command = [0x23, self.vsr_addr,  0x44, register_043[0], register_043[1]]
+            asic1_command = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_043[0], register_043[1]]
             for msb, lsb in asic1_cal_enable:
                 asic1_command.append(msb)
                 asic1_command.append(lsb)
@@ -1447,7 +1478,7 @@ class HexitecFem():
             row_read_enable1 = asic1_command
         else:
             # Row Read Enable, for ASIC1 (Reg 0x43)
-            row_read_enable1 = [0x23, self.vsr_addr, 0x44, register_043[0], register_043[1], 
+            row_read_enable1 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_043[0], register_043[1], 
                                 value_043[0], value_043[1], value_043[2], value_043[3], value_043[4],
                                 value_043[5], value_043[6], value_043[7], value_043[8], value_043[9],
                                 value_043[10], value_043[1], value_043[2], value_043[3], value_043[14],
@@ -1456,7 +1487,7 @@ class HexitecFem():
 
         asic2_cal_enable = self._extract_80_bits(self.hexitec_parameters, "RowEn_", vsr, 2, "Block")
         if asic2_cal_enable[0][0] > 0:
-            asic2_command = [0x23, self.vsr_addr,  0x44, register_0A4[0], register_0A4[1]]
+            asic2_command = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_0A4[0], register_0A4[1]]
             for msb, lsb in asic2_cal_enable:
                 asic2_command.append(msb)
                 asic2_command.append(lsb)
@@ -1464,7 +1495,7 @@ class HexitecFem():
             row_read_enable2 = asic2_command
         else:
             # Row Read Enable, for ASIC2 (Reg 0xA4)
-            row_read_enable2 = [0x23, self.vsr_addr, 0x44, register_0A4[0], register_0A4[1],
+            row_read_enable2 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_0A4[0], register_0A4[1],
                                 value_0A4[0], value_0A4[1], value_0A4[2], value_0A4[3], value_0A4[4],
                                 value_0A4[5], value_0A4[6], value_0A4[7], value_0A4[8], value_0A4[9],
                                 value_0A4[10], value_0A4[1], value_0A4[2], value_0A4[3], value_0A4[14],
@@ -1480,7 +1511,7 @@ class HexitecFem():
 
         asic1_pwr_enable = self._extract_80_bits(self.hexitec_parameters, "RowPwr", vsr, 1, "Block")
         if asic1_pwr_enable[0][0] > 0:
-            asic1_command = [0x23, self.vsr_addr,  0x44, register_02F[0], register_02F[1]]
+            asic1_command = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_02F[0], register_02F[1]]
             for msb, lsb in asic1_pwr_enable:
                 asic1_command.append(msb)
                 asic1_command.append(lsb)
@@ -1488,7 +1519,7 @@ class HexitecFem():
             row_power_enable1 = asic1_command
         else:
             # Row Power Enable, for ASIC1 (Reg 0x2F)
-            row_power_enable1 = [0x23, self.vsr_addr, 0x44, register_02F[0], register_02F[1], 
+            row_power_enable1 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_02F[0], register_02F[1], 
                                 value_02F[0], value_02F[1], value_02F[2], value_02F[3], value_02F[4],
                                 value_02F[5], value_02F[6], value_02F[7], value_02F[8], value_02F[9],
                                 value_02F[10], value_02F[1], value_02F[2], value_02F[3], value_02F[14],
@@ -1497,7 +1528,7 @@ class HexitecFem():
 
         asic2_pwr_enable = self._extract_80_bits(self.hexitec_parameters, "RowPwr", vsr, 2, "Block")
         if asic2_pwr_enable[0][0] > 0:
-            asic2_command = [0x23, self.vsr_addr,  0x44, register_090[0], register_090[1]]
+            asic2_command = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_090[0], register_090[1]]
             for msb, lsb in asic2_pwr_enable:
                 asic2_command.append(msb)
                 asic2_command.append(lsb)
@@ -1505,7 +1536,7 @@ class HexitecFem():
             row_power_enable2 = asic2_command
         else:
             # Row Power Enable, for ASI90 (Reg 0x90)
-            row_power_enable2 = [0x23, self.vsr_addr, 0x44, register_090[0], register_090[1],
+            row_power_enable2 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_090[0], register_090[1],
                                 value_090[0], value_090[1], value_090[2], value_090[3], value_090[4],
                                 value_090[5], value_090[6], value_090[7], value_090[8], value_090[9],
                                 value_090[10], value_090[1], value_090[2], value_090[3], value_090[14],
@@ -1521,7 +1552,7 @@ class HexitecFem():
 
         asic1_cal_enable = self._extract_80_bits(self.hexitec_parameters, "RowCal", vsr, 1, "Block")
         if asic1_cal_enable[0][0] > 0:
-            asic1_command = [0x23, self.vsr_addr,  0x44, register_039[0], register_039[1]]
+            asic1_command = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_039[0], register_039[1]]
             for msb, lsb in asic1_cal_enable:
                 asic1_command.append(msb)
                 asic1_command.append(lsb)
@@ -1529,7 +1560,7 @@ class HexitecFem():
             row_cal_enable1 = asic1_command
         else:
             # Row Calibrate Enable, for ASIC1 (Reg 0x39)
-            row_cal_enable1 = [0x23, self.vsr_addr, 0x44, register_039[0], register_039[1], 
+            row_cal_enable1 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_039[0], register_039[1], 
                             value_039[0], value_039[1], value_039[2], value_039[3], value_039[4],
                             value_039[5], value_039[6], value_039[7], value_039[8], value_039[9],
                             value_039[10], value_039[1], value_039[2], value_039[3], value_039[14],
@@ -1538,7 +1569,7 @@ class HexitecFem():
 
         asic2_cal_enable = self._extract_80_bits(self.hexitec_parameters, "RowCal", vsr, 2, "Block")
         if asic2_cal_enable[0][0] > 0:
-            asic2_command = [0x23, self.vsr_addr,  0x44, register_09A[0], register_09A[1]]
+            asic2_command = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_09A[0], register_09A[1]]
             for msb, lsb in asic2_cal_enable:
                 asic2_command.append(msb)
                 asic2_command.append(lsb)
@@ -1546,7 +1577,7 @@ class HexitecFem():
             row_cal_enable2 = asic2_command
         else:
             # Row Calibrate Enable, for ASIC2 (Reg 0x9A)
-            row_cal_enable2 = [0x23, self.vsr_addr, 0x44, register_09A[0], register_09A[1], 
+            row_cal_enable2 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, register_09A[0], register_09A[1], 
                             value_09A[0], value_09A[1], value_09A[2], value_09A[3], value_09A[4],
                             value_09A[5], value_09A[6], value_09A[7], value_09A[8], value_09A[9],
                             value_09A[10], value_09A[1], value_09A[2], value_09A[3], value_09A[14],
@@ -1554,21 +1585,21 @@ class HexitecFem():
                             0x0D]
 
 
-        col_cal_enable1a = [0x23, self.vsr_addr, 0x44, 0x35, 0x37, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
-        col_cal_enable1b = [0x23, self.vsr_addr, 0x44, 0x35, 0x37, 0x30, 0x30, 0x30, 0x30, 0x46, 0x30, 0x30, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
-        col_cal_enable1c = [0x23, self.vsr_addr, 0x44, 0x35, 0x37, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
+        col_cal_enable1a = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, 0x35, 0x37, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
+        col_cal_enable1b = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, 0x35, 0x37, 0x30, 0x30, 0x30, 0x30, 0x46, 0x30, 0x30, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
+        col_cal_enable1c = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, 0x35, 0x37, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
 
-        col_cal_enable2a = [0x23, self.vsr_addr, 0x44, 0x42, 0x38, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
-        col_cal_enable2b = [0x23, self.vsr_addr, 0x44, 0x42, 0x38, 0x30, 0x30, 0x30, 0x30, 0x46, 0x30, 0x30, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
-        col_cal_enable2c = [0x23, self.vsr_addr, 0x44, 0x42, 0x38, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
+        col_cal_enable2a = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, 0x42, 0x38, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
+        col_cal_enable2b = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, 0x42, 0x38, 0x30, 0x30, 0x30, 0x30, 0x46, 0x30, 0x30, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
+        col_cal_enable2c = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, 0x42, 0x38, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
 
-        row_cal_enable1a = [0x23, self.vsr_addr, 0x44, 0x33, 0x39, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
-        row_cal_enable1b = [0x23, self.vsr_addr, 0x44, 0x33, 0x39, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
-        row_cal_enable1c = [0x23, self.vsr_addr, 0x44, 0x33, 0x39, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
+        row_cal_enable1a = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, 0x33, 0x39, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
+        row_cal_enable1b = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, 0x33, 0x39, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
+        row_cal_enable1c = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, 0x33, 0x39, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
         
-        row_cal_enable2a = [0x23, self.vsr_addr, 0x44, 0x39, 0x41, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
-        row_cal_enable2b = [0x23, self.vsr_addr, 0x44, 0x39, 0x41, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
-        row_cal_enable2c = [0x23, self.vsr_addr, 0x44, 0x39, 0x41, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
+        row_cal_enable2a = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, 0x39, 0x41, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
+        row_cal_enable2b = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, 0x39, 0x41, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
+        row_cal_enable2c = [0x23, self.vsr_addr, HexitecFem.SEND_REG_BURST, 0x39, 0x41, 0x30, 0x30, 0x46, 0x46, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x0D]
 
         self.send_cmd(disable_sm)
         self.read_response()
@@ -1677,7 +1708,7 @@ class HexitecFem():
             vcal[0], vcal[1] = self.convert_to_aspect_format(vcal_high)
             vcal[2], vcal[3] = self.convert_to_aspect_format(vcal_low)
         
-        self.send_cmd([0x23, self.vsr_addr, 0x54, 
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.WRITE_DAC_VAL, 
                         vcal[0], vcal[1], vcal[2], vcal[3],     # Vcal, e.g. 0x0111 =: 0.2V
                         umid[0], umid[1], umid[2], umid[3],     # Umid, e.g. 0x0555 =: 1.0V
                         hv[0],   hv[1],   hv[2],   hv[3],       # reserve1, 0x0555 =: 1V (-> HV ca. -250V)
@@ -1687,7 +1718,7 @@ class HexitecFem():
         self.read_response()
         logging.debug("DAC values set")
         
-    def make_list_hexadecimal(self, value):        
+    def make_list_hexadecimal(self, value):
         value_hexadecimal = []
         for val in value:
             value_hexadecimal.append("0x%x" % val)
@@ -1698,12 +1729,14 @@ class HexitecFem():
         Enables the ADCs
         """
         logging.debug("Enabling ADC")
-        adc_disable   = [0x23, self.vsr_addr, 0x55, 0x30, 0x32, 0x0D]
-        enable_sm     = [0x23, self.vsr_addr, 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
-        adc_enable    = [0x23, self.vsr_addr, 0x55, 0x30, 0x33, 0x0D]
-        adc_set       = [0x23, self.vsr_addr, 0x53, 0x31, 0x36, 0x30, 0x39, 0x0D]
-        aqu1          = [0x23, self.vsr_addr, 0x40, 0x32, 0x34, 0x32, 0x32, 0x0D]
-        aqu2          = [0x23, self.vsr_addr, 0x40, 0x32, 0x34, 0x32, 0x38, 0x0D]   
+        adc_disable   = [0x23, self.vsr_addr, HexitecFem.CTRL_ADC_DAC, 0x30, 0x32, 0x0D]
+        enable_sm     = [0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
+        adc_enable    = [0x23, self.vsr_addr, HexitecFem.CTRL_ADC_DAC, 0x30, 0x33, 0x0D]
+        adc_set       = [0x23, self.vsr_addr, HexitecFem.WRITE_REG_VAL, 0x31, 0x36, 0x30, 0x39, 0x0D]
+        # Send reg value; Register 0x24, bits1,5: capture average picture, disable VCAL:
+        aqu1          = [0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]
+        # Send reg value; Register 0x24, bits3,5: enable spectroscopic mode, disable VCAL:
+        aqu2          = [0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]
 
         self.send_cmd(adc_disable)
         self.read_response()
@@ -1721,7 +1754,7 @@ class HexitecFem():
         self.read_response()
         
         # Disable ADC test testmode
-        self.send_cmd([0x23, self.vsr_addr, 0x53, 0x30, 0x44, 0x30, 0x30, 0x0d])
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.WRITE_REG_VAL, 0x30, 0x44, 0x30, 0x30, 0x0d])
         self.read_response() 
 
     def initialise_system(self):
@@ -1729,21 +1762,21 @@ class HexitecFem():
         Configures in full VSR2, VSR1 each in the sequence:
         Initialises, loads enables, sets up state machine, writes to DAC and enables ADCs
         """
-        enable_sm_vsr1  = [0x23, HexitecFem.VSR_ADDRESS[0], 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
-        enable_sm_vsr2  = [0x23, HexitecFem.VSR_ADDRESS[1], 0x42, 0x30, 0x31, 0x30, 0x31, 0x0D]
-        disable_sm_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], 0x43, 0x30, 0x31, 0x30, 0x30, 0x0D]
-        disable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], 0x43, 0x30, 0x31, 0x30, 0x30, 0x0D]
+        enable_sm_vsr1  = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
+        enable_sm_vsr2  = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
+        disable_sm_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.CLEAR_REG_BIT, 0x30, 0x31, 0x30, 0x30, 0x0D]
+        disable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.CLEAR_REG_BIT, 0x30, 0x31, 0x30, 0x30, 0x0D]
 
         # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
-        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x41, 0x38, 0x46, 0x0D])
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x38, 0x46, 0x0D])
         vsr2_before = self.read_response()
-        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0x42, 0x38, 0x46, 0x30, 0x31, 0x0D])
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT, 0x38, 0x46, 0x30, 0x31, 0x0D])
         self.read_response()
 
         # Repeat with other VSR board
-        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x41, 0x38, 0x46, 0x0D])
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x38, 0x46, 0x0D])
         vsr1_before = self.read_response()
-        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0x42, 0x38, 0x46, 0x30, 0x31, 0x0D])
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT, 0x38, 0x46, 0x30, 0x31, 0x0D])
         self.read_response()
 
         # Stop the state machine
@@ -1823,6 +1856,7 @@ class HexitecFem():
         # self.row_s1               # B12 from hexitecVSR file
         # self.s1_sph               # B13 from file
         # self.sph_s2               # B14 from file
+        
         RowReadClks     = ((Columns + WaitCol + self.row_s1 + self.s1_sph + self.sph_s2) \
                                                             * 2) + 10   # B16 = ((B7 + B9 + B12 + B13 + B14) * 2) + 10
         frameReadClks   = (Rows * RowReadClks) + 4 + (WaitRow * 2)      # B18 = B6 * B16 + 4 + (B10 * 2)
@@ -1831,14 +1865,12 @@ class HexitecFem():
         frame_rate      = 1 / frame_time                                # B21 = 1 / B20
         
         self.frame_rate = frame_rate
-
         if self.duration_enabled:
             # With duration enabled, recalculate number of frames in case clocks changed 
             self.set_duration(self.duration)
             self.parent.set_number_frames(self.number_frames)
-        # print(" \n  HxtFEM duration_enabled: %s frame_rate: %s \n" % (self.duration_enabled, frame_rate))
+        #print(" \n  HxtFEM duration_enabled: %s frame_rate: %s \n" % (self.duration_enabled, frame_rate))
 
-        ###
 
     def print_vcal_registers(self, vsr_addr):
         """
@@ -1904,7 +1936,7 @@ class HexitecFem():
         register_reply = []
         for idx in range(boundaries[0], boundaries[1]+1, 1):
             formatted_address = self.convert_to_aspect_format(idx)
-            command = [0x23, vsr_addr, 0x41, formatted_address[0], formatted_address[1], 0x0D]
+            command = [0x23, vsr_addr, HexitecFem.READ_REG_VALUE, formatted_address[0], formatted_address[1], 0x0D]
             self.send_cmd(command)
             # A typical reply: "\x90FF\r\r\r\r"
             # After strip() -> "\x90FF"
@@ -1917,7 +1949,7 @@ class HexitecFem():
         """
         Reads and converts power data into voltages
         """
-        self.send_cmd([0x23, self.vsr_addr, 0x50, 0x0D], False)
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_PWR_VOLT, 0x0D], False)
         sensors_values = self.read_response()
         sensors_values = sensors_values.strip()
 

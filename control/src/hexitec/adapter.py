@@ -379,21 +379,16 @@ class Hexitec():
         # print(time_enlapsed < self.fems[0].bias_refresh_interval)
         if (time_elapsed < self.fems[0].bias_refresh_interval):
             # Still within collection window - acquiring data is allowed
-            pass    #TODO: Need not change anything here?
-            # print("!\n Within bias ; lapsed: %s v interval: %s\n!" % (time_elapsed, self.fems[0].bias_refresh_interval))
+            pass
         else:
             if (time_elapsed < self.collect_and_bias_time):
                 # Blackout period - Await for electrons to replenish/voltage to stabilise
                 self.bias_blocking_acquisition = True
-                # print("!\n Blackout Period ; lapsed: %s v interval: %s\n!" % (time_elapsed, (self.fems[0].bias_refresh_interval +
-                #                 self.fems[0].bias_voltage_refresh + 
-                #                 self.fems[0].time_refresh_voltage_held)))
             else:
                 # Beyond blackout period - Back within bias
                 # Reset bias clock
                 self.bias_init_time = current_time
                 self.bias_blocking_acquisition = False
-                # print("!\n BEYOND THE BLACKOUT PERIODIC, RESETTING THE BIAS TO GO BACK TO BIAS (say what?)\n!")
 
         IOLoop.instance().call_later(0.1, self.poll_bias_clock)
 
@@ -442,7 +437,7 @@ class Hexitec():
         for fem in self.fems:
             fem.set_number_frames(self.number_frames)
 
-        self.daq.set_number_frames(self.number_frames)()
+        self.daq.set_number_frames(self.number_frames)
 
     def set_duration(self, duration):
         self.duration = duration
@@ -454,7 +449,7 @@ class Hexitec():
         
         self.number_frames = number_frames
         # print("\n\n ADAPTER's set_duration(%s) meaning number_frames: %s  !!!!! \n\n" % (duration, number_frames))
-        self.daq.set_number_frames(self.number_frames)()
+        self.daq.set_number_frames(self.number_frames)
     
     def _get_debug_count(self):
         return self.dbgCount
@@ -482,19 +477,36 @@ class Hexitec():
                 logging.warning("Cannot Start Acquistion: Already in progress")
                 return
 
-        # Did the acquisition coincide with bias dead time?
-        if self.bias_blocking_acquisition:
-            IOLoop.instance().call_later(0.1, self.acquisition)
-            return
+        total_delay = 0
+        number_frames_to_request = self.number_frames
 
-        # Work out how many frames can be acquired before next bias refresh #
-        time_into_window = time.time() - self.bias_init_time
-        time_available = self.fems[0].bias_refresh_interval - time_into_window
+        if self.fems[0].bias_voltage_refresh:
+            # Did the acquisition coincide with bias dead time?
+            if self.bias_blocking_acquisition:
+                IOLoop.instance().call_later(0.1, self.acquisition)
+                return
 
-        # If we (already) exceeded bias window, stop here without acquiring any frames
-        if time_available < 0:
-            IOLoop.instance().call_later(0.1, self.acquisition)
-            return
+            # Work out how many frames can be acquired before next bias refresh
+            time_into_window = time.time() - self.bias_init_time
+            time_available = self.fems[0].bias_refresh_interval - time_into_window
+
+            if time_available < 0:
+                IOLoop.instance().call_later(0.1, self.acquisition)
+                return
+
+            frames_before_bias = self.fems[0].frame_rate * time_available
+            number_frames_before_bias = int(round(frames_before_bias))
+
+            number_frames_to_request = self.number_frames - self.frames_already_acquired
+
+            # Can we obtain all required frames within current bias window?
+            if (number_frames_before_bias < number_frames_to_request):
+                # No - Need >1 bias window(s) fulfil acquisition
+                self.extended_acquisition = True
+                number_frames_to_request = number_frames_before_bias
+
+            total_delay = time_available + self.fems[0].bias_voltage_settle_time + \
+                self.fems[0].time_refresh_voltage_held
 
         # #TODO: Remove once Firmware made to reset on each new acquisition
         # #TODO: WILL BE NON 0 VALUE IN THE FUTURE - TO SUPPORT BIAS REFRESH INTV
@@ -510,36 +522,18 @@ class Hexitec():
         if self.initial_acquisition:
             self.daq.start_acquisition(self.number_frames)
             self.initial_acquisition = False
-
-        frames_before_bias = self.fems[0].frame_rate * time_available
-        number_frames_before_bias = int(round(frames_before_bias))
-
-        number_frames_to_request = self.number_frames - self.frames_already_acquired
-
-        # print("\n\n  ADP frames_before_bias: %s number_frames: %s frames_already_acquired: %s number_frames_to_request: %s time left: %s\n\n" \
-        #     % (number_frames_before_bias, self.number_frames, self.frames_already_acquired, number_frames_to_request, time_available))
-
-        # Can we obtain all required frames within current bias window?
-        if (number_frames_before_bias < number_frames_to_request):
-            # No - Need >1 bias window(s) fulfil acquisition
-            self.extended_acquisition = True
-            number_frames_to_request = number_frames_before_bias
+        
+        # FP may be slow to process frame_number reset, need this one second wait to be on a safe side.
+        time.sleep(1)
 
         self.data_collection_begun = time.time()
         for fem in self.fems:
-            #TODO: Dirty hack: Prevent frames being 1 (= continuous readout) by setting it to 2 if it is 1
+            #TODO: Dirty hack: Prevent frames being 1 (continuous readout) by setting it to 2 if it is 1
             number_frames_to_request = 2 if (number_frames_to_request == 1) else number_frames_to_request
             fem.set_number_frames(number_frames_to_request)
             fem.collect_data()
 
-        # Fem(s) are now busy acquiring data; If remainder of Bias window is enough to accommodate 
-        #  number_frames_to_request then we're done here. Otherwise..
-        #  ..Wait for Fem(s) to finish plus delay of dead time and for voltage to settle, before calling same function again
-
-        total_delay = time_available + self.fems[0].bias_voltage_settle_time + \
-            self.fems[0].time_refresh_voltage_held
         self.frames_already_acquired += number_frames_to_request
-        # print("   ADP total_delay: %s" % (total_delay))
 
         IOLoop.instance().call_later(total_delay, self.check_fem_finished_collecting_data)
 
@@ -578,7 +572,7 @@ class Hexitec():
         Instructs fem(s) to collect offsets
         """
         for fem in self.fems:
-            fem.collect_offsets()        
+            fem.collect_offsets()
 
     def commit_configuration(self, msg):
         """
