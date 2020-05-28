@@ -9,11 +9,8 @@ from os import path
 from functools import partial
 
 from odin.adapters.adapter import ApiAdapterRequest
-from odin.adapters.parameter_tree import ParameterTree
 
-# from concurrent import futures
 from tornado.ioloop import IOLoop
-# from tornado.concurrent import run_on_executor
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
@@ -23,7 +20,6 @@ import h5py
 from datetime import datetime
 import collections
 import os.path
-import time
 
 class HexitecDAQ():
     """
@@ -36,6 +32,9 @@ class HexitecDAQ():
     # thread_executor = futures.ThreadPoolExecutor(max_workers=1)
 
     THRESHOLDOPTIONS = ["value", "filename", "none"]
+
+    # Define timestamp format
+    DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
 
     def __init__(self, parent, save_file_dir="", save_file_name=""):
 
@@ -94,8 +93,17 @@ class HexitecDAQ():
         self.rows, self.columns = 80, 80
         self.pixels = self.rows * self.columns
         self.number_frames = 10
+        # Diagnostics
+        self.daq_start_time = 0
+        self.fem_not_busy = 0
+        self.daq_stop_time = 0
 
         self.param_tree = ParameterTree({
+            "diagnostics": {
+                "daq_start_time": (lambda: self.daq_start_time, None),
+                "daq_stop_time": (lambda: self.daq_stop_time, None),
+                "fem_not_busy": (lambda: self.fem_not_busy, None),
+            },
             "receiver": {
                 "connected": (partial(self.is_od_connected, adapter="fr"), None),
                 "configured": (self.is_fr_configured, None),
@@ -202,8 +210,11 @@ class HexitecDAQ():
         else:
             # print("   ***   start_acquisition - not first initialisation, let's set that File writing to TRUE !")
             self.set_file_writing(True)
-        # Wait while fem(s) finish sending data
-        IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
+        # Diagnostics:
+        self.daq_start_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
+
+        # Wait while fem(s) finish sending data (HexitecFem triggers FEM ~1.006 seconds - because of a time.sleep(1) statement !)
+        IOLoop.instance().call_later(1.3, self.acquisition_check_loop)
 
     def acquisition_check_loop(self):
         """
@@ -217,6 +228,8 @@ class HexitecDAQ():
         if bBusy:
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
+            self.fem_not_busy = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
+
             IOLoop.instance().call_later(0.5, self.processing_check_loop)
 
     def processing_check_loop(self):
@@ -249,6 +262,8 @@ class HexitecDAQ():
 
     def stop_acquisition(self):
         """ Disables file writing so the processes can access the saved data """
+        self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
+
         logging.debug("      stop_acq()")
         self.in_progress = False
         self.set_file_writing(False)

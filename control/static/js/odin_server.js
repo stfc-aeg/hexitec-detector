@@ -214,7 +214,32 @@ function poll_fem()
 {
     // Polls the fem(s) for  hardware status, environmental data, etc
 
-    $.getJSON(hexitec_url + 'detector/', function(response)
+    $.getJSON(hexitec_url + 'fr/status/', function(response)
+    {
+        var frames = response["value"][0].frames;
+        var decoder = response["value"][0].decoder;
+        var buffers = response["value"][0].buffers;
+
+        $('#frames_received').html(frames.received);
+        $('#frames_released').html(frames.released);
+        $('#frames_dropped').html(frames.dropped);
+        $('#frames_timedout').html(frames.timedout);
+
+        $('#fem_packets_lost').html(decoder.fem_packets_lost);
+        $('#packets_lost').html(decoder.packets_lost);
+        $('#buffers_empty').html(buffers.empty);
+        $('#buffers_mapped').html(buffers.mapped);
+        
+        // console.log("Frames; received: " + frames.received + " released: " + frames.released + 
+        //                     " dropped: " + frames.dropped + " timedout: " + frames.timedout + "");
+        // console.log("r: " + JSON.stringify( response, null, 4));  // fine (object within object)
+
+        // console.log("r[value]: " + JSON.stringify( response["value"], null, 4));    // fine (object within array)
+        // console.log("r[value][0]: " + JSON.stringify( response["value"][0], null, 4));  // fine (object within object)
+        // console.log("r[value][0].frames: " + response["value"][0].frames);                  //  [object Object]
+    });
+
+    $.getJSON(hexitec_url + 'detector', function(response)
     {
         var fems = response["detector"]["fems"]
         var adapter_status = response["detector"]["status"] // adapter.py's status
@@ -222,11 +247,9 @@ function poll_fem()
         var percentage_complete = fems["fem_0"]["operation_percentage_complete"];
         var hardware_connected = fems["fem_0"]["hardware_connected"];
         var hardware_busy = fems["fem_0"]["hardware_busy"];
-        // console.log("frames: " + fems["fem_0"]["number_frames"]);
         
         var polled_frames = fems["fem_0"]["number_frames"];
         
-
         // if (polled_frames != ui_frames)
         // {
         //     console.log("polled_frames (" + polled_frames + ") != ui_frames (" + ui_frames + ") UPDATE TIME!");
@@ -264,9 +287,39 @@ function poll_fem()
 
         // http://localhost:8888/api/0.1/hexitec/detector/fems/fem_0/diagnostics/successful_reads
         // Diagnostics:
-        var num_reads = fems["fem_0"]["diagnostics"]["successful_reads"];
+        // curl -s http://localhost:8888/api/0.1/hexitec/fr/status/ | python -m json.tool
+        // curl -s http://localhost:8888/api/0.1/hexitec/detector/fems/fem_0/ | python -m json.tool
+
+        var fem_diagnostics = fems["fem_0"]["diagnostics"];
+        var num_reads = fem_diagnostics["successful_reads"];
+        var frame_rate = fems["fem_0"]["frame_rate"];
         console.log("percentage_complete: " + fems["fem_0"]["operation_percentage_complete"] 
                     + " reads: " + num_reads + " msg: " + adapter_status["status_message"]);
+
+        $('#frame_rate').html(frame_rate.toFixed(2));
+
+        var acquire_start = fem_diagnostics["acquire_start_time"];
+        var acquire_stop = fem_diagnostics["acquire_stop_time"];
+        var acquire_time = fem_diagnostics["acquire_time"];
+        $('#acquire_start').html(acquire_start);
+        $('#acquire_stop').html(acquire_stop);
+        $('#acquire_time').html(acquire_time);
+
+        var daq_diagnostics = response["detector"]["daq"]["diagnostics"];
+        var daq_start = daq_diagnostics["daq_start_time"];
+        var daq_stop = daq_diagnostics["daq_stop_time"];
+        var fem_not_busy = daq_diagnostics["fem_not_busy"];
+
+        $('#daq_start').html(daq_start);
+        $('#daq_stop').html(daq_stop);
+        $('#fem_not_busy').html(fem_not_busy);
+
+        // <b>&nbsp;daq start:&nbsp;</b><span id="daq_start">&nbsp;</span>
+        // <b>&nbsp;daq stop:&nbsp;</b><span id="daq_stop">&nbsp;</span>
+        // <b>&nbsp;fem not busy:&nbsp;</b><span id="fem_not_busy">&nbsp;</span>
+        // "daq_start_time": (lambda: self.daq_start_time, None),
+        // "daq_stop_time": (lambda: self.daq_stop_time, None),
+        // "fem_not_busy": (lambda: self.fem_not_busy, None),
 
         // Obtain overall adapter(.py's) status
 
@@ -738,6 +791,26 @@ var changeNextFrameEnable = function ()
 var changeCalibrationEnable = function()
 {
     calibration_enable = $("[name='calibration_enable']").bootstrapSwitch('state');
+
+    if (calibration_enable)
+    {
+        $('#bin_start').html("Bin Start: [keV]&nbsp;");
+        $('#bin_end').html("Bin End: [keV]&nbsp;");
+        $('#bin_width').html("Bin Width: [keV]&nbsp;");
+        document.getElementById("bin-start-text").value = 0;
+        document.getElementById("bin-end-text").value = 200;
+        document.getElementById("bin-width-text").value = 0.25;
+    }
+    else
+    {
+        $('#bin_start').html("Bin Start: [ADU]&nbsp;");
+        $('#bin_end').html("Bin End: [ADU]&nbsp;");
+        $('#bin_width').html("Bin Width: [ADU]&nbsp;");
+        document.getElementById("bin-start-text").value = 0;
+        document.getElementById("bin-end-text").value = 8000;
+        document.getElementById("bin-width-text").value = 10;
+   }
+
     $.ajax({
         type: "PUT",
         url: hexitec_url + 'detector/daq/config/calibration/enable',

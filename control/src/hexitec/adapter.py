@@ -77,15 +77,15 @@ class HexitecAdapter(ApiAdapter):
         response = {}
         request = ApiAdapterRequest(None, accept="application/json")
         # Check adapters if path isn't empty
-        #   e.g. If asking for /api/0.1/hexitec/fp/, path = "fp/"
+        #   e.g. If asking for /api/0.1/hexitec/fr/status/frames, path = "fr/status/frames"
         #        Compare:      /api/0.1/hexitec/, path = ""
         checkAdapters = True if len(path) > 0 else False
         try:
             if checkAdapters:
                 for name, adapter in self.adapters.items():
                     if path.startswith(name):
-                        relative_path = path.split(name)
-                        path = relative_path[1]
+                        tokens = path.split("/")
+                        path = "/".join(tokens[1:])
                         response = adapter.get(path=path, request=request).data
                         logging.debug(response)
                         return ApiAdapterResponse(response, content_type=content_type, status_code=status_code)
@@ -520,6 +520,7 @@ class Hexitec():
 
         # Only call daq's start_acquisition() once per acquisition
         if self.initial_acquisition:
+            # MOVE time.sleep(1) TO HERE...???
             self.daq.start_acquisition(self.number_frames)
             self.initial_acquisition = False
         
@@ -566,6 +567,17 @@ class Hexitec():
         self.vcal = vcal
         for fem in self.fems:
             fem._set_test_mode_image(vcal)
+
+    def _get_vcal_control(self):
+        return self.vcal_control
+
+    def _set_vcal_control(self, vcal_control):
+        """
+        Sets vcal control (enable/disable) in Fem(s)
+        """
+        self.vcal_control = vcal_control
+        for fem in self.fems:
+            fem._set_vcal_control(vcal_control)
 
     def _collect_offsets(self, msg):
         """

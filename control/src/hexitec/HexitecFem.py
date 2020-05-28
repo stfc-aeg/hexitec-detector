@@ -77,7 +77,6 @@ class HexitecFem():
 
     DAC_SCALE_FACTOR = 0.732
 
-    # 
     SEND_REG_VALUE = 0x40
     READ_REG_VALUE = 0x41
     SET_REG_BIT = 0x42
@@ -89,8 +88,7 @@ class HexitecFem():
     WRITE_DAC_VAL = 0x54
     CTRL_ADC_DAC = 0x55    
     
-
-    # define a timestamp format you like
+    # Define timestamp format
     DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
 
     def __init__(self, parent, fem_id=1,
@@ -108,7 +106,9 @@ class HexitecFem():
         # FPGA base addresses
         self.rdma_addr = {
             "receiver":        0xC0000000,
-            "frm_gate":        0xD0000000
+            "frm_gate":        0xD0000000,
+            # Reset monitors before triggering frame gate (suggested by Rob)
+            "reset_monitor":   0x90000000
         }
 
         self.image_size_x    = 0x100
@@ -144,11 +144,12 @@ class HexitecFem():
         self.time_refresh_voltage_held = 3.0
         self.bias_voltage_settle_time = 2.0
 
-        # Acquisition completed, note completion
+        # Acquisition completed, note completion timestamp
         self.acquisition_completed = False
         self.acquisition_timestamp = 0.0
 
         self.debug = False
+        self.debug_register24 = False
         # Diagnostics:
         self.exception_triggered = False
         self.successful_reads = 0
@@ -163,8 +164,10 @@ class HexitecFem():
 
         self.selected_sensor    = HexitecFem.OPTIONS[2]         # "Sensor_2_1"
         self.sensors_layout     = HexitecFem.READOUTMODE[1]     # "2x2"
-        self.dark_correction    = HexitecFem.DARKCORRECTION[0]  # "DARK CORRECTION OFF" = 0
+        self.dark_correction    = HexitecFem.DARKCORRECTION[1]  # "DARK CORRECTION OFF" = 0
         self.test_mode_image    = HexitecFem.TESTMODEIMAGE[3]   # "IMAGE 4" [3]=Uncalibrated image, [0]=vcal on
+
+        self.vcal_control   = True
 
         self.vsr1_ambient   = 0
         self.vsr1_humidity  = 0
@@ -190,15 +193,18 @@ class HexitecFem():
 
         self.acquire_start_time = ""
         self.acquire_stop_time = ""
+        self.acquire_time = 0.0
 
         param_tree_dict = {
             "diagnostics": {
                 "successful_reads": (lambda: self.successful_reads, None),
                 "acquire_start_time": (lambda: self.acquire_start_time, None),
                 "acquire_stop_time": (lambda: self.acquire_stop_time, None),
+                "acquire_time": (lambda: self.acquire_time, None),
             },
             "id": (lambda: self.id, None),
             "debug": (self.get_debug, self.set_debug),
+            "frame_rate": (lambda: self.frame_rate, None),
             "health": (lambda: self.health, None),
             "status_message": (self._get_status_message, None),
             "status_error": (self._get_status_error, None),
@@ -320,6 +326,11 @@ class HexitecFem():
         return
     
     def frame_gate_trigger(self):
+        # the reset of monitors suggested by Rob:
+        self.x10g_rdma.write(self.rdma_addr["reset_monitor"]+0,0x0,     'reset monitor off')
+        self.x10g_rdma.write(self.rdma_addr["reset_monitor"]+0,0x1,     'reset monitor on')
+        self.x10g_rdma.write(self.rdma_addr["reset_monitor"]+0,0x0,     'reset monitor off')
+        #
         self.x10g_rdma.write(self.rdma_addr["frm_gate"]+0,0x0,          'frame gate trigger off')
         self.x10g_rdma.write(self.rdma_addr["frm_gate"]+0,0x1,          'frame gate trigger on')
         self.x10g_rdma.write(self.rdma_addr["frm_gate"]+0,0x0,          'frame gate trigger off')
@@ -386,6 +397,12 @@ class HexitecFem():
     def _get_test_mode_image(self):
         return self.test_mode_image
 
+    def _set_vcal_control(self, vcal_control):
+        self.vcal_control = vcal_control
+
+    def _get_vcal_control(self):
+        return self.vcal_control
+
     def get_health(self):
         return self.health
 
@@ -400,13 +417,15 @@ class HexitecFem():
         Poll hardware while connected but not busy initialising
             collecting offsets et cetera
         """
+        # logging.debug("\t\t\t hardware_connected: %s hardware_busy: %s THUS cond: %s" % \
+        #     (self.hardware_connected, self.hardware_busy, self.hardware_connected and (self.hardware_busy == False)))
         if self.hardware_connected and (self.hardware_busy == False):
             self.read_sensors()
         IOLoop.instance().call_later(1.0, self.poll_sensors)
 
     def connect_hardware(self, msg=None):
         """
-        Connect with hardware and wait 10 seconds for 
+        Connect with hardware and wait 10 seconds for
         the VSRs' microcontrollers to initialise
         """
         try:
@@ -431,6 +450,7 @@ class HexitecFem():
             logging.error("%s" % str(e))
             # Cannot raise error beyond this thread
         
+        # print("\n\nReinstate polling before merging with master !\n\n")
         # Start polling thread (connect successfully set up)
         if len(self.status_error) == 0:
             self.start_polling()
@@ -447,7 +467,14 @@ class HexitecFem():
                 raise HexitecFemError("Hardware sensors busy initialising")
             else:
                 self._set_status_error("")
+
+            if self.debug_register24:
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+                print("\n");logging.debug("    *** 00 *** init_HW, nowt chngd; Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
+
             self.hardware_busy = True
+            # logging.debug("\t HARDWARE_BUSY = TRUE\n\n")
             self.operation_percentage_complete = 0
             self.operation_percentage_steps = 108
             self.initialise_system()
@@ -468,6 +495,23 @@ class HexitecFem():
             else:
                 # Not cold initialisation, clear hardware_busy here
                 self.hardware_busy = False
+                # logging.debug("\t HARDWARE_BUSY = FALSE\n\n")
+
+            # if self.debug_register24:
+            #     self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+            #     self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+            #     print("\n");logging.debug("    *** 01 *** init_HW, CLR b1,b4;  Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
+
+            # # EXPLICITLY clear register 24, bit1, 4: capture average picture, send average picture
+            # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x31, 0x32, 0x0D])
+            # self.read_response()
+            # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x31, 0x32, 0x0D])
+            # self.read_response()
+
+            # if self.debug_register24:
+            #     self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+            #     self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+            #     print("\n");logging.debug("    *** 01 *** init_HW, CLR b1,b4;  Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
 
             self.initialise_progress = 0
         except (HexitecFemError, ParameterTreeError) as e:
@@ -493,6 +537,7 @@ class HexitecFem():
             if self.ignore_busy:
                 self.ignore_busy = False
             self.hardware_busy = True
+            # logging.debug("\t HARDWARE_BUSY = TRUE\n\n")
             self.operation_percentage_complete = 0
             self.operation_percentage_steps = 100
             self._set_status_message("Acquiring data..")
@@ -550,6 +595,7 @@ class HexitecFem():
         Sets up to wait 10 seconds to allow VSRs' microcontrollers to initialise
         """
         self.hardware_busy = True
+        # logging.debug("\t HARDWARE_BUSY = TRUE\n\n")
         self.start = time.time()
         self.delay = 10
         IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
@@ -561,6 +607,7 @@ class HexitecFem():
         if len(self.status_error) > 0:
             self.operation_percentage_complete = 0
             self.hardware_busy = False
+            # logging.debug("\t HARDWARE_BUSY = FALLS\n\n")
             return
         self.delay = time.time() - self.start
         self.operation_percentage_complete += 10
@@ -568,7 +615,13 @@ class HexitecFem():
             IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
         else:
             self.hardware_busy = False
+            # logging.debug("\t HARDWARE_BUSY = FALSE\n\n")
             self._set_status_message("Camera connected. Microcontrollers initialised.")
+            print("\n\n\n\n\n")
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+            print("\n\n");logging.debug(" %s, %s   ****** conn_hw; Register 0x24: Start of this line !! ******                     !!!!!" % (vsr2, vsr1));print("\n\n")
+
 
     def send_cmd(self, cmd, track_progress=True):
         """
@@ -785,13 +838,22 @@ class HexitecFem():
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x31, 0x38, 0x30, 0x31, 0x0D])
         self.read_response()
         logging.debug("Clear bit 5")
-        # Clear bit; Register 0x24, bit5: disable VCAL
+        # Clear bit; Register 0x24, bit5: disable VCAL (i.e. VCAL is here ENABLED)
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
         self.read_response()
+
+        if self.debug_register24:
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+            print("\n");logging.debug("    *** 02 *** cal_sen, CLR bit5;   Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
     
         # Set bit 4 of Reg24: send average picture
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
         self.read_response()
+        if self.debug_register24:
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+            print("\n");logging.debug("    *** 03 *** cal_sen, SET bit4;   Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
         
         logging.debug("Set bit 6")
         # Clear bit; Register 0x24, bit6: test mode
@@ -799,9 +861,27 @@ class HexitecFem():
         self.read_response()
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x30, 0x31, 0x0D])
         self.read_response()
-        # Set bit; Register 0x24, bit5, bit1: capture average picture
-        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x32, 0x32, 0x0D])
+        if self.debug_register24:
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+            print("\n");logging.debug("    *** 04 *** cal_sen, CLR bit6;   Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
+
+        # Slows data coll'ns down (by adding 8k extra frames..)
+        # Set bit; Register 0x24, bit5 (disable VCAL), bit1 (capture average picture)
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x32, 0x32, 0x0D])  # JE original
         self.read_response()
+        if self.debug_register24:
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+            print("\n");logging.debug("    *** 05 *** cal_sen, SET b5,b1;  Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
+
+        # #Makes data acquisition as fast as it should be (no extra 8k for offsets..)
+        # # Set bit; Register 0x24, bit5 (disable VCAL)
+        # self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])    # My mod
+        # self.read_response()
+        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+        # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+        # print("\n");logging.debug("    *** X6 *** cal_sen, SET b5;     Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
 
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
             self.x10g_rdma.write(0x60000002, 1, 'Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
@@ -838,22 +918,37 @@ class HexitecFem():
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLEAR_REG_BIT, 0x30, 0x31, 0x43, 0x30, 0x0D])
         self.read_response()
 
-        logging.debug("Clear bit 5 - VCAL ENABLED")
-        # Clear bit; Register 0x24, bit5: disable VCAL
-        self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D]) 
-        self.read_response()
+        if self.vcal_control:
+            logging.debug("Clear bit 5 - VCAL ENABLED")
+            # Clear bit; Register 0x24, bit5: disable VCAL (i.e. VCAL is here ENABLED)
+            self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
+            self.read_response()
+
+        if self.debug_register24:
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+            print("\n");logging.debug("    *** 06 *** cal_sen, CLR b5;     Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
 
         if self.dark_correction == HexitecFem.DARKCORRECTION[0]:
             logging.debug("DARK CORRECTION OFF")
             # Clear bit; Register 0x24, bit3: enable DC spectroscopic mode
             self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x30, 0x38, 0x0D])
             self.read_response()
+            if self.debug_register24:
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+                print("\n");logging.debug("    *** 07 *** cal_sen, CLR b3;     Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
+
         elif self.dark_correction == HexitecFem.DARKCORRECTION[1]:
             logging.debug("DARK CORRECTION ON")
             # Set bit; Register 0x24, bit3: enable DC spectroscopic mode
             self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x30, 0x38, 0x0D])
             self.read_response()
-        
+            if self.debug_register24:
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+                print("\n");logging.debug("    *** 08 *** cal_sen, SET b3;     Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
+
         # Read Reg24
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x32, 0x34, 0x0D])
         if self.debug: 
@@ -948,6 +1043,11 @@ class HexitecFem():
         if self.debug:
             logging.debug("number of Frames := %s" % self.number_frames)
 
+        if self.debug_register24:
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+            print("\n");logging.debug("    ****** ACQUISITION;  Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
+
         logging.debug("Initiate Data Capture")
         self.data_stream(self.number_frames)
         self.acquire_start_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
@@ -955,8 +1055,10 @@ class HexitecFem():
         waited = 0.0
         delay = 0.10
         resp = 0
-        while resp < 1:
+        while True:
             resp = self.x10g_rdma.read(0x60000014, 'Check data transfer completed?')
+            if resp > 0:
+                break
             time.sleep(delay)
             waited += delay
             if (self.stop_acquisition):
@@ -1073,6 +1175,13 @@ class HexitecFem():
 
         # Fem finished sending data/monitoring info, clear hardware busy
         self.hardware_busy = False
+        # logging.debug("\t HARDWARE_BUSY = FALSE\n\n")
+
+        # Workout exact duration of fem data transmission:
+        self.acquire_time = float(self.acquire_stop_time.split("_")[1]) - float(self.acquire_start_time.split("_")[1])
+        start_ = datetime.strptime(self.acquire_start_time, HexitecFem.DATE_FORMAT)
+        stop_ = datetime.strptime(self.acquire_stop_time, HexitecFem.DATE_FORMAT)
+        self.acquire_time = (stop_ - start_).total_seconds()
 
         if self.first_initialisation:
             self.number_frames = number_frames
@@ -1145,11 +1254,23 @@ class HexitecFem():
 
         self.sph_s2 = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Sph -> S2', bit_range=6)
         if self.sph_s2 > -1:
-            value_004 = self.convert_to_aspect_format(self.sph_s2)
+            value_005 = self.convert_to_aspect_format(self.sph_s2)
         # Send SphS2  to Register 0x05 (Accepts 6 Bits)
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_005[0], register_005[1],
                         value_005[0], value_005[1], 0x0D])
         self.read_response()
+
+        # print("\n\n  row_S1,\n       value_002: 0x%x, 0x%x\n       value_003: 0x%x, 0x%x\n" % (value_002[0], value_002[1], value_003[0], value_003[1]))
+        # print("  S1_SpH,\n       value_004: 0x%x, 0x%x\n " % (value_004[0], value_004[1]))
+        # print("  Sph_s2,\n       value_005: 0x%x, 0x%x\n\n\n\n\n" % (value_005[0], value_005[1]))
+
+        # print("  sm_timing2, ", self.make_list_hexadecimal([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_002[0], register_002[1],
+        #                 value_002[0], value_002[1], 0x0D]))
+        # print("  S1_SPH, ", self.make_list_hexadecimal([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_004[0], register_004[1],
+        #                 value_004[0], value_004[1], 0x0D]))
+        # print("  SPH_S2, ", self.make_list_hexadecimal([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_005[0], register_005[1],
+        #                 value_005[0], value_005[1], 0x0D]))
+        # print("\n\n")
 
         #TODO: What should default value be? (not set by JE previously!)
         gain = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Gain', bit_range=1)
@@ -1207,7 +1328,7 @@ class HexitecFem():
         # Recalculate frame_rate, et cetera if new clock values provided by .ini
         self.calculate_frame_rate()
 
-        #print("\n   HxtFEM self.row_s1 %s self.s1_sph %s self.sph_s2 %s\n" % (self.row_s1, self.s1_sph, self.sph_s2))
+        # print("\n   HxtFEM self.row_s1 %s self.s1_sph %s self.sph_s2 %s\n" % (self.row_s1, self.s1_sph, self.sph_s2))
 
         logging.debug("Finished Setting up state machine")
 
@@ -1225,6 +1346,7 @@ class HexitecFem():
                 self._set_status_error("")
 
             self.hardware_busy = True
+            # logging.debug("\t HARDWARE_BUSY = TRUE\n\n")
             self.operation_percentage_complete = 0
             self.operation_percentage_steps = 15
 
@@ -1235,14 +1357,20 @@ class HexitecFem():
             logging.debug("Reading back register 24; VSR1: '%s' VSR2: '%s'" % \
                                 (vsr1.replace('\r', ''), vsr2.replace('\r','')))
 
-            # Set bit; Register 0x24, bit3: enable DC spectroscopic mode
-            self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
+            # Set bit; Register 0x24, bit4: send average picture
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
             self.read_response()
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
+            self.read_response()
+            if self.debug_register24:
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+                print("\n");logging.debug("    *** 09 *** coll_off, SET b4;    Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
 
-            # Send reg value; Register 0x24, bits1,5: capture average picture, disable VCAL:
+            # Send reg value; Register 0x24, bits5,1: disable VCAL, capture average picture:
             enable_dc_vsr1  = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]
             enable_dc_vsr2  = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]
-            # Send reg value; Register 0x24, bits3,5: enable spectroscopic mode, disable VCAL:
+            # Send reg value; Register 0x24, bits5,3: disable VCAL, enable spectroscopic mode:
             disable_dc_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]
             disable_dc_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]
             enable_sm_vsr1  = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
@@ -1266,6 +1394,10 @@ class HexitecFem():
             self.read_response()
             self.send_cmd(enable_dc_vsr2)
             self.read_response()
+            if self.debug_register24:
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+                print("\n");logging.debug("    *** 10 *** coll_off, SET b1,5;  Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
 
             # 4. Start the state machine
 
@@ -1292,6 +1424,10 @@ class HexitecFem():
             self.read_response()
             self.send_cmd(disable_dc_vsr2)
             self.read_response()
+            if self.debug_register24:
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+                print("\n");logging.debug("    *** 11 *** coll_off, SET b3,5;  Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
 
             # 8. Start state machine
 
@@ -1300,15 +1436,23 @@ class HexitecFem():
             self.send_cmd(enable_sm_vsr2)
             self.read_response()
 
-            logging.debug("Ensure VCAL remains on")
-            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
-            self.read_response()
-            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
-            self.read_response()
+            if self.vcal_control:
+                logging.debug("Ensure VCAL remains on")
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
+                self.read_response()
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
+                self.read_response()
+            else:
+                logging.debug("DONT'T THINk SO - Ensure VCAL remains D I S A B L E D")
+            if self.debug_register24:
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+                print("\n");logging.debug("    *** 12 *** coll_off, SET b5;    Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
 
             self.operation_percentage_complete = 100
             self._set_status_message("Offsets collections operation completed.")
             self.hardware_busy = False
+            # logging.debug("\t HARDWARE_BUSY = FALSE\n\n")
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Can't collect offsets while disconnected: %s" % str(e))
             logging.error("%s" % str(e))
@@ -1733,9 +1877,9 @@ class HexitecFem():
         enable_sm     = [0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
         adc_enable    = [0x23, self.vsr_addr, HexitecFem.CTRL_ADC_DAC, 0x30, 0x33, 0x0D]
         adc_set       = [0x23, self.vsr_addr, HexitecFem.WRITE_REG_VAL, 0x31, 0x36, 0x30, 0x39, 0x0D]
-        # Send reg value; Register 0x24, bits1,5: capture average picture, disable VCAL:
+        # Send reg value; Register 0x24, bits5,1: disable VCAL, capture average picture:
         aqu1          = [0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]
-        # Send reg value; Register 0x24, bits3,5: enable spectroscopic mode, disable VCAL:
+        # Send reg value; Register 0x24, bits5,3: disable VCAL, enable spectroscopic mode:
         aqu2          = [0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]
 
         self.send_cmd(adc_disable)
@@ -1750,8 +1894,16 @@ class HexitecFem():
         self.read_response() 
         self.send_cmd(aqu1)
         self.read_response()
-        self.send_cmd(aqu2)
+        if self.debug_register24:
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+            print("\n");logging.debug("    *** 13 *** ena_adc,  SET b1,5;  Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
+        self.send_cmd(aqu2) 
         self.read_response()
+        if self.debug_register24:
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+            print("\n");logging.debug("    *** 14 *** ena_adc,  SET b3,5;  Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
         
         # Disable ADC test testmode
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.WRITE_REG_VAL, 0x30, 0x44, 0x30, 0x30, 0x0d])
@@ -1869,7 +2021,7 @@ class HexitecFem():
             # With duration enabled, recalculate number of frames in case clocks changed 
             self.set_duration(self.duration)
             self.parent.set_number_frames(self.number_frames)
-        #print(" \n  HxtFEM duration_enabled: %s frame_rate: %s \n" % (self.duration_enabled, frame_rate))
+        # print(" \n  HxtFEM duration_enabled: %s frame_rate: %s \n" % (self.duration_enabled, frame_rate))
 
 
     def print_vcal_registers(self, vsr_addr):
@@ -2101,10 +2253,17 @@ class HexitecFem():
         if bias_voltage_settle_time > -1:
             self.bias_voltage_settle_time = bias_voltage_settle_time / 1000.0
 
-        print("                 bias refresh interval: %s (%s)" % (self.bias_refresh_interval, type(self.bias_refresh_interval)))
-        print("                 bias voltage settle time: %s (%s)" % (self.bias_voltage_settle_time, type(self.bias_voltage_settle_time)))
-        print("                 time refresh voltage held: %s (%s)" % (self.time_refresh_voltage_held, type(self.time_refresh_voltage_held)))
-        print("                 bias voltage refresh: %s (%s)\n\n" % (self.bias_voltage_refresh, type(self.bias_voltage_refresh)))
+
+        vcal_control = self._extract_boolean(self.hexitec_parameters, \
+            'Control-Settings/vcal_control')
+        if vcal_control > -1:
+            self.vcal_control = vcal_control
+        print("                 vcal_control: %s (%s)\n\n" % (self.vcal_control, type(self.vcal_control)))
+
+        # print("                 bias refresh interval: %s (%s)" % (self.bias_refresh_interval, type(self.bias_refresh_interval)))
+        # print("                 bias voltage settle time: %s (%s)" % (self.bias_voltage_settle_time, type(self.bias_voltage_settle_time)))
+        # print("                 time refresh voltage held: %s (%s)" % (self.time_refresh_voltage_held, type(self.time_refresh_voltage_held)))
+        # print("                 bias voltage refresh: %s (%s)\n\n" % (self.bias_voltage_refresh, type(self.bias_voltage_refresh)))
 
     def convert_aspect_exponent_to_dac_value(self, exponent):
         ''' 

@@ -46,18 +46,6 @@
       </div>
     </nav>
     
-    <table class="overall-table" align="center">
-      <thead></thead>
-      <tbody>
-        <tr>
-          <input type="button" class="btn btn-primary" id='storeButton' name="store_enable" data-size="small" value="store">
-          <input type="button" class="btn btn-primary" id='testButton' name="store_enable" data-size="small" value="test_stuff">
-          Adding Apply button:&nbsp;
-          <input type="button" class="btn btn-primary" id='applyButton' name="store_enable" data-size="small" value="apply">
-        </tr>
-      </tbody>
-    </table>
-  
     <!-- HDF plugin settings settings -->
 
     <div class="well sidebar-nav-fixed">
@@ -184,11 +172,7 @@
                   <input type="checkbox" id='durationButton' name="duration_enable" data-size="small">
                 </div>
               </div>
-            </td>  
-            <td>&nbsp;On = Duration in second, Off = number of frames</td>
-            </td>
           </tr>
-
 
           <tr>
             <td>
@@ -232,6 +216,12 @@
               &nbsp;<td><span id="vcal-warning">&nbsp;</span></td>
             </td>
           </tr>
+          <td>
+            Apply:&nbsp;
+          </td>
+          <td>
+            <input type="button" class="btn btn-primary" id='applyButton' name="store_enable" data-size="small" value="apply">
+          </td>
           <!-- Single traffic light to indicate system health -->
           <tr>
             <td>
@@ -276,6 +266,87 @@
             </td>
             &nbsp;<td><span id="odin-control-error">&nbsp;</span></td>
             <td>
+            </td>
+          </tr>
+          <!-- Display ODIN FP/FR frame/packet info -->
+          <tr>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+              <b>&nbsp;Frame rate:&nbsp;</b><span id="frame_rate">&nbsp;</span>
+            </td>
+            <!-- <td>
+              <b>&nbsp;packets_lost:&nbsp;</b><span id="packets_lost">&nbsp;</span>
+            </td> -->
+          </tr>
+          <tr>
+            <td>
+              <b>&nbsp;acquire start:&nbsp;</b><span id="acquire_start">&nbsp;</span>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <b>&nbsp;acquire stop:&nbsp;</b><span id="acquire_stop">&nbsp;</span>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <b>&nbsp;acquire time:&nbsp;</b><span id="acquire_time">&nbsp;</span>
+            </td>
+          </tr>
+          <!--  -->
+          <tr>
+            <td>
+              <b>&nbsp;daq start:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b><span id="daq_start">&nbsp;</span>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <b>&nbsp;fem not busy:&nbsp;</b><span id="fem_not_busy">&nbsp;</span>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <b>&nbsp;daq stop:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b><span id="daq_stop">&nbsp;</span>
+            </td>
+          </tr>
+          <!--  -->
+          <tr>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+              <b>&nbsp;Frames received:&nbsp;</b><span id="frames_received">&nbsp;</span>
+            </td>
+            <td>
+              <b>&nbsp;released:&nbsp;</b><span id="frames_released">&nbsp;</span>
+            </td>
+            <td>
+              <b>&nbsp;dropped:&nbsp;</b><span id="frames_dropped">&nbsp;</span>
+            </td>
+            <td>
+              <b>&nbsp;timedout:&nbsp;</b><span id="frames_timedout">&nbsp;</span>
+            </td>
+          </tr>
+          <tr>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+              <b>&nbsp;fem packets_lost:&nbsp;</b><span id="fem_packets_lost">&nbsp;</span>
+            </td>
+            <td>
+              <b>&nbsp;packets_lost:&nbsp;</b><span id="packets_lost">&nbsp;</span>
+            </td>
+            <td>
+              <b>&nbsp;Buffers empty:&nbsp;</b><span id="buffers_empty">&nbsp;</span>
+            </td>
+            <td>
+              <b>&nbsp;mapped:&nbsp;</b><span id="buffers_mapped">&nbsp;</span>
             </td>
           </tr>
           <!-- Display VSRs' environmental data -->
@@ -515,7 +586,7 @@
           </tr>
           <tr>
             <td>
-              Bin Start:&nbsp;
+              <div id="bin_start">Bin Start: [ADU]&nbsp;</div>
             </td>
             <td>
               <div class="text-columns">
@@ -528,7 +599,7 @@
           </tr>
           <tr>
             <td>
-              Bin End:&nbsp;
+              <div id="bin_end">Bin End: [ADU]&nbsp;</div>
             </td>
             <td>
               <div class="text-columns">
@@ -542,7 +613,7 @@
           </tr>
           <tr>
             <td> 
-              Bin Width:&nbsp;
+              <div id="bin_width">Bin Width: [ADU]&nbsp;</div>
             </td>
             <td> 
               <div class="text-columns">
