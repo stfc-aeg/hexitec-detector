@@ -61,8 +61,14 @@ namespace FrameProcessor
     static const std::string CONFIG_BIN_WIDTH;
     /** Configuration constant for flush_histograms **/
     static const std::string CONFIG_FLUSH_HISTOS;
+    /** Configuration constant for reset_histograms **/
+    static const std::string CONFIG_RESET_HISTOS;
     /** Configuration constant for Hardware sensors **/
     static const std::string CONFIG_SENSORS_LAYOUT;
+    /** Configuration constant for frames processed **/
+    static const std::string CONFIG_FRAMES_PROCESSED;
+    /** Configuration constant for histograms written **/
+    static const std::string CONFIG_HISTOGRAMS_WRITTEN;
 
     std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
     std::string sensors_layout_str_;
@@ -88,11 +94,13 @@ namespace FrameProcessor
     int image_pixels_;
     /** number of frames expected per acquisition **/
     int max_frames_received_;
-    /** Count number of frames **/
-    int frames_counter_;
+    /** Count number of frames processed **/
+    int frames_processed_;
     /** Flush (remaining data to) histograms **/
     // bool flush_histograms_;
     int flush_histograms_;
+    int reset_histograms_;
+    int histograms_written_;
 
     int bin_start_;
     int bin_end_;

@@ -10,12 +10,15 @@
 
 namespace FrameProcessor
 {
-  const std::string HexitecHistogramPlugin::CONFIG_MAX_FRAMES     = "max_frames_received";
-  const std::string HexitecHistogramPlugin::CONFIG_BIN_START      = "bin_start";
-  const std::string HexitecHistogramPlugin::CONFIG_BIN_END        = "bin_end";
-  const std::string HexitecHistogramPlugin::CONFIG_BIN_WIDTH      = "bin_width";
-  const std::string HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS   = "flush_histograms";
-  const std::string HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT = "sensors_layout";
+  const std::string HexitecHistogramPlugin::CONFIG_MAX_FRAMES         = "max_frames_received";
+  const std::string HexitecHistogramPlugin::CONFIG_BIN_START          = "bin_start";
+  const std::string HexitecHistogramPlugin::CONFIG_BIN_END            = "bin_end";
+  const std::string HexitecHistogramPlugin::CONFIG_BIN_WIDTH          = "bin_width";
+  const std::string HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS       = "flush_histograms";
+  const std::string HexitecHistogramPlugin::CONFIG_RESET_HISTOS       = "reset_histograms";
+  const std::string HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT     = "sensors_layout";
+  const std::string HexitecHistogramPlugin::CONFIG_FRAMES_PROCESSED   = "frames_processed";
+  const std::string HexitecHistogramPlugin::CONFIG_HISTOGRAMS_WRITTEN = "histograms written";
 
   /**
    * The constructor sets up logging used within the class.
@@ -25,8 +28,9 @@ namespace FrameProcessor
       image_height_(Hexitec::pixel_rows_per_sensor),
       image_pixels_(image_width_ * image_height_),
       max_frames_received_(0),
-      frames_counter_(0),
-      flush_histograms_(0)
+      flush_histograms_(0),
+      histograms_written_(0),
+      frames_processed_(0)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecHistogramPlugin");
@@ -158,6 +162,7 @@ namespace FrameProcessor
    * - bin_end_             <=> bin_end
    * - bin_width_           <=> bin_width
    * - flush_histograms_    <=> flush_histograms
+   * - reset_histograms_    <=> reset_histograms
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -192,6 +197,17 @@ namespace FrameProcessor
 
     number_bins_  = (int)(((bin_end_ - bin_start_) / bin_width_) + 0.5);
 
+    if (config.has_param(HexitecHistogramPlugin::CONFIG_RESET_HISTOS))
+    {
+      reset_histograms_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_RESET_HISTOS);
+
+      if (reset_histograms_ == 1)
+      {
+        frames_processed_ = 0;
+        reset_histograms_ = 0;
+      }      
+    }
+
     if (config.has_param(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS))
     {
       flush_histograms_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS);
@@ -201,7 +217,7 @@ namespace FrameProcessor
         /// Time to push current histogram data
         writeHistogramsToDisk();
 
-        frames_counter_ = 0;
+        frames_processed_ = 0;
 
         // Clear flush_histograms_
         flush_histograms_ = 0;
@@ -222,6 +238,8 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_END , bin_end_);
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_BIN_WIDTH, bin_width_);
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS, flush_histograms_);
+    reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_FRAMES_PROCESSED, frames_processed_);
+    reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_HISTOGRAMS_WRITTEN, histograms_written_);
   }
 
   /**
@@ -239,6 +257,8 @@ namespace FrameProcessor
     status.set_param(get_name() + "/bin_end", bin_end_);
     status.set_param(get_name() + "/bin_width", bin_width_);
     status.set_param(get_name() + "/flush_histograms", flush_histograms_);
+    status.set_param(get_name() + "/frames_processed", frames_processed_);
+    status.set_param(get_name() + "/histograms_written", histograms_written_);
   }
 
   /**
@@ -278,8 +298,6 @@ namespace FrameProcessor
     {
       try
       {
-        frames_counter_++;
-
         // Define pointer to the input image data
         void* input_ptr = static_cast<void *>(
           static_cast<char *>(const_cast<void *>(data_ptr)));
@@ -287,12 +305,15 @@ namespace FrameProcessor
         // Add this frame's contribution onto histograms
         add_frame_data_to_histogram_with_sum(static_cast<float *>(input_ptr));
 
+        frames_processed_++;
+
         // Write histograms to disc when maximum number of frames received
-        if ( ((frames_counter_ % max_frames_received_) == 0) &&
-              (frames_counter_ != 0) )
+        if ( ((frames_processed_ % max_frames_received_) == 0) &&
+              (frames_processed_ != 0) )
         {
           /// Time to push current histogram data to file
           writeHistogramsToDisk();
+          histograms_written_ = frames_processed_;
         }
 
         /// Histogram will access data dataset but not change it in any way
@@ -319,6 +340,8 @@ namespace FrameProcessor
    */
   void HexitecHistogramPlugin::writeHistogramsToDisk()
   {
+    LOG4CXX_TRACE(logger_, " -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
+
     LOG4CXX_TRACE(logger_, "Pushing " << energy_bins_->get_meta_data().get_dataset_name() << " dataset");
     this->push(energy_bins_);
 

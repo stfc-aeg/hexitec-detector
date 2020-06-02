@@ -12,10 +12,10 @@ class GenerateConfigFiles():
     Accepts Parameter tree from hexitecDAQ's "/config" branch to generate json file
     """
 
-    def __init__(self, param_tree, number_of_histograms, bDeleteFileOnClose=False):
+    def __init__(self, param_tree, number_histograms, bDeleteFileOnClose=False):
 
         self.param_tree = param_tree
-        self.number_of_histograms = number_of_histograms
+        self.number_histograms = number_histograms
         self.delete_file_on_close = bDeleteFileOnClose
 
     def boolean_to_string(self, bBool):
@@ -261,24 +261,24 @@ class GenerateConfigFiles():
                             {
                                 "cmd": "create",
                                 "datatype": "float",
-                                "dims": [%s],''' % (self.number_of_histograms) + '''
-                                "chunks": [1, %s],''' % (self.number_of_histograms) + '''
+                                "dims": [%s],''' % (self.number_histograms) + '''
+                                "chunks": [1, %s],''' % (self.number_histograms) + '''
                                 "compression": "none"
                             },
                             "pixel_histograms" :
                             {
                                 "cmd": "create",
                                 "datatype": "float",
-                                "dims": [%s, %s],''' % (pixels, self.number_of_histograms) + '''
-                                "chunks": [1, %s, %s],''' % (pixels, self.number_of_histograms) + '''
+                                "dims": [%s, %s],''' % (pixels, self.number_histograms) + '''
+                                "chunks": [1, %s, %s],''' % (pixels, self.number_histograms) + '''
                                 "compression": "none"
                             },
                             "summed_histograms" :
                             {
                                 "cmd": "create",
                                 "datatype": "uint64",
-                                "dims": [%s],''' % (self.number_of_histograms) + '''
-                                "chunks": [1, %s],''' % (self.number_of_histograms) + '''
+                                "dims": [%s],''' % (self.number_histograms) + '''
+                                "chunks": [1, %s],''' % (self.number_histograms) + '''
                                 "compression": "none"
                             }
                         }
@@ -349,7 +349,7 @@ class GenerateConfigFiles():
 
 if __name__ == '__main__':
     param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'}, 
-        'sensors_layout': '3x3',  'receiver': {'config_file': '', 'configured': False, 'connected': 
+        'sensors_layout': '2x2',  'receiver': {'config_file': '', 'configured': False, 'connected': 
         False}, 'in_progress': False, 
         # The 'config' nested dictionary control which plugin(s) are loaded:
         'config': 
@@ -365,9 +365,9 @@ if __name__ == '__main__':
     bin_end = param_tree['config']['histogram']['bin_end']
     bin_start = param_tree['config']['histogram']['bin_start']
     bin_width = param_tree['config']['histogram']['bin_width']
-    number_of_histograms = int((bin_end - bin_start) / bin_width)
+    number_histograms = int((bin_end - bin_start) / bin_width)
 
-    gcf = GenerateConfigFiles(param_tree, number_of_histograms, bDeleteFileOnClose=False)
+    gcf = GenerateConfigFiles(param_tree, number_histograms, bDeleteFileOnClose=False)
     s, e = gcf.generate_config_files()
 
     print("GFC returned config files\n Store:   %s\n Execute: %s\n" % (s, e))

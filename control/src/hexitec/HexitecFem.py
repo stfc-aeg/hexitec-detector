@@ -146,7 +146,6 @@ class HexitecFem():
 
         # Acquisition completed, note completion timestamp
         self.acquisition_completed = False
-        self.acquisition_timestamp = 0.0
 
         self.debug = False
         self.debug_register24 = False
@@ -546,7 +545,6 @@ class HexitecFem():
             self.initialise_progress = 0
             # Acquisition completed, note completion
             self.acquisition_completed = True
-            self.acquisition_timestamp = time.time()
             # Don't clear hardware_busy, wait for acquire_data() to clear it 
             if self.first_initialisation:
                 self._set_status_message("Initialisation from cold completed")

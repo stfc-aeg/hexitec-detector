@@ -255,8 +255,10 @@ class Hexitec():
 
         # print("\n\n  ADP  %s %s %s \n\n" % (self.fems[0].bias_refresh_interval, self.fems[0].bias_voltage_settle_time, self.fems[0].time_refresh_voltage_held))
 
-        self.data_collection_begun = 0
+        # Tracks whether first acquisition of multi-collection: (spanning bias windows)
         self.initial_acquisition = True
+        # Tracks whether 2 frame fudge collection: (during cold initialisation)
+        self.first_initialisation = True
 
         ## ##
 
@@ -267,7 +269,7 @@ class Hexitec():
         version_info = get_versions()
 
         self.vcal = 3               # 0-2: Calibrated Image 0-2; 3: Normal data
-        
+
         self.fem_id = 101
         self.health = True
         self.status_message = ""
@@ -315,14 +317,24 @@ class Hexitec():
         IOLoop.instance().add_callback(self.poll_fem)
 
     def poll_fem(self):
-        start = time.time()
+
         #TODO: Needs reworking, reset must be issued to all fem(s) once triggered
         for fem in self.fems:
             if fem.acquisition_completed:
-                timeout = time.time() - fem.acquisition_timestamp
-                if (timeout > 1.0):
+                histogram_status = self.get_od_status('fp').get('histogram', {'frames_processed': 0})
+
+                # Either cold initialisation (first_initialisation is True, therefore only 2 frames expected)
+                #   or, ordinary collection (self.number_frames frames expected)
+                if (((self.first_initialisation is True) and (histogram_status['frames_processed'] == 2))
+                    or (histogram_status['frames_processed'] == self.number_frames)):
+
+                    if self.first_initialisation:
+                        number_frames = fem.get_number_frames()
+                        print("  adapter, number_frames: %s VS fem: %s" % (self.number_frames, number_frames))
+                        self.number_frames = number_frames
                     # Issue reset to histogram
-                    command = "config/histogram/flush_histograms"
+                    # command = "config/histogram/flush_histograms"
+                    command = "config/histogram/reset_histograms"
                     request = ApiAdapterRequest(self.file_dir, content_type="application/json")
                     request.body = "{}".format(1)
                     self.adapters["fp"].put(command, request)
@@ -339,7 +351,20 @@ class Hexitec():
                 self.status_message = fem._get_status_message()
                 self.health = self.health and health
 
+
         IOLoop.instance().call_later(1.0, self.poll_fem)
+
+
+    def get_od_status(self, adapter):
+        try:
+            request = ApiAdapterRequest(None, content_type="application/json")
+            response = self.adapters[adapter].get("status", request)
+            response = response.data["value"][0]
+        except KeyError:
+            logging.warning("%s Adapter Not Found" % adapter)
+            response = {"Error": "Adapter {} not found".format(adapter)}
+        finally:
+            return response
 
     def connect_hardware(self, msg):
         #TODO: Must recalculate collect and bias time both here and in initialise();
@@ -402,7 +427,15 @@ class Hexitec():
         # print("\n\n  ADP Bias Interval: %s Settle: %s Held: %s bias_and_deadtime: %s\n\n" % \
         #     (self.fems[0].bias_refresh_interval, self.fems[0].bias_voltage_settle_time, self.fems[0].time_refresh_voltage_held, self.collect_and_bias_time))
 
+        # If first initialisation, ie fudge, temporarily changed number_frames = 2
+        # Adapter controls this change in fem(s) too
+        first_initialisation = False
+        if self.first_initialisation is True:
+            self.number_frames = 2
+            first_initialisation = True
+
         for fem in self.fems:
+            fem.first_initialisation = first_initialisation
             fem.initialise_hardware(msg)
 
     def disconnect_hardware(self, msg):
@@ -446,11 +479,11 @@ class Hexitec():
         for fem in self.fems:
             fem.set_duration(self.duration)
             number_frames = fem.get_number_frames()
-        
+
         self.number_frames = number_frames
         # print("\n\n ADAPTER's set_duration(%s) meaning number_frames: %s  !!!!! \n\n" % (duration, number_frames))
         self.daq.set_number_frames(self.number_frames)
-    
+
     def _get_debug_count(self):
         return self.dbgCount
 
@@ -471,7 +504,13 @@ class Hexitec():
 
     @run_on_executor(executor='thread_executor')
     def acquisition(self, put_data=None):
-        
+
+        if self.first_initialisation:
+            for fem in self.fems:
+                # Only need to check first fem's value
+                self.first_initialisation = fem.first_initialisation
+                break
+
         if self.extended_acquisition == False:
             if self.daq.in_progress:
                 logging.warning("Cannot Start Acquistion: Already in progress")
@@ -523,11 +562,10 @@ class Hexitec():
             # MOVE time.sleep(1) TO HERE...???
             self.daq.start_acquisition(self.number_frames)
             self.initial_acquisition = False
-        
+
         # FP may be slow to process frame_number reset, need this one second wait to be on a safe side.
         time.sleep(1)
 
-        self.data_collection_begun = time.time()
         for fem in self.fems:
             #TODO: Dirty hack: Prevent frames being 1 (continuous readout) by setting it to 2 if it is 1
             number_frames_to_request = 2 if (number_frames_to_request == 1) else number_frames_to_request
@@ -545,7 +583,6 @@ class Hexitec():
             # fem still collecting data
             IOLoop.instance().call_later(0.1, self.check_fem_finished_collecting_data)
         else:
-            print("\n\n  Adapter detected fem data collected in: %s seconds \n\n" % (time.time() - self.data_collection_begun))
             # Current collection completed; But do we have all the frames user requested?
             if (self.frames_already_acquired < self.number_frames):
                 # Need further bias window(s)
