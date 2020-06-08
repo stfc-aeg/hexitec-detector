@@ -212,17 +212,14 @@ namespace FrameProcessor
 
       if (raw_image)
       {
-        // Frame modification now available
         FrameMetaData frame_meta;
 
-        // Setup of the frame dimensions
+        // Frame meta data common to both datasets
         dimensions_t dims(2);
         dims[0] = image_height_;
         dims[1] = image_width_;
         frame_meta.set_dimensions(dims);
-
         frame_meta.set_compression_type(no_compression);
-
         frame_meta.set_data_type(raw_float);
         frame_meta.set_frame_number(hdr_ptr->frame_number);
 
@@ -248,10 +245,10 @@ namespace FrameProcessor
           this->push(raw_frame);
         }
 
-        // For data dataset, reuse existing meta data as only the dataset name will differ
+        // For processed_frames dataset, reuse existing meta data as only the dataset name will differ
 
         // Set the dataset name
-        frame_meta.set_dataset_name("data");
+        frame_meta.set_dataset_name("processed_frames");
 
         boost::shared_ptr<Frame> data_frame;
         data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
@@ -264,7 +261,8 @@ namespace FrameProcessor
         convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
                                           static_cast<float *>(output_ptr));
 
-        LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: " <<
+        const std::string& dataset = frame_meta.get_dataset_name();
+        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: " <<
                       data_frame->get_frame_number());
         this->push(data_frame);
         // Manually update frame_number (until fixed in firmware)

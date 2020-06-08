@@ -69,6 +69,8 @@ namespace FrameProcessor
     static const std::string CONFIG_FRAMES_PROCESSED;
     /** Configuration constant for histograms written **/
     static const std::string CONFIG_HISTOGRAMS_WRITTEN;
+    /** Configuration constant for pass processed (dataset) **/
+    static const std::string CONFIG_PASS_PROCESSED;
 
     std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
     std::string sensors_layout_str_;
@@ -80,9 +82,9 @@ namespace FrameProcessor
     // function copied from HexitecGigE, but not currently in use:
     void addFrameDataToHistogram(float *frame);
 
-    boost::shared_ptr<Frame> energy_bins_;
-    boost::shared_ptr<Frame> summed_histograms_;
-    boost::shared_ptr<Frame> pixel_histograms_;
+    boost::shared_ptr<Frame> spectra_bins_;
+    boost::shared_ptr<Frame> summed_spectra_;
+    boost::shared_ptr<Frame> pixel_spectra_;
 
     /** Pointer to logger **/
     LoggerPtr logger_;
@@ -101,14 +103,12 @@ namespace FrameProcessor
     int flush_histograms_;
     int reset_histograms_;
     int histograms_written_;
+    bool pass_processed_;
 
     int bin_start_;
     int bin_end_;
     double bin_width_;
     long long number_bins_;
-    float *hexitec_bin_;
-    float *histogram_per_pixel_;
-    long long *summed_histogram_;
     void initialiseHistograms();
     void writeHistogramsToDisk();
     /// Debug only:

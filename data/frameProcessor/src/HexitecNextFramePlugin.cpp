@@ -150,7 +150,7 @@ namespace FrameProcessor
                                         << current_frame_number);
       this->push(frame);
     }
-    else if (dataset.compare(std::string("data")) == 0)
+    else if (dataset.compare(std::string("processed_frames")) == 0)
     {
       try
       {

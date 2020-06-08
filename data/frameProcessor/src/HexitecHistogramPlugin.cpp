@@ -19,6 +19,8 @@ namespace FrameProcessor
   const std::string HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT     = "sensors_layout";
   const std::string HexitecHistogramPlugin::CONFIG_FRAMES_PROCESSED   = "frames_processed";
   const std::string HexitecHistogramPlugin::CONFIG_HISTOGRAMS_WRITTEN = "histograms written";
+  const std::string HexitecHistogramPlugin::CONFIG_PASS_PROCESSED     = "pass_processed";
+
 
   /**
    * The constructor sets up logging used within the class.
@@ -30,7 +32,8 @@ namespace FrameProcessor
       max_frames_received_(0),
       flush_histograms_(0),
       histograms_written_(0),
-      frames_processed_(0)
+      frames_processed_(0),
+      pass_processed_(true)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecHistogramPlugin");
@@ -90,23 +93,23 @@ namespace FrameProcessor
    */
   void HexitecHistogramPlugin::initialiseHistograms()
   {
-    // Setup the dimension(s) for energy_bins, summed_histograms
+    // Setup the dimension(s) for spectra_bins, summed_spectra
     dimensions_t dims(1);
     dims[0] = number_bins_;
 
-    // Setup the energy bins
+    // Setup the spectra bins
 
-    FrameMetaData energy_meta;
+    FrameMetaData spectra_meta;
 
-    energy_meta.set_dimensions(dims);
-    energy_meta.set_compression_type(no_compression);
-    energy_meta.set_data_type(raw_float);
-    energy_meta.set_frame_number(0);
-    energy_meta.set_dataset_name("energy_bins");
+    spectra_meta.set_dimensions(dims);
+    spectra_meta.set_compression_type(no_compression);
+    spectra_meta.set_data_type(raw_float);
+    spectra_meta.set_frame_number(0);
+    spectra_meta.set_dataset_name("spectra_bins");
 
-    energy_bins_ = boost::shared_ptr<Frame>(new DataBlockFrame(energy_meta, number_bins_ * sizeof(float)));
+    spectra_bins_ = boost::shared_ptr<Frame>(new DataBlockFrame(spectra_meta, number_bins_ * sizeof(float)));
 
-    // Setup the summed histograms
+    // Setup the summed spectra
 
     FrameMetaData summed_meta;
 
@@ -114,13 +117,13 @@ namespace FrameProcessor
     summed_meta.set_compression_type(no_compression);
     summed_meta.set_data_type(raw_64bit);
     summed_meta.set_frame_number(0);
-    summed_meta.set_dataset_name("summed_histograms");
+    summed_meta.set_dataset_name("summed_spectra");
 
-    summed_histograms_ = boost::shared_ptr<Frame>(new DataBlockFrame(summed_meta, number_bins_ * sizeof(uint64_t)));
+    summed_spectra_ = boost::shared_ptr<Frame>(new DataBlockFrame(summed_meta, number_bins_ * sizeof(uint64_t)));
 
-    // Setup the pixels' histograms
+    // Setup the pixel spectra
 
-    // Setup the dimensions pixel_histograms
+    // Setup the dimensions pixel_spectra
     dimensions_t pixel_dims(2);
     pixel_dims[0] = image_pixels_;
     pixel_dims[1] = number_bins_;
@@ -131,13 +134,13 @@ namespace FrameProcessor
     pixel_meta.set_compression_type(no_compression);
     pixel_meta.set_data_type(raw_float);
     pixel_meta.set_frame_number(0);
-    pixel_meta.set_dataset_name("pixel_histograms");
+    pixel_meta.set_dataset_name("pixel_spectra");
 
-    pixel_histograms_ = boost::shared_ptr<Frame>(new DataBlockFrame(pixel_meta, image_pixels_ * number_bins_ * sizeof(float)));
+    pixel_spectra_ = boost::shared_ptr<Frame>(new DataBlockFrame(pixel_meta, image_pixels_ * number_bins_ * sizeof(float)));
 
     // Initialise bins
     float currentBin = bin_start_;
-    float *pHxtBin = static_cast<float *>(energy_bins_->get_data_ptr());	// New implementation
+    float *pHxtBin = static_cast<float *>(spectra_bins_->get_data_ptr());	// New implementation
     for (long i = bin_start_; i < number_bins_; i++, currentBin += bin_width_)
     {
       *pHxtBin = currentBin;
@@ -145,8 +148,8 @@ namespace FrameProcessor
     }
 
     // Clear histogram values
-    float *pixels = static_cast<float *>(pixel_histograms_->get_data_ptr());
-    float *summed = static_cast<float *>(summed_histograms_->get_data_ptr());
+    float *pixels = static_cast<float *>(pixel_spectra_->get_data_ptr());
+    float *summed = static_cast<float *>(summed_spectra_->get_data_ptr());
     memset(pixels, 0, (number_bins_ * image_pixels_) * sizeof(float));
     memset(summed, 0, number_bins_ * sizeof(uint64_t));
   }
@@ -163,6 +166,7 @@ namespace FrameProcessor
    * - bin_width_           <=> bin_width
    * - flush_histograms_    <=> flush_histograms
    * - reset_histograms_    <=> reset_histograms
+   * - pass_processed_      <=> pass_processed
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -210,6 +214,7 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS))
     {
+      LOG4CXX_DEBUG(logger_, "    !!!!! FLSUHING HISTOS awaaaaay now ");
       flush_histograms_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS);
 
       if (flush_histograms_ == 1)
@@ -224,9 +229,14 @@ namespace FrameProcessor
       }
     }
 
+    if (config.has_param(HexitecHistogramPlugin::CONFIG_PASS_PROCESSED))
+    {
+      pass_processed_ = config.get_param<bool>(HexitecHistogramPlugin::CONFIG_PASS_PROCESSED);
+    }
+
     // (Re-)Initialise memory
     initialiseHistograms();
-    }
+  }
 
   void HexitecHistogramPlugin::requestConfiguration(OdinData::IpcMessage& reply)
   {
@@ -240,6 +250,7 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS, flush_histograms_);
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_FRAMES_PROCESSED, frames_processed_);
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_HISTOGRAMS_WRITTEN, histograms_written_);
+    reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_PASS_PROCESSED, pass_processed_);
   }
 
   /**
@@ -259,6 +270,7 @@ namespace FrameProcessor
     status.set_param(get_name() + "/flush_histograms", flush_histograms_);
     status.set_param(get_name() + "/frames_processed", frames_processed_);
     status.set_param(get_name() + "/histograms_written", histograms_written_);
+    status.set_param(get_name() + "/pass_processed", pass_processed_);
   }
 
   /**
@@ -294,7 +306,7 @@ namespace FrameProcessor
                                         << frame->get_frame_number());
       this->push(frame);
     }
-    else if (dataset.compare(std::string("data")) == 0)
+    else if (dataset.compare(std::string("processed_frames")) == 0)
     {
       try
       {
@@ -305,24 +317,31 @@ namespace FrameProcessor
         // Add this frame's contribution onto histograms
         add_frame_data_to_histogram_with_sum(static_cast<float *>(input_ptr));
 
-        frames_processed_++;
-
         // Write histograms to disc when maximum number of frames received
-        if ( ((frames_processed_ % max_frames_received_) == 0) &&
-              (frames_processed_ != 0) )
+        if ( ((frames_processed_+1) % max_frames_received_) == 0) 
         {
           /// Time to push current histogram data to file
           writeHistogramsToDisk();
           histograms_written_ = frames_processed_;
         }
 
-        /// Histogram will access data dataset but not change it in any way
+        /// Histogram will access processed_frames dataset but not change it
         /// Therefore do not need to check frame dimensions, etc
 
-        // Pass on data dataset unmodified:
-        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                          << frame->get_frame_number());
-        this->push(frame);
+        if (pass_processed_)
+        {
+          // Pass on processed_frames dataset unmodified:
+          LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+                                            << frame->get_frame_number());
+          this->push(frame);
+        }
+        else
+        {
+          // Do not pass on processed_frames dataset unmodified:
+          LOG4CXX_TRACE(logger_, "             !!!!!             I AM NOT Pushing " << dataset << " dataset, frame number: "
+                                            << frame->get_frame_number());
+        }
+        frames_processed_++;
       }
       catch (const std::exception& e)
       {
@@ -342,14 +361,15 @@ namespace FrameProcessor
   {
     LOG4CXX_TRACE(logger_, " -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
 
-    LOG4CXX_TRACE(logger_, "Pushing " << energy_bins_->get_meta_data().get_dataset_name() << " dataset");
-    this->push(energy_bins_);
+    LOG4CXX_TRACE(logger_, "Pushing " << spectra_bins_->get_meta_data().get_dataset_name() << " dataset");
+    this->push(spectra_bins_);
 
-    LOG4CXX_TRACE(logger_, "Pushing " << summed_histograms_->get_meta_data().get_dataset_name() << " dataset");
-    this->push(summed_histograms_);
+    LOG4CXX_TRACE(logger_, "Pushing " << summed_spectra_->get_meta_data().get_dataset_name() << " dataset");
+    this->push(summed_spectra_);
 
-    LOG4CXX_TRACE(logger_, "Pushing " << pixel_histograms_->get_meta_data().get_dataset_name() << " dataset");
-    this->push(pixel_histograms_);
+    LOG4CXX_TRACE(logger_, "Pushing " << pixel_spectra_->get_meta_data().get_dataset_name() << " dataset");
+    this->push(pixel_spectra_);
+    LOG4CXX_TRACE(logger_, " !?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!");
   }
 
   /**
@@ -361,12 +381,12 @@ namespace FrameProcessor
   void HexitecHistogramPlugin::add_frame_data_to_histogram_with_sum(float *frame)
   {
     const void* pixel_ptr = static_cast<const void*>(
-      static_cast<const char*>(pixel_histograms_->get_data_ptr()));
+      static_cast<const char*>(pixel_spectra_->get_data_ptr()));
     void* pixel_input_ptr = static_cast<void *>(
       static_cast<char *>(const_cast<void *>(pixel_ptr)));
 
     const void* summed_ptr = static_cast<const void*>(
-      static_cast<const char*>(summed_histograms_->get_data_ptr()));
+      static_cast<const char*>(summed_spectra_->get_data_ptr()));
     void* summed_input_ptr = static_cast<void *>(
       static_cast<char *>(const_cast<void *>(summed_ptr)));
 
@@ -395,7 +415,7 @@ namespace FrameProcessor
   // Called when the user NOT selected spectrum option
   void HexitecHistogramPlugin::addFrameDataToHistogram(float *frame)
   {
-    float *currentHistogram = static_cast<float *>(pixel_histograms_->get_data_ptr());
+    float *currentHistogram = static_cast<float *>(pixel_spectra_->get_data_ptr());
     float thisEnergy;
     int bin;
     int pixel;

@@ -85,7 +85,13 @@ class HexitecDAQ():
         self.number_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
 
         self.max_frames_received = 10
+        self.pass_processed = False
         self.raw_data = False
+        # Look at histogram/hdf to determine when processing finished:
+        self.plugin = "histogram"
+        self.master_dataset = "spectra_bins"
+        self.extra_datasets = []
+
         self.threshold_filename = ""
         self.threshold_mode = "value"
         self.threshold_value = 100
@@ -138,7 +144,8 @@ class HexitecDAQ():
                     "bin_end": (lambda: self.bin_end, self._set_bin_end),
                     "bin_start": (lambda: self.bin_start, self._set_bin_start),
                     "bin_width": (lambda: self.bin_width, self._set_bin_width),
-                    "max_frames_received": (lambda: self.max_frames_received, self._set_max_frames_received)
+                    "max_frames_received": (lambda: self.max_frames_received, self._set_max_frames_received),
+                    "pass_processed": (lambda: self.pass_processed, self._set_pass_processed)
                 },
                 "reorder": {
                     "raw_data": (lambda: self.raw_data, self._set_raw_data)
@@ -236,21 +243,31 @@ class HexitecDAQ():
         """
         Checks that the processing has completed
         """
+        if self.first_initialisation:
+            # First initialisation runs without file writing; Stop acquisition
+            #   without reopening (non-existent) file to add meta data
+            self.first_initialisation = False
+            # Delay calling stop_acquisition, otherwise software may beat fem to it
+            IOLoop.instance().call_later(2.0, self.stop_acquisition)
+            return
+        # Not fudge initialisation; Check HDF/histogram processing progress
+        processing_status = self.get_od_status('fp').get(self.plugin, {'frames_processed': 0})
+
+        # Debugging information:
         hdf_status = self.get_od_status('fp').get('hdf', {"frames_processed": 0})
-        logging.debug("      process_chek_loop, hdf stat vs frm_end_acq %s v %s" % (hdf_status['frames_processed'], self.frame_end_acquisition))
-        if hdf_status['frames_processed'] == self.frame_end_acquisition:
-            self.stop_acquisition()
+        his_status = self.get_od_status('fp').get('histogram', {'frames_processed': 0})
+        logging.debug("      process_chek_loop, hdf (%s) vs his (%s) vs frm_end_acq (%s) PLUG = %s" % 
+            (hdf_status['frames_processed'], his_status['frames_processed'], self.frame_end_acquisition, self.plugin))
+
+        if processing_status['frames_processed'] == self.frame_end_acquisition:
+            print("\n  ***  frms proc'd - proc_check_loop *** \n")
+            delay = 1.0
+            IOLoop.instance().call_later(delay, self.stop_acquisition)
             logging.debug("Acquisition Complete")
-            # All required frames acquired, wait for hdf file to close
-            self.hdf_closing_loop()
+            # All required frames acquired; if either of frames based datasets 
+            #   selected, wait for hdf file to close
+            IOLoop.instance().call_later(delay, self.hdf_closing_loop)
         else:
-            if self.first_initialisation:
-                # First initialisation runs without file writing, stopping acquisition 
-                #   without reopening (non-existent) file to add meta data
-                self.first_initialisation = False
-                # Delay calling stop_acquisition, otherwise software may beat fem to it
-                IOLoop.instance().call_later(2.0, self.stop_acquisition)
-                return
             IOLoop.instance().call_later(.5, self.processing_check_loop)
 
     def check_file_exists(self):
@@ -263,8 +280,7 @@ class HexitecDAQ():
     def stop_acquisition(self):
         """ Disables file writing so the processes can access the saved data """
         self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
-
-        logging.debug("      stop_acq()")
+        logging.debug("\n      stop_acq()")
         self.in_progress = False
         self.set_file_writing(False)
 
@@ -276,15 +292,15 @@ class HexitecDAQ():
         hdf_status = self.get_od_status('fp').get('hdf', {"writing": True})
         logging.debug("      hdf_clos_loop, hdf stat: %s" % hdf_status)
         if hdf_status['writing']:
-            # print("   hdf_clo_loo, writ still TRUE")
+            print("   hdf_clo_loo, writ still TRUE")
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
-            # print("   hdf_clo_loo, writ FALSE so LET's GOGOGO")
             self.hdf_file_location = self.file_dir + self.file_name + '_000001.h5'
             # Check file exists before reopening to add metadata
             if os.path.exists(self.hdf_file_location):
                 self.prepare_hdf_file()
             else:
+                #TODO: Not FEM specific error - Update directly, not via fem !
                 for fem in self.parent.fems:
                     fem._set_status_error("Cannot add meta data; No such File: %s" % \
                                                                 self.hdf_file_location)
@@ -293,7 +309,6 @@ class HexitecDAQ():
         """
         Re-open HDF5 file, prepare meta data
         """
-        logging.debug("      prep_hdf_file")
         try:
             hdf_file = h5py.File(self.hdf_file_location, 'r+')
             for fem in self.parent.fems:
@@ -301,10 +316,10 @@ class HexitecDAQ():
             self.hdf_retry = 0
         except IOError as e:
             # Let's retry a couple of times in case file just temporary busy
-            if self.hdf_retry < 3:
+            if self.hdf_retry < 6:
                 self.hdf_retry += 1
-                # print("   *** Re-trying: %s because: %s" % (self.hdf_retry, e))
-                IOLoop.instance().call_later(1.0, self.hdf_closing_loop)
+                print("   *** Re-trying: %s because: %s" % (self.hdf_retry, e))
+                IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
                 return
             #....?
             logging.error("Failed to open '%s' with error: %s" % (hdf_file_location, e))
@@ -562,29 +577,32 @@ class HexitecDAQ():
         Updates histograms' dimensions in the relevant datasets
         """
         self.number_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
-        # energy_bins dataset
+        # spectra_bins dataset
         payload = '{"dims": [%s], "chunks": [1, %s]}' % \
             (self.number_histograms, self.number_histograms)
-        command = "config/hdf/dataset/" + "energy_bins"
+        command = "config/hdf/dataset/" + "spectra_bins"
         request = ApiAdapterRequest(str(payload), content_type="application/json")
         self.adapters["fp"].put(command, request)
 
-        # pixel_histograms dataset
+        # pixel_spectra dataset
         payload = '{"dims": [%s, %s], "chunks": [1, %s, %s]}' % \
             (self.pixels, self.number_histograms, self.pixels, self.number_histograms)
-        command = "config/hdf/dataset/" + "pixel_histograms"
+        command = "config/hdf/dataset/" + "pixel_spectra"
         request = ApiAdapterRequest(str(payload), content_type="application/json")
         self.adapters["fp"].put(command, request)
 
-        # summed_histograms dataset
+        # summed_spectra dataset
         payload = '{"dims": [%s], "chunks": [1, %s]}' % \
             (self.number_histograms, self.number_histograms)
-        command = "config/hdf/dataset/" + "summed_histograms"
+        command = "config/hdf/dataset/" + "summed_spectra"
         request = ApiAdapterRequest(str(payload), content_type="application/json")
         self.adapters["fp"].put(command, request)
 
     def _set_max_frames_received(self, max_frames_received):
         self.max_frames_received = max_frames_received
+
+    def _set_pass_processed(self, pass_processed):
+        self.pass_processed = pass_processed
 
     def _set_raw_data(self, raw_data):
         self.raw_data = raw_data
@@ -632,13 +650,25 @@ class HexitecDAQ():
 
     def commit_configuration(self):
         """
-        Sends each ParameterTree value to it's counterpart in the FP
+        Generates and sends the FP config files
         """
-        # Generate JSON config file from parameter tree's settings
+        # Generate JSON config file determining which plugins, the order to chain them, etc
         parameter_tree = self.param_tree.get('')
 
+        self.extra_datasets = []
+        self.master_dataset = "spectra_bins"
+
+        if self.raw_data:
+            self.master_dataset = "raw_frames"
+            self.extra_datasets.append(self.master_dataset)
+        if self.pass_processed:
+            self.master_dataset = "processed_frames"
+            self.extra_datasets.append(self.master_dataset)
+
         self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
-                                        bDeleteFileOnClose=False)
+                                        bDeleteFileOnClose=False,
+                                        master_dataset=self.master_dataset,
+                                        extra_datasets=self.extra_datasets)
 
         store_config, execute_config = self.gcf.generate_config_files()
 
@@ -649,6 +679,13 @@ class HexitecDAQ():
         request = ApiAdapterRequest(execute_config, content_type="application/json")
         self.adapters["fp"].put(command, request)
 
+        # Allow FP time to process above PUT requests before configuring plugin settings
+        IOLoop.instance().call_later(0.4, self.submit_configuration)
+
+    def submit_configuration(self):
+        """
+        Sends each ParameterTree value to the corresponding FP plugin
+        """
         # Loop overall plugins in ParameterTree, updating fp's settings except reorder
         #TODO: Include reorder when odin control supports raw_data (i.e. bool)
         for plugin in self.param_tree.tree.get("config"):
@@ -657,15 +694,29 @@ class HexitecDAQ():
 
                 for param_key in self.param_tree.tree['config'].get(plugin):
 
-                    # print "\nconfig/%s/%s" % (plugin, param_key), " -> ", \
-                    #         self.param_tree.tree['detector']['config'][plugin][param_key].get(), "\n"
+                    # print "config/%s/%s" % (plugin, param_key), " -> ", \
+                    #         self.param_tree.tree['config'][plugin][param_key].get("")
 
-                    command = "config/%s/%s" % (plugin, param_key)
-                    payload = self.param_tree.tree['config'][plugin][param_key].get()
-                    request = ApiAdapterRequest(str(payload), content_type="application/json")
-                    self.adapters["fp"].put(command, request)
+                    # Don't send histograms' pass_processed, since Odin Control do not support bool..
+                    if param_key != "pass_processed":
 
-        #TODO: Cannot implement delayed file deletion, forced to keep them alive past closure..!
+                        command = "config/%s/%s" % (plugin, param_key)
+                        payload = self.param_tree.tree['config'][plugin][param_key].get()
+                        request = ApiAdapterRequest(str(payload), content_type="application/json")
+                        self.adapters["fp"].put(command, request)
+
+        # Which plugin determines when processing finished?
+        if (self.raw_data or self.pass_processed):
+            self.plugin = "hdf"
+        else:
+            self.plugin = "histogram"
+        
+        # print("\n\n *** self.plugin: %s ***" % self.plugin)
+        # print(" *** master dset: %s ***" % self.master_dataset)
+        # print(" *** extra  dset: %s ***" % self.extra_datasets)
+        # print(" *** pass_proc'd(%s), raw_frms(%s) ***\n\n" % (self.pass_processed, self.raw_data))
+
+    #TODO: Cannot implement delayed file deletion, forced to keep them alive past closure..!
     #     logging.debug("\n\n\tWaiting three seconds before closing temporary files..\n\n")
     #     IOLoop.instance().call_later(3.0, self.close_temporary_files)
 

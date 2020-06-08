@@ -448,7 +448,7 @@ class HexitecFem():
             self._set_status_error("Uncaught Exception; Failed to establish camera connection: %s" % str(e))
             logging.error("%s" % str(e))
             # Cannot raise error beyond this thread
-        
+
         # print("\n\nReinstate polling before merging with master !\n\n")
         # Start polling thread (connect successfully set up)
         if len(self.status_error) == 0:

@@ -3,6 +3,7 @@ var hexitec_url = '/api/' + api_version + '/hexitec/';
 
 // Vars added for Odin-Data
 var raw_data_enable = false;
+var processed_data_enable = false;
 var addition_enable = false;
 var discrimination_enable = false;
 var charged_sharing_enable = false;
@@ -85,6 +86,11 @@ $( document ).ready(function()
         changeDurationEnable();
     });
 
+    $("[name='processed_data_enable']").bootstrapSwitch();
+    $("[name='processed_data_enable']").bootstrapSwitch('state', processed_data_enable, true);
+    $('input[name="processed_data_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
+        changeProcessedDataEnable();
+    });
 
     $("[name='raw_data_enable']").bootstrapSwitch();
     $("[name='raw_data_enable']").bootstrapSwitch('state', raw_data_enable, true);
@@ -163,7 +169,7 @@ $( document ).ready(function()
         // Stop polling thread after a 2 second delay to 
         //  allow any lingering message(s) through
         setTimeout(function() {
-            polling_thread_running = false;    
+            polling_thread_running = false;
         }, 2000);
         document.getElementById("disconnectButton").disabled = true;
         document.getElementById("connectButton").disabled = false;
@@ -519,31 +525,40 @@ function apply_ui_values()
 {
     // Load all UI settings into HexitecDAQ's ParameterTree
 
-    changeRawDataEnable();
-    threshold_mode_changed();
-    threshold_value_changed();
-    var threshold_mode = $('#threshold-mode-text').prop('value');
-    // Update threshold filename if threshold filename mode set
-    //  (0: strings equal [filename mode], 1: not [none/value mode])
-    if (threshold_mode.localeCompare("filename") == 0)
-    {
-        threshold_filename_changed();
-    }
-    gradients_filename_changed();
-    intercepts_filename_changed();
-    pixel_grid_size_changed();
-    bin_start_changed();
-    bin_end_changed();
-    bin_width_changed();
-
-    hdf_file_path_changed();
-    hdf_file_name_changed();
-
-    hexitec_config_changed();
-
-    // Push HexitecDAQ's ParameterTree settings to FP's plugins,
-    //  generate temporary config files loading plugins chain
+    // Generate temporary config file(s) loading plugins chain,
+    //  push HexitecDAQ's ParameterTree settings to FP's plugins
     commit_configuration();
+
+    // This will be executed after however many milliseconds 
+    //  specified at the end of this function definition
+    setTimeout(function() {
+
+        // Delay necessary otherwise some plugin' variables are configured 
+        // before they are actually loaded (which will not work obviously)
+
+        changeRawDataEnable();
+        changeProcessedDataEnable();
+        threshold_mode_changed();
+        threshold_value_changed();
+        var threshold_mode = $('#threshold-mode-text').prop('value');
+        // Update threshold filename if threshold filename mode set
+        //  (0: strings equal [filename mode], 1: not [none/value mode])
+        if (threshold_mode.localeCompare("filename") == 0)
+        {
+            threshold_filename_changed();
+        }
+        gradients_filename_changed();
+        intercepts_filename_changed();
+        pixel_grid_size_changed();
+        bin_start_changed();
+        bin_end_changed();
+        bin_width_changed();
+
+        hdf_file_path_changed();
+        hdf_file_name_changed();
+
+        hexitec_config_changed();
+    }, 300);
 }
 
 function threshold_filename_changed()
@@ -749,10 +764,37 @@ var changeDurationEnable = function ()
     }
 };
 
+var changeProcessedDataEnable = function ()
+{
+    // TODO: Temporarily hacked until Odin control supports bool
+    processed_data_enable = $("[name='processed_data_enable']").bootstrapSwitch('state');
+    console.log("changeProcessedDataEnable called, changing to: " + processed_data_enable);
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'fp/config/histogram/pass_processed',  // Targets FP Plugin directly
+        contentType: "application/json",
+        data: JSON.stringify(processed_data_enable),
+        error: function(request, msg, error) {
+            console.log("Processed dataset in FP: couldn't be changed");
+        }
+    });
+
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/histogram/pass_processed',  // Targets DAQ adapter
+        contentType: "application/json",
+        data: JSON.stringify(processed_data_enable),
+        error: function(request, msg, error) {
+            console.log("Processed dataset in daq: couldn't be changed");
+        }
+    });
+};
+
 var changeRawDataEnable = function ()
 {
     // TODO: Temporarily hacked until Odin control supports bool
     raw_data_enable = $("[name='raw_data_enable']").bootstrapSwitch('state');
+    console.log("changeRawDataEnable called, changing to: " + raw_data_enable);
     $.ajax({
         type: "PUT",
         url: hexitec_url + 'fp/config/reorder/raw_data',  // Targets FP Plugin directly

@@ -332,12 +332,6 @@ class Hexitec():
                         number_frames = fem.get_number_frames()
                         print("  adapter, number_frames: %s VS fem: %s" % (self.number_frames, number_frames))
                         self.number_frames = number_frames
-                    # Issue reset to histogram
-                    # command = "config/histogram/flush_histograms"
-                    command = "config/histogram/reset_histograms"
-                    request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-                    request.body = "{}".format(1)
-                    self.adapters["fp"].put(command, request)
 
                     # Reset fem's acquisiton status ahead of future acquisition
                     fem.acquisition_completed = False
@@ -555,6 +549,13 @@ class Hexitec():
         command = "config/reorder/frame_number"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         request.body = "{}".format(self.frames_already_acquired)
+        self.adapters["fp"].put(command, request)
+
+        # Issue reset to histogram
+        # command = "config/histogram/flush_histograms"
+        command = "config/histogram/reset_histograms"
+        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+        request.body = "{}".format(1)
         self.adapters["fp"].put(command, request)
 
         # Only call daq's start_acquisition() once per acquisition

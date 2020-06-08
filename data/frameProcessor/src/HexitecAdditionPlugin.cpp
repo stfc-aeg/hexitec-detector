@@ -152,7 +152,7 @@ namespace FrameProcessor
             " dataset, frame number: " << frame->get_frame_number());
       this->push(frame);
     }
-    else if (dataset.compare(std::string("data")) == 0)
+    else if (dataset.compare(std::string("processed_frames")) == 0)
     {
       try
       {
@@ -182,7 +182,7 @@ namespace FrameProcessor
    * Prepare frame for charged sharing processing
    *
    * \param[in] input_frame - Pointer to the image data to be processed.
-   * \param[in] output_frame - Pointer to the process image data.
+   * \param[in] output_frame - Pointer to the processed image data.
    */
   void HexitecAdditionPlugin::prepare_charged_sharing(float *frame)
   {
