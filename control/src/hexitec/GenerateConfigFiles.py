@@ -68,6 +68,17 @@ class GenerateConfigFiles():
 
     def generate_config_files(self):
 
+        self.store_temp = tempfile.NamedTemporaryFile(mode='w+t')
+        self.store_temp.delete = self.delete_file_on_close
+
+        # >>> tempfile.NamedTemporaryFile(mode='w+t').name.split("/")
+        # ['', 'tmp', 'tmp6xM4wn']
+        # >>> '/tmp/tmp6xM4wn'.split("/") => ['', 'tmp', 'tmp6xM4wn']
+
+        # Generate a unique index name
+        (blank, folder, filename) = self.store_temp.name.split("/")
+        self.index_name = filename
+
         # ---------------- Section for the store sequence ---------------- #
 
         # Preamble includes name of sequence, fr setup (unlikely to change)
@@ -75,7 +86,7 @@ class GenerateConfigFiles():
     {
         "store": 
         {
-            "index": "temp", 
+            "index": "%s",
             "value":
             [
                 {
@@ -83,7 +94,7 @@ class GenerateConfigFiles():
                         "fr_ready_cnxn": "tcp://127.0.0.1:5001",
                         "fr_release_cnxn": "tcp://127.0.0.1:5002"
                     }
-                }'''
+                }''' % self.index_name
 
         # plugin path that follows the same format i.e. ("reorder", "Reorder", "Reorder")
         # "index": "reorder",
@@ -300,9 +311,6 @@ class GenerateConfigFiles():
     }
 ]'''
 
-        self.store_temp = tempfile.NamedTemporaryFile(mode='w+t')
-        self.store_temp.delete = self.delete_file_on_close
-
         # Put together the store sequence file
         try:
             self.store_temp.writelines(store_sequence_preamble)
@@ -312,6 +320,7 @@ class GenerateConfigFiles():
         finally:
             self.store_temp.close()
 
+        
 
         # The execute_config file is used to wipe any existing config, then load user config
         execute_config = '''
@@ -325,10 +334,10 @@ class GenerateConfigFiles():
     {
         "execute": 
         {
-            "index": "temp"
+            "index": "%s"
         }
     }
-]'''
+]''' % self.index_name
 
         self.execute_temp = tempfile.NamedTemporaryFile(mode='w+t')
         self.execute_temp.delete = self.delete_file_on_close

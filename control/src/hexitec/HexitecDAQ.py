@@ -292,7 +292,9 @@ class HexitecDAQ():
         hdf_status = self.get_od_status('fp').get('hdf', {"writing": True})
         logging.debug("      hdf_clos_loop, hdf stat: %s" % hdf_status)
         if hdf_status['writing']:
-            print("   hdf_clo_loo, writ still TRUE")
+            print("")
+            logging.debug("   hdf_clo_loo, writ still TRUE")
+            print("")
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
             self.hdf_file_location = self.file_dir + self.file_name + '_000001.h5'
@@ -302,8 +304,8 @@ class HexitecDAQ():
             else:
                 #TODO: Not FEM specific error - Update directly, not via fem !
                 for fem in self.parent.fems:
-                    fem._set_status_error("Cannot add meta data; No such File: %s" % \
-                                                                self.hdf_file_location)
+                    fem._set_status_error("No file to add meta: %s" % \
+                        self.hdf_file_location)
 
     def prepare_hdf_file(self):
         """
@@ -341,6 +343,7 @@ class HexitecDAQ():
 
         for fem in self.parent.fems:
             fem._set_status_message("Meta data added")
+            # fem._set_status_message("Fuck that")
         hdf_file.close()
 
     def write_metadata(self, metadata_group, param_tree_dict):
@@ -461,6 +464,7 @@ class HexitecDAQ():
         self.file_dir = directory
 
     def set_number_frames(self, number_frames):
+        print("");logging.debug("  .set_number_frames(%s); Changing number_frames: %s " % (number_frames, self.number_frames));print("")
         self.number_frames = number_frames
 
     def set_file_name(self, name):
@@ -469,7 +473,9 @@ class HexitecDAQ():
     def set_file_writing(self, writing):
         command = "config/hdf/frames"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-        request.body = "{}".format(self.number_frames)
+        # request.body = "{}".format(self.number_frames)
+        print("\n\n\n\n\n\n\n\n\n      hexitec DAQ HARDCODED\n\n\n\n\n\n\n\n\n")
+        request.body = "{}".format(0)
         self.adapters["fp"].put(command, request)
 
         self.file_writing = writing

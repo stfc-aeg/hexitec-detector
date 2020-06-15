@@ -24,12 +24,12 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from tornado.ioloop import IOLoop
 from tornado.concurrent import run_on_executor
-from tornado.escape import json_decode
+
 
 class HexitecFem():
     """
     Hexitec Fem class. Represents a single FEM-II module.
-    
+
     Controls and configures each FEM-II module ready for a DAQ via UDP.
     """
     thread_executor = futures.ThreadPoolExecutor(max_workers=2)
@@ -310,8 +310,8 @@ class HexitecFem():
         elif p_size == 8 and f_size == 8:
             pixel_count_max = pixel_count_max//4
         else:
-            size_status =size_status + 1
-            
+            size_status = size_status + 1
+
         # set up registers if no size errors     
         if size_status != 0:
             logging.error("%-32s %8i %8i %8i %8i %8i %8i" % ('-> size error', number_bytes, number_bytes_r4, \
@@ -321,9 +321,8 @@ class HexitecFem():
             data = (pixel_count_max & 0x1FFFF) -1
             self.x10g_rdma.write(address, data, 'pixel count max')
             self.x10g_rdma.write(self.rdma_addr["receiver"]+4, 0x3, 'pixel bit size => 16 bit')
-            
         return
-    
+
     def frame_gate_trigger(self):
         # the reset of monitors suggested by Rob:
         self.x10g_rdma.write(self.rdma_addr["reset_monitor"]+0,0x0,     'reset monitor off')
@@ -376,11 +375,15 @@ class HexitecFem():
 
     def get_number_frames(self):
         return self.number_frames
-    
+
     def set_number_frames(self, frames):
+        print("");logging.debug("  .set_number_frames(%s); About to update: %s " % (frames, self.number_frames));print("")
         if self.number_frames != frames:
             self.number_frames = frames
             self.duration = self.number_frames / self.frame_rate
+            print("");logging.debug("  .set_number_frames(%s); Updated: %s " % (frames, self.number_frames));print("")
+        else:
+            print("");logging.debug("  .set_number_frames(%s); NOPE: %s " % (frames, self.number_frames));print("")
 
     def get_duration(self):
         return self.duration
@@ -388,6 +391,7 @@ class HexitecFem():
     def set_duration(self, duration):
         self.duration = duration
         frames = self.duration * self.frame_rate
+        print("");logging.debug("  .set_duration(dur=%s); About to update: %s become: %s" % (duration, self.number_frames, int(round(frames))));print("")
         self.number_frames = int(round(frames))
 
     def _set_test_mode_image(self, image):
@@ -449,10 +453,10 @@ class HexitecFem():
             logging.error("%s" % str(e))
             # Cannot raise error beyond this thread
 
-        # print("\n\nReinstate polling before merging with master !\n\n")
-        # Start polling thread (connect successfully set up)
-        if len(self.status_error) == 0:
-            self.start_polling()
+        print("\n\nReinstate polling before merging with master !\n\n")
+        # # Start polling thread (connect successfully set up)
+        # if len(self.status_error) == 0:
+        #     self.start_polling()
 
     @run_on_executor(executor='thread_executor')
     def initialise_hardware(self, msg=None):
@@ -615,11 +619,17 @@ class HexitecFem():
             self.hardware_busy = False
             # logging.debug("\t HARDWARE_BUSY = FALSE\n\n")
             self._set_status_message("Camera connected. Microcontrollers initialised.")
-            print("\n\n\n\n\n")
-            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
-            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
-            print("\n\n");logging.debug(" %s, %s   ****** conn_hw; Register 0x24: Start of this line !! ******                     !!!!!" % (vsr2, vsr1));print("\n\n")
-
+            # try:
+            #     print("\n\n\n\n\n")
+            #     self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+            #     self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+            #     print("\n\n");logging.debug(" %s, %s   ****** conn_hw; Register 0x24: Start of this line !! ******                     !!!!!" % (vsr2, vsr1));print("\n\n")
+            # except (HexitecFemError, ParameterTreeError) as e:
+            #     self._set_status_error("DEBUG init_check_loop Error: %s" % str(e))
+            #     logging.error("%s" % str(e))
+            # except Exception as e:
+            #     self._set_status_error("DEBUG Exception; init_check_loop failed: %s" % str(e))
+            #     logging.error("%s" % str(e))
 
     def send_cmd(self, cmd, track_progress=True):
         """
@@ -1001,7 +1011,10 @@ class HexitecFem():
         number_frames = self.number_frames
         if self.first_initialisation:
             # Don't set to 1, as rdma write subtracts 1 (and 0 = continuous readout!)
-            self.number_frames = 2 
+            self.number_frames = 2
+            print("");logging.debug("  .acquire_data(); Changing (temporarily) number_frames: %s " % (self.number_frames));print("")
+        else:
+            print("");logging.debug("  .acquire_data(); NOT changing number_frames: %s " % (self.number_frames));print("")
 
         self.x10g_rdma.write(0xD0000001, self.number_frames-1, 'Frame Gate set to \
                                                                 self.number_frames')
@@ -1183,6 +1196,9 @@ class HexitecFem():
 
         if self.first_initialisation:
             self.number_frames = number_frames
+            print("");logging.debug("  .acquire_data(); Restored number_frames: %s " % (self.number_frames));print("")
+        else:
+            print("");logging.debug("  .acquire_data(); NOT touching number_frames: %s " % (self.number_frames));print("")
 
     def set_up_state_machine(self):
         """
@@ -2019,6 +2035,7 @@ class HexitecFem():
             # With duration enabled, recalculate number of frames in case clocks changed 
             self.set_duration(self.duration)
             self.parent.set_number_frames(self.number_frames)
+            print("");logging.debug("  .calculate_frame_rate(); Changed PARENT's number_frames: %s " % (self.number_frames));print("")
         # print(" \n  HxtFEM duration_enabled: %s frame_rate: %s \n" % (self.duration_enabled, frame_rate))
 
 
@@ -2230,7 +2247,7 @@ class HexitecFem():
         #TODO: Remove display of file contents when no longer needed
         self.read_ini_file(self.hexitec_config, self.hexitec_parameters, debug=True)
 
-        ### DEBUGGING: Testing reading hexitecVSR.ini config file ###
+        # Read hexitecVSR.ini config file
         bias_refresh_interval = self._extract_integer(self.hexitec_parameters, \
             'Bias_Voltage/Bias_Refresh_Interval', bit_range=32)
         if bias_refresh_interval > -1:
@@ -2256,8 +2273,8 @@ class HexitecFem():
             'Control-Settings/vcal_control')
         if vcal_control > -1:
             self.vcal_control = vcal_control
-        print("                 vcal_control: %s (%s)\n\n" % (self.vcal_control, type(self.vcal_control)))
 
+        # print("                 vcal_control: %s (%s)\n\n" % (self.vcal_control, type(self.vcal_control)))
         # print("                 bias refresh interval: %s (%s)" % (self.bias_refresh_interval, type(self.bias_refresh_interval)))
         # print("                 bias voltage settle time: %s (%s)" % (self.bias_voltage_settle_time, type(self.bias_voltage_settle_time)))
         # print("                 time refresh voltage held: %s (%s)" % (self.time_refresh_voltage_held, type(self.time_refresh_voltage_held)))

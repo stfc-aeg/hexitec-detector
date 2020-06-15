@@ -332,6 +332,9 @@ class Hexitec():
                         number_frames = fem.get_number_frames()
                         print("  adapter, number_frames: %s VS fem: %s" % (self.number_frames, number_frames))
                         self.number_frames = number_frames
+                        print("");logging.debug("  .poll_fem(); Changed number_frames: %s " % (self.number_frames));print("")
+                    else:
+                        print("");logging.debug("  .poll_fem(); DIDN'T Change number_frames: %s " % (self.number_frames));print("")
 
                     # Reset fem's acquisiton status ahead of future acquisition
                     fem.acquisition_completed = False
@@ -427,6 +430,9 @@ class Hexitec():
         if self.first_initialisation is True:
             self.number_frames = 2
             first_initialisation = True
+            print("");logging.debug("  .initialise_hardware(); Changed number_frames: %s " % (self.number_frames));print("")
+        else:
+            print("");logging.debug("  .initialise_hardware(); DIDN'T Change number_frames: %s " % (self.number_frames));print("")
 
         for fem in self.fems:
             fem.first_initialisation = first_initialisation
@@ -455,15 +461,18 @@ class Hexitec():
         if duration_enable:
             self.set_duration(self.duration)
         else:
+            print("");logging.debug("  .set_duration_enable(); reaffirming number_frames: %s " % (self.number_frames));print("")
             self.set_number_frames(self.number_frames)
 
     def set_number_frames(self, frames):
-        # print("\n\n  ADAPTER's set_number_frames(%s)! \n\n" % (frames))
+        print("");logging.debug("  .set_number_frames(%s); Changing number_frames: %s " % (frames, self.number_frames));print("")
         self.number_frames = frames
         # Update number of frames in Hardware, and (via DAQ) in histogram and hdf plugins
         for fem in self.fems:
+            print("");logging.debug("  .set_number_frames(%s); ALSO Changing number_frames in fem(s): %s " % (frames, self.number_frames));print("")
             fem.set_number_frames(self.number_frames)
 
+        print("");logging.debug("  .set_number_frames(%s); ALSO Changing number_frames in daq: %s " % (frames, self.number_frames));print("")
         self.daq.set_number_frames(self.number_frames)
 
     def set_duration(self, duration):
@@ -475,7 +484,9 @@ class Hexitec():
             number_frames = fem.get_number_frames()
 
         self.number_frames = number_frames
-        # print("\n\n ADAPTER's set_duration(%s) meaning number_frames: %s  !!!!! \n\n" % (duration, number_frames))
+        print("");logging.debug("  .set_duration(%s); Changed number_frames in adapter: %s " % (number_frames, self.number_frames));print("")
+        
+        print("");logging.debug("  .set_duration(%s); ALSO Changing number_frames in daq: %s " % (number_frames, self.number_frames));print("")
         self.daq.set_number_frames(self.number_frames)
 
     def _get_debug_count(self):
@@ -570,6 +581,7 @@ class Hexitec():
         for fem in self.fems:
             #TODO: Dirty hack: Prevent frames being 1 (continuous readout) by setting it to 2 if it is 1
             number_frames_to_request = 2 if (number_frames_to_request == 1) else number_frames_to_request
+            print("");logging.debug("  .acquisition(); Changing from %s to %s " % (fem.get_number_frames(), number_frames_to_request));print("")
             fem.set_number_frames(number_frames_to_request)
             fem.collect_data()
 

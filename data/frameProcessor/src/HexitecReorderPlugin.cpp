@@ -223,6 +223,27 @@ namespace FrameProcessor
         frame_meta.set_data_type(raw_float);
         frame_meta.set_frame_number(hdr_ptr->frame_number);
 
+        // For processed_frames dataset, reuse existing meta data as only the dataset name will differ
+
+        // Set the dataset name
+        frame_meta.set_dataset_name("processed_frames");
+
+        boost::shared_ptr<Frame> data_frame;
+        data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
+          output_image_size));
+
+        // Get a pointer to the data buffer in the output frame
+        void* output_ptr = data_frame->get_data_ptr();
+
+        // Turn unsigned short raw pixel data into float data type
+        convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
+                                          static_cast<float *>(output_ptr));
+
+        const std::string& dataset = frame_meta.get_dataset_name();
+        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: " <<
+                      data_frame->get_frame_number());
+        this->push(data_frame);
+
         // Only construct raw data frame if configured
         if (write_raw_data_)
         {
@@ -245,26 +266,6 @@ namespace FrameProcessor
           this->push(raw_frame);
         }
 
-        // For processed_frames dataset, reuse existing meta data as only the dataset name will differ
-
-        // Set the dataset name
-        frame_meta.set_dataset_name("processed_frames");
-
-        boost::shared_ptr<Frame> data_frame;
-        data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
-          output_image_size));
-
-        // Get a pointer to the data buffer in the output frame
-        void* output_ptr = data_frame->get_data_ptr();
-
-        // Turn unsigned short raw pixel data into float data type
-        convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
-                                          static_cast<float *>(output_ptr));
-
-        const std::string& dataset = frame_meta.get_dataset_name();
-        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: " <<
-                      data_frame->get_frame_number());
-        this->push(data_frame);
         // Manually update frame_number (until fixed in firmware)
         frame_number_++;
       }
