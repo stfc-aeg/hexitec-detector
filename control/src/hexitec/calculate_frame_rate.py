@@ -28,6 +28,9 @@ def calculate_frame_rate(row_s1, s1_sph, sph_s2):
     frame_rate      = 1 / frame_time                                # B21 = 1 / B20
     
     print(" frame_rate: %s " % frame_rate)
+    data_rate_b = 160*160*2 * frame_rate
+    data_rate_m = data_rate_b / 1000000
+    print(" data rate: {:.2f}".format(data_rate_m))
 
     ###
 

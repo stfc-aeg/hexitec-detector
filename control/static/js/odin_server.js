@@ -25,6 +25,7 @@ $( document ).ready(function()
     // Begin with all except connectButton disabled
     document.getElementById("initialiseButton").disabled = true;
     document.getElementById("acquireButton").disabled = true;
+    document.getElementById("cancelButton").disabled = true;
     document.getElementById("disconnectButton").disabled = true;
     document.getElementById("offsetsButton").disabled = true;
  
@@ -164,6 +165,10 @@ $( document ).ready(function()
         collect_data();
     });
 
+    $('#cancelButton').on('click', function(event) {
+        cancel_data();
+    });
+
     $('#disconnectButton').on('click', function(event) {
         disconnect_hardware();
         // Stop polling thread after a 2 second delay to 
@@ -207,6 +212,7 @@ function toggle_ui_elements(bBool)
 {
     document.getElementById("initialiseButton").disabled = bBool;
     document.getElementById("acquireButton").disabled = bBool;
+    document.getElementById("cancelButton").disabled = bBool;
     document.getElementById("offsetsButton").disabled = bBool;
     document.getElementById("applyButton").disabled = bBool;
     document.getElementById("fp-config-text").disabled = bBool;
@@ -267,6 +273,9 @@ function poll_fem()
         // console.log("frames-text: " + $('#frames-text').val() );
         // // $('#frames-text').html(status_message);
 
+        var in_progress = response["detector"]["acquisition"]["in_progress"];
+        // console.log("in_progress: " + in_progress );
+
         // Enable buttons when connection completed
         if (hardware_connected == true)
         {
@@ -277,6 +286,14 @@ function poll_fem()
             else
             {
                 toggle_ui_elements(false);
+            }
+            if (in_progress == true)
+            {
+                document.getElementById("cancelButton").disabled = false;   // Enable
+            }
+            else
+            {
+                document.getElementById("cancelButton").disabled = true;    // Disable
             }
         }
         else
@@ -459,6 +476,22 @@ function collect_data()
         url: hexitec_url + 'detector/acquisition',
         contentType: "application/json",
         data: JSON.stringify({"start_acq": ""}),
+        success: function(result) {
+            $('#odin-control-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#odin-control-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+}
+
+function cancel_data()
+{
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/acquisition',
+        contentType: "application/json",
+        data: JSON.stringify({"stop_acq": ""}),
         success: function(result) {
             $('#odin-control-warning').html("");
         },

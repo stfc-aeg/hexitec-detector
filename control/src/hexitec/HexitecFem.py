@@ -193,6 +193,7 @@ class HexitecFem():
         self.acquire_start_time = ""
         self.acquire_stop_time = ""
         self.acquire_time = 0.0
+        self.acquire_timestamp = 0
 
         param_tree_dict = {
             "diagnostics": {
@@ -453,10 +454,10 @@ class HexitecFem():
             logging.error("%s" % str(e))
             # Cannot raise error beyond this thread
 
-        print("\n\nReinstate polling before merging with master !\n\n")
-        # # Start polling thread (connect successfully set up)
-        # if len(self.status_error) == 0:
-        #     self.start_polling()
+        # print("\n\nReinstate polling before merging with master !\n\n")
+        # Start polling thread (connect successfully set up)
+        if len(self.status_error) == 0:
+            self.start_polling()
 
     @run_on_executor(executor='thread_executor')
     def initialise_hardware(self, msg=None):
@@ -477,7 +478,6 @@ class HexitecFem():
                 print("\n");logging.debug("    *** 00 *** init_HW, nowt chngd; Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
 
             self.hardware_busy = True
-            # logging.debug("\t HARDWARE_BUSY = TRUE\n\n")
             self.operation_percentage_complete = 0
             self.operation_percentage_steps = 108
             self.initialise_system()
@@ -498,7 +498,6 @@ class HexitecFem():
             else:
                 # Not cold initialisation, clear hardware_busy here
                 self.hardware_busy = False
-                # logging.debug("\t HARDWARE_BUSY = FALSE\n\n")
 
             # if self.debug_register24:
             #     self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
@@ -511,10 +510,10 @@ class HexitecFem():
             # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x31, 0x32, 0x0D])
             # self.read_response()
 
-            # if self.debug_register24:
-            #     self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
-            #     self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
-            #     print("\n");logging.debug("    *** 01 *** init_HW, CLR b1,b4;  Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
+            if self.debug_register24:
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
+                self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
+                print("\n");logging.debug("    *** 01 *** init_HW, CLR b1,b4;  Register 0x24: %s, %s ***                    !!!!!" % (vsr2, vsr1))
 
             self.initialise_progress = 0
         except (HexitecFemError, ParameterTreeError) as e:
@@ -540,7 +539,6 @@ class HexitecFem():
             if self.ignore_busy:
                 self.ignore_busy = False
             self.hardware_busy = True
-            # logging.debug("\t HARDWARE_BUSY = TRUE\n\n")
             self.operation_percentage_complete = 0
             self.operation_percentage_steps = 100
             self._set_status_message("Acquiring data..")
@@ -597,7 +595,6 @@ class HexitecFem():
         Sets up to wait 10 seconds to allow VSRs' microcontrollers to initialise
         """
         self.hardware_busy = True
-        # logging.debug("\t HARDWARE_BUSY = TRUE\n\n")
         self.start = time.time()
         self.delay = 10
         IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
@@ -609,7 +606,6 @@ class HexitecFem():
         if len(self.status_error) > 0:
             self.operation_percentage_complete = 0
             self.hardware_busy = False
-            # logging.debug("\t HARDWARE_BUSY = FALLS\n\n")
             return
         self.delay = time.time() - self.start
         self.operation_percentage_complete += 10
@@ -617,7 +613,6 @@ class HexitecFem():
             IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
         else:
             self.hardware_busy = False
-            # logging.debug("\t HARDWARE_BUSY = FALSE\n\n")
             self._set_status_message("Camera connected. Microcontrollers initialised.")
             # try:
             #     print("\n\n\n\n\n")
@@ -1062,6 +1057,8 @@ class HexitecFem():
         logging.debug("Initiate Data Capture")
         self.data_stream(self.number_frames)
         self.acquire_start_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
+        # How to convert datetime object to float?
+        self.acquire_timestamp = time.time()
 
         waited = 0.0
         delay = 0.10
@@ -1073,8 +1070,9 @@ class HexitecFem():
             time.sleep(delay)
             waited += delay
             if (self.stop_acquisition):
-                print(" \n HxtFEM YOU PULLED THE EMERGENCY BRAKE !!!!! \n")
+                logging.error(" -=-=-=- HEXITECFEM INSTRUCTED TO STOP ACQUISITION -=-=-=-")
                 break
+
         self.acquire_stop_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
 
         # Stop the state machine
@@ -1085,10 +1083,13 @@ class HexitecFem():
         self.x10g_rdma.write(0xD0000000, 0, 'Clear enable signal')
 
         if self.stop_acquisition:
-            logging.error("Acquisition interrupted by User")
-            self._set_status_message("User interrupted acquisition")
+            logging.error("Acquisition stopped prematurely")
+            # Reset variables
             self.stop_acquisition = False
-            raise HexitecFemError("User interrupted acquisition")
+            self.operation_percentage_complete = 100
+            self.initialise_progress = 0
+            self.hardware_busy = False
+            raise HexitecFemError("Acquire interrupted")
         else:
             logging.debug("Capturing " + str(self.number_frames) + " frames took " + str(waited) + " seconds")
             duration = "Requested %s frame(s), took %s seconds" % (self.number_frames, str(waited))
@@ -1186,7 +1187,6 @@ class HexitecFem():
 
         # Fem finished sending data/monitoring info, clear hardware busy
         self.hardware_busy = False
-        # logging.debug("\t HARDWARE_BUSY = FALSE\n\n")
 
         # Workout exact duration of fem data transmission:
         self.acquire_time = float(self.acquire_stop_time.split("_")[1]) - float(self.acquire_start_time.split("_")[1])
@@ -1284,7 +1284,7 @@ class HexitecFem():
         #                 value_004[0], value_004[1], 0x0D]))
         # print("  SPH_S2, ", self.make_list_hexadecimal([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, register_005[0], register_005[1],
         #                 value_005[0], value_005[1], 0x0D]))
-        # print("\n\n")
+        # print("\n")
 
         #TODO: What should default value be? (not set by JE previously!)
         gain = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Gain', bit_range=1)
@@ -1360,7 +1360,6 @@ class HexitecFem():
                 self._set_status_error("")
 
             self.hardware_busy = True
-            # logging.debug("\t HARDWARE_BUSY = TRUE\n\n")
             self.operation_percentage_complete = 0
             self.operation_percentage_steps = 15
 
@@ -1456,8 +1455,7 @@ class HexitecFem():
                 self.read_response()
                 self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.CLEAR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
                 self.read_response()
-            else:
-                logging.debug("DONT'T THINk SO - Ensure VCAL remains D I S A B L E D")
+
             if self.debug_register24:
                 self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr2 = self.read_response().strip("\r")
                 self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE, 0x32, 0x34,   0x0D]);vsr1 = self.read_response().strip("\r")
@@ -1466,7 +1464,6 @@ class HexitecFem():
             self.operation_percentage_complete = 100
             self._set_status_message("Offsets collections operation completed.")
             self.hardware_busy = False
-            # logging.debug("\t HARDWARE_BUSY = FALSE\n\n")
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Can't collect offsets while disconnected: %s" % str(e))
             logging.error("%s" % str(e))

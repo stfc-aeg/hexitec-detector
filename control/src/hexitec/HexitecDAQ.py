@@ -20,6 +20,7 @@ import h5py
 from datetime import datetime
 import collections
 import os.path
+import time
 
 class HexitecDAQ():
     """
@@ -91,6 +92,13 @@ class HexitecDAQ():
         self.plugin = "histogram"
         self.master_dataset = "spectra_bins"
         self.extra_datasets = []
+        # Processing timeout variables, support adapter's watchdog
+        self.processed_timestamp = 0
+        self.frames_processed = 0
+        self.shutdown_processing = False
+        # Add base timeout, if bias window then add blank out duration to this value
+        self.base_timeout = 2.0
+        self.watchdog_timeout = self.base_timeout
 
         self.threshold_filename = ""
         self.threshold_mode = "value"
@@ -209,6 +217,8 @@ class HexitecDAQ():
                      self.frame_start_acquisition,
                      self.frame_start_acquisition+number_frames)
         self.in_progress = True
+        # Reset timeout watchdog
+        self.processed_timestamp = time.time()
         logging.debug("Starting File Writer")
         if self.first_initialisation:
             # First initialisation captures data without writing to disk
@@ -219,6 +229,16 @@ class HexitecDAQ():
             self.set_file_writing(True)
         # Diagnostics:
         self.daq_start_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
+
+        # for fem in self.parent.fems:
+        bvr = self.parent.fems[0].bias_voltage_refresh
+        bvst = self.parent.fems[0].bias_voltage_settle_time
+        trvh = self.parent.fems[0].time_refresh_voltage_held
+
+        if bvr:
+            self.watchdog_timeout = self.base_timeout + bvst + trvh
+        else:
+            self.watchdog_timeout = self.base_timeout
 
         # Wait while fem(s) finish sending data (HexitecFem triggers FEM ~1.006 seconds - because of a time.sleep(1) statement !)
         IOLoop.instance().call_later(1.3, self.acquisition_check_loop)
@@ -236,7 +256,9 @@ class HexitecDAQ():
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
             self.fem_not_busy = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
-
+            # Reset timeout watchdog
+            self.processed_timestamp = time.time()
+            self.frames_processed = 0
             IOLoop.instance().call_later(0.5, self.processing_check_loop)
 
     def processing_check_loop(self):
@@ -256,11 +278,13 @@ class HexitecDAQ():
         # Debugging information:
         hdf_status = self.get_od_status('fp').get('hdf', {"frames_processed": 0})
         his_status = self.get_od_status('fp').get('histogram', {'frames_processed': 0})
+        print("")
         logging.debug("      process_chek_loop, hdf (%s) vs his (%s) vs frm_end_acq (%s) PLUG = %s" % 
             (hdf_status['frames_processed'], his_status['frames_processed'], self.frame_end_acquisition, self.plugin))
+        print("")
 
         if processing_status['frames_processed'] == self.frame_end_acquisition:
-            print("\n  ***  frms proc'd - proc_check_loop *** \n")
+            print("  ***  Process'g DONE - proc_check_loop *** \n")
             delay = 1.0
             IOLoop.instance().call_later(delay, self.stop_acquisition)
             logging.debug("Acquisition Complete")
@@ -268,6 +292,19 @@ class HexitecDAQ():
             #   selected, wait for hdf file to close
             IOLoop.instance().call_later(delay, self.hdf_closing_loop)
         else:
+            # Not all frames processed yet; Check data still in flow
+            if processing_status['frames_processed'] == self.frames_processed:
+                # No frames processed in at least 0.5 sec, did processing time out?
+                if self.shutdown_processing:
+                    self.shutdown_processing = False
+                    # Stop acquisition
+                    IOLoop.instance().add_callback(self.stop_acquisition)
+                    return
+            else:
+                # Data still bein' processed
+                self.processed_timestamp = time.time()
+                self.frames_processed = processing_status['frames_processed']
+            # Wait 0.5 seconds and check again
             IOLoop.instance().call_later(.5, self.processing_check_loop)
 
     def check_file_exists(self):
@@ -290,11 +327,8 @@ class HexitecDAQ():
         before preparing to write meta data
         """
         hdf_status = self.get_od_status('fp').get('hdf', {"writing": True})
-        logging.debug("      hdf_clos_loop, hdf stat: %s" % hdf_status)
+        # logging.debug("      hdf_clos_loop, hdf stat:                            %s" % hdf_status)
         if hdf_status['writing']:
-            print("")
-            logging.debug("   hdf_clo_loo, writ still TRUE")
-            print("")
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
             self.hdf_file_location = self.file_dir + self.file_name + '_000001.h5'
@@ -302,10 +336,8 @@ class HexitecDAQ():
             if os.path.exists(self.hdf_file_location):
                 self.prepare_hdf_file()
             else:
-                #TODO: Not FEM specific error - Update directly, not via fem !
-                for fem in self.parent.fems:
-                    fem._set_status_error("No file to add meta: %s" % \
-                        self.hdf_file_location)
+                self.parent.fems[0]._set_status_error("No file to add meta: %s" % \
+                    self.hdf_file_location)
 
     def prepare_hdf_file(self):
         """
@@ -474,7 +506,6 @@ class HexitecDAQ():
         command = "config/hdf/frames"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         # request.body = "{}".format(self.number_frames)
-        print("\n\n\n\n\n\n\n\n\n      hexitec DAQ HARDCODED\n\n\n\n\n\n\n\n\n")
         request.body = "{}".format(0)
         self.adapters["fp"].put(command, request)
 

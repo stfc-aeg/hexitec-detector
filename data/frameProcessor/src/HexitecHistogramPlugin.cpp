@@ -214,7 +214,6 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS))
     {
-      LOG4CXX_DEBUG(logger_, "    !!!!! FLSUHING HISTOS awaaaaay now ");
       flush_histograms_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS);
 
       if (flush_histograms_ == 1)
@@ -335,12 +334,7 @@ namespace FrameProcessor
                                             << frame->get_frame_number());
           this->push(frame);
         }
-        else
-        {
-          // Do not pass on processed_frames dataset unmodified:
-          LOG4CXX_TRACE(logger_, "             !!!!!             I AM NOT Pushing " << dataset << " dataset, frame number: "
-                                            << frame->get_frame_number());
-        }
+
         frames_processed_++;
       }
       catch (const std::exception& e)
@@ -359,8 +353,6 @@ namespace FrameProcessor
    */
   void HexitecHistogramPlugin::writeHistogramsToDisk()
   {
-    LOG4CXX_TRACE(logger_, " -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
-
     LOG4CXX_TRACE(logger_, "Pushing " << spectra_bins_->get_meta_data().get_dataset_name() << " dataset");
     this->push(spectra_bins_);
 
@@ -369,7 +361,6 @@ namespace FrameProcessor
 
     LOG4CXX_TRACE(logger_, "Pushing " << pixel_spectra_->get_meta_data().get_dataset_name() << " dataset");
     this->push(pixel_spectra_);
-    LOG4CXX_TRACE(logger_, " !?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!");
   }
 
   /**
