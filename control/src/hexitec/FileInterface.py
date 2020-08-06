@@ -1,11 +1,12 @@
 """
-Adapter for ODIN control FileInterface
+Adapter for ODIN control FileInterface.
 
 This class implements a simple adapter used for retrieving config file(s)
 
 Tim Nicholls, STFC Detector Systems Software Group
 Christian Angelsen, STFC Detector Systems Software Group
 """
+
 import logging
 import tornado
 import time
@@ -22,14 +23,16 @@ DIRECTORY_CONFIG_NAME = "directories"
 
 
 class FileInterfaceAdapter(ApiAdapter):
-    """ System info adapter class for the ODIN server.
+    """System info adapter class for the ODIN server.
+
     This adapter provides ODIN clients with information about the server and the system that it is
     running on.
     """
 
     def __init__(self, **kwargs):
-        """ Initialize the WorkshopAdapter object.
-        This constructor initializes the WorkshopAdapter object.
+        """Initialize the FileInterfaceAdapter object.
+
+        This constructor initializes the FileInterfaceAdapter object.
         :param kwargs: keyword arguments specifying options
         """
         # Intialise superclass
@@ -50,7 +53,8 @@ class FileInterfaceAdapter(ApiAdapter):
 
     @response_types('application/json', default='application/json')
     def get(self, path, request):
-        """ Handle an HTTP GET request.
+        """Handle an HTTP GET request.
+
         This method handles an HTTP GET request, returning a JSON response.
         :param path: URI path of request
         :param request: HTTP request object
@@ -71,13 +75,13 @@ class FileInterfaceAdapter(ApiAdapter):
     @request_types('application/json')
     @response_types('application/json', default='application/json')
     def put(self, path, request):
-        """ Handle an HTTP PUT request.
+        """Handle an HTTP PUT request.
+
         This method handles an HTTP PUT request, returning a JSON response.
         :param path: URI path of request
         :param request: HTTP request object
         :return: an ApiAdapterResponse object containing the appropriate response
         """
-
         content_type = 'application/json'
 
         try:
@@ -98,7 +102,8 @@ class FileInterfaceAdapter(ApiAdapter):
                                   status_code=status_code)
 
     def delete(self, path, request):
-        """ Handle an HTTP DELETE request.
+        """Handle an HTTP DELETE request.
+
         This method handles an HTTP DELETE request, returning a JSON response.
         :param path: URI path of request
         :param request: HTTP request object
@@ -113,19 +118,20 @@ class FileInterfaceAdapter(ApiAdapter):
 
 
 class FileInterfaceError(Exception):
-    """ Simple exception class for FileInterface to wrap lower-level exceptions."""
+    """Simple exception class for FileInterface to wrap lower-level exceptions."""
 
     pass
 
 
 class FileInterface():
-    """ Workshop - class that extracts and stores information about system-level parameters."""
+    """FileInterface: class that extracts and stores information about system-level parameters."""
 
     # Thread executor used for background tasks
     executor = futures.ThreadPoolExecutor(max_workers=1)
 
     def __init__(self, directories):
-        """ Initialise the FileInterface object.
+        """Initialise the FileInterface object.
+
         This constructor initialises the FileInterface object, building a parameter tree.
         """
         # Save arguments
@@ -154,20 +160,23 @@ class FileInterface():
         })
 
     def get_server_uptime(self):
-        """ Get the uptime for the ODIN server.
+        """Get the uptime for the ODIN server.
+
         This method returns the current uptime for the ODIN server.
         """
         return time.time() - self.init_time
 
     def get(self, path):
-        """ Get the parameter tree.
+        """Get the parameter tree.
+
         This method returns the parameter tree for use by clients via the FileInterface adapter.
         :param path: path to retrieve from tree
         """
         return self.param_tree.get(path)
 
     def set(self, path, data):
-        """ Set parameters in the parameter tree.
+        """Set parameters in the parameter tree.
+
         This method simply wraps underlying ParameterTree method so that an exceptions can be
         re-raised with an appropriate FileInterfaceError.
         :param path: path of parameter tree to set values for
@@ -179,7 +188,8 @@ class FileInterface():
             raise FileInterfaceError(e)
 
     def get_config_files(self):
-        """ Retrieve all of the txt configuration files in the absolute directory path
+        """Retrieve all of the txt configuration files in the absolute directory path.
+
         Clears the internal lists first to prevent circular appending at every "GET"
         """
         self.clear_lists()
@@ -188,8 +198,9 @@ class FileInterface():
                 self.txt_files.append(file)
 
     def get_fp_config_files(self):
-        """ Gets the frame processor config files from the list of text files found
-        @returns : the fp config files list
+        """Get the frame processor config files from the list of text files found.
+
+        @returns: the fp config files list
         """
         self.get_config_files()
         for file in self.txt_files:
@@ -198,18 +209,18 @@ class FileInterface():
         return self.fp_config_files
 
     def get_fr_config_files(self):
-        """ Gets the frame receiver config files from the list of text files found
-        @returns : the fr config files list
+        """Get the frame receiver config files from the list of text files found.
+
+        @returns: the fr config files list
         """
         self.get_config_files()
         for file in self.txt_files:
             if "fr" in file:
                 self.fr_config_files.append(file)
         return self.fr_config_files
-    
+
     def clear_lists(self):
-        """ Clears the text file, fr and fp config file lists 
-        """        
+        """Clear the text file, fr and fp config file lists."""
         self.fp_config_files = []
         self.txt_files = []
         self.fr_config_files = []

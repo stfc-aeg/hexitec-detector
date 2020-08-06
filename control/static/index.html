@@ -36,13 +36,14 @@
           </button>
           <a class="navbar-brand" href="https://github.com/stfc-aeg/odin-workshop">ODIN</a>
         </div>
-        <div id="navbar" class="collapse navbar-collapse">
+        <!-- <div id="navbar" class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
             <li class="active"><a href="#">Home</a></li>
             <li><a href="#about">About</a></li>
             <li><a href="#contact">Contact</a></li>
           </ul>
-        </div><!--/.nav-collapse -->
+        </div> -->
+        <!--/.nav-collapse -->
       </div>
     </nav>
     
@@ -53,49 +54,6 @@
         <thead></thead>
         <tbody>
 
-          <!-- <tr> 
-            <td>
-              <th>hdf/write&nbsp;</th>
-            </td>
-            <td>&nbsp;</td>
-            <td>
-              <div class="row sidebar-row vertical-align">
-                <div class="col-xs-7">
-                  <input type="checkbox" id='hdfWriteButton' name="hdf_write_enable" data-size="small">
-                </div>
-              </div>
-            </td>
-            <td>
-              &nbsp;<span id="hdf-write-enable-warning">&nbsp;</span>
-            </td>
-          </tr> -->
-
-          <tr>  
-            <td>  
-              FR Config File:&nbsp;
-            </td>
-            <td>
-              <div class="text-rows">
-                <input type="text" id="fr-config-text" onChange='fr_config_changed()' placeholder="fr_config.json" value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/config/fr_hexitec_config.json">
-              </div>
-            </td>
-            <td>
-              &nbsp;<td><span id="fr-config-warning">&nbsp;</span></td>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              FP Config File:&nbsp;
-            </td>
-            <td>
-              <div class="text-columns">
-                <input type="text" id="fp-config-text" onChange='fp_config_changed()' placeholder="fp_config.json" value= "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/config/fp_hexitec_minimum_config.json">
-              </div>
-            </td>
-            <td>
-              &nbsp;<td><span id="fp-config-warning">&nbsp;</span></td>
-            </td>
-          </tr>
           <tr>
             <td>
               hdf/file/path:&nbsp;
@@ -124,7 +82,7 @@
           </tr>
           <tr>
             <td>
-              Hexitec config:&nbsp;
+              Hexitec Config:&nbsp;
             </td>
             <td>
               <div class="text-columns">
@@ -144,23 +102,6 @@
       <table class="overall-table" align="center">
         <thead></thead>
         <tbody>
-          <tr>
-            <td>
-              Sensors Layout:&nbsp;
-            </td>
-            <td>
-              <select onchange="selectChange(this.value)">
-                <option value="1x1">1x1 (80x80)</option>
-                <option selected="selected" value="2x2">2x2 (160x160)</option>
-              </select>
-            </td>
-            <td>
-              &nbsp;<td><span id="sensors-layout-warning">&nbsp;</span></td>
-            </td>
-          </tr>
-          <tr>
-            <th>Camera&nbsp;</th>
-          </tr>
 
           <!--  -->
           <tr>  
@@ -202,26 +143,12 @@
           </tr>
           <tr>
             <td>
-              Test Mode:&nbsp;
+              Apply:&nbsp;
             </td>
             <td>
-              <select onchange="vcalChange(this.value)">
-                <option value="0">0</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option selected="selected" value="3">3</option>
-              </select>
-            </td>
-            <td>
-              &nbsp;<td><span id="vcal-warning">&nbsp;</span></td>
+              <input type="button" class="btn btn-primary" id='applyButton' name="store_enable" data-size="small" value="Apply">
             </td>
           </tr>
-          <td>
-            Apply:&nbsp;
-          </td>
-          <td>
-            <input type="button" class="btn btn-primary" id='applyButton' name="store_enable" data-size="small" value="Apply">
-          </td>
           <!-- Single traffic light to indicate system health -->
           <tr>
             <td>
@@ -313,13 +240,13 @@
               <b>&nbsp;acquire start:&nbsp;</b><span id="acquire_start" style="float:right">&nbsp;</span>
             </td>
             <td>
-              <b>&nbsp;fem packets_lost:&nbsp;</b><span id="fem_packets_lost" style="float:right">&nbsp;</span>
+              <b>&nbsp;FEM packets_lost:&nbsp;</b><span id="fem_packets_lost" style="float:right">&nbsp;</span>
             </td>
             <td>
               pkts&nbsp;
             </td>
             <td>
-              <b>&nbsp;packets_lost:&nbsp;</b><span id="packets_lost" style="float:right">&nbsp;</span>
+              <b>&nbsp;FR packets_lost:&nbsp;</b><span id="packets_lost" style="float:right">&nbsp;</span>
             </td>
             <td>
               pkts&nbsp;
@@ -591,19 +518,6 @@
         <tbody>
           <tr>  
             <td>  
-              <th>Processed Data&nbsp;</th>
-            </td>
-            <td>&nbsp;</td>
-            <td>
-              <div class="row sidebar-row vertical-align">
-                <div class="col-xs-7">
-                  <input type="checkbox" id='processedDataButton' name="processed_data_enable" data-size="small">
-                </div>
-              </div>
-            </td>
-          </tr>
-          <tr>  
-            <td>  
               <th>Raw Data&nbsp;</th>
             </td>
             <td>&nbsp;</td>
@@ -611,6 +525,19 @@
               <div class="row sidebar-row vertical-align">
                 <div class="col-xs-7">
                   <input type="checkbox" id='rawDataButton' name="raw_data_enable" data-size="small">
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <th>Processed Data&nbsp;</th>
+            </td>
+            <td>&nbsp;</td>
+            <td>
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
+                  <input type="checkbox" id='processedDataButton' name="processed_data_enable" data-size="small">
                 </div>
               </div>
             </td>

@@ -215,8 +215,6 @@ function toggle_ui_elements(bBool)
     document.getElementById("cancelButton").disabled = bBool;
     document.getElementById("offsetsButton").disabled = bBool;
     document.getElementById("applyButton").disabled = bBool;
-    document.getElementById("fp-config-text").disabled = bBool;
-    document.getElementById("fr-config-text").disabled = bBool;
     document.getElementById("hdf-file-path-text").disabled = bBool;
     document.getElementById("hdf-file-name-text").disabled = bBool;
     document.getElementById("hexitec-config-text").disabled = bBool;
@@ -273,27 +271,33 @@ function poll_fem()
         // console.log("frames-text: " + $('#frames-text').val() );
         // // $('#frames-text').html(status_message);
 
-        var in_progress = response["detector"]["acquisition"]["in_progress"];
-        // console.log("in_progress: " + in_progress );
+        var adapter_in_progress = response["detector"]["acquisition"]["in_progress"];
+        var daq_in_progress = response["detector"]["daq"]["in_progress"];
 
         // Enable buttons when connection completed
         if (hardware_connected == true)
         {
             if (hardware_busy == true)
             {
-                toggle_ui_elements(true);
+                toggle_ui_elements(true);   // Disable
             }
             else
             {
-                toggle_ui_elements(false);
+                toggle_ui_elements(false);  // Enable
             }
-            if (in_progress == true)
+            if (daq_in_progress == true)
             {
-                document.getElementById("cancelButton").disabled = false;   // Enable
+                // Enable cancelButton but disable changing file[path]
+                document.getElementById("cancelButton").disabled = false;
+                document.getElementById("hdf-file-path-text").disabled = true;
+                document.getElementById("hdf-file-name-text").disabled = true;
             }
             else
             {
-                document.getElementById("cancelButton").disabled = true;    // Disable
+                // Disable cancelButton but enable changing file[path]
+                document.getElementById("cancelButton").disabled = true;
+                document.getElementById("hdf-file-path-text").disabled = false;
+                document.getElementById("hdf-file-name-text").disabled = false;
             }
         }
         else
@@ -301,8 +305,6 @@ function poll_fem()
             toggle_ui_elements(true);
             // Unlock configuration related UI elements
             document.getElementById("applyButton").disabled = false;
-            document.getElementById("fp-config-text").disabled = false;
-            document.getElementById("fr-config-text").disabled = false;
             document.getElementById("hdf-file-path-text").disabled = false;
             document.getElementById("hdf-file-name-text").disabled = false;
             document.getElementById("hexitec-config-text").disabled = false;        
@@ -316,8 +318,11 @@ function poll_fem()
         var fem_diagnostics = fems["fem_0"]["diagnostics"];
         var num_reads = fem_diagnostics["successful_reads"];
         var frame_rate = fems["fem_0"]["frame_rate"];
-        console.log("percentage_complete: " + fems["fem_0"]["operation_percentage_complete"] 
+        console.log(hardware_busy + " " + adapter_in_progress + " " + daq_in_progress + 
+                    " <= hw_busy, apd_in_prog, daq_in_prog " + "   %_compl: "
+                    + fems["fem_0"]["operation_percentage_complete"] 
                     + " reads: " + num_reads + " msg: " + adapter_status["status_message"]);
+                    
 
         $('#frame_rate').html(frame_rate.toFixed(2));
 
@@ -562,11 +567,14 @@ function apply_ui_values()
     //  push HexitecDAQ's ParameterTree settings to FP's plugins
     commit_configuration();
 
+    // Read configuration file into memory, recalculate frame_rate
+    hexitec_config_changed();
+
     // This will be executed after however many milliseconds 
     //  specified at the end of this function definition
     setTimeout(function() {
 
-        // Delay necessary otherwise some plugin' variables are configured 
+        // Delay necessary otherwise some plugins' variables are configured 
         // before they are actually loaded (which will not work obviously)
 
         changeRawDataEnable();
@@ -589,8 +597,9 @@ function apply_ui_values()
 
         hdf_file_path_changed();
         hdf_file_name_changed();
-
-        hexitec_config_changed();
+        
+        // (Re-)set duration/frames as hexitec config may have changed frame_rate
+        changeDurationEnable();
     }, 300);
 }
 
@@ -799,9 +808,8 @@ var changeDurationEnable = function ()
 
 var changeProcessedDataEnable = function ()
 {
-    // TODO: Temporarily hacked until Odin control supports bool
+    // TODO: Temporarily hacked until Odin Control supports bool
     processed_data_enable = $("[name='processed_data_enable']").bootstrapSwitch('state');
-    console.log("changeProcessedDataEnable called, changing to: " + processed_data_enable);
     $.ajax({
         type: "PUT",
         url: hexitec_url + 'fp/config/histogram/pass_processed',  // Targets FP Plugin directly
@@ -953,15 +961,11 @@ function setHdfWrite(enable)
             //  file path & name and frames (vice versa if disabled)
             if (hdf_write_enable == true)
             {
-                $('#fr-config').prop('disabled', true);
-                $('#fp-config-text').prop('disabled', true);
                 $('#hdf-file-path-text').prop('disabled', true);
                 $('#hdf-file-name-text').prop('disabled', true);
             }
             else
             {
-                $('#fr-config').prop('disabled', false);
-                $('#fp-config-text').prop('disabled', false);
                 $('#hdf-file-path-text').prop('disabled', false);
                 $('#hdf-file-name-text').prop('disabled', false);
             }

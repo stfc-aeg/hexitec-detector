@@ -49,6 +49,7 @@ namespace FrameProcessor
     LOG4CXX_TRACE(logger_, "HexitecThresholdPlugin destructor.");
 
     free(threshold_per_pixel_);
+    threshold_per_pixel_ = NULL;
   }
 
   int HexitecThresholdPlugin::get_version_major()

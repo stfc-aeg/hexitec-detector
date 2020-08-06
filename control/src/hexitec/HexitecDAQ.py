@@ -1,5 +1,5 @@
-""" 
-HexitecDAQ for Hexitec ODIN control
+"""
+HexitecDAQ for Hexitec ODIN control.
 
 Christian Angelsen, STFC Detector Systems Software Group
 """
@@ -8,10 +8,8 @@ import logging
 from os import path
 from functools import partial
 
-from odin.adapters.adapter import ApiAdapterRequest
-
 from tornado.ioloop import IOLoop
-
+from odin.adapters.adapter import ApiAdapterRequest
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from hexitec.GenerateConfigFiles import GenerateConfigFiles
@@ -22,15 +20,15 @@ import collections
 import os.path
 import time
 
+
 class HexitecDAQ():
     """
     Encapsulates all the functionaility to initiate the DAQ.
-    
+
     Configures the Frame Receiver and Frame Processor plugins
     Configures the HDF File Writer Plugin
     Configures the Live View Plugin
     """
-    # thread_executor = futures.ThreadPoolExecutor(max_workers=1)
 
     THRESHOLDOPTIONS = ["value", "filename", "none"]
 
@@ -38,7 +36,14 @@ class HexitecDAQ():
     DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
 
     def __init__(self, parent, save_file_dir="", save_file_name=""):
+        """
+        Initialize the HexitecDAQ object.
 
+        This constructor initializes the HexitecDAQ object.
+        :param parent: Reference to adapter object
+        :param save_file_dir: save processed file to directory
+        :param save_file_name: save processed file name as
+        """
         self.parent = parent
         self.adapters = {}
 
@@ -96,9 +101,6 @@ class HexitecDAQ():
         self.processed_timestamp = 0
         self.frames_processed = 0
         self.shutdown_processing = False
-        # Add base timeout, if bias window then add blank out duration to this value
-        self.base_timeout = 2.0
-        self.watchdog_timeout = self.base_timeout
 
         self.threshold_filename = ""
         self.threshold_mode = "value"
@@ -119,13 +121,13 @@ class HexitecDAQ():
                 "fem_not_busy": (lambda: self.fem_not_busy, None),
             },
             "receiver": {
-                "connected": (partial(self.is_od_connected, adapter="fr"), None),
-                "configured": (self.is_fr_configured, None),
+                "connected": (partial(self._is_od_connected, adapter="fr"), None),
+                "configured": (self._is_fr_configured, None),
                 "config_file": (partial(self.get_config_file, "fr"), None)
             },
             "processor": {
-                "connected": (partial(self.is_od_connected, adapter="fp"), None),
-                "configured": (self.is_fp_configured, None),
+                "connected": (partial(self._is_od_connected, adapter="fp"), None),
+                "configured": (self._is_fp_configured, None),
                 "config_file": (partial(self.get_config_file, "fp"), None)
             },
             "file_info": {
@@ -141,8 +143,10 @@ class HexitecDAQ():
                 },
                 "calibration": {
                     "enable": (lambda: self.calibration_enable, self._set_calibration_enable),
-                    "gradients_filename": (lambda: self.gradients_filename, self._set_gradients_filename),
-                    "intercepts_filename": (lambda: self.intercepts_filename, self._set_intercepts_filename)
+                    "gradients_filename": (lambda: self.gradients_filename,
+                                           self._set_gradients_filename),
+                    "intercepts_filename": (lambda: self.intercepts_filename,
+                                            self._set_intercepts_filename)
                 },
                 "discrimination": {
                     "enable": (lambda: self.discrimination_enable, self._set_discrimination_enable),
@@ -152,7 +156,8 @@ class HexitecDAQ():
                     "bin_end": (lambda: self.bin_end, self._set_bin_end),
                     "bin_start": (lambda: self.bin_start, self._set_bin_start),
                     "bin_width": (lambda: self.bin_width, self._set_bin_width),
-                    "max_frames_received": (lambda: self.max_frames_received, self._set_max_frames_received),
+                    "max_frames_received": (lambda: self.max_frames_received,
+                                            self._set_max_frames_received),
                     "pass_processed": (lambda: self.pass_processed, self._set_pass_processed)
                 },
                 "reorder": {
@@ -162,7 +167,8 @@ class HexitecDAQ():
                     "enable": (lambda: self.next_frame_enable, self._set_next_frame_enable)
                 },
                 "threshold": {
-                    "threshold_filename": (lambda: self.threshold_filename, self._set_threshold_filename),
+                    "threshold_filename": (lambda: self.threshold_filename,
+                                           self._set_threshold_filename),
                     "threshold_mode": (lambda: self.threshold_mode, self._set_threshold_mode),
                     "threshold_value": (lambda: self.threshold_value, self._set_threshold_value)
                 }
@@ -174,6 +180,7 @@ class HexitecDAQ():
         self.gcf = None
 
     def initialize(self, adapters):
+        """Initialise adapters and related parameter tree entries."""
         self.adapters["fp"] = adapters['fp']
         self.adapters["fr"] = adapters['fr']
         self.adapters["file_interface"] = adapters['file_interface']
@@ -182,40 +189,38 @@ class HexitecDAQ():
         self.is_initialised = True
 
     def start_acquisition(self, number_frames):
-        """
-        Ensures the odin data FP and FR are configured, and turn on File Writing
-        """
+        """Ensure the odin data FP and FR are configured, and turn on File Writing."""
         logging.debug("Setting up Acquisition")
 
         fr_status = self.get_od_status("fr")
         fp_status = self.get_od_status("fp")
-        if self.is_od_connected(fr_status) is False:
+        if self._is_od_connected(fr_status) is False:
             logging.error("Cannot start Acquisition: Frame Receiver not found")
             return
-        elif self.is_fr_configured(fr_status) is False:
-            self.config_odin_data("fr")
+        elif self._is_fr_configured(fr_status) is False:
+            self._config_odin_data("fr")
         else:
             logging.debug("Frame Receiver Already connected/configured")
 
-        if self.is_od_connected(fp_status) is False:
+        if self._is_od_connected(fp_status) is False:
             logging.error("Cannot Start Acquisition: Frame Processor not found")
             return
-        elif self.is_fp_configured(fp_status) is False:
-            self.config_odin_data("fp")
+        elif self._is_fp_configured(fp_status) is False:
+            self._config_odin_data("fp")
         else:
             logging.debug("Frame Processor Already connected/configured")
 
         hdf_status = fp_status.get('hdf', None)
         if hdf_status is None:
             fp_status = self.get_od_status('fp')
-            # get current frame written number. if not found, assume FR
+            # Get current frame written number. If not found, assume FR
             # just started up and it will be 0
             hdf_status = fp_status.get('hdf', {"frames_processed": 0})
         self.frame_start_acquisition = hdf_status['frames_processed']
         self.frame_end_acquisition = number_frames
         logging.info("FRAME START ACQ: %d END ACQ: %d",
                      self.frame_start_acquisition,
-                     self.frame_start_acquisition+number_frames)
+                     self.frame_start_acquisition + number_frames)
         self.in_progress = True
         # Reset timeout watchdog
         self.processed_timestamp = time.time()
@@ -225,33 +230,16 @@ class HexitecDAQ():
             #   therefore don't enable file writing here
             pass
         else:
-            # print("   ***   start_acquisition - not first initialisation, let's set that File writing to TRUE !")
             self.set_file_writing(True)
         # Diagnostics:
         self.daq_start_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
 
-        # for fem in self.parent.fems:
-        bvr = self.parent.fems[0].bias_voltage_refresh
-        bvst = self.parent.fems[0].bias_voltage_settle_time
-        trvh = self.parent.fems[0].time_refresh_voltage_held
-
-        if bvr:
-            self.watchdog_timeout = self.base_timeout + bvst + trvh
-        else:
-            self.watchdog_timeout = self.base_timeout
-
-        # Wait while fem(s) finish sending data (HexitecFem triggers FEM ~1.006 seconds - because of a time.sleep(1) statement !)
+        # Wait while fem(s) finish sending data
         IOLoop.instance().call_later(1.3, self.acquisition_check_loop)
 
     def acquisition_check_loop(self):
-        """
-        Waits for acquisition to complete without blocking current thread
-        """
-        logging.debug("      acq_chek_loop")
-        #TODO: Handle multiple fems more gracefully ?
-        bBusy = True
-        for fem in self.parent.fems:
-            bBusy = fem.hardware_busy
+        """Wait for acquisition to complete without blocking current thread."""
+        bBusy = self.parent.fems[0].hardware_busy
         if bBusy:
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
@@ -262,33 +250,33 @@ class HexitecDAQ():
             IOLoop.instance().call_later(0.5, self.processing_check_loop)
 
     def processing_check_loop(self):
-        """
-        Checks that the processing has completed
-        """
+        """Check that the processing has completed."""
         if self.first_initialisation:
             # First initialisation runs without file writing; Stop acquisition
             #   without reopening (non-existent) file to add meta data
             self.first_initialisation = False
+            self.in_progress = False
             # Delay calling stop_acquisition, otherwise software may beat fem to it
             IOLoop.instance().call_later(2.0, self.stop_acquisition)
             return
         # Not fudge initialisation; Check HDF/histogram processing progress
         processing_status = self.get_od_status('fp').get(self.plugin, {'frames_processed': 0})
 
-        # Debugging information:
-        hdf_status = self.get_od_status('fp').get('hdf', {"frames_processed": 0})
-        his_status = self.get_od_status('fp').get('histogram', {'frames_processed': 0})
-        print("")
-        logging.debug("      process_chek_loop, hdf (%s) vs his (%s) vs frm_end_acq (%s) PLUG = %s" % 
-            (hdf_status['frames_processed'], his_status['frames_processed'], self.frame_end_acquisition, self.plugin))
-        print("")
+        # # Debugging information:
+        # hdf_status = self.get_od_status('fp').get('hdf', {"frames_processed": 0})
+        # his_status = self.get_od_status('fp').get('histogram', {'frames_processed': 0})
+        # print("")
+        # logging.debug("      proc'g_chek_loop, hdf (%s) v his (%s) v frm_end_acq (%s) PLUG = %s" %
+        #              (hdf_status['frames_processed'], his_status['frames_processed'],
+        #               self.frame_end_acquisition, self.plugin))
+        # print("")
 
         if processing_status['frames_processed'] == self.frame_end_acquisition:
             print("  ***  Process'g DONE - proc_check_loop *** \n")
             delay = 1.0
             IOLoop.instance().call_later(delay, self.stop_acquisition)
             logging.debug("Acquisition Complete")
-            # All required frames acquired; if either of frames based datasets 
+            # All required frames acquired; if either of frames based datasets
             #   selected, wait for hdf file to close
             IOLoop.instance().call_later(delay, self.hdf_closing_loop)
         else:
@@ -297,7 +285,7 @@ class HexitecDAQ():
                 # No frames processed in at least 0.5 sec, did processing time out?
                 if self.shutdown_processing:
                     self.shutdown_processing = False
-                    # Stop acquisition
+                    self.in_progress = False
                     IOLoop.instance().add_callback(self.stop_acquisition)
                     return
             else:
@@ -308,26 +296,20 @@ class HexitecDAQ():
             IOLoop.instance().call_later(.5, self.processing_check_loop)
 
     def check_file_exists(self):
-        # DEBUGGING
+        """Debug function: Check whether processed file has been created."""
         full_path = self.file_dir + self.file_name + '_000001.h5'
         existence = os.path.exists(full_path)
         print(" *** Exist? %s file: %s " % (existence, full_path))
         IOLoop.instance().call_later(.5, self.check_file_exists)
 
     def stop_acquisition(self):
-        """ Disables file writing so the processes can access the saved data """
+        """Disable file writing so processing can access the saved data to add Meta data."""
         self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
-        logging.debug("\n      stop_acq()")
-        self.in_progress = False
         self.set_file_writing(False)
 
     def hdf_closing_loop(self):
-        """
-        Waits for processing to complete without blocking thread,
-        before preparing to write meta data
-        """
+        """Wait for processing to complete but don't block, before prep to write meta data."""
         hdf_status = self.get_od_status('fp').get('hdf', {"writing": True})
-        # logging.debug("      hdf_clos_loop, hdf stat:                            %s" % hdf_status)
         if hdf_status['writing']:
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
@@ -336,27 +318,27 @@ class HexitecDAQ():
             if os.path.exists(self.hdf_file_location):
                 self.prepare_hdf_file()
             else:
-                self.parent.fems[0]._set_status_error("No file to add meta: %s" % \
-                    self.hdf_file_location)
+                self.parent.fems[0]._set_status_error("No file to add meta: %s" %
+                                                      self.hdf_file_location)
+                self.in_progress = False
 
     def prepare_hdf_file(self):
-        """
-        Re-open HDF5 file, prepare meta data
-        """
+        """Re-open HDF5 file, prepare meta data."""
         try:
             hdf_file = h5py.File(self.hdf_file_location, 'r+')
             for fem in self.parent.fems:
                 fem._set_status_message("Reopening file to add meta data..")
             self.hdf_retry = 0
         except IOError as e:
-            # Let's retry a couple of times in case file just temporary busy
+            # Let's retry a couple of times in case file temporary busy
             if self.hdf_retry < 6:
                 self.hdf_retry += 1
-                print("   *** Re-trying: %s because: %s" % (self.hdf_retry, e))
+                logging.warning(" Re-try attempt: %s Reopen file, because: %s" %
+                                (self.hdf_retry, e))
                 IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
                 return
-            #....?
-            logging.error("Failed to open '%s' with error: %s" % (hdf_file_location, e))
+            logging.error("Failed to open '%s' with error: %s" % (self.hdf_file_location, e))
+            self.in_progress = False
             for fem in self.parent.fems:
                 fem._set_status_error("Error reopening HDF file: %s" % e)
             return
@@ -365,28 +347,25 @@ class HexitecDAQ():
 
         parent_metadata_group = hdf_file.create_group("hexitec")
         parent_tree_dict = self.parent.param_tree.get('')
-        # fem_tree_dict = self.parent.fem.param_tree.get('')
         self.write_metadata(parent_metadata_group, parent_tree_dict)
 
-        #TODO: Hacked until frame_process_adapter updated to use parameter tree
+        # TODO: Hacked until frame_process_adapter updated to use parameter tree
         hdf_metadata_group = hdf_file.create_group("hdf")
         hdf_tree_dict = self.adapters['fp']._param
         self.write_metadata(hdf_metadata_group, hdf_tree_dict)
 
         for fem in self.parent.fems:
             fem._set_status_message("Meta data added")
-            # fem._set_status_message("Fuck that")
         hdf_file.close()
+        self.in_progress = False
 
     def write_metadata(self, metadata_group, param_tree_dict):
-        """
-        Write parameter tree(s) and config files as meta data
-        """
-        param_tree_dict = self.flatten_dict(param_tree_dict)
+        """Write parameter tree(s) and config files as meta data."""
+        param_tree_dict = self._flatten_dict(param_tree_dict)
 
         # Build metadata attributes from dictionary
         for param, val in param_tree_dict.items():
-            if val == None:
+            if val is None:
                 # Replace None or TypeError will be thrown as:
                 #   ("Object dtype dtype('O') has no native HDF5 equivalent")
                 val = "N/A"
@@ -402,61 +381,57 @@ class HexitecDAQ():
 
             # Write contents of config files
             for param_file in ('detector/fems/fem_0/hexitec_config',
-                                'detector/daq/config/calibration/gradients_filename',
-                                'detector/daq/config/calibration/intercepts_filename'):
+                               'detector/daq/config/calibration/gradients_filename',
+                               'detector/daq/config/calibration/intercepts_filename'):
                 # Only attempt to open file if it exists
                 file_name = param_tree_dict[param_file]
                 if os.path.isfile(file_name):
-
-                    self.config_ds[param_file] = metadata_group.create_dataset(param_file, 
-                                                                            shape=(1,),
-                                                                            dtype=str_type)
+                    self.config_ds[param_file] = \
+                        metadata_group.create_dataset(param_file, shape=(1,), dtype=str_type)
                     try:
                         with open(file_name, 'r') as xml_file:
                             self.config_ds[param_file][:] = xml_file.read()
-
                     except IOError as e:
-                        logging.error("Failed to read %s XML file %s : %s " % (param_file, 
-                                                                    file_name, e))
+                        logging.error("Failed to read %s XML file %s : %s " %
+                                      (param_file, file_name, e))
                         raise(e)
                     except Exception as e:
-                        logging.error("Exception creating metadata for %s XML file %s : %s " %
-                            (param_file, param_file, e))
+                        logging.error("Exception creating metadata for %s XML file %s : %s" %
+                                      (param_file, param_file, e))
                         raise(e)
                     logging.debug("Key '%s'; Successfully read file '%s'" % (param_file, file_name))
                 else:
-                    logging.debug("\n\n Key: %s's file: %s\n Doesn't exist!\n\n\n" % (param_file, file_name))
+                    logging.debug("Key: %s's file: %s. Doesn't exist!" % (param_file, file_name))
 
-    def flatten_dict(self, d, parent_key='', sep='/'):
-        """
-        Flattens a dictionary with nested dictionary into single dictionary of key-value pairs
-        """
+    def _flatten_dict(self, d, parent_key='', sep='/'):
+        """Flatten a dictionary of nested dictionary into single dictionary of key-value pairs."""
         items = []
         for k, v in d.items():
             new_key = parent_key + sep + k if parent_key else k
             if isinstance(v, collections.MutableMapping):
-                items.extend(self.flatten_dict(v, new_key, sep=sep).items())
+                items.extend(self._flatten_dict(v, new_key, sep=sep).items())
             else:
                 items.append((new_key, v))
         return dict(items)
 
-    def is_od_connected(self, status=None, adapter=""):
+    def _is_od_connected(self, status=None, adapter=""):
         if status is None:
             status = self.get_od_status(adapter)
         return status.get("connected", False)
 
-    def is_fr_configured(self, status={}):
+    def _is_fr_configured(self, status={}):
         if status.get('status') is None:
             status = self.get_od_status("fr")
         config_status = status.get("status", {}).get("configuration_complete", False)
         return config_status
 
-    def is_fp_configured(self, status=None):
+    def _is_fp_configured(self, status=None):
         status = self.get_od_status("fp")
         config_status = status.get("plugins")  # if plugins key exists, it has been configured
         return config_status is not None
 
     def get_od_status(self, adapter):
+        """Get status from adapter."""
         if not self.is_initialised:
             return {"Error": "Adapter not initialised with references yet"}
         try:
@@ -470,6 +445,7 @@ class HexitecDAQ():
             return response
 
     def get_config_file(self, adapter):
+        """Get config file from adapter."""
         if not self.is_initialised:
             # IAC not setup yet
             return ""
@@ -493,16 +469,19 @@ class HexitecDAQ():
             return return_val
 
     def set_data_dir(self, directory):
+        """Set directory of processed file."""
         self.file_dir = directory
 
     def set_number_frames(self, number_frames):
-        print("");logging.debug("  .set_number_frames(%s); Changing number_frames: %s " % (number_frames, self.number_frames));print("")
+        """Set number of frames to be acquired."""
         self.number_frames = number_frames
 
     def set_file_name(self, name):
+        """Set processed file name."""
         self.file_name = name
 
     def set_file_writing(self, writing):
+        """Update processed file details, file writing and histogram setting."""
         command = "config/hdf/frames"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         # request.body = "{}".format(self.number_frames)
@@ -530,7 +509,7 @@ class HexitecDAQ():
         request.body = "{}".format(self.number_frames)
         self.adapters["fp"].put(command, request)
 
-    def config_odin_data(self, adapter):
+    def _config_odin_data(self, adapter):
         config = path.join(self.config_dir, self.config_files[adapter])
         config = path.expanduser(config)
         if not config.startswith('/'):
@@ -541,9 +520,9 @@ class HexitecDAQ():
         _ = self.adapters[adapter].put(command, request)
 
     def update_rows_columns_pixels(self):
-        """
-        Updates rows, columns and pixels from selected sensors_layout value
-        If sensors_layout = "3x2" => 3 rows of sensors by 2 columns of sensors
+        """Update rows, columns and pixels from selected sensors_layout value.
+
+        e.g. sensors_layout = "3x2" => 3 rows of sensors by 2 columns of sensors
         """
         self.sensors_rows, self.sensors_columns = self.sensors_layout.split("x")
         self.rows = int(self.sensors_rows) * 80
@@ -569,40 +548,32 @@ class HexitecDAQ():
             raise ParameterTreeError("Must be either 3 or 5")
 
     def _set_gradients_filename(self, gradients_filename):
-        if (path.isfile(gradients_filename) == False):
+        if (path.isfile(gradients_filename) is False):
             raise ParameterTreeError("Gradients file doesn't exist")
         self.gradients_filename = gradients_filename
 
     def _set_intercepts_filename(self, intercepts_filename):
-        if (path.isfile(intercepts_filename) == False):
+        if (path.isfile(intercepts_filename) is False):
             raise ParameterTreeError("Intercepts file doesn't exist")
         self.intercepts_filename = intercepts_filename
 
     def _set_bin_end(self, bin_end):
-        """
-        Updates bin_end and datasets' histograms' dimensions
-        """
+        """Update bin_end and datasets' histograms' dimensions."""
         self.bin_end = bin_end
         self.update_histogram_dimensions()
-    
+
     def _set_bin_start(self, bin_start):
-        """
-        Updates bin_start and datasets' histograms' dimensions
-        """
+        """Update bin_start and datasets' histograms' dimensions."""
         self.bin_start = bin_start
         self.update_histogram_dimensions()
-    
+
     def _set_bin_width(self, bin_width):
-        """
-        Updates bin_width and datasets' histograms' dimensions
-        """
+        """Update bin_width and datasets' histograms' dimensions."""
         self.bin_width = bin_width
         self.update_histogram_dimensions()
 
     def update_datasets_frame_dimensions(self):
-        """
-        Updates frames' datasets' dimensions
-        """
+        """Update frames' datasets' dimensions."""
         for dataset in ["data", "raw_frames"]:
             payload = '{"dims": [%s, %s]}' % (self.rows, self.columns)
             command = "config/hdf/dataset/" + dataset
@@ -610,9 +581,7 @@ class HexitecDAQ():
             self.adapters["fp"].put(command, request)
 
     def update_histogram_dimensions(self):
-        """
-        Updates histograms' dimensions in the relevant datasets
-        """
+        """Update histograms' dimensions in the relevant datasets."""
         self.number_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
         # spectra_bins dataset
         payload = '{"dims": [%s], "chunks": [1, %s]}' % \
@@ -645,7 +614,7 @@ class HexitecDAQ():
         self.raw_data = raw_data
 
     def _set_threshold_filename(self, threshold_filename):
-        if (path.isfile(threshold_filename) == False):
+        if (path.isfile(threshold_filename) is False):
             raise ParameterTreeError("Threshold file doesn't exist")
         self.threshold_filename = threshold_filename
 
@@ -663,14 +632,12 @@ class HexitecDAQ():
         return self.sensors_layout
 
     def _set_sensors_layout(self, layout):
-        """
-        Sets sensors_layout in all FP's plugins and FR; Recalculates rows, columns and pixels
-        """
+        """Set sensors_layout in all FP's plugins and FR; Recalculates rows, columns and pixels."""
         self.sensors_layout = layout
 
         # send command to all FP plugins, then FR
-        plugins =  ['addition', 'calibration', 'discrimination', 'histogram', 'reorder', 
-                    'next_frame', 'threshold']
+        plugins = ['addition', 'calibration', 'discrimination', 'histogram', 'reorder',
+                   'next_frame', 'threshold']
 
         for plugin in plugins:
             command = "config/" + plugin + "/sensors_layout"
@@ -686,9 +653,7 @@ class HexitecDAQ():
         self.update_histogram_dimensions()
 
     def commit_configuration(self):
-        """
-        Generates and sends the FP config files
-        """
+        """Generate and sends the FP config files."""
         # Generate JSON config file determining which plugins, the order to chain them, etc
         parameter_tree = self.param_tree.get('')
 
@@ -703,9 +668,9 @@ class HexitecDAQ():
             self.extra_datasets.append(self.master_dataset)
 
         self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
-                                        bDeleteFileOnClose=False,
-                                        master_dataset=self.master_dataset,
-                                        extra_datasets=self.extra_datasets)
+                                       bDeleteFileOnClose=False,
+                                       master_dataset=self.master_dataset,
+                                       extra_datasets=self.extra_datasets)
 
         store_config, execute_config = self.gcf.generate_config_files()
 
@@ -720,11 +685,9 @@ class HexitecDAQ():
         IOLoop.instance().call_later(0.4, self.submit_configuration)
 
     def submit_configuration(self):
-        """
-        Sends each ParameterTree value to the corresponding FP plugin
-        """
+        """Send each ParameterTree value to the corresponding FP plugin."""
         # Loop overall plugins in ParameterTree, updating fp's settings except reorder
-        #TODO: Include reorder when odin control supports raw_data (i.e. bool)
+        # TODO: Include reorder when odin control supports raw_data (i.e. bool)
         for plugin in self.param_tree.tree.get("config"):
 
             if plugin != "reorder":
@@ -734,7 +697,7 @@ class HexitecDAQ():
                     # print "config/%s/%s" % (plugin, param_key), " -> ", \
                     #         self.param_tree.tree['config'][plugin][param_key].get("")
 
-                    # Don't send histograms' pass_processed, since Odin Control do not support bool..
+                    # Don't send histograms' pass_processed, since Odin Control do not support bool
                     if param_key != "pass_processed":
 
                         command = "config/%s/%s" % (plugin, param_key)
@@ -747,19 +710,8 @@ class HexitecDAQ():
             self.plugin = "hdf"
         else:
             self.plugin = "histogram"
-        
+
         # print("\n\n *** self.plugin: %s ***" % self.plugin)
         # print(" *** master dset: %s ***" % self.master_dataset)
         # print(" *** extra  dset: %s ***" % self.extra_datasets)
         # print(" *** pass_proc'd(%s), raw_frms(%s) ***\n\n" % (self.pass_processed, self.raw_data))
-
-    #TODO: Cannot implement delayed file deletion, forced to keep them alive past closure..!
-    #     logging.debug("\n\n\tWaiting three seconds before closing temporary files..\n\n")
-    #     IOLoop.instance().call_later(3.0, self.close_temporary_files)
-
-    # @run_on_executor(executor='thread_executor')
-    # def close_temporary_files(self):
-    #     logging.debug("\n\n\tI ain't waiting no more, close them files!!!!!\n\n")
-    #     # Cleanup by closing temporary files
-    #     self.gcf.close_files()
-

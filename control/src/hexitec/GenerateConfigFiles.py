@@ -1,20 +1,29 @@
 """
-GenerateConfigFiles.py - Creates a temporary file according to user UI selections 
-                        (to replace 12 Configuration files)
+GenerateConfigFiles: Creates a temporary file according to user UI selections.
+
+Christian Angelsen, STFC Detector Systems Software Group
 """
 
 import tempfile
 import logging
 from collections import OrderedDict
 
+
 class GenerateConfigFiles():
-    """
-    Accepts Parameter tree from hexitecDAQ's "/config" branch to generate json file
-    """
+    """Accepts Parameter tree from hexitecDAQ's "/config" branch to generate json file."""
 
-    def __init__(self, param_tree, number_histograms, 
-                bDeleteFileOnClose=False, master_dataset="data", extra_datasets=[]):
+    def __init__(self, param_tree, number_histograms, bDeleteFileOnClose=False,
+                 master_dataset="processed_frames", extra_datasets=[]):
+        """
+        Initialize the GenerateConfigFiles object.
 
+        This constructor initializes the GenerateConfigFiles object.
+        :param param_tree: dictionary of parameter_tree configuration
+        :param number_histograms: number of histogram bins
+        :param bDeleteFileOnClose: delete temporary files after use - disabled: unable to implement
+        :param master_dataset: set master dataset
+        :param extra_datasets: include optional dataset(s)
+        """
         self.param_tree = param_tree
         self.number_histograms = number_histograms
         self.delete_file_on_close = bDeleteFileOnClose
@@ -22,18 +31,21 @@ class GenerateConfigFiles():
         self.extra_datasets = extra_datasets
 
     def boolean_to_string(self, bBool):
+        """Convert bool to string."""
         string = "false"
         if bBool:
             string = "true"
         return string
 
     def threshold_settings(self, threshold):
+        """Add threshold plugin section to configuration file."""
         try:
             threshold_config = '''
                         "threshold_file": "%s",
                         "threshold_value": %s,
-                        "threshold_mode": "%s",''' % (threshold['threshold_filename'], 
-                                threshold['threshold_value'], threshold['threshold_mode'])
+                        "threshold_mode": "%s",''' % \
+                (threshold['threshold_filename'], threshold['threshold_value'],
+                 threshold['threshold_mode'])
         except KeyError:
             logging.error("Error extracting threshold_settings!")
             print("Error extracting threshold_settings!")
@@ -41,11 +53,12 @@ class GenerateConfigFiles():
         return threshold_config
 
     def calibration_settings(self, calibration):
+        """Add calibration plugin section to configuration file."""
         try:
             calibration_config = '''
                         "gradients_file": "%s",
-                        "intercepts_file": "%s",''' % (calibration['gradients_filename'], 
-                                                    calibration['intercepts_filename'])
+                        "intercepts_file": "%s",''' % (calibration['gradients_filename'],
+                                                       calibration['intercepts_filename'])
         except KeyError:
             logging.error("Error extracting calibration_settings!")
             print("Error extracting calibration_settings!")
@@ -53,21 +66,25 @@ class GenerateConfigFiles():
         return calibration_config
 
     def histogram_settings(self, histogram):
+        """Add histogram plugin section to configuration file."""
         try:
             histogram_config = '''
                         "bin_start": %s,
                         "bin_end": %s,
-                        "bin_width": %s,''' % (histogram['bin_start'],
-                        histogram['bin_end'], histogram['bin_width'])
+                        "bin_width": %s,''' % \
+                (histogram['bin_start'], histogram['bin_end'], histogram['bin_width'])
         except KeyError:
             logging.error("Error extracting histogram_settings!")
             print("Error extracting histogram_settings!")
             raise KeyError("Couldn't locate histogram setting(s)!")
         return histogram_config
 
+    def generate_config_files(self):  # noqa: C901
+        """Generate the two configuration files.
 
-    def generate_config_files(self):
-
+        The store config file contains the actual configuration.
+        The execute config file is used to execute the configuration of the store file.
+        """
         self.store_temp = tempfile.NamedTemporaryFile(mode='w+t')
         self.store_temp.delete = self.delete_file_on_close
 
@@ -84,7 +101,7 @@ class GenerateConfigFiles():
         # Preamble includes name of sequence, fr setup (unlikely to change)
         store_sequence_preamble = '''[
     {
-        "store": 
+        "store":
         {
             "index": "%s",
             "value":
@@ -102,13 +119,13 @@ class GenerateConfigFiles():
         # "library": "/u/ckd27546/develop/projects/odin-demo/install/lib/libHexitecReorderPlugin.so"
 
         standard_path = {}
-        standard_path['reorder']        = ["reorder", "Reorder", "Reorder"]
-        standard_path['threshold']      = ["threshold", "Threshold", "Threshold"]
-        standard_path['next_frame']     = ["next_frame", "NextFrame", "NextFrame"]
-        standard_path["calibration"]    = ["calibration", "Calibration", "Calibration"]
-        standard_path["addition"]       = ["addition", "Addition", "Addition"]
+        standard_path['reorder'] = ["reorder", "Reorder", "Reorder"]
+        standard_path['threshold'] = ["threshold", "Threshold", "Threshold"]
+        standard_path['next_frame'] = ["next_frame", "NextFrame", "NextFrame"]
+        standard_path["calibration"] = ["calibration", "Calibration", "Calibration"]
+        standard_path["addition"] = ["addition", "Addition", "Addition"]
         standard_path["discrimination"] = ["discrimination", "Discrimination", "Discrimination"]
-        standard_path["histogram"]      = ["histogram", "Histogram", "Histogram"]
+        standard_path["histogram"] = ["histogram", "Histogram", "Histogram"]
 
         # Plugin path that doesn't follow the same format (as the others)
         # "index": "live_view",
@@ -120,7 +137,7 @@ class GenerateConfigFiles():
 
         nonstandard_path = {}
         nonstandard_path["live_view"] = ["live_view", "LiveView", "LiveView"]
-        nonstandard_path['hdf']       = ["hdf", "FileWriter", "Hdf5"]
+        nonstandard_path['hdf'] = ["hdf", "FileWriter", "Hdf5"]
 
         sensors_layout = self.param_tree['sensors_layout']
         rows_of_sensors, columns_of_sensors = int(sensors_layout[0]), int(sensors_layout[2])
@@ -130,32 +147,29 @@ class GenerateConfigFiles():
         d = self.param_tree['config']
 
         # Sort parameter tree dict into R, T, N, C, A, D, H plugin order
-        keyorder = ['reorder', 'threshold',  'next_frame', 'calibration', 'addition', 
+        keyorder = ['reorder', 'threshold', 'next_frame', 'calibration', 'addition',
                     'discrimination', 'histogram']
-        config = OrderedDict(sorted(d.items(), key=lambda i:keyorder.index(i[0])))
+        config = OrderedDict(sorted(d.items(), key=lambda i: keyorder.index(i[0])))
 
         # Check parameter tree if next/calib/CS (i.e. optional) plugins to be added:
 
         list_optional_plugins = ["next_frame", "calibration", "addition", "discrimination"]
         sample_plugins = ["reorder", "threshold"]
-        
+
         for key in config:
             if key not in list_optional_plugins:
                 continue
             try:
-                enabled = ""
                 if config[key]['enable']:
-                    enabled = True
                     sample_plugins.append(key)
-                # print("%s has 'enable' %s" % (key, enabled))
-            except KeyError as e:
+            except KeyError:
                 # KeyError thrown if plugin doesn't have "enable" key
-                print("Plugin %s missing 'enable' setting!")
-                logging.debug("Plugin %s missing 'enable' setting!")
-                raise Exception("Plugin %s missing 'enable' setting!")
+                print("Plugin %s missing 'enable' setting!" % key)
+                logging.debug("Plugin %s missing 'enable' setting!" % key)
+                raise Exception("Plugin %s missing 'enable' setting!" % key)
 
         sample_plugins += ["histogram", "live_view", "hdf"]
-        
+
         odin_path = "/u/ckd27546/develop/projects/odin-demo"
         store_plugin_paths = ""
 
@@ -171,7 +185,7 @@ class GenerateConfigFiles():
                             "library": "%s/install/lib/libHexitec%sPlugin.so"
                         }
                     }
-                }''' % (standard_path[plugin][0], standard_path[plugin][1], 
+                }''' % (standard_path[plugin][0], standard_path[plugin][1],
                         odin_path, standard_path[plugin][2])
 
         # Build config for Non-standard paths
@@ -189,7 +203,6 @@ class GenerateConfigFiles():
                 }''' % (nonstandard_path[plugin][0], nonstandard_path[plugin][1],
                         odin_path, nonstandard_path[plugin][2])
 
-
         store_plugin_connect = ""
         previous_plugin = "frame_receiver"
         # Chain together plugins starting with frame receiver
@@ -204,7 +217,7 @@ class GenerateConfigFiles():
                     }
                 }''' % (plugin, previous_plugin)
             previous_plugin = plugin
-    
+
         # Set plugins' settings
         store_plugin_config = ""
         unique_setting = ""
@@ -215,23 +228,23 @@ class GenerateConfigFiles():
                 # Get unique_setting(s) according to plugin
                 if plugin == "reorder":
                     unique_setting = '''\n                        "raw_data": %s,''' % \
-                                        self.boolean_to_string(config[plugin]['raw_data'])
+                        self.boolean_to_string(config[plugin]['raw_data'])
                 if plugin == "threshold":
                     unique_setting = self.threshold_settings(config[plugin])
                 if plugin == "next_frame":
-                    pass # Nowt extra
+                    pass    # Nowt extra
                 if plugin == "calibration":
                     unique_setting = self.calibration_settings(config[plugin])
                 if plugin == "discrimination" or plugin == "addition":
                     unique_setting = '''\n                        "pixel_grid_size": %s,''' % \
-                                                                config[plugin]['pixel_grid_size']
+                        config[plugin]['pixel_grid_size']
                 if plugin == "histogram":
                     unique_setting = self.histogram_settings(config[plugin])
 
                 store_plugin_config += ''',
                 {
                     "%s": {%s
-            		"sensors_layout": "%s"
+                    "sensors_layout": "%s"
                     }
                 }''' % (plugin, unique_setting, sensors_layout)
                 unique_setting = ""
@@ -239,7 +252,7 @@ class GenerateConfigFiles():
         # live_view, hdf have different settings (no sensors_layout..)
         store_plugin_config += ''',
                 {
-                    "live_view": 
+                    "live_view":
                     {
                         "frame_frequency": 50,
                         "per_second": 0,
@@ -250,10 +263,10 @@ class GenerateConfigFiles():
 
         store_plugin_config += ''',
                 {
-                    "hdf": 
+                    "hdf":
                     {
                         "master": "%s",''' % self.master_dataset + '''
-                        "dataset": 
+                        "dataset":
                         {'''
 
         for dataset in self.extra_datasets:
@@ -320,19 +333,17 @@ class GenerateConfigFiles():
         finally:
             self.store_temp.close()
 
-        
-
         # The execute_config file is used to wipe any existing config, then load user config
         execute_config = '''
 [
     {
-        "plugin": 
+        "plugin":
         {
             "disconnect": "all"
         }
     },
     {
-        "execute": 
+        "execute":
         {
             "index": "%s"
         }
@@ -342,7 +353,7 @@ class GenerateConfigFiles():
         self.execute_temp = tempfile.NamedTemporaryFile(mode='w+t')
         self.execute_temp.delete = self.delete_file_on_close
 
-        # Put together the execute sequence file 
+        # Put together the execute sequence file
         try:
             self.execute_temp.writelines(execute_config)
         finally:
@@ -357,19 +368,25 @@ class GenerateConfigFiles():
 
 
 if __name__ == '__main__':
-    param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'}, 
-        'sensors_layout': '2x2',  'receiver': {'config_file': '', 'configured': False, 'connected': 
-        False}, 'in_progress': False, 
-        # The 'config' nested dictionary control which plugin(s) are loaded:
-        'config': 
-        {'calibration': {'enable': False, 'intercepts_filename': '', 'gradients_filename': ''}, 
-            'addition': {'enable': False, 'pixel_grid_size': 3}, 'discrimination': {'enable': 
-            False, 'pixel_grid_size': 5}, 'histogram': {'max_frames_received': 10, 'bin_end': 
-            8000, 'bin_width': 10.0, 'bin_start': 0}, 'next_frame': {'enable': True}, 
-            'threshold': {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 
-            'none'}, 'reorder': {'raw_data': True}
-        }, 
-        'processor': {'config_file': '', 'configured': False, 'connected': False}}
+    param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
+                  'sensors_layout': '2x2', 'receiver':
+                  {'config_file': '', 'configured': False, 'connected': False},
+                  'in_progress': False,
+                  # The 'config' nested dictionary control which plugin(s) are loaded:
+                  'config':
+                  {'calibration':
+                   {'enable': False, 'intercepts_filename': '', 'gradients_filename': ''},
+                   'addition':
+                   {'enable': False, 'pixel_grid_size': 3},
+                   'discrimination': {'enable': False, 'pixel_grid_size': 5},
+                   'histogram':
+                   {'max_frames_received': 10, 'bin_end': 8000, 'bin_width': 10.0, 'bin_start': 0},
+                   'next_frame': {'enable': True},
+                   'threshold':
+                   {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'},
+                   'reorder': {'raw_data': True}
+                   },
+                  'processor': {'config_file': '', 'configured': False, 'connected': False}}
 
     bin_end = param_tree['config']['histogram']['bin_end']
     bin_start = param_tree['config']['histogram']['bin_start']
@@ -379,8 +396,8 @@ if __name__ == '__main__':
     # extra_datasets = [master_dataset, "raw_frames"]
     extra_datasets = [master_dataset]
 
-    gcf = GenerateConfigFiles(param_tree, number_histograms, bDeleteFileOnClose=False, 
-                                master_dataset=master_dataset, extra_datasets=extra_datasets)
+    gcf = GenerateConfigFiles(param_tree, number_histograms, bDeleteFileOnClose=False,
+                              master_dataset=master_dataset, extra_datasets=extra_datasets)
     s, e = gcf.generate_config_files()
 
     print("GFC returned config files\n Store:   %s\n Execute: %s\n" % (s, e))
