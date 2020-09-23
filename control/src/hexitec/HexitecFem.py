@@ -263,11 +263,11 @@ class HexitecFem():
             vsr = self.vsr_addr
             self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
             self.read_temperatures_humidity_values()
-            self.read_pwr_voltages()
-            self.vsr_addr = HexitecFem.VSR_ADDRESS[1]
-            self.read_temperatures_humidity_values()
-            self.read_pwr_voltages()
-            self.vsr_addr = vsr
+            self.read_pwr_voltages()  # pragma: no cover
+            self.vsr_addr = HexitecFem.VSR_ADDRESS[1]  # pragma: no cover
+            self.read_temperatures_humidity_values()  # pragma: no cover
+            self.read_pwr_voltages()  # pragma: no cover
+            self.vsr_addr = vsr  # pragma: no cover
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to read sensors: %s" % str(e))
             logging.error("%s" % str(e))
@@ -304,7 +304,7 @@ class HexitecFem():
         if p_size >= 11 and p_size <= 14 and f_size == 16:
             pixel_count_max = pixel_count_max // 2
         elif p_size == 8 and f_size == 8:
-            pixel_count_max = pixel_count_max // 4
+            pixel_count_max = pixel_count_max // 4  # pragma: no cover
         else:
             size_status = size_status + 1
 
@@ -425,18 +425,19 @@ class HexitecFem():
             self._set_status_message("Is the camera powered?")
             logging.error("%s" % str(e))
         except Exception as e:
-            self._set_status_error("Uncaught Exception; Failed to establish camera \
-                connection: %s" % str(e))
+            self._set_status_error("Uncaught Exception; Failed to establish camera " +
+                                   "connection: %s" % str(e))
             logging.error("%s" % str(e))
             # Cannot raise error beyond current thread
 
-        # Start polling thread (connect successfully set up)
-        if len(self.status_error) == 0:
-            self._start_polling()
+        print("\n\nReinstate polling before merging with master !\n\n")
+        # # Start polling thread (connect successfully set up)
+        # if len(self.status_error) == 0:
+        #     self._start_polling()
 
     @run_on_executor(executor='thread_executor')
     def initialise_hardware(self, msg=None):
-        """Initialise sensors, load enables, et cetera to initialise both VSR boards."""
+        """Initialise sensors, load enables, etc to initialise both VSR boards."""
         try:
             if self.hardware_connected is not True:
                 raise ParameterTreeError("No connection established")
@@ -445,7 +446,7 @@ class HexitecFem():
             else:
                 self._set_status_error("")
 
-            if self.debug_register24:
+            if self.debug_register24:  # pragma: no cover
                 (vsr2, vsr1) = self.debug_reg24()
                 print("\n")
                 logging.debug("  * 00 *** init_HW, nowt chngd; Reg 0x24: %s, %s ***" % (vsr2, vsr1))
@@ -671,11 +672,12 @@ class HexitecFem():
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0xE3, 0x0D])
             logging.debug("Modules Enabled")
         except socket_error as e:
-            raise HexitecFemError(e)
             self.hardware_connected = False
+            raise HexitecFemError(e)
 
     def cam_disconnect(self):
         """Send commands to disconnect camera."""
+        self.hardware_connected = False
         try:
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0xE2, 0x0D])
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0xE2, 0x0D])
@@ -763,7 +765,7 @@ class HexitecFem():
         full_empty = self.x10g_rdma.read(0x60000012, 'Check FULL Signals')
         logging.debug("Check FULL Signals: %s" % full_empty)
 
-    def debug_reg24(self):
+    def debug_reg24(self): # pragma: no cover
         """Debug function: Display contents of register 24."""
         self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE,
                        0x32, 0x34, 0x0D])
@@ -787,7 +789,7 @@ class HexitecFem():
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
         self.read_response()
 
-        if self.debug_register24:
+        if self.debug_register24:  # pragma: no cover
             (vsr2, vsr1) = self.debug_reg24()
             print("\n")
             logging.debug("  * 02 *** cal_sen, CLR bit5;   Reg 0x24: %s, %s ***" % (vsr2, vsr1))
@@ -795,7 +797,7 @@ class HexitecFem():
         # Set bit 4 of Reg24: send average picture
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
         self.read_response()
-        if self.debug_register24:
+        if self.debug_register24:  # pragma: no cover
             (vsr2, vsr1) = self.debug_reg24()
             print("\n")
             logging.debug("  * 03 *** cal_sen, SET bit4;   Reg 0x24: %s, %s ***" % (vsr2, vsr1))
@@ -806,7 +808,7 @@ class HexitecFem():
         self.read_response()
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x30, 0x31, 0x0D])
         self.read_response()
-        if self.debug_register24:
+        if self.debug_register24:  # pragma: no cover
             (vsr2, vsr1) = self.debug_reg24()
             print("\n")
             logging.debug("  * 04 *** cal_sen, CLR bit6;   Reg 0x24: %s, %s ***" % (vsr2, vsr1))
@@ -815,7 +817,7 @@ class HexitecFem():
         # Set bit; Register 0x24, bit5 (disable VCAL), bit1 (capture average picture)
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x32, 0x32, 0x0D])
         self.read_response()
-        if self.debug_register24:
+        if self.debug_register24:  # pragma: no cover
             (vsr2, vsr1) = self.debug_reg24()
             print("\n")
             logging.debug("  * 05 *** cal_sen, SET b5,b1;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
@@ -849,12 +851,12 @@ class HexitecFem():
         logging.debug("Check FULL Signals: %s" % full_empty)
 
         # Check whether the currently selected VSR has synchronised or not
-        if synced == 15:
+        if synced == 15:  # pragma: no cover
             logging.debug("All Links on VSR's 1 and 2 synchronised")
             logging.debug("Starting State Machine in VSR's")
-        elif synced == 12:
+        elif synced == 12:  # pragma: no cover
             logging.debug("Both Links on VSR 2 synchronised")
-        elif synced == 3:
+        elif synced == 3:  # pragma: no cover
             logging.debug("Both Links on VSR 1 synchronised")
         else:
             logging.debug(synced)
@@ -869,7 +871,7 @@ class HexitecFem():
                        0x32, 0x30, 0x0D])
         self.read_response()
 
-        if self.debug_register24:
+        if self.debug_register24:  # pragma: no cover
             (vsr2, vsr1) = self.debug_reg24()
             print("\n")
             logging.debug("  * 06 *** cal_sen, CLR b5;     Reg 0x24: %s, %s ***" % (vsr2, vsr1))
@@ -879,7 +881,7 @@ class HexitecFem():
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34,
                        0x30, 0x38, 0x0D])
         self.read_response()
-        if self.debug_register24:
+        if self.debug_register24:  # pragma: no cover
             (vsr2, vsr1) = self.debug_reg24()
             print("\n")
             logging.debug("  * 08 *** cal_sen, SET b3;     Reg 0x24: %s, %s ***" % (vsr2, vsr1))
@@ -897,7 +899,6 @@ class HexitecFem():
 
         if self.debug:
             logging.debug("Poll register 0x89")
-
         bPolling = True
         time_taken = 0
         while bPolling:
@@ -915,7 +916,6 @@ class HexitecFem():
                 time_taken += 0.1
             if time_taken > 3.0:
                 raise HexitecFemError("Timed out polling register 0x89; PLL remains disabled")
-
         if self.debug:
             logging.debug("Bit 1 should be 1")
             logging.debug(reply)
@@ -977,7 +977,7 @@ class HexitecFem():
         if self.debug:
             logging.debug("number of Frames := %s" % self.number_frames)
 
-        if self.debug_register24:
+        if self.debug_register24:  # pragma: no cover
             (vsr2, vsr1) = self.debug_reg24()
             print("\n")
             logging.debug("    ****** ACQUISITION;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
@@ -1325,7 +1325,7 @@ class HexitecFem():
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1],
                           HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
             self.read_response()
-            if self.debug_register24:
+            if self.debug_register24:  # pragma: no cover
                 (vsr2, vsr1) = self.debug_reg24()
                 print("\n")
                 logging.debug("  * 09 *** coll_off, SET b4;    Reg 0x24: %s, %s ***" % (vsr2, vsr1))
@@ -1365,7 +1365,7 @@ class HexitecFem():
             self.read_response()
             self.send_cmd(enable_dc_vsr2)
             self.read_response()
-            if self.debug_register24:
+            if self.debug_register24:  # pragma: no cover
                 (vsr2, vsr1) = self.debug_reg24()
                 print("\n")
                 logging.debug("  * 10 *** coll_off, SET b1,5;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
@@ -1395,7 +1395,7 @@ class HexitecFem():
             self.read_response()
             self.send_cmd(disable_dc_vsr2)
             self.read_response()
-            if self.debug_register24:
+            if self.debug_register24:  # pragma: no cover
                 (vsr2, vsr1) = self.debug_reg24()
                 print("\n")
                 logging.debug("  * 11 *** coll_off, SET b3,5;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
@@ -1415,7 +1415,7 @@ class HexitecFem():
                            0x32, 0x34, 0x32, 0x30, 0x0D])
             self.read_response()
 
-            if self.debug_register24:
+            if self.debug_register24:  # pragma: no cover
                 (vsr2, vsr1) = self.debug_reg24()
                 print("\n")
                 logging.debug("  * 12 *** coll_off, SET b5;    Reg 0x24: %s, %s ***" % (vsr2, vsr1))
@@ -1840,13 +1840,13 @@ class HexitecFem():
         self.read_response()
         self.send_cmd(aqu1)
         self.read_response()
-        if self.debug_register24:
+        if self.debug_register24:  # pragma: no cover
             (vsr2, vsr1) = self.debug_reg24()
             print("\n")
             logging.debug("  * 13 *** ena_adc,  SET b1,5;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
         self.send_cmd(aqu2)
         self.read_response()
-        if self.debug_register24:
+        if self.debug_register24:  # pragma: no cover
             (vsr2, vsr1) = self.debug_reg24()
             print("\n")
             logging.debug("  * 14 *** ena_adc,  SET b3,5;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
@@ -2114,7 +2114,7 @@ class HexitecFem():
                     self.vsr2_asic2 = self.get_asic_temperature(asic2_hex)
                     self.vsr2_adc = self.get_adc_temperature(adc_hex)
         else:
-            logging.warn("VSR 0x%s: Sensor data temporarily unavailable" %
+            logging.warning("VSR 0x%s: Sensor data temporarily unavailable" %
                          format(self.vsr_addr, '02x'))
 
     def get_ambient_temperature(self, hex_val):
@@ -2224,7 +2224,7 @@ class HexitecFem():
                                valid_range[1]))
                 setting = -1
         except KeyError:
-            logging.warn("Warning: No '%s' Key defined!" % descriptor)
+            logging.warning("Warning: No '%s' Key defined!" % descriptor)
         return setting
 
     def convert_aspect_float_to_dac_value(self, number_float):
@@ -2268,7 +2268,7 @@ class HexitecFem():
                               (descriptor, setting, valid_range[0], valid_range[1]))
                 setting = -1
         except KeyError:
-            logging.warn("Warning: No '%s' Key defined!" % descriptor)
+            logging.warning("Warning: No '%s' Key defined!" % descriptor)
 
         return setting
 
@@ -2297,7 +2297,7 @@ class HexitecFem():
                               (descriptor, setting, valid_range[0], valid_range[1]))
                 setting = [-1, -1, -1, -1, -1]
         except KeyError:
-            logging.warn("Warn: No '%s' Key defined!" % descriptor)
+            logging.warning("Warn: No '%s' Key defined!" % descriptor)
         return setting
 
     def _extract_boolean(self, parameter_dict, descriptor):
@@ -2366,7 +2366,8 @@ class HexitecFem():
             print("   3rd: %s" % third_channel)
             print("   4th: %s" % fourth_channel)
             print("   entirety: %s" % entirety)
-
+        # Convert string to bytes (to support Python 3)
+        entirety = entirety.encode("utf-8")
         # Pixels appear in 8 bit reverse order, reverse bit order accordingly
         # More info: https://docs.scipy.org/doc/numpy/user/basics.byteswapping.html
         big_end_arr = np.ndarray(shape=(10,), dtype='>i8', buffer=entirety)
@@ -2422,9 +2423,9 @@ class HexitecFem():
             if debug:
                 print('Section:', section)
             for key, value in parser.items(section):
-                parameter_dict[section + "/" + key] = value.encode("utf-8").strip("\"")
+                parameter_dict[section + "/" + key] = value.strip("\"")
                 if debug:
-                    print("   " + section + "/" + key + " => " + value.encode("utf-8").strip("\""))
+                    print("   " + section + "/" + key + " => " + value.strip("\""))
         if debug:
             print("---------------------------------------------------------------------")
 

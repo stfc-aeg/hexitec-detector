@@ -281,7 +281,6 @@ class Hexitec():
             "connect_hardware": (None, self.connect_hardware),
             "initialise_hardware": (None, self.initialise_hardware),
             "disconnect_hardware": (None, self.disconnect_hardware),
-            "check_file": (None, self.check_file),  # DEBUGGING
             "collect_offsets": (None, self._collect_offsets),
             "commit_configuration": (None, self.commit_configuration),
             "debug_count": (self._get_debug_count, self._set_debug_count),
@@ -514,10 +513,6 @@ class Hexitec():
         # Stop bias clock
         if self.bias_clock_running:
             self.bias_clock_running = False
-
-    def check_file(self, msg):
-        """Debug function: Check that daq's processed file exists."""
-        self.daq.check_file_exists()
 
     def set_duration_enable(self, duration_enable):
         """Set duration enable, calculating number of frames accordingly."""

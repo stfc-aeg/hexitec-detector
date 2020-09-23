@@ -18,28 +18,43 @@ if sys.version_info[0] == 3:  # pragma: no cover
 else:                         # pragma: no cover
     from mock import Mock, MagicMock, call, patch, ANY
 
+from hexitec.adapter import HexitecAdapter, Hexitec
+
 
 class FemTestFixture(object):
 
     def __init__(self):
 
         self.ip = "127.0.0.1"
-        self.port = 8888
         self.id = 0
-        self.frame_size = 7344
+
+        self.options = {
+            "fem_0":
+                """
+                id = 0,
+                server_ctrl_ip = 127.0.0.1,
+                camera_ctrl_ip = 127.0.0.1,
+                server_data_ip = 127.0.0.1,
+                camera_data_ip = 127.0.0.1
+                """
+        }
 
         # FPGA base addresses
         self.rdma_addr = {
-            "sequencer":       0xB0000000,
-            "receiver":        0xC0000000,
-            "frm_gate":        0xD0000000
+            "receiver": 0xC0000000,
+            "frm_gate": 0xD0000000,
+            "reset_monitor": 0x90000000
         }
 
-        with patch("hexitec.HexitecFem.RdmaUDP"):
-            self.fem = HexitecFem(None, self.id,
-                                self.ip, self.ip, self.ip, self.ip)
+        with patch("hexitec.HexitecDAQ.ParameterTree"):
+            self.adapter = HexitecAdapter(**self.options)
+            self.detector = self.adapter.hexitec  # shortcut, makes assert lines shorter
 
-            self.fem.connect()
+            with patch("hexitec.HexitecFem.RdmaUDP"):
+                self.fem = HexitecFem(self.detector, self.id, self.ip,
+                                      self.ip, self.ip, self.ip)
+                self.fem.connect()
+
 
 @pytest.fixture()
 def test_fem():
@@ -58,8 +73,7 @@ class TestFem():
     def test_nonzero_id(self, test_fem):
         """Assert the vector file is ignored if ID is not 0"""
         id = 1
-        fem = HexitecFem(None, id,
-                     test_fem.ip, test_fem.ip, test_fem.ip, test_fem.ip)
+        fem = HexitecFem(None, id, test_fem.ip, test_fem.ip, test_fem.ip, test_fem.ip)
         assert fem.id == 1
 
     def test_connect(self, test_fem):
@@ -75,15 +89,70 @@ class TestFem():
             assert test_fem.fem.x10g_rdma.ack is True
 
     def test_connect_fails(self, test_fem):
-        """Assert the connect method Exception handling works"""
+        """Assert the connect method Exception handling works."""
 
         with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
-            
             rdma_mock.side_effect = socket_error()
             with pytest.raises(socket_error) as exc_info:
                 test_fem.fem.connect()
             assert exc_info.type is socket_error
             assert exc_info.value.args[0] == "Failed to setup Control connection: "
+
+    def test_read_sensors_working_ok(self, test_fem):
+        """Test the read_sensors function works."""
+
+        with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
+            test_fem.fem.vsr_addr = 144
+            test_fem.fem.read_firmware_version = True
+            firmware_date = "11/03/2020"
+            firmware_time = "09:43"
+            test_fem.fem.x10g_rdma.read = Mock()
+            test_fem.fem.x10g_rdma.read.side_effect = [285417504, 2371]
+            test_fem.fem.read_sensors()
+            assert test_fem.fem.vsr_addr == 144
+            assert test_fem.fem.firmware_date == firmware_date
+            assert test_fem.fem.firmware_time == firmware_time
+            # assert test_fem.fem.read_firmware_version is False
+            # assert test_fem.fem.firmware_date == ""
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#  <class 'str'>  02E305D508B300040C040FCE07F7089012241A3E00000001
+# sensors_value:  02E305D508B300040C040FCE07F7089012241A3E00000001 <class 'str'>
+# vsr1_hv:  -4.210618644688452 <class 'float'>
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#  <class 'str'>  02E205D208BF00000C0A0FE607ED08A3121E1A3C00010002
+# sensors_value:  02E205D208BF00000C0A0FE607ED08A3121E1A3C00010002 <class 'str'>
+# vsr2_hv:  -5.833060659340504 <class 'float'>
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    def test_read_sensors_Exception(self, test_fem):
+        """Test the read_sensors handles Exception."""
+
+        with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
+            test_fem.fem.read_firmware_version = True
+            test_fem.fem.x10g_rdma.read = Mock()
+            test_fem.fem.x10g_rdma.read.side_effect = Exception()
+            test_fem.fem.read_sensors()
+            error = "Uncaught Exception; Reading sensors failed: "
+            assert test_fem.fem._get_status_error() == error
+
+    def test_read_sensors_HexitecFemError(self, test_fem):
+        """Test the read_sensors handles Exception."""
+
+        with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
+            test_fem.fem.read_firmware_version = True
+            test_fem.fem.x10g_rdma.read = Mock()
+            test_fem.fem.x10g_rdma.read.side_effect = HexitecFemError()
+            test_fem.fem.read_sensors()
+            error = "Failed to read sensors: "
+            assert test_fem.fem._get_status_error() == error
+
+    def test_cleanup(self, test_fem):
+        test_fem.fem.cleanup()
+
+        test_fem.fem.x10g_rdma.close.assert_called_with()
 
     def test_set_image_size(self, test_fem):
 
@@ -115,13 +184,11 @@ class TestFem():
         assert test_fem.fem.image_size_f == 16
 
         pixel_count_max = (80*80)//2
-        data = (pixel_count_max & 0x1FFFF) -1
+        data = (pixel_count_max & 0x1FFFF) - 1
         test_fem.fem.x10g_rdma.write.assert_has_calls(
             [call(address_pixel_count, data, ANY),
                 call(address_pixel_size, 0x3, ANY)]
         )
-
-
 
     def test_set_image_size_wrong_pixel(self, test_fem):
 
@@ -145,38 +212,58 @@ class TestFem():
         test_fem.fem.x10g_rdma.write.assert_has_calls([
             call(test_fem.rdma_addr["frm_gate"] + 1, frame_num, ANY),
             call(test_fem.rdma_addr["frm_gate"] + 2, frame_gap, ANY),
+            call(test_fem.rdma_addr["reset_monitor"], 0, ANY),
+            call(test_fem.rdma_addr["reset_monitor"], 1, ANY),
+            call(test_fem.rdma_addr["reset_monitor"], 0, ANY),
             call(test_fem.rdma_addr["frm_gate"], 0, ANY),
             call(test_fem.rdma_addr["frm_gate"], 1, ANY),
             call(test_fem.rdma_addr["frm_gate"], 0, ANY)
         ])
 
-    # frame_gate_trigger called by data_stream()
-    # def test_frame_gate_trigger(self, test_fem):
+    def test_set_duration_enable(self, test_fem):
+        """Test set_duration_enable works."""
+        test_fem.fem.duration_enabled = False
+        test_fem.fem.set_duration_enable(True)
+        assert test_fem.fem.duration_enabled is True
 
-    #     test_fem.fem.frame_gate_trigger()
+    def test_set_duration(self, test_fem):
+        """Test set_duration works."""
+        # Ensure clocks configured
+        row_s1 = 5
+        s1_sph = 1
+        sph_s2 = 5
+        test_fem.fem.row_s1 = row_s1
+        test_fem.fem.s1_sph = s1_sph
+        test_fem.fem.sph_s2 = sph_s2
+        test_fem.fem.calculate_frame_rate()
+        #
+        duration = 1
+        test_fem.fem.set_duration(duration)
+        assert test_fem.fem.number_frames == 7154
 
-    #     test_fem.fem.x10g_rdma.write.assert_has_calls([
-    #         call(test_fem.rdma_addr["frm_gate"], 0, ANY),
-    #         call(test_fem.rdma_addr["frm_gate"], 1, ANY),
-    #         call(test_fem.rdma_addr["frm_gate"], 0, ANY)
-    #     ])
+    def test_get_health(self, test_fem):
+        health = False
+        test_fem.fem.health = health
+        assert test_fem.fem.get_health() is health
 
-    def test_cleanup(self, test_fem):
-        test_fem.fem.cleanup()
+    def test_get_id(self, test_fem):
+        new_id = 2
+        test_fem.fem.id = new_id
+        assert test_fem.fem.get_id() == new_id
 
-        test_fem.fem.x10g_rdma.close.assert_called_with()
+    def test_poll_sensors_calls_self(self, test_fem):
+        """Test poll_sensors() calls itself after 1 seconds."""
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            test_fem.fem.hardware_connected = True
+            test_fem.fem.hardware_busy = False
+            test_fem.fem.poll_sensors()
 
-    def test_disconnect_hardware(self, test_fem):
-        test_fem.fem.hardware_connected = True
-        test_fem.fem.disconnect_hardware("test")
-        # time.sleep(0.5)
-
-        assert test_fem.fem.hardware_connected == False
+            mock_loop.instance().call_later.assert_called_with(1.0, test_fem.fem.poll_sensors)
 
     def test_connect_hardware_fails(self, test_fem):
 
         with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
-            
+
             # Fein error connecting to camera
             rdma_mock.side_effect = HexitecFemError()
             test_fem.fem.connect_hardware()
@@ -204,82 +291,144 @@ class TestFem():
         time.sleep(0.1)
         assert test_fem.fem._get_status_error() == "Connection already established"
 
-    def test_disconnect_hardware_fails(self, test_fem):
+    def test_connect_hardware(self, test_fem):
+        with patch("hexitec.HexitecFem.RdmaUDP") as mock_rdma:
+
+            test_fem.fem.connect_hardware("test")
+            assert test_fem.fem.hardware_connected is True
+
+    def test_initialise_hardware_fails_if_not_connected(self, test_fem):
+        """Test function fails when no connection established."""
         test_fem.fem.hardware_connected = False
+        test_fem.fem.initialise_hardware()
+        error = "Failed to initialise camera: No connection established"
+        assert test_fem.fem._get_status_error() == error
 
-        test_fem.fem.disconnect_hardware("test")
+    def test_initialise_hardware_fails_if_hardware_busy(self, test_fem):
+        """Test function fails when hardware busy."""
+        test_fem.fem.hardware_connected = True
+        test_fem.fem.hardware_busy = True
+        test_fem.fem.initialise_hardware()
         time.sleep(0.1)
-        assert test_fem.fem._get_status_error() == "Failed to disconnect: No connection to disconnect"
+        error = "Failed to initialise camera: Hardware sensors busy initialising"
+        assert test_fem.fem.status_error == error
 
-    def test_initialise_hardware(self, test_fem):
-        test_fem.fem.initialise_hardware("test")
+    def test_initialise_hardware_fails_unknown_exception(self, test_fem):
+        """Test function fails unexpected exception."""
+        test_fem.fem.hardware_connected = True
+        test_fem.fem.hardware_busy = False
+        test_fem.fem.initialise_system = Mock()
+        test_fem.fem.initialise_system.side_effect = AttributeError()
+        test_fem.fem.initialise_hardware()
+        time.sleep(0.1)
+        error = "Uncaught Exception; Camera initialisation failed: "
+        assert test_fem.fem.status_error == error
 
-        # time.sleep(0.1)
-        # assert test_fem.fem.hardware_connected == True
-        # assert test_fem.fem._get_status_message() == "Acquiring data.."
+    def test_initialise_hardware_handles_fudge_initialisation(self, test_fem):
+        """Test function handles initialisation from cold."""
+        test_fem.fem.hardware_connected = True
+        test_fem.fem.hardware_busy = False
+        test_fem.fem.debug_register24 = False
+        test_fem.fem.initialise_system = Mock()
+        test_fem.fem.first_initialisation = True
+        test_fem.fem.parent.daq = Mock(in_progress=False)
+        test_fem.fem.parent.daq.start_acquisition = Mock()
+        test_fem.fem.initialise_hardware()
         assert test_fem.fem.operation_percentage_complete == 0
+        assert test_fem.fem.operation_percentage_steps == 108
+        assert test_fem.fem.initialise_progress == 0
 
-    #TODO: status_error == "", unless initialise_system littered with print's..
-    # def test_initialise_hardware_fails_HexitecFemError(self, test_fem):
+    def test_initialise_hardware_handles_daq_busy(self, test_fem):
+        """Test function handles cold start with daq already busy."""
+        test_fem.fem.hardware_connected = True
+        test_fem.fem.hardware_busy = False
+        test_fem.fem.debug_register24 = False
+        test_fem.fem.initialise_system = Mock()
+        test_fem.fem.first_initialisation = True
+        test_fem.fem.parent.daq = Mock(in_progress=True)
+        # test_fem.fem.parent.daq.start_acquisition = Mock()
+        test_fem.fem.initialise_hardware()
 
-    #     # This block takes frekkin' aaages, And:
+    def test_initialise_hardware_handles_warm_initialisation(self, test_fem):
+        """Test function handles fudge free initialisation."""
+        test_fem.fem.hardware_connected = True
+        test_fem.fem.hardware_busy = False
+        test_fem.fem.debug_register24 = False
+        test_fem.fem.initialise_system = Mock()
+        test_fem.fem.first_initialisation = False
+        test_fem.fem.initialise_hardware()
 
-    #     test_fem.fem.hardware_connected = True
-    #     # test_fem.fem.connect_hardware("test")
-    #     # Fein error initialising camera
-    #     test_fem.fem.x10g_rdma.write = Mock()
-    #     test_fem.fem.x10g_rdma.write.side_effect = HexitecFemError()
-    #     test_fem.fem.initialise_hardware()
-    #     time.sleep(0.2)     # Sleep required or assert finds "" == "Failed..."
-    #     assert test_fem.fem._get_status_error() == "Failed to initialise camera: "
+    def test_collect_data_fails_on_hardware_busy(self, test_fem):
+        """Test function fails when hardware already busy."""
+        test_fem.fem.hardware_connected = True
+        test_fem.fem.hardware_busy = True
+        test_fem.fem.ignore_busy = False
+        test_fem.fem.collect_data()
 
-    #     test_fem.fem.hardware_connected = False
-    #     test_fem.fem.initialise_hardware("test")
+        time.sleep(0.1)
+        error = "Failed to collect data: Hardware sensors busy initialising"
+        assert test_fem.fem._get_status_error() == error
 
-    #     time.sleep(0.1)
-    #     assert test_fem.fem._get_status_error() == "Failed to initialise camera: No connection established"
-
-    #     test_fem.fem.hardware_connected = True
-    #     test_fem.fem.hardware_initialising = True
-    #     test_fem.fem.initialise_hardware("test")
-
-    #     time.sleep(0.1)
-    #     assert test_fem.fem._get_status_error() == "Failed to initialise camera: Hardware sensors busy initialising"
-    #     test_fem.fem._set_status_error("")
-
-    # #TODO: status_error == "", unless initialise_system littered with print's..
-    # def test_initialise_hardware_fails_Exception(self, test_fem):
-
-    #     test_fem.fem.hardware_connected = True
-    #     # Fein unexpected Exception initialising camera
-    #     test_fem.fem.x10g_rdma.write = Mock()
-    #     test_fem.fem.x10g_rdma.write.side_effect = Exception()
-    #     test_fem.fem.initialise_hardware()
-    #     time.sleep(0.1)
-    #     assert test_fem.fem._get_status_error() == "Uncaught Exception; Camera initialisation failed: "
-
-    def test_collect_data(self, test_fem):
-        test_fem.fem.collect_data("test")
-
-        # time.sleep(0.1)
-        # assert test_fem.fem.hardware_connected == True
-        # assert test_fem.fem._get_status_message() == "Acquiring data.."
-        assert test_fem.fem.operation_percentage_complete == 0
-
-    def test_collect_data_fails(self, test_fem):
+    def test_collect_data_fails_without_connection(self, test_fem):
+        """Test function fails without established hardware connection."""
         test_fem.fem.hardware_connected = False
         test_fem.fem.collect_data("test")
 
         time.sleep(0.1)
         assert test_fem.fem._get_status_error() == "Failed to collect data: No connection established"
 
+    def test_collect_data_fails_on_exception(self, test_fem):
+        """Test function can handle unexpected exception."""
         test_fem.fem.hardware_connected = True
-        test_fem.fem.hardware_initialising = True
-        test_fem.fem.collect_data("test")
+        test_fem.fem.hardware_busy = False
+        test_fem.fem.acquire_data = Mock()
+        test_fem.fem.acquire_data.side_effect = AttributeError()
+        test_fem.fem.collect_data()
+        time.sleep(0.1)
+        error = "Uncaught Exception; Data collection failed: "
+        assert test_fem.fem.status_error == error
 
-        # #TODO: Fix why it fails as "No connection" rather than hardware busy?
-        # time.sleep(0.1)
-        # assert test_fem.fem._get_status_error() == "Failed to collect data: Hardware sensors busy initialising"
+    def test_collect_data_works(self, test_fem):
+        """Test function works all right."""
+        # Ensure correct circumstances
+        test_fem.fem.hardware_connected = True
+        test_fem.fem.hardware_busy = False
+        test_fem.fem.ignore_busy = True
+        test_fem.fem.first_initialisation = True
+        # Reset variables, to be checked post run
+        test_fem.fem.acquisition_completed = False
+        test_fem.fem.acquire_data = Mock()
+        test_fem.fem.collect_data()
+
+        time.sleep(0.1)
+        assert test_fem.fem.operation_percentage_complete == 100
+        assert test_fem.fem.initialise_progress == 0
+        assert test_fem.fem.acquisition_completed is True
+        assert test_fem.fem.first_initialisation is False
+
+    def test_disconnect_hardware(self, test_fem):
+        """Test the function works ok."""
+        test_fem.fem.hardware_connected = True
+        test_fem.fem.disconnect_hardware()
+
+        assert test_fem.fem.hardware_connected is False
+
+    def test_disconnect_hardware_fails_without_connection(self, test_fem):
+        """Test function fails without established hardware connection."""
+        test_fem.fem.hardware_connected = False
+
+        test_fem.fem.disconnect_hardware()
+        error = "Failed to disconnect: No connection to disconnect"
+        assert test_fem.fem._get_status_error() == error
+
+    def test_disconnect_hardware_fails_on_exception(self, test_fem):
+        """Test function can handle unexpected exception."""
+        test_fem.fem.hardware_connected = True
+        test_fem.fem.cam_disconnect = Mock()
+        test_fem.fem.cam_disconnect.side_effect = AttributeError()
+        test_fem.fem.disconnect_hardware()
+        error = "Uncaught Exception; Disconnection failed: "
+        assert test_fem.fem._get_status_error() == error
 
     def test_accessor_functions(self, test_fem):
 
@@ -288,55 +437,1129 @@ class TestFem():
         assert test_fem.fem.get_number_frames() == number_frames
 
         for bEnabled in True, False:
-            test_fem.fem._set_dark_correction(bEnabled)
-            assert test_fem.fem._get_dark_correction() == bEnabled
-
-            test_fem.fem._set_test_mode_image(bEnabled)
-            assert test_fem.fem._get_test_mode_image() == bEnabled
-
             test_fem.fem.set_debug(bEnabled)
             assert test_fem.fem.get_debug() == bEnabled
 
-    def test_read_response(self, test_fem):
+    def test_initialisation_check_loop_error_exits(self, test_fem):
+        """Test the function will exit immediately if an error has been detected."""
+        test_fem.fem.status_error = "Error: Oh No"
+        test_fem.fem.hardware_busy = True
+        test_fem.fem.initialisation_check_loop()
+        assert test_fem.fem.hardware_busy is False
 
+    def test_initialisation_check_loop_respects_time_delay(self, test_fem):
+        """Test function will call itself until delay of 10 seconds achieved."""
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            test_fem.fem.start = time.time() - 9
+            test_fem.fem.operation_percentage_complete = 90
+            test_fem.fem.initialisation_check_loop()
+
+            mock_loop.instance().call_later.assert_called_with(1.0, test_fem.fem.initialisation_check_loop)
+
+    def test_initialisation_check_loop_stops_after_delay(self, test_fem):
+        """Test the function will exit after 10 second delay."""
+        test_fem.fem.start = time.time() - 10
+        test_fem.fem.operation_percentage_complete = 90
+        test_fem.fem.initialisation_check_loop()
+        status = "Camera connected. Microcontrollers initialised."
+        assert test_fem.fem.status_message == status
+
+    def test_send_cmd(self, test_fem):
+        """Test send_cmd working ok."""
+        test_fem.fem.debug = True
+        cmd = [35, 144, 68, 65, 52, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70,
+               70, 70, 70, 70, 70, 13, 13]
+        encoded_value = [596657217, 877020742, 1179010630, 1179010630, 1179010630, 1179010630,
+                         1175260429]
+        test_fem.fem.send_cmd(cmd)
+
+        test_fem.fem.x10g_rdma.write.assert_has_calls([
+            call(0xE0000100, encoded_value[0], ANY),
+            call(0xE0000100, encoded_value[1], ANY),
+            call(0xE0000100, encoded_value[2], ANY),
+            call(0xE0000100, encoded_value[3], ANY),
+            call(0xE0000100, encoded_value[4], ANY),
+            call(0xE0000100, encoded_value[5], ANY),
+            call(0xE0000100, encoded_value[6], ANY)
+        ])
+
+    def test_read_response(self, test_fem):
+        """Test function works ok."""
         test_fem.fem.set_debug(True)
 
         return_values = [0, 714158145, 0, 808520973, 0, 13]
-        test_fem.fem.x10g_rdma.read = Mock() #Mock(return_value=0)
+        test_fem.fem.x10g_rdma.read = Mock()
         test_fem.fem.x10g_rdma.read.side_effect = return_values
 
-        address = 0xE0000011 #0xE0000200
+        address = 0xE0000011
         status = test_fem.fem.read_response()
 
         test_fem.fem.x10g_rdma.read.assert_called_with(address, ANY)
         assert status == '\x910A01\r\r'
 
     def test_read_response_failed(self, test_fem):
-
+        """Test the function fails receiving badly formatted data."""
         test_fem.fem.x10g_rdma.read = Mock(return_value=1)
-
-        address = 0xE0000011 #0xE0000200
 
         with pytest.raises(HexitecFemError) as exc_info:
             test_fem.fem.read_response()
         assert exc_info.type is HexitecFemError
         assert exc_info.value.args[0] == "read_response aborted"
 
-        # def test_read_response_failed(self, test_fem):
+    def test_cam_connect(self, test_fem):
+        """Test function works ok."""
+        test_fem.fem.connect = Mock()
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.cam_connect()
 
-        # test_fem.fem.x10g_rdma.read = Mock(return_value=1)
+    def test_cam_connect_fails_network_error(self, test_fem):
+        """Test function handles socket error."""
+        test_fem.fem.connect = Mock()
+        test_fem.fem.connect.side_effect = socket_error()
 
-        # address = 0xE0000011 #0xE0000200
+        with pytest.raises(HexitecFemError) as exc_info:
+            test_fem.fem.cam_connect()
+        # time.sleep(0.1)
+        assert exc_info.type is HexitecFemError
+        assert test_fem.fem.hardware_connected is False
 
-        # with pytest.raises(HexitecFemError) as exc_info:
-        #     test_fem.fem.read_response()
-        # assert exc_info.type is HexitecFemError
-        # assert exc_info.value.args[0] == "read_response aborted"
+    def test_cam_disconnect(self, test_fem):
+        """Test function works ok."""
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.disconnect = Mock()
+        test_fem.fem.cam_disconnect()
 
-    def test_connect_hardware(self, test_fem):
-        with patch("hexitec.HexitecFem.RdmaUDP") as mock_rdma:
+    def test_cam_disconnect_fails_network_error(self, test_fem):
+        """Test function handles socket error."""
+        # test_fem.fem.disconnect = Mock()
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.send_cmd.side_effect = socket_error()
 
-            test_fem.fem.connect_hardware("test")
+        with pytest.raises(HexitecFemError) as exc_info:
+            test_fem.fem.cam_disconnect()
+        # time.sleep(0.1)
+        assert exc_info.type is HexitecFemError
+        assert test_fem.fem.hardware_connected is False
 
-            time.sleep(0.1)
-            assert test_fem.fem.hardware_connected == True
+    def test_cam_disconnect_fails_attribute_error(self, test_fem):
+        """Test function handles attribute error."""
+        # test_fem.fem.disconnect = Mock()
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.send_cmd.side_effect = AttributeError()
+
+        with pytest.raises(HexitecFemError) as exc_info:
+            test_fem.fem.cam_disconnect()
+        time.sleep(0.1)
+        assert exc_info.type is HexitecFemError
+        assert test_fem.fem.hardware_connected is False
+
+    def test_initialise_sensor(self, test_fem):
+        """Test function works ok."""
+        # Ensure appropriate configuration
+        test_fem.fem.selected_sensor = test_fem.fem.OPTIONS[0]  # line:699
+        test_fem.fem.sensors_layout = test_fem.fem.READOUTMODE[1]  # line:716
+        test_fem.fem.read_response = Mock()
+        test_fem.fem.send_cmd = Mock()
+
+        empty_signals = 65535
+        full_signals = 255
+        test_fem.fem.x10g_rdma.read = Mock()
+        test_fem.fem.x10g_rdma.read.side_effect = [empty_signals, full_signals]
+        test_fem.fem.initialise_sensor()
+
+        test_fem.fem.x10g_rdma.write.assert_has_calls([
+            call(0x60000002, 0, ANY),  # line:699
+            call(0x60000004, 0, ANY),  # line:700
+            call(0x60000001, 2, ANY),  # line:725
+        ])
+
+        assert test_fem.fem.vsr_addr == test_fem.fem.VSR_ADDRESS[0]
+
+    def test_initialise_sensor2(self, test_fem):
+        """Test function works ok, testing the path the previous function doesn't cover."""
+        # Ensure appropriate configuration
+        test_fem.fem.selected_sensor = test_fem.fem.OPTIONS[2]  # line:704
+        test_fem.fem.sensors_layout = test_fem.fem.READOUTMODE[0]  # line:710
+        test_fem.fem.read_response = Mock()
+        test_fem.fem.send_cmd = Mock()
+
+        empty_signals = 65535
+        full_signals = 255
+        test_fem.fem.x10g_rdma.read = Mock()
+        test_fem.fem.x10g_rdma.read.side_effect = [empty_signals, full_signals]
+        test_fem.fem.initialise_sensor()
+
+        test_fem.fem.x10g_rdma.write.assert_has_calls([
+            call(0x60000002, 0, ANY),  # line:704
+            call(0x60000004, 4, ANY),  # line:710
+            call(0x60000001, 2, ANY),  # line:725
+        ])
+
+        assert test_fem.fem.vsr_addr == test_fem.fem.VSR_ADDRESS[1]
+
+    def test_calibrate_sensor_1_sensor(self, test_fem):
+        """Test function handles single sensor."""
+        test_fem.fem.sensors_layout = test_fem.fem.READOUTMODE[0]  # line:780
+        test_fem.fem.selected_sensor = HexitecFem.OPTIONS[2]
+        test_fem.fem.read_response = Mock(return_value="06")
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.x10g_rdma.read = Mock()
+        test_fem.fem.x10g_rdma.read.side_effects = 65535
+        test_fem.fem.debug = True
+
+        test_fem.fem.calibrate_sensor()
+
+        assert test_fem.fem.image_size_x == 80
+        assert test_fem.fem.image_size_y == 80
+
+    def test_calibrate_sensor_fails_wrong_rdma_read(self, test_fem):
+        """Test function handles rdma read return wrong value."""
+        test_fem.fem.sensors_layout = test_fem.fem.READOUTMODE[1]  # line:783
+        test_fem.fem.selected_sensor = HexitecFem.OPTIONS[0]
+        test_fem.fem.read_response = Mock(return_value="01")
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.x10g_rdma.read = Mock()
+        test_fem.fem.x10g_rdma.read.side_effects = 65535
+
+        with patch('time.sleep') as fake_sleep:
+            fake_sleep.side_effect = None
+
+            with pytest.raises(HexitecFemError) as exc_info:
+                test_fem.fem.calibrate_sensor()
+            assert exc_info.type is HexitecFemError
+            assert exc_info.value.args[0] == "Timed out polling register 0x89; PLL remains disabled"
+
+        assert test_fem.fem.image_size_x == 160
+        assert test_fem.fem.image_size_y == 160
+
+    def test_acquire_data_2x2_system(self, test_fem):
+        """Test function handles normal configuration."""
+        test_fem.fem.first_initialisation = True
+        test_fem.fem.sensors_layout = HexitecFem.READOUTMODE[1]
+        test_fem.fem.selected_sensor = HexitecFem.OPTIONS[2]
+        test_fem.fem.debug = True
+
+        empty_signals = 65535
+        full_signals = 255
+        transfer_ongoing = 0
+        transfer_completed = 1
+        number_frames = 2
+        # Output from Sensor
+        s_frame_last_length = 51200
+        s_frame_max_length = 76960
+        s_frame_min_length = 51200
+        s_frame_number = 9
+        s_frame_last_clock_cycles = 23015
+        s_frame_max_clock_cycles = 4112394392
+        s_frame_min_clock_cycles = 23015
+        s_frame_data_total = 538080
+        s_frame_data_total_clock_cycles = 1278212083
+        s_frame_trigger_count = 0
+        s_frame_in_progress_flag = 0
+        # Output from frame Gate
+        fg_frame_last_length = 51200
+        fg_frame_max_length = 51200
+        fg_frame_min_length = 51200
+        fg_frame_number = 6
+        fg_frame_last_clock_cycles = 23015
+        fg_frame_max_clock_cycles = 4112417407
+        fg_frame_min_clock_cycles = 23015
+        fg_frame_data_total = 307200
+        fg_frame_data_total_clock_cycles = 1278186053
+        fg_frame_trigger_count = 0
+        fg_frame_in_progress_flag = 0
+        # Input to XAUI
+        xaui_frame_last_length = 51200
+        xaui_frame_max_length = 51200
+        xaui_frame_min_length = 51200
+        xaui_frame_number = 6
+        xaui_frame_last_clock_cycles = 23015
+        xaui_frame_max_clock_cycles = 4112417407
+        xaui_frame_min_clock_cycles = 23015
+        xaui_frame_data_total = 307200
+        xaui_frame_data_total_clock_cycles = 1278186053
+        xaui_frame_trigger_count = 0
+        xaui_frame_in_progress_flag = 0
+
+        side = [empty_signals, full_signals, empty_signals, full_signals, transfer_ongoing,
+                transfer_completed,
+                empty_signals, full_signals, number_frames, s_frame_last_length, s_frame_max_length,
+                s_frame_min_length, s_frame_number, s_frame_last_clock_cycles, s_frame_max_clock_cycles,
+                s_frame_min_clock_cycles, s_frame_data_total, s_frame_data_total_clock_cycles,
+                s_frame_trigger_count, s_frame_in_progress_flag,
+                # Frame Gate:
+                fg_frame_last_length, fg_frame_max_length, fg_frame_min_length, fg_frame_number,
+                fg_frame_last_clock_cycles, fg_frame_max_clock_cycles, fg_frame_min_clock_cycles,
+                fg_frame_data_total, fg_frame_data_total_clock_cycles, fg_frame_trigger_count,
+                fg_frame_in_progress_flag,
+                # Input to XAUI
+                xaui_frame_last_length, xaui_frame_max_length, xaui_frame_min_length, xaui_frame_number,
+                xaui_frame_last_clock_cycles, xaui_frame_max_clock_cycles, xaui_frame_min_clock_cycles, 
+                xaui_frame_data_total, xaui_frame_data_total_clock_cycles, xaui_frame_trigger_count,
+                xaui_frame_in_progress_flag]
+
+        test_fem.fem.x10g_rdma.read = Mock()
+        test_fem.fem.x10g_rdma.read.side_effect = side
+        test_fem.fem.acquire_data()
+
+        test_fem.fem.x10g_rdma.read.assert_has_calls([
+            call(0x60000011, ANY),
+            call(0x60000012, ANY),
+            call(0x60000011, ANY),
+            call(0x60000012, ANY),
+            call(0x60000014, ANY),  # Transfer ongoing
+            call(0x60000014, ANY),  # Transfer completed
+            call(0x60000011, ANY),
+            call(0x60000012, ANY),
+            call(0xD0000001, ANY),
+            # Output from Sensor
+            call(0x70000010, ANY),
+            call(0x70000011, ANY),
+            call(0x70000012, ANY),
+            call(0x70000013, ANY),
+            call(0x70000014, ANY),
+            call(0x70000015, ANY),
+            call(0x70000016, ANY),
+            call(0x70000017, ANY),
+            call(0x70000018, ANY),
+            call(0x70000019, ANY),
+            call(0x7000001A, ANY),
+            # Output from Frame Gate
+            call(0x80000010, 'frame last length'),
+            call(0x80000011, 'frame max length'),
+            call(0x80000012, 'frame min length'),
+            call(0x80000013, 'frame number'),
+            call(0x80000014, 'frame last clock cycles'),
+            call(0x80000015, 'frame max clock cycles'),
+            call(0x80000016, 'frame min clock cycles'),
+            call(0x80000017, 'frame data total'),
+            call(0x80000018, 'frame data total clock cycles'),
+            call(0x80000019, 'frame trigger count'),
+            call(0x8000001A, 'frame in progress flag'),
+            # Input to XAUI
+            call(0x90000010, 'frame last length'),
+            call(0x90000011, 'frame max length'),
+            call(0x90000012, 'frame min length'),
+            call(0x90000013, 'frame number'),
+            call(0x90000014, 'frame last clock cycles'),
+            call(0x90000015, 'frame max clock cycles'),
+            call(0x90000016, 'frame min clock cycles'),
+            call(0x90000017, 'frame data total'),
+            call(0x90000018, 'frame data total clock cycles'),
+            call(0x90000019, 'frame trigger count'),
+            call(0x9000001A, 'frame in progress flag'),
+        ])
+
+    def test_acquire_data_single_sensor(self, test_fem):
+        """Test function handles single sensor selected."""
+        test_fem.fem.first_initialisation = True
+        test_fem.fem.sensors_layout = HexitecFem.READOUTMODE[0]
+        test_fem.fem.selected_sensor = HexitecFem.OPTIONS[0]
+        test_fem.fem.debug = True
+
+        empty_signals = 65535
+        full_signals = 255
+        transfer_completed = 1
+        number_frames = 2
+        # Output from Sensor
+        s_frame_last_length = 51200
+        s_frame_max_length = 76960
+        s_frame_min_length = 51200
+        s_frame_number = 9
+        s_frame_last_clock_cycles = 23015
+        s_frame_max_clock_cycles = 4112394392
+        s_frame_min_clock_cycles = 23015
+        s_frame_data_total = 538080
+        s_frame_data_total_clock_cycles = 1278212083
+        s_frame_trigger_count = 0
+        s_frame_in_progress_flag = 0
+        # Output from frame Gate
+        fg_frame_last_length = 51200
+        fg_frame_max_length = 51200
+        fg_frame_min_length = 51200
+        fg_frame_number = 6
+        fg_frame_last_clock_cycles = 23015
+        fg_frame_max_clock_cycles = 4112417407
+        fg_frame_min_clock_cycles = 23015
+        fg_frame_data_total = 307200
+        fg_frame_data_total_clock_cycles = 1278186053
+        fg_frame_trigger_count = 0
+        fg_frame_in_progress_flag = 0
+        # Input to XAUI
+        xaui_frame_last_length = 51200
+        xaui_frame_max_length = 51200
+        xaui_frame_min_length = 51200
+        xaui_frame_number = 6
+        xaui_frame_last_clock_cycles = 23015
+        xaui_frame_max_clock_cycles = 4112417407
+        xaui_frame_min_clock_cycles = 23015
+        xaui_frame_data_total = 307200
+        xaui_frame_data_total_clock_cycles = 1278186053
+        xaui_frame_trigger_count = 0
+        xaui_frame_in_progress_flag = 0
+
+        side = [empty_signals, full_signals, empty_signals, full_signals, transfer_completed,
+                empty_signals, full_signals, number_frames, s_frame_last_length, s_frame_max_length,
+                s_frame_min_length, s_frame_number, s_frame_last_clock_cycles, s_frame_max_clock_cycles,
+                s_frame_min_clock_cycles, s_frame_data_total, s_frame_data_total_clock_cycles,
+                s_frame_trigger_count, s_frame_in_progress_flag,
+                # Frame Gate:
+                fg_frame_last_length, fg_frame_max_length, fg_frame_min_length, fg_frame_number,
+                fg_frame_last_clock_cycles, fg_frame_max_clock_cycles, fg_frame_min_clock_cycles,
+                fg_frame_data_total, fg_frame_data_total_clock_cycles, fg_frame_trigger_count,
+                fg_frame_in_progress_flag,
+                # Input to XAUI
+                xaui_frame_last_length, xaui_frame_max_length, xaui_frame_min_length, xaui_frame_number,
+                xaui_frame_last_clock_cycles, xaui_frame_max_clock_cycles, xaui_frame_min_clock_cycles,
+                xaui_frame_data_total, xaui_frame_data_total_clock_cycles, xaui_frame_trigger_count,
+                xaui_frame_in_progress_flag]
+
+        test_fem.fem.x10g_rdma.read = Mock()
+        test_fem.fem.x10g_rdma.read.side_effect = side
+        test_fem.fem.acquire_data()
+        # Calls to test_fem.fem.x10g_rdma.read() already covered in previous unit test
+
+    def test_acquire_data_handles_manual_stop(self, test_fem):
+        """Test function handles user stopping acquisition."""
+        test_fem.fem.sensors_layout = HexitecFem.READOUTMODE[0]
+        test_fem.fem.selected_sensor = HexitecFem.OPTIONS[0]
+
+        test_fem.fem.stop_acquisition = True
+        test_fem.fem.read_response = Mock(return_value="0")
+        test_fem.fem.send_cmd = Mock()
+
+        empty_signals = 65535
+        full_signals = 255
+        transfer_ongoing = 0
+
+        side = [empty_signals, full_signals, empty_signals, full_signals, transfer_ongoing]
+
+        test_fem.fem.x10g_rdma.read = Mock()
+        test_fem.fem.x10g_rdma.read.side_effect = side
+
+        with patch('time.sleep') as fake_sleep:
+            fake_sleep.side_effect = None
+
+            with pytest.raises(HexitecFemError) as exc_info:
+                test_fem.fem.acquire_data()
+            assert exc_info.type is HexitecFemError
+            assert exc_info.value.args[0] == "Acquire interrupted"
+
+        assert test_fem.fem.operation_percentage_complete == 100
+        assert test_fem.fem.hardware_busy is False
+
+    def test_set_up_state_machine(self, test_fem):
+        """Test function works ok."""
+        test_fem.fem.read_response = Mock(return_value="0")
+
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.calculate_frame_rate = Mock()
+
+        test_fem.fem.hexitec_parameters = {'Control-Settings/Gain': '0',
+                                          'Control-Settings/ADC1 Delay': '2',
+                                          'Control-Settings/delay sync signals': '10',
+                                          'Control-Settings/Row -> S1': '5',
+                                          'Control-Settings/S1 -> Sph': '1',
+                                          'Control-Settings/Sph -> S2': '5',
+                                          'Control-Settings/VCAL2 -> VCAL1': '1'} 
+
+        test_fem.fem.set_up_state_machine()
+
+        vsr = test_fem.fem.vsr_addr
+
+        # Establish register values (r0XX), default values (v0XX)
+        r002 = 0x30, 0x32
+        r003 = 0x30, 0x33
+        r004 = 0x30, 0x34
+        r005 = 0x30, 0x35
+        r006 = 0x30, 0x36
+        r007 = 0x30, 0x37
+        r009 = 0x30, 0x39
+        r00E = 0x30, 0x45
+        r018 = 0x31, 0x38
+        r019 = 0x31, 0x39
+        r01B = 0x31, 0x42
+        r014 = 0x31, 0x34
+        v002 = 0x30, 0x31
+        v003 = 0x30, 0x30
+        v004 = 0x30, 0x31
+        v005 = 0x30, 0x36
+        v006 = 0x30, 0x31
+        v007 = 0x30, 0x33
+        v009 = 0x30, 0x32
+        v00E = 0x30, 0x41
+        v018 = 0x30, 0x31
+        v019 = 0x30, 0x30
+        v01B = 0x30, 0x38
+        v014 = 0x30, 0x31
+
+        # Default clock settings in HexitecFem determined default values for
+        # Registers 002 - 005. Update defaults accordingly:
+        row_s1 = test_fem.fem.row_s1
+        if row_s1 > -1:
+            row_s1_low = row_s1 & 0xFF
+            row_s1_high = row_s1 >> 8
+            v002 = test_fem.fem.convert_to_aspect_format(row_s1_low)
+            v003 = test_fem.fem.convert_to_aspect_format(row_s1_high)
+
+        s1_sph = test_fem.fem.s1_sph
+        if s1_sph > -1:
+            v004 = test_fem.fem.convert_to_aspect_format(s1_sph)
+
+        sph_s2 = test_fem.fem.sph_s2
+        if sph_s2 > -1:
+            v005 = test_fem.fem.convert_to_aspect_format(sph_s2)
+
+        gain = test_fem.fem._extract_integer(test_fem.fem.hexitec_parameters, 'Control-Settings/Gain', bit_range=1)
+        if gain > -1:
+            v006 = test_fem.fem.convert_to_aspect_format(gain)
+
+        test_fem.fem.send_cmd.assert_has_calls([
+            call([0x23, vsr, HexitecFem.SET_REG_BIT, r007[0], r007[1], v007[0], v007[1], 0x0D]),
+            call([0x23, vsr, HexitecFem.SET_REG_BIT, r002[0], r002[1], v002[0], v002[1], 0x0D]),
+            call([0x23, vsr, HexitecFem.SET_REG_BIT, r003[0], r003[1], v003[0], v003[1], 0x0D]),
+            call([0x23, vsr, HexitecFem.SET_REG_BIT, r004[0], r004[1], v004[0], v004[1], 0x0D]),
+            call([0x23, vsr, HexitecFem.SET_REG_BIT, r005[0], r005[1], v005[0], v005[1], 0x0D]),
+            call([0x23, vsr, HexitecFem.SET_REG_BIT, r006[0], r006[1], v006[0], v006[1], 0x0D]),
+            call([0x23, vsr, HexitecFem.SET_REG_BIT, r009[0], r009[1], v009[0], v009[1], 0x0D]),
+            call([0x23, vsr, HexitecFem.SET_REG_BIT, r00E[0], r00E[1], v00E[0], v00E[1], 0x0D]),
+            call([0x23, vsr, HexitecFem.SET_REG_BIT, r01B[0], r01B[1], v01B[0], v01B[1], 0x0D]),
+            call([0x23, vsr, HexitecFem.SET_REG_BIT, r014[0], r014[1], v014[0], v014[1], 0x0D]),
+            call([0x23, vsr, HexitecFem.SET_REG_BIT, r018[0], r018[1], v018[0], v018[1], 0x0D]),
+            call([0x23, vsr, HexitecFem.SET_REG_BIT, r019[0], r019[1], v019[0], v019[1], 0x0D]),
+        ])
+
+    def calculate_register_values(self, cmd):
+        """Calculate registry value like HexitecFem.send_cmd()."""
+        while len(cmd) % 4 != 0:
+            cmd.append(13)
+
+        register_values = []
+        for i in range(0, len(cmd) // 4):
+            reg_value = 256 * 256 * 256 * cmd[(i * 4)] + 256 * 256 * cmd[(i * 4) + 1] \
+                + 256 * cmd[(i * 4) + 2] + cmd[(i * 4) + 3]
+            register_values.append( reg_value)
+        return register_values
+
+    def test_collect_offsets(self, test_fem):
+        """Test function handles ok."""
+        test_fem.fem.hardware_connected = True
+        test_fem.fem.hardware_busy = False
+
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.read_response = Mock(return_value='1A')
+
+        with patch('time.sleep') as fake_sleep:
+            fake_sleep.side_effect = None
+            test_fem.fem.collect_offsets()
+
+        vsr1 = HexitecFem.VSR_ADDRESS[0]
+        vsr2 = HexitecFem.VSR_ADDRESS[1]
+        # Because collect_offsets() runs in a separate thread, need a brief pause
+        #   otherwise calls to send_cmd() will take place after the assert block below.
+        time.sleep(1.3)
+
+        test_fem.fem.send_cmd.assert_has_calls([
+            call([0x23, vsr1, HexitecFem.READ_REG_VALUE, 0x32, 0x34, 0x0D]),
+            call([0x23, vsr2, HexitecFem.READ_REG_VALUE, 0x32, 0x34, 0x0D]),
+            call([0x23, vsr1, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D]),
+            call([0x23, vsr2, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D]),
+            # 2. Stop the state machine
+            call([0x23, vsr1, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x30, 0x0D]),
+            call([0x23, vsr2, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x30, 0x0D]),
+            # 3. Set register 0x24 to 0x22
+            call([0x23, vsr1, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]),
+            call([0x23, vsr2, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]),
+            # 4. Start the state machine
+            call([0x23, vsr1, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]),
+            call([0x23, vsr2, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]),
+            # 5 (wait 1 second), 6. Stop the state machine
+            call([0x23, vsr1, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x30, 0x0D]),
+            call([0x23, vsr2, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x30, 0x0D]),
+            # 7. Set register 0x24 to 0x28
+            call([0x23, vsr1, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]),
+            call([0x23, vsr2, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]),
+            # 8. Start state machine (same as 4)
+            call([0x23, vsr1, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]),
+            call([0x23, vsr2, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]),
+            # Ensure VCAL remains on
+            call([0x23, vsr1, HexitecFem.CLR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D]),
+            call([0x23, vsr2, HexitecFem.CLR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D]),
+        ])
+
+    def test_collect_offsets_handles_hardware_disconnected(self, test_fem):
+        """Test function handles hardware disconnected."""
+        test_fem.fem.hardware_connected = False
+
+        test_fem.fem.collect_offsets()
+        time.sleep(0.1)
+        error = "Can't collect offsets while disconnected: Can't collect offsets while disconnected"
+        assert test_fem.fem._get_status_error() == error
+
+    def test_collect_offsets_handles_hardware_busy(self, test_fem):
+        """Test function handles hardware busy."""
+        test_fem.fem.hardware_connected = True
+        test_fem.fem.hardware_busy = True
+
+        test_fem.fem.collect_offsets()
+        time.sleep(0.1)
+        error = "Can't collect offsets while disconnected: Hardware sensors busy initialising"
+        assert test_fem.fem._get_status_error() == error
+
+    def test_collect_offsets_fails_unknown_exception(self, test_fem):
+        """Test function fails unexpected exception."""
+        test_fem.fem.hardware_connected = True
+        test_fem.fem.hardware_busy = False
+
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.send_cmd.side_effect = AttributeError()
+        test_fem.fem.collect_offsets()
+        time.sleep(0.1)
+        error = "Uncaught Exception; Failed to collect offsets: "
+        assert test_fem.fem.status_error == error
+
+    def test_load_pwr_cal_read_enables_handles_defaults(self, test_fem):
+        """Test function handles default values in the absence of ini config file."""
+        vsr_addr = HexitecFem.VSR_ADDRESS[0]
+
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.read_response = Mock()
+
+        list_of_46s = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+                       0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        list_of_30s = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+                       0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+
+        register_061 = [0x36, 0x31]   # Column Read Enable ASIC1
+        register_0C2 = [0x43, 0x32]   # Column Read Enable ASIC2
+        value_061 = list_of_46s
+        value_0C2 = list_of_46s
+
+        enable_sm = [0x23, vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
+        disable_sm = [0x23, vsr_addr, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
+
+        # Column Power Enable
+
+        register_04D = [0x34, 0x44]   # Column Power Enable ASIC1 (Reg 0x4D)
+        register_0AE = [0x41, 0x45]   # Column Power Enable ASIC2 (Reg 0xAE)
+        value_04D = list_of_46s
+        value_0AE = list_of_46s
+
+        # Column Power Enable, for ASIC1 (Reg 0x4D)
+        col_power_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                             register_04D[0], register_04D[1], value_04D[0], value_04D[1],
+                             value_04D[2], value_04D[3], value_04D[4], value_04D[5],
+                             value_04D[6], value_04D[7], value_04D[8], value_04D[9],
+                             value_04D[10], value_04D[11], value_04D[12], value_04D[13],
+                             value_04D[14], value_04D[15], value_04D[16], value_04D[17],
+                             value_04D[18], value_04D[19], 0x0D]
+
+        # Column Power Enable, for ASIC2 (Reg 0xAE)
+        col_power_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                             register_0AE[0], register_0AE[1], value_0AE[0], value_0AE[1],
+                             value_0AE[2], value_0AE[3], value_0AE[4], value_0AE[5],
+                             value_0AE[6], value_0AE[7], value_0AE[8], value_0AE[9],
+                             value_0AE[10], value_0AE[11], value_0AE[12], value_0AE[13],
+                             value_0AE[14], value_0AE[15], value_0AE[16], value_0AE[17],
+                             value_0AE[18], value_0AE[19], 0x0D]
+
+        # Row Power Enable
+
+        register_02F = [0x32, 0x46]   # Row Power Enable ASIC1 (Reg 0x2F)
+        register_090 = [0x39, 0x30]   # Row Power Enable ASIC2 (Reg 0x90)
+        value_02F = list_of_46s
+        value_090 = list_of_46s
+
+        # Row Power Enable, for ASIC1 (Reg 0x2F)
+        row_power_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                             register_02F[0], register_02F[1], value_02F[0], value_02F[1],
+                             value_02F[2], value_02F[3], value_02F[4], value_02F[5],
+                             value_02F[6], value_02F[7], value_02F[8], value_02F[9],
+                             value_02F[10], value_02F[1], value_02F[2], value_02F[3],
+                             value_02F[14], value_02F[15], value_02F[16], value_02F[17],
+                             value_02F[18], value_02F[19], 0x0D]
+
+        # Row Power Enable, for ASIC2 (Reg 0x90)
+        row_power_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                             register_090[0], register_090[1], value_090[0], value_090[1],
+                             value_090[2], value_090[3], value_090[4], value_090[5],
+                             value_090[6], value_090[7], value_090[8], value_090[9],
+                             value_090[10], value_090[11], value_090[12], value_090[13],
+                             value_090[14], value_090[15], value_090[16], value_090[17],
+                             value_090[18], value_090[19], 0x0D]
+
+        # Column Calibration Enable
+
+        register_057 = [0x35, 0x37]   # Column Calibrate Enable ASIC1 (Reg 0x57)
+        register_0B8 = [0x42, 0x38]   # Column Calibrate Enable ASIC2 (Reg 0xB8)
+        value_057 = list_of_30s
+        value_0B8 = list_of_30s
+
+        # Column Calibrate Enable, for ASIC1 (Reg 0x57)
+        col_cal_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                           register_057[0], register_057[1], value_057[0], value_057[1],
+                           value_057[2], value_057[3], value_057[4], value_057[5],
+                           value_057[6], value_057[7], value_057[8], value_057[9],
+                           value_057[10], value_057[11], value_057[12], value_057[13],
+                           value_057[14], value_057[15], value_057[16], value_057[17],
+                           value_057[18], value_057[19], 0x0D]
+
+        # Column Calibrate Enable, for ASIC2 (Reg 0xB8)
+        col_cal_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                           register_0B8[0], register_0B8[1], value_0B8[0], value_0B8[1],
+                           value_0B8[2], value_0B8[3], value_0B8[4], value_0B8[5],
+                           value_0B8[6], value_0B8[7], value_0B8[8], value_0B8[9],
+                           value_0B8[10], value_0B8[11], value_0B8[12], value_0B8[13],
+                           value_0B8[14], value_0B8[15], value_0B8[16], value_0B8[17],
+                           value_0B8[18], value_0B8[19], 0x0D]
+
+        # Row Calibration Enable
+
+        register_039 = [0x33, 0x39]   # Row Calibrate Enable ASIC1 (Reg 0x39)
+        register_09A = [0x39, 0x41]   # Row Calibrate Enable ASIC2 (Reg 0x9A)
+        value_039 = list_of_30s
+        value_09A = list_of_30s
+
+        # Row Calibrate Enable, for ASIC1 (Reg 0x39)
+        row_cal_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                           register_039[0], register_039[1], value_039[0], value_039[1],
+                           value_039[2], value_039[3], value_039[4], value_039[5],
+                           value_039[6], value_039[7], value_039[8], value_039[9],
+                           value_039[10], value_039[11], value_039[12], value_039[13],
+                           value_039[14], value_039[15], value_039[16], value_039[17],
+                           value_039[18], value_039[19], 0x0D]
+
+        # Row Calibrate Enable, for ASIC2 (Reg 0x9A)
+        row_cal_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                           register_09A[0], register_09A[1], value_09A[0], value_09A[1],
+                           value_09A[2], value_09A[3], value_09A[4], value_09A[5],
+                           value_09A[6], value_09A[7], value_09A[8], value_09A[9],
+                           value_09A[10], value_09A[11], value_09A[12], value_09A[13],
+                           value_09A[14], value_09A[15], value_09A[16], value_09A[17],
+                           value_09A[18], value_09A[19], 0x0D]
+
+        register_061 = [0x36, 0x31]   # Column Read Enable ASIC1
+        register_0C2 = [0x43, 0x32]   # Column Read Enable ASIC2
+        value_061 = list_of_46s
+        value_0C2 = list_of_46s
+
+        # No ini file loaded, use default values
+        col_read_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST, register_061[0],
+                            register_061[1], value_061[0], value_061[1], value_061[2],
+                            value_061[3], value_061[4], value_061[5], value_061[6],
+                            value_061[7], value_061[8], value_061[9], value_061[10],
+                            value_061[11], value_061[12], value_061[13], value_061[14],
+                            value_061[15], value_061[16], value_061[17], value_061[18],
+                            value_061[19], 0x0D]
+
+        # Column Read Enable, for ASIC2 (Reg 0xC2)
+        col_read_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                            register_0C2[0], register_0C2[1], value_0C2[0], value_0C2[1],
+                            value_0C2[2], value_0C2[3], value_0C2[4], value_0C2[5],
+                            value_0C2[6], value_0C2[7], value_0C2[8], value_0C2[9],
+                            value_0C2[10], value_0C2[11], value_0C2[12], value_0C2[13],
+                            value_0C2[14], value_0C2[15], value_0C2[16], value_0C2[17],
+                            value_0C2[18], value_0C2[19], 0x0D]
+
+        # No ini file loaded, use default values
+        col_read_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST, register_061[0],
+                            register_061[1], value_061[0], value_061[1], value_061[2],
+                            value_061[3], value_061[4], value_061[5], value_061[6],
+                            value_061[7], value_061[8], value_061[9], value_061[10],
+                            value_061[11], value_061[12], value_061[13], value_061[14],
+                            value_061[15], value_061[16], value_061[17], value_061[18],
+                            value_061[19], 0x0D]
+        # Column Read Enable, for ASIC2 (Reg 0xC2)
+        col_read_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                            register_0C2[0], register_0C2[1], value_0C2[0], value_0C2[1],
+                            value_0C2[2], value_0C2[3], value_0C2[4], value_0C2[5],
+                            value_0C2[6], value_0C2[7], value_0C2[8], value_0C2[9],
+                            value_0C2[10], value_0C2[11], value_0C2[12], value_0C2[13],
+                            value_0C2[14], value_0C2[15], value_0C2[16], value_0C2[17],
+                            value_0C2[18], value_0C2[19], 0x0D]
+
+        # Row Read Enable
+
+        register_043 = [0x34, 0x33]   # Row Read Enable ASIC1
+        register_0A4 = [0x41, 0x34]   # Row Read Enable ASIC2
+        value_043 = list_of_46s
+        value_0A4 = list_of_46s
+
+        # Row Read Enable, for ASIC1 (Reg 0x43)
+        row_read_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                            register_043[0], register_043[1], value_043[0], value_043[1],
+                            value_043[2], value_043[3], value_043[4], value_043[5],
+                            value_043[6], value_043[7], value_043[8], value_043[9],
+                            value_043[10], value_043[11], value_043[12], value_043[13],
+                            value_043[14], value_043[15], value_043[16], value_043[17],
+                            value_043[18], value_043[19], 0x0D]
+
+        # Row Read Enable, for ASIC2 (Reg 0xA4)
+        row_read_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                            register_0A4[0], register_0A4[1], value_0A4[0], value_0A4[1],
+                            value_0A4[2], value_0A4[3], value_0A4[4], value_0A4[5],
+                            value_0A4[6], value_0A4[7], value_0A4[8], value_0A4[9],
+                            value_0A4[10], value_0A4[11], value_0A4[12], value_0A4[13],
+                            value_0A4[14], value_0A4[15], value_0A4[16], value_0A4[17],
+                            value_0A4[18], value_0A4[19], 0x0D]
+
+        test_fem.fem.load_pwr_cal_read_enables()
+
+        test_fem.fem.send_cmd.assert_has_calls([
+            call(disable_sm),
+            call(col_power_enable1),
+            call(col_power_enable2),
+            call(row_power_enable1),
+            call(row_power_enable2),
+            call(col_cal_enable1),
+            call(col_cal_enable2),
+            call(row_cal_enable1),
+            call(row_cal_enable2),
+            call(col_read_enable1),
+            call(col_read_enable2),
+            call(row_read_enable1),
+            call(row_read_enable2),
+            call(enable_sm),
+        ])
+
+    def test_load_pwr_cal_read_enables_handles_configured_values(self, test_fem):
+        """Test function handles values provided by an (simulated) ini config file."""
+        vsr_addr = HexitecFem.VSR_ADDRESS[1]
+        test_fem.fem.vsr_addr = vsr_addr
+
+        params = \
+            {'Bias_Voltage/Bias_Voltage_Refresh': 'False',
+             'Bias_Voltage/Bias_Refresh_Interval': '18000',
+             'Bias_Voltage/Time_Refresh_Voltage_Held': '3000',
+             'Bias_Voltage/Bias_Voltage_Settle_Time': '2000',
+             'Control-Settings/Gain': '0', 'Control-Settings/ADC1 Delay': '2',
+             'Control-Settings/delay sync signals': '10', 'Control-Settings/Row -> S1': '5',
+             'Control-Settings/S1 -> Sph': '1', 'Control-Settings/Sph -> S2': '5',
+             'Control-Settings/VCAL2 -> VCAL1': '1', 'Control-Settings/VCAL': '0.4',
+             'Control-Settings/Uref_mid': '1,000000E+3',
+             'Sensor-Config_V1_S1/ColumnEn_1stChannel': '11111111111111111111',
+             'Sensor-Config_V1_S1/ColumnPwr1stChannel': '11111111111111111111',
+             'Sensor-Config_V1_S1/ColumnCal1stChannel': '00110011001100110011',
+             'Sensor-Config_V1_S1/ColumnEn_2ndChannel': '11111111111111111111',
+             'Sensor-Config_V1_S1/ColumnPwr2ndChannel': '11111111111111111111',
+             'Sensor-Config_V1_S1/ColumnCal2ndChannel': '00110011001100110011',
+             'Sensor-Config_V1_S1/ColumnEn_3rdChannel': '11111111111111111111',
+             'Sensor-Config_V1_S1/ColumnPwr3rdChannel': '11111111111111111111',
+             'Sensor-Config_V1_S1/ColumnCal3rdChannel': '00110011001100110011',
+             'Sensor-Config_V1_S1/ColumnEn_4thChannel': '11111111111111111111',
+             'Sensor-Config_V1_S1/ColumnPwr4thChannel': '11111111111111111111',
+             'Sensor-Config_V1_S1/ColumnCal4thChannel': '00110011001100110011',
+             'Sensor-Config_V1_S1/RowEn_1stBlock': '11111111111111111111',
+             'Sensor-Config_V1_S1/RowPwr1stBlock': '11111111111111111111',
+             'Sensor-Config_V1_S1/RowCal1stBlock': '00110011001100110011',
+             'Sensor-Config_V1_S1/RowEn_2ndBlock': '11111111111111111111',
+             'Sensor-Config_V1_S1/RowPwr2ndBlock': '11111111111111111111',
+             'Sensor-Config_V1_S1/RowCal2ndBlock': '00110011001100110011',
+             'Sensor-Config_V1_S1/RowEn_3rdBlock': '11111111111111111111',
+             'Sensor-Config_V1_S1/RowPwr3rdBlock': '11111111111111111111',
+             'Sensor-Config_V1_S1/RowCal3rdBlock': '00110011001100110011',
+             'Sensor-Config_V1_S1/RowEn_4thBlock': '11111111111111111111',
+             'Sensor-Config_V1_S1/RowPwr4thBlock': '11111111111111111111',
+             'Sensor-Config_V1_S1/RowCal4thBlock': '00110011001100110011',
+             'Sensor-Config_V1_S2/ColumnEn_1stChannel': '11111111111111111111',
+             'Sensor-Config_V1_S2/ColumnPwr1stChannel': '11111111111111111111',
+             'Sensor-Config_V1_S2/ColumnCal1stChannel': '10110101101011010110',
+             'Sensor-Config_V1_S2/ColumnEn_2ndChannel': '11111111111111111111',
+             'Sensor-Config_V1_S2/ColumnPwr2ndChannel': '11111111111111111111',
+             'Sensor-Config_V1_S2/ColumnCal2ndChannel': '10110101101011010110',
+             'Sensor-Config_V1_S2/ColumnEn_3rdChannel': '11111111111111111111',
+             'Sensor-Config_V1_S2/ColumnPwr3rdChannel': '11111111111111111111',
+             'Sensor-Config_V1_S2/ColumnCal3rdChannel': '10110101101011010110',
+             'Sensor-Config_V1_S2/ColumnEn_4thChannel': '11111111111111111111',
+             'Sensor-Config_V1_S2/ColumnPwr4thChannel': '11111111111111111111',
+             'Sensor-Config_V1_S2/ColumnCal4thChannel': '10110101101011010110',
+             'Sensor-Config_V1_S2/RowEn_1stBlock': '11111111111111111111',
+             'Sensor-Config_V1_S2/RowPwr1stBlock': '11111111111111111111',
+             'Sensor-Config_V1_S2/RowCal1stBlock': '10110101101011010110',
+             'Sensor-Config_V1_S2/RowEn_2ndBlock': '11111111111111111111',
+             'Sensor-Config_V1_S2/RowPwr2ndBlock': '11111111111111111111',
+             'Sensor-Config_V1_S2/RowCal2ndBlock': '10110101101011010110',
+             'Sensor-Config_V1_S2/RowEn_3rdBlock': '11111111111111111111',
+             'Sensor-Config_V1_S2/RowPwr3rdBlock': '11111111111111111111',
+             'Sensor-Config_V1_S2/RowCal3rdBlock': '10110101101011010110',
+             'Sensor-Config_V1_S2/RowEn_4thBlock': '11111111111111111111',
+             'Sensor-Config_V1_S2/RowPwr4thBlock': '11111111111111111111',
+             'Sensor-Config_V1_S2/RowCal4thBlock': '10110101101011010110',
+             'Sensor-Config_V2_S1/ColumnEn_1stChannel': '11111111111111111111',
+             'Sensor-Config_V2_S1/ColumnPwr1stChannel': '11111111111111111111',
+             'Sensor-Config_V2_S1/ColumnCal1stChannel': '10101010101010101010',
+             'Sensor-Config_V2_S1/ColumnEn_2ndChannel': '11111111111111111111',
+             'Sensor-Config_V2_S1/ColumnPwr2ndChannel': '11111111111111111111',
+             'Sensor-Config_V2_S1/ColumnCal2ndChannel': '10101010101010101010',
+             'Sensor-Config_V2_S1/ColumnEn_3rdChannel': '11111111111111111111',
+             'Sensor-Config_V2_S1/ColumnPwr3rdChannel': '11111111111111111111',
+             'Sensor-Config_V2_S1/ColumnCal3rdChannel': '10101010101010101010',
+             'Sensor-Config_V2_S1/ColumnEn_4thChannel': '11111111111111111111',
+             'Sensor-Config_V2_S1/ColumnPwr4thChannel': '11111111111111111111',
+             'Sensor-Config_V2_S1/ColumnCal4thChannel': '10101010101010101010',
+             'Sensor-Config_V2_S1/RowEn_1stBlock': '11111111111111111111',
+             'Sensor-Config_V2_S1/RowPwr1stBlock': '11111111111111111111',
+             'Sensor-Config_V2_S1/RowCal1stBlock': '10101010101010101010',
+             'Sensor-Config_V2_S1/RowEn_2ndBlock': '11111111111111111111',
+             'Sensor-Config_V2_S1/RowPwr2ndBlock': '11111111111111111111',
+             'Sensor-Config_V2_S1/RowCal2ndBlock': '10101010101010101010',
+             'Sensor-Config_V2_S1/RowEn_3rdBlock': '11111111111111111111',
+             'Sensor-Config_V2_S1/RowPwr3rdBlock': '11111111111111111111',
+             'Sensor-Config_V2_S1/RowCal3rdBlock': '10101010101010101010',
+             'Sensor-Config_V2_S1/RowEn_4thBlock': '11111111111111111111',
+             'Sensor-Config_V2_S1/RowPwr4thBlock': '11111111111111111111',
+             'Sensor-Config_V2_S1/RowCal4thBlock': '10101010101010101010',
+             'Sensor-Config_V2_S2/ColumnEn_1stChannel': '11111111111111111111',
+             'Sensor-Config_V2_S2/ColumnPwr1stChannel': '11111111111111111111',
+             'Sensor-Config_V2_S2/ColumnCal1stChannel': '00000000000000000000',
+             'Sensor-Config_V2_S2/ColumnEn_2ndChannel': '11111111111111111111',
+             'Sensor-Config_V2_S2/ColumnPwr2ndChannel': '11111111111111111111',
+             'Sensor-Config_V2_S2/ColumnCal2ndChannel': '00000000000000000000',
+             'Sensor-Config_V2_S2/ColumnEn_3rdChannel': '11111111111111111111',
+             'Sensor-Config_V2_S2/ColumnPwr3rdChannel': '11111111111111111111',
+             'Sensor-Config_V2_S2/ColumnCal3rdChannel': '00000000000000000000',
+             'Sensor-Config_V2_S2/ColumnEn_4thChannel': '11111111111111111111',
+             'Sensor-Config_V2_S2/ColumnPwr4thChannel': '11111111111111111111',
+             'Sensor-Config_V2_S2/ColumnCal4thChannel': '00000000000000000000',
+             'Sensor-Config_V2_S2/RowEn_1stBlock': '11111111111111111111',
+             'Sensor-Config_V2_S2/RowPwr1stBlock': '11111111111111111111',
+             'Sensor-Config_V2_S2/RowCal1stBlock': '00000000000000000000',
+             'Sensor-Config_V2_S2/RowEn_2ndBlock': '11111111111111111111',
+             'Sensor-Config_V2_S2/RowPwr2ndBlock': '11111111111111111111',
+             'Sensor-Config_V2_S2/RowCal2ndBlock': '00000000000000000000',
+             'Sensor-Config_V2_S2/RowEn_3rdBlock': '11111111111111111111',
+             'Sensor-Config_V2_S2/RowPwr3rdBlock': '11111111111111111111',
+             'Sensor-Config_V2_S2/RowCal3rdBlock': '00000000000000000000',
+             'Sensor-Config_V2_S2/RowEn_4thBlock': '11111111111111111111',
+             'Sensor-Config_V2_S2/RowPwr4thBlock': '11111111111111111111',
+             'Sensor-Config_V2_S2/RowCal4thBlock': '00000000000000000000'}
+
+        test_fem.fem.hexitec_parameters = params
+
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.read_response = Mock()
+
+        list_of_46s = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+                       0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        list_of_30s = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+                       0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+
+        register_061 = [0x36, 0x31]   # Column Read Enable ASIC1
+        register_0C2 = [0x43, 0x32]   # Column Read Enable ASIC2
+        value_061 = list_of_46s
+        value_0C2 = list_of_46s
+
+        enable_sm = [0x23, vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
+        disable_sm = [0x23, vsr_addr, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
+
+        # Column Power Enable
+
+        register_04D = [0x34, 0x44]   # Column Power Enable ASIC1 (Reg 0x4D)
+        register_0AE = [0x41, 0x45]   # Column Power Enable ASIC2 (Reg 0xAE)
+        value_04D = list_of_46s
+        value_0AE = list_of_46s
+
+        # Column Power Enable, for ASIC1 (Reg 0x4D)
+        col_power_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                             register_04D[0], register_04D[1], value_04D[0], value_04D[1],
+                             value_04D[2], value_04D[3], value_04D[4], value_04D[5],
+                             value_04D[6], value_04D[7], value_04D[8], value_04D[9],
+                             value_04D[10], value_04D[11], value_04D[12], value_04D[13],
+                             value_04D[14], value_04D[15], value_04D[16], value_04D[17],
+                             value_04D[18], value_04D[19], 0x0D]
+
+        # Column Power Enable, for ASIC2 (Reg 0xAE)
+        col_power_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                             register_0AE[0], register_0AE[1], value_0AE[0], value_0AE[1],
+                             value_0AE[2], value_0AE[3], value_0AE[4], value_0AE[5],
+                             value_0AE[6], value_0AE[7], value_0AE[8], value_0AE[9],
+                             value_0AE[10], value_0AE[11], value_0AE[12], value_0AE[13],
+                             value_0AE[14], value_0AE[15], value_0AE[16], value_0AE[17],
+                             value_0AE[18], value_0AE[19], 0x0D]
+
+        # Row Power Enable
+
+        register_02F = [0x32, 0x46]   # Row Power Enable ASIC1 (Reg 0x2F)
+        register_090 = [0x39, 0x30]   # Row Power Enable ASIC2 (Reg 0x90)
+        value_02F = list_of_46s
+        value_090 = list_of_46s
+
+        # Row Power Enable, for ASIC1 (Reg 0x2F)
+        row_power_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                             register_02F[0], register_02F[1], value_02F[0], value_02F[1],
+                             value_02F[2], value_02F[3], value_02F[4], value_02F[5],
+                             value_02F[6], value_02F[7], value_02F[8], value_02F[9],
+                             value_02F[10], value_02F[1], value_02F[2], value_02F[3],
+                             value_02F[14], value_02F[15], value_02F[16], value_02F[17],
+                             value_02F[18], value_02F[19], 0x0D]
+
+        # Row Power Enable, for ASIC2 (Reg 0x90)
+        row_power_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                             register_090[0], register_090[1], value_090[0], value_090[1],
+                             value_090[2], value_090[3], value_090[4], value_090[5],
+                             value_090[6], value_090[7], value_090[8], value_090[9],
+                             value_090[10], value_090[11], value_090[12], value_090[13],
+                             value_090[14], value_090[15], value_090[16], value_090[17],
+                             value_090[18], value_090[19], 0x0D]
+
+        # Column Calibration Enable
+
+        register_057 = [0x35, 0x37]   # Column Calibrate Enable ASIC1 (Reg 0x57)
+        register_0B8 = [0x42, 0x38]   # Column Calibrate Enable ASIC2 (Reg 0xB8)
+        value_057 = [53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53]
+        value_0B8 = list_of_30s
+
+        # Column Calibrate Enable, for ASIC1 (Reg 0x57)
+        col_cal_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                           register_057[0], register_057[1], value_057[0], value_057[1],
+                           value_057[2], value_057[3], value_057[4], value_057[5],
+                           value_057[6], value_057[7], value_057[8], value_057[9],
+                           value_057[10], value_057[11], value_057[12], value_057[13],
+                           value_057[14], value_057[15], value_057[16], value_057[17],
+                           value_057[18], value_057[19], 0x0D]
+
+        # Column Calibrate Enable, for ASIC2 (Reg 0xB8)
+        col_cal_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                           register_0B8[0], register_0B8[1], value_0B8[0], value_0B8[1],
+                           value_0B8[2], value_0B8[3], value_0B8[4], value_0B8[5],
+                           value_0B8[6], value_0B8[7], value_0B8[8], value_0B8[9],
+                           value_0B8[10], value_0B8[11], value_0B8[12], value_0B8[13],
+                           value_0B8[14], value_0B8[15], value_0B8[16], value_0B8[17],
+                           value_0B8[18], value_0B8[19], 0x0D]
+
+        # Row Calibration Enable
+
+        register_039 = [0x33, 0x39]   # Row Calibrate Enable ASIC1 (Reg 0x39)
+        register_09A = [0x39, 0x41]   # Row Calibrate Enable ASIC2 (Reg 0x9A)
+        value_039 = [53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53]
+        value_09A = list_of_30s
+
+        # Row Calibrate Enable, for ASIC1 (Reg 0x39)
+        row_cal_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                           register_039[0], register_039[1], value_039[0], value_039[1],
+                           value_039[2], value_039[3], value_039[4], value_039[5],
+                           value_039[6], value_039[7], value_039[8], value_039[9],
+                           value_039[10], value_039[11], value_039[12], value_039[13],
+                           value_039[14], value_039[15], value_039[16], value_039[17],
+                           value_039[18], value_039[19], 0x0D]
+
+        # Row Calibrate Enable, for ASIC2 (Reg 0x9A)
+        row_cal_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                           register_09A[0], register_09A[1], value_09A[0], value_09A[1],
+                           value_09A[2], value_09A[3], value_09A[4], value_09A[5],
+                           value_09A[6], value_09A[7], value_09A[8], value_09A[9],
+                           value_09A[10], value_09A[11], value_09A[12], value_09A[13],
+                           value_09A[14], value_09A[15], value_09A[16], value_09A[17],
+                           value_09A[18], value_09A[19], 0x0D]
+
+        register_061 = [0x36, 0x31]   # Column Read Enable ASIC1
+        register_0C2 = [0x43, 0x32]   # Column Read Enable ASIC2
+        value_061 = list_of_46s
+        value_0C2 = list_of_46s
+
+        # No ini file loaded, use default values
+        col_read_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST, register_061[0],
+                            register_061[1], value_061[0], value_061[1], value_061[2],
+                            value_061[3], value_061[4], value_061[5], value_061[6],
+                            value_061[7], value_061[8], value_061[9], value_061[10],
+                            value_061[11], value_061[12], value_061[13], value_061[14],
+                            value_061[15], value_061[16], value_061[17], value_061[18],
+                            value_061[19], 0x0D]
+
+        # Column Read Enable, for ASIC2 (Reg 0xC2)
+        col_read_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                            register_0C2[0], register_0C2[1], value_0C2[0], value_0C2[1],
+                            value_0C2[2], value_0C2[3], value_0C2[4], value_0C2[5],
+                            value_0C2[6], value_0C2[7], value_0C2[8], value_0C2[9],
+                            value_0C2[10], value_0C2[11], value_0C2[12], value_0C2[13],
+                            value_0C2[14], value_0C2[15], value_0C2[16], value_0C2[17],
+                            value_0C2[18], value_0C2[19], 0x0D]
+
+        # No ini file loaded, use default values
+        col_read_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST, register_061[0],
+                            register_061[1], value_061[0], value_061[1], value_061[2],
+                            value_061[3], value_061[4], value_061[5], value_061[6],
+                            value_061[7], value_061[8], value_061[9], value_061[10],
+                            value_061[11], value_061[12], value_061[13], value_061[14],
+                            value_061[15], value_061[16], value_061[17], value_061[18],
+                            value_061[19], 0x0D]
+
+        # Column Read Enable, for ASIC2 (Reg 0xC2)
+        col_read_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                            register_0C2[0], register_0C2[1], value_0C2[0], value_0C2[1],
+                            value_0C2[2], value_0C2[3], value_0C2[4], value_0C2[5],
+                            value_0C2[6], value_0C2[7], value_0C2[8], value_0C2[9],
+                            value_0C2[10], value_0C2[11], value_0C2[12], value_0C2[13],
+                            value_0C2[14], value_0C2[15], value_0C2[16], value_0C2[17],
+                            value_0C2[18], value_0C2[19], 0x0D]
+
+        # Row Read Enable
+
+        register_043 = [0x34, 0x33]   # Row Read Enable ASIC1
+        register_0A4 = [0x41, 0x34]   # Row Read Enable ASIC2
+        value_043 = list_of_46s
+        value_0A4 = list_of_46s
+
+        # Row Read Enable, for ASIC1 (Reg 0x43)
+        row_read_enable1 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                            register_043[0], register_043[1], value_043[0], value_043[1],
+                            value_043[2], value_043[3], value_043[4], value_043[5],
+                            value_043[6], value_043[7], value_043[8], value_043[9],
+                            value_043[10], value_043[11], value_043[12], value_043[13],
+                            value_043[14], value_043[15], value_043[16], value_043[17],
+                            value_043[18], value_043[19], 0x0D]
+
+        # Row Read Enable, for ASIC2 (Reg 0xA4)
+        row_read_enable2 = [0x23, vsr_addr, HexitecFem.SEND_REG_BURST,
+                            register_0A4[0], register_0A4[1], value_0A4[0], value_0A4[1],
+                            value_0A4[2], value_0A4[3], value_0A4[4], value_0A4[5],
+                            value_0A4[6], value_0A4[7], value_0A4[8], value_0A4[9],
+                            value_0A4[10], value_0A4[11], value_0A4[12], value_0A4[13],
+                            value_0A4[14], value_0A4[15], value_0A4[16], value_0A4[17],
+                            value_0A4[18], value_0A4[19], 0x0D]
+
+        test_fem.fem.load_pwr_cal_read_enables()
+
+        test_fem.fem.send_cmd.assert_has_calls([
+            call(disable_sm),
+            call(col_power_enable1),
+            call(col_power_enable2),
+            call(row_power_enable1),
+            call(row_power_enable2),
+            call(col_cal_enable1),
+            call(col_cal_enable2),
+            call(row_cal_enable1),
+            call(row_cal_enable2),
+            call(col_read_enable1),
+            call(col_read_enable2),
+            call(row_read_enable1),
+            call(row_read_enable2),
+            call(enable_sm),
+        ])
+
+    def test_load_pwr_cal_read_enables_fails_unknown_vsr(self, test_fem):
+        """Test function handles unknown VSR address."""
+        vsr_addr = 25
+        test_fem.fem.vsr_addr = vsr_addr
+
+        with pytest.raises(HexitecFemError) as exc_info:
+            test_fem.fem.load_pwr_cal_read_enables()
+        assert exc_info.type is HexitecFemError
+        assert exc_info.value.args[0] == "Unknown VSR address! (%s)" % vsr_addr
+        # time.sleep(0.1)
+
+    def test_calculate_frame_rate(self, test_fem):
+        """Test calculate_frame_rate works."""
+        row_s1 = 5
+        s1_sph = 1
+        sph_s2 = 5
+        test_fem.fem.row_s1 = row_s1
+        test_fem.fem.s1_sph = s1_sph
+        test_fem.fem.sph_s2 = sph_s2
+        test_fem.fem.calculate_frame_rate()
+        assert test_fem.fem.frame_rate == 7154.079227920547
+
+# duration VS duration:  1 1
+# frames:  7154.079227920547
+# .number_frames:  7154
+# Rowe, S1, S2:  5 1 5

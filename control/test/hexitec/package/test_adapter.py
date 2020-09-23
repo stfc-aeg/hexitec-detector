@@ -29,9 +29,7 @@ class DetectorAdapterTestFixture(object):
                 """
         }
         with patch('hexitec.adapter.HexitecFem'), \
-             patch('hexitec.adapter.HexitecDAQ'), \
-             patch('hexitec.adapter.FrameProcessorAdapter'), \
-             patch('hexitec.adapter.FrameReceiverAdapter'):
+             patch('hexitec.adapter.HexitecDAQ'):
 
             self.adapter = HexitecAdapter(**self.options)
             self.detector = self.adapter.hexitec  # shortcut, makes assert lines shorter

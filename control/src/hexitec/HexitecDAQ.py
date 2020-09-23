@@ -16,7 +16,7 @@ from hexitec.GenerateConfigFiles import GenerateConfigFiles
 
 import h5py
 from datetime import datetime
-import collections
+import collections.abc
 import os.path
 import time
 
@@ -228,7 +228,7 @@ class HexitecDAQ():
         if self.first_initialisation:
             # First initialisation captures data without writing to disk
             #   therefore don't enable file writing here
-            pass
+            pass  # pragma: no cover
         else:
             self.set_file_writing(True)
         # Diagnostics:
@@ -294,13 +294,6 @@ class HexitecDAQ():
                 self.frames_processed = processing_status['frames_processed']
             # Wait 0.5 seconds and check again
             IOLoop.instance().call_later(.5, self.processing_check_loop)
-
-    def check_file_exists(self):
-        """Debug function: Check whether processed file has been created."""
-        full_path = self.file_dir + self.file_name + '_000001.h5'
-        existence = os.path.exists(full_path)
-        print(" *** Exist? %s file: %s " % (existence, full_path))
-        IOLoop.instance().call_later(.5, self.check_file_exists)
 
     def stop_acquisition(self):
         """Disable file writing so processing can access the saved data to add Meta data."""
@@ -408,7 +401,7 @@ class HexitecDAQ():
         items = []
         for k, v in d.items():
             new_key = parent_key + sep + k if parent_key else k
-            if isinstance(v, collections.MutableMapping):
+            if isinstance(v, collections.abc.MutableMapping):
                 items.extend(self._flatten_dict(v, new_key, sep=sep).items())
             else:
                 items.append((new_key, v))
@@ -542,7 +535,7 @@ class HexitecDAQ():
         self.next_frame_enable = next_frame_enable
 
     def _set_pixel_grid_size(self, size):
-        if (self.pixel_grid_size in [3, 5]):
+        if (size in [3, 5]):
             self.pixel_grid_size = size
         else:
             raise ParameterTreeError("Must be either 3 or 5")
@@ -574,7 +567,7 @@ class HexitecDAQ():
 
     def update_datasets_frame_dimensions(self):
         """Update frames' datasets' dimensions."""
-        for dataset in ["data", "raw_frames"]:
+        for dataset in ["processed_frames", "raw_frames"]:
             payload = '{"dims": [%s, %s]}' % (self.rows, self.columns)
             command = "config/hdf/dataset/" + dataset
             request = ApiAdapterRequest(str(payload), content_type="application/json")
@@ -668,12 +661,10 @@ class HexitecDAQ():
             self.extra_datasets.append(self.master_dataset)
 
         self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
-                                       bDeleteFileOnClose=False,
                                        master_dataset=self.master_dataset,
                                        extra_datasets=self.extra_datasets)
 
         store_config, execute_config = self.gcf.generate_config_files()
-
         command = "config/config_file/"
         request = ApiAdapterRequest(store_config, content_type="application/json")
         self.adapters["fp"].put(command, request)

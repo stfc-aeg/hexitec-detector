@@ -141,11 +141,6 @@ $( document ).ready(function()
         apply_ui_values();
     });
 
-    // Test button
-    $('#testButton').on('click', function(event) {
-        test_iac();
-    });
-
     $('#connectButton').on('click', function(event) {
         connect_hardware();
         if (polling_thread_running == false)
@@ -421,23 +416,6 @@ function poll_fem()
         else
         {
             console.log("Stopping the polling thread");
-        }
-    });
-}
-
-// Test purposes only:
-function test_iac()
-{
-    $.ajax({
-        type: "PUT",
-        url: hexitec_url + 'detector',
-        contentType: "application/json",
-        data: JSON.stringify({"check_file": ""}),
-        success: function(result) {
-            $('#odin-control-warning').html("");
-        },
-        error: function(request, msg, error) {
-            $('#odin-control-warning').html(error + ": " + format_error(request.responseText));
         }
     });
 }

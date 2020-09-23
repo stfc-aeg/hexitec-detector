@@ -12,7 +12,7 @@ from collections import OrderedDict
 class GenerateConfigFiles():
     """Accepts Parameter tree from hexitecDAQ's "/config" branch to generate json file."""
 
-    def __init__(self, param_tree, number_histograms, bDeleteFileOnClose=False,
+    def __init__(self, param_tree, number_histograms,
                  master_dataset="processed_frames", extra_datasets=[]):
         """
         Initialize the GenerateConfigFiles object.
@@ -20,13 +20,11 @@ class GenerateConfigFiles():
         This constructor initializes the GenerateConfigFiles object.
         :param param_tree: dictionary of parameter_tree configuration
         :param number_histograms: number of histogram bins
-        :param bDeleteFileOnClose: delete temporary files after use - disabled: unable to implement
         :param master_dataset: set master dataset
         :param extra_datasets: include optional dataset(s)
         """
         self.param_tree = param_tree
         self.number_histograms = number_histograms
-        self.delete_file_on_close = bDeleteFileOnClose
         self.master_dataset = master_dataset
         self.extra_datasets = extra_datasets
 
@@ -85,15 +83,15 @@ class GenerateConfigFiles():
         The store config file contains the actual configuration.
         The execute config file is used to execute the configuration of the store file.
         """
-        self.store_temp = tempfile.NamedTemporaryFile(mode='w+t')
-        self.store_temp.delete = self.delete_file_on_close
+        store_temp_name = "/tmp/_tmp_store.txt"
+        self.store_temp = open(store_temp_name, mode='w+t')
 
         # >>> tempfile.NamedTemporaryFile(mode='w+t').name.split("/")
         # ['', 'tmp', 'tmp6xM4wn']
         # >>> '/tmp/tmp6xM4wn'.split("/") => ['', 'tmp', 'tmp6xM4wn']
 
         # Generate a unique index name
-        (blank, folder, filename) = self.store_temp.name.split("/")
+        (blank, folder, filename) = store_temp_name.split("/")
         self.index_name = filename
 
         # ---------------- Section for the store sequence ---------------- #
@@ -350,8 +348,8 @@ class GenerateConfigFiles():
     }
 ]''' % self.index_name
 
-        self.execute_temp = tempfile.NamedTemporaryFile(mode='w+t')
-        self.execute_temp.delete = self.delete_file_on_close
+        execute_temp_name = "/tmp/_tmp_execute.txt"
+        self.execute_temp = open(execute_temp_name, mode='w+t')
 
         # Put together the execute sequence file
         try:
@@ -359,12 +357,7 @@ class GenerateConfigFiles():
         finally:
             self.execute_temp.close()
 
-        return self.store_temp.name, self.execute_temp.name
-
-    # Redundant, couldn't get delete on file closing (delay closing file) to work
-    # def close_files(self):
-    #     self.store_temp.close()
-    #     self.execute_temp.close()
+        return store_temp_name, execute_temp_name
 
 
 if __name__ == '__main__':
@@ -396,8 +389,8 @@ if __name__ == '__main__':
     # extra_datasets = [master_dataset, "raw_frames"]
     extra_datasets = [master_dataset]
 
-    gcf = GenerateConfigFiles(param_tree, number_histograms, bDeleteFileOnClose=False,
-                              master_dataset=master_dataset, extra_datasets=extra_datasets)
+    gcf = GenerateConfigFiles(param_tree, number_histograms, master_dataset=master_dataset,
+                              extra_datasets=extra_datasets)
     s, e = gcf.generate_config_files()
 
     print("GFC returned config files\n Store:   %s\n Execute: %s\n" % (s, e))
