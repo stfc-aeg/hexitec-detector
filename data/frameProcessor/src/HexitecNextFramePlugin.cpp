@@ -177,10 +177,8 @@ namespace FrameProcessor
 
         last_frame_number_ = current_frame_number;
 
-        // Copy current frame into last frame's place - regardless of any correction
-        //	taking place, as we'll always need the current frame to compare against
-        // 	the previous frame
-        // 		Will this work (static_cast'ing..) ???
+        // Copy current frame into last frame's place - regardless of any correction taking place,
+        //	as we'll always need the current frame to compare against the previous frame
         memcpy(last_frame_, static_cast<float *>(input_ptr), image_pixels_ * sizeof(float));
 
         this->push(frame);

@@ -307,6 +307,8 @@ class HexitecDAQ():
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
             self.hdf_file_location = self.file_dir + self.file_name + '_000001.h5'
+            print("hdf_file_location: ", self.hdf_file_location)
+            print(os.path.exists(self.hdf_file_location))
             # Check file exists before reopening to add metadata
             if os.path.exists(self.hdf_file_location):
                 self.prepare_hdf_file()
@@ -336,12 +338,15 @@ class HexitecDAQ():
                 fem._set_status_error("Error reopening HDF file: %s" % e)
             return
 
+        error_code = 0
         # Create metadata group, add dataset to it and pass to write function
-
         parent_metadata_group = hdf_file.create_group("hexitec")
         parent_tree_dict = self.parent.param_tree.get('')
-        self.write_metadata(parent_metadata_group, parent_tree_dict)
+        error_code = self.write_metadata(parent_metadata_group, parent_tree_dict)
 
+        # TODO: returns < 0 if XML issues, 0 if fine
+        # if (error_code == 0)
+        #    # ..
         # TODO: Hacked until frame_process_adapter updated to use parameter tree
         hdf_metadata_group = hdf_file.create_group("hdf")
         hdf_tree_dict = self.adapters['fp']._param
@@ -354,6 +359,7 @@ class HexitecDAQ():
 
     def write_metadata(self, metadata_group, param_tree_dict):
         """Write parameter tree(s) and config files as meta data."""
+
         param_tree_dict = self._flatten_dict(param_tree_dict)
 
         # Build metadata attributes from dictionary
@@ -387,14 +393,15 @@ class HexitecDAQ():
                     except IOError as e:
                         logging.error("Failed to read %s XML file %s : %s " %
                                       (param_file, file_name, e))
-                        raise(e)
+                        return -1
                     except Exception as e:
                         logging.error("Exception creating metadata for %s XML file %s : %s" %
                                       (param_file, param_file, e))
-                        raise(e)
+                        return -2
                     logging.debug("Key '%s'; Successfully read file '%s'" % (param_file, file_name))
                 else:
                     logging.debug("Key: %s's file: %s. Doesn't exist!" % (param_file, file_name))
+        return 0
 
     def _flatten_dict(self, d, parent_key='', sep='/'):
         """Flatten a dictionary of nested dictionary into single dictionary of key-value pairs."""
@@ -679,6 +686,7 @@ class HexitecDAQ():
         """Send each ParameterTree value to the corresponding FP plugin."""
         # Loop overall plugins in ParameterTree, updating fp's settings except reorder
         # TODO: Include reorder when odin control supports raw_data (i.e. bool)
+
         for plugin in self.param_tree.tree.get("config"):
 
             if plugin != "reorder":
@@ -692,6 +700,7 @@ class HexitecDAQ():
                     if param_key != "pass_processed":
 
                         command = "config/%s/%s" % (plugin, param_key)
+
                         payload = self.param_tree.tree['config'][plugin][param_key].get()
                         request = ApiAdapterRequest(str(payload), content_type="application/json")
                         self.adapters["fp"].put(command, request)

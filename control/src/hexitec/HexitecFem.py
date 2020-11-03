@@ -251,7 +251,7 @@ class HexitecFem():
     def read_sensors(self, msg=None):
         """Read environmental sensors and updates parameter tree with results."""
         try:
-            # Note when firmware was built, once
+            # Note once, when firmware was built
             if self.read_firmware_version:
                 date = self.x10g_rdma.read(0x60000015, 'FIRMWARE DATE')
                 time = self.x10g_rdma.read(0x60000016, 'FIRMWARE TIME')
@@ -395,7 +395,7 @@ class HexitecFem():
         """Get FEM id."""
         return self.id
 
-    def _start_polling(self):
+    def _start_polling(self):  # pragma: no cover
         IOLoop.instance().add_callback(self.poll_sensors)
 
     def poll_sensors(self):
@@ -1090,7 +1090,7 @@ class HexitecFem():
         m0 = self.x10g_rdma.read(0x8000001A, 'frame in progress flag')
         logging.debug("frame in progress flag: %s" % m0)
 
-        logging.debug("Input to XAUI")
+        logging.debug("Input to XAUI")  # Conn'd to 10G core going out
         m0 = self.x10g_rdma.read(0x90000010, 'frame last length')
         logging.debug("frame last length: %s" % m0)
         m0 = self.x10g_rdma.read(0x90000011, 'frame max length')
@@ -1809,7 +1809,7 @@ class HexitecFem():
         self.read_response()
         logging.debug("DAC values set")
 
-    def make_list_hexadecimal(self, value):
+    def make_list_hexadecimal(self, value):  # pragma: no cover
         """Debug function: Turn decimal list into hexadecimal list."""
         value_hexadecimal = []
         for val in value:
@@ -1976,7 +1976,7 @@ class HexitecFem():
             self.set_duration(self.duration)
             self.parent.set_number_frames(self.number_frames)
 
-    def print_vcal_registers(self, vsr_addr):
+    def print_vcal_registers(self, vsr_addr):  # pragma: no cover
         """Debug function: Print all VCAL (Power, calibrate & read enables) registers."""
         print("---------------------------------------------------------------------------------")
         # ROW, ASIC 1
@@ -2030,7 +2030,7 @@ class HexitecFem():
 
         print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
 
-    def read_back_register(self, vsr_addr, boundaries):
+    def read_back_register(self, vsr_addr, boundaries):  # pragma: no cover
         """Debug function: Actual hardware interaction with VCAL registers."""
         register_reply = []
         for idx in range(boundaries[0], boundaries[1] + 1, 1):
@@ -2123,7 +2123,7 @@ class HexitecFem():
             return ((int(hex_val, 16) * 175.72) / 65536) - 46.84
         except ValueError as e:
             logging.error("Error converting ambient temperature: %s" % e)
-            return -1
+            return -100
 
     def get_humidity(self, hex_val):
         """Calculate humidity."""
@@ -2131,7 +2131,7 @@ class HexitecFem():
             return ((int(hex_val, 16) * 125) / 65535) - 6
         except ValueError as e:
             logging.error("Error converting humidity: %s" % e)
-            return -1
+            return -100
 
     def get_asic_temperature(self, hex_val):
         """Calculate ASIC temperature."""
@@ -2139,7 +2139,7 @@ class HexitecFem():
             return int(hex_val, 16) * 0.0625
         except ValueError as e:
             logging.error("Error converting ASIC temperature: %s" % e)
-            return -1
+            return -100
 
     def get_adc_temperature(self, hex_val):
         """Calculate ADC Temperature."""
@@ -2147,7 +2147,7 @@ class HexitecFem():
             return int(hex_val, 16) * 0.0625
         except ValueError as e:
             logging.error("Error converting ADC temperature: %s" % e)
-            return -1
+            return -100
 
     def _set_hexitec_config(self, filename):
         """Check whether file exists, load parameters from file."""
@@ -2183,6 +2183,7 @@ class HexitecFem():
                                                          'Bias_Voltage/Bias_Voltage_Settle_Time',
                                                          bit_range=32)
         if bias_voltage_settle_time > -1:
+            self.time_refresh_voltage_held = time_refresh_voltage_held / 1000.0
             self.bias_voltage_settle_time = bias_voltage_settle_time / 1000.0
 
         # Recalculate frame rate
@@ -2194,7 +2195,7 @@ class HexitecFem():
                                             bit_range=6)
         self.calculate_frame_rate()
 
-    def convert_aspect_exponent_to_dac_value(self, exponent):
+    def convert_string_exponential_to_integer(self, exponent):
         """Convert aspect format to fit dac format.
 
         Aspect's exponent format looks like: 1,003000E+2
@@ -2205,19 +2206,18 @@ class HexitecFem():
         number_string = number_string.replace(",", ".")
         number_float = float(number_string)
         number_int = int(round(number_float))
-        number_scaled = int(number_int // self.DAC_SCALE_FACTOR)
-        return number_scaled
+        return number_int
+        # number_scaled = int(number_int // self.DAC_SCALE_FACTOR)
 
     def _extract_exponential(self, parameter_dict, descriptor, bit_range):
         """Extract exponential descriptor from parameter_dict, check it's within bit_range."""
         valid_range = [0, 1 << bit_range]
         setting = -1
-
         try:
             unscaled_setting = parameter_dict[descriptor]
-            scaled_setting = self.convert_aspect_exponent_to_dac_value(unscaled_setting)
+            scaled_setting = self.convert_string_exponential_to_integer(unscaled_setting)
             if scaled_setting >= valid_range[0] and scaled_setting <= valid_range[1]:
-                setting = scaled_setting
+                setting = int(scaled_setting // self.DAC_SCALE_FACTOR)
             else:
                 logging.error("Error parsing %s, got: %s (scaled: % s) but valid range: %s-%s" %
                               (descriptor, unscaled_setting, scaled_setting, valid_range[0],
@@ -2244,13 +2244,12 @@ class HexitecFem():
         try:
             setting = float(parameter_dict[descriptor])
             if setting >= valid_range[0] and setting <= valid_range[1]:
-                pass
+                # Convert from volts to DAQ format
+                setting = self.convert_aspect_float_to_dac_value(setting)
             else:
                 logging.error("Error parsing float %s, got: %s but valid range: %s-%s" %
                               (descriptor, setting, valid_range[0], valid_range[1]))
                 setting = -1
-            # Convert from volts to DAQ format
-            setting = self.convert_aspect_float_to_dac_value(setting)
         except KeyError:
             logging.warning("Warning: No '%s' Key defined!" % descriptor)
         return setting
@@ -2270,34 +2269,6 @@ class HexitecFem():
         except KeyError:
             logging.warning("Warning: No '%s' Key defined!" % descriptor)
 
-        return setting
-
-    def _extract_binary_words(self, parameter_dict, descriptor, bit_range):
-        """Extract descriptor from parameter_dict, check they're within bit_range."""
-        valid_range = [0, (1 << bit_range) - 1]
-        hex_words = []
-        setting = [-1, -1, -1, -1, -1]
-        try:
-            parameter = parameter_dict[descriptor]
-            setting = int(parameter, 2)
-            if setting >= valid_range[0] and setting <= valid_range[1]:
-                # Split into 5 hexidecimal words (4 bits/word)
-                word_length = len(parameter)
-                if word_length != 20:
-                    logging.error("Error: Key %s is %s chars long, expected: %s" %
-                                  (descriptor, word_length, 20))
-                    setting = [-1, -1, -1, -1, -1]
-                else:
-                    for idx in range(0, word_length, 4):
-                        value = int(parameter[idx:idx + 4], 2)
-                        hex_words.append(value)
-                    setting = hex_words
-            else:
-                logging.error("Error parsing parameter %s, got: %s but valid range: %s-%s" %
-                              (descriptor, setting, valid_range[0], valid_range[1]))
-                setting = [-1, -1, -1, -1, -1]
-        except KeyError:
-            logging.warning("Warn: No '%s' Key defined!" % descriptor)
         return setting
 
     def _extract_boolean(self, parameter_dict, descriptor):
@@ -2360,7 +2331,7 @@ class HexitecFem():
             return aspect_list
 
         entirety = first_channel + second_channel + third_channel + fourth_channel
-        if bDebug:
+        if bDebug:  # pragma: no cover
             print("   1st: %s" % first_channel)
             print("   2nd: %s" % second_channel)
             print("   3rd: %s" % third_channel)
@@ -2383,7 +2354,7 @@ class HexitecFem():
             decimal = int(binary, 2)
             aspect = self.convert_to_aspect_format(decimal)
             aspect_list.append(aspect)
-            if bDebug:
+            if bDebug:  # pragma: no cover
                 print("\t\tVSR: %s   bin: %s dec: %s" % (vsr, binary, "{:02x}".format(decimal)))
 
         # Turns aspect_list into tupples of (MSB, LSB), e.g.
@@ -2414,19 +2385,19 @@ class HexitecFem():
     def read_ini_file(self, filename, parameter_dict, debug=False):
         """Read filename, parse case sensitive keys decoded as strings."""
         parser = configparser.ConfigParser()
-        if debug:
+        if debug:  # pragma: no cover
             print("---------------------------------------------------------------------")
         # Maintain case-sensitivity:
         parser.optionxform = str
         parser.read(filename)
         for section in parser.sections():
-            if debug:
+            if debug:  # pragma: no cover
                 print('Section:', section)
             for key, value in parser.items(section):
                 parameter_dict[section + "/" + key] = value.strip("\"")
-                if debug:
+                if debug:  # pragma: no cover
                     print("   " + section + "/" + key + " => " + value.strip("\""))
-        if debug:
+        if debug:  # pragma: no cover
             print("---------------------------------------------------------------------")
 
 

@@ -366,7 +366,7 @@ class Hexitec():
                 # #
                 fem_begun = self.fems[0].acquire_timestamp
                 delta_time = time.time() - fem_begun
-                logging.debug("    FEM w-dog: {0:.2f} > {1:.2f}".format(delta_time,
+                logging.debug("    FEM w-dog: {0:.2f} < {1:.2f}".format(delta_time,
                                                                         self.fem_tx_timeout))
                 if (delta_time > self.fem_tx_timeout):
                     self.fems[0].stop_acquisition = True
@@ -385,7 +385,7 @@ class Hexitec():
         if self.daq.in_progress:
             processed_timestamp = self.daq.processed_timestamp
             delta_time = time.time() - processed_timestamp
-            # logging.debug("    DAQ w-dog: {0:.2f} > {1:.2f}".format(delta_time,
+            # logging.debug("    DAQ w-dog: {0:.2f} < {1:.2f}".format(delta_time,
             #                                                         self.daq_rx_timeout))
             if (delta_time > self.daq_rx_timeout):
                 logging.error("    DAQ -- PROCESSING TIMED OUT")

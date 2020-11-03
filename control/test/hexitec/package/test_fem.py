@@ -1,5 +1,5 @@
-"""
-Test Cases for the Hexitec Fem in hexitec
+"""Test Cases for the Hexitec Fem in hexitec.
+
 Christian Angelsen, STFC Detector Systems Software Group
 """
 
@@ -8,23 +8,23 @@ import pytest
 import time
 
 from hexitec.HexitecFem import HexitecFem, HexitecFemError
+from hexitec.adapter import HexitecAdapter, Hexitec
 
 from odin.adapters.parameter_tree import ParameterTreeError
 
 from socket import error as socket_error
 
 if sys.version_info[0] == 3:  # pragma: no cover
-    from unittest.mock import Mock, MagicMock, call, patch, ANY
+    from unittest.mock import Mock, call, patch, ANY
 else:                         # pragma: no cover
-    from mock import Mock, MagicMock, call, patch, ANY
-
-from hexitec.adapter import HexitecAdapter, Hexitec
+    from mock import Mock, call, patch, ANY
 
 
 class FemTestFixture(object):
+    """Set up a text fixture."""
 
     def __init__(self):
-
+        """Initialise object."""
         self.ip = "127.0.0.1"
         self.id = 0
 
@@ -58,26 +58,26 @@ class FemTestFixture(object):
 
 @pytest.fixture()
 def test_fem():
-    """Test Fixture for testing the Fem"""
-
+    """Test Fixture for testing the Fem."""
     test_fem = FemTestFixture()
     yield test_fem
 
 
 class TestFem():
+    """Construct test class."""
 
     def test_init(self, test_fem):
-        """Assert the initilisation of the Fem class works"""
+        """Assert the initilisation of the Fem class works."""
         assert test_fem.fem.id == test_fem.id
 
     def test_nonzero_id(self, test_fem):
-        """Assert the vector file is ignored if ID is not 0"""
+        """Test constructor works ok."""
         id = 1
         fem = HexitecFem(None, id, test_fem.ip, test_fem.ip, test_fem.ip, test_fem.ip)
         assert fem.id == 1
 
     def test_connect(self, test_fem):
-        """Assert the connect method creates the rdma as expected"""
+        """Assert the connect method creates the rdma as expected."""
         with patch("hexitec.HexitecFem.RdmaUDP") as mock_rdma:
             test_fem.fem.connect()
 
@@ -90,7 +90,6 @@ class TestFem():
 
     def test_connect_fails(self, test_fem):
         """Assert the connect method Exception handling works."""
-
         with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
             rdma_mock.side_effect = socket_error()
             with pytest.raises(socket_error) as exc_info:
@@ -100,8 +99,7 @@ class TestFem():
 
     def test_read_sensors_working_ok(self, test_fem):
         """Test the read_sensors function works."""
-
-        with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
+        with patch('hexitec.HexitecFem.RdmaUDP'):
             test_fem.fem.vsr_addr = 144
             test_fem.fem.read_firmware_version = True
             firmware_date = "11/03/2020"
@@ -115,22 +113,9 @@ class TestFem():
             # assert test_fem.fem.read_firmware_version is False
             # assert test_fem.fem.firmware_date == ""
 
-# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#  <class 'str'>  02E305D508B300040C040FCE07F7089012241A3E00000001
-# sensors_value:  02E305D508B300040C040FCE07F7089012241A3E00000001 <class 'str'>
-# vsr1_hv:  -4.210618644688452 <class 'float'>
-# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#  <class 'str'>  02E205D208BF00000C0A0FE607ED08A3121E1A3C00010002
-# sensors_value:  02E205D208BF00000C0A0FE607ED08A3121E1A3C00010002 <class 'str'>
-# vsr2_hv:  -5.833060659340504 <class 'float'>
-# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
     def test_read_sensors_Exception(self, test_fem):
         """Test the read_sensors handles Exception."""
-
-        with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
+        with patch('hexitec.HexitecFem.RdmaUDP'):
             test_fem.fem.read_firmware_version = True
             test_fem.fem.x10g_rdma.read = Mock()
             test_fem.fem.x10g_rdma.read.side_effect = Exception()
@@ -140,8 +125,7 @@ class TestFem():
 
     def test_read_sensors_HexitecFemError(self, test_fem):
         """Test the read_sensors handles Exception."""
-
-        with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
+        with patch('hexitec.HexitecFem.RdmaUDP'):
             test_fem.fem.read_firmware_version = True
             test_fem.fem.x10g_rdma.read = Mock()
             test_fem.fem.x10g_rdma.read.side_effect = HexitecFemError()
@@ -150,25 +134,24 @@ class TestFem():
             assert test_fem.fem._get_status_error() == error
 
     def test_cleanup(self, test_fem):
+        """Test cleanup function works ok."""
         test_fem.fem.cleanup()
-
         test_fem.fem.x10g_rdma.close.assert_called_with()
 
     def test_set_image_size(self, test_fem):
-
+        """Test setting image size handled ok."""
         address_pixel_count = test_fem.rdma_addr['receiver'] | 0x01
         address_pixel_size = test_fem.rdma_addr['receiver'] + 4
 
-        # test_fem.fem.set_image_size(102, 288, 11, 16)
         test_fem.fem.set_image_size(160, 160, 14, 16)
 
-        assert test_fem.fem.image_size_x == 160 #102
-        assert test_fem.fem.image_size_y == 160 #288
-        assert test_fem.fem.image_size_p == 14  #11
+        assert test_fem.fem.image_size_x == 160
+        assert test_fem.fem.image_size_y == 160
+        assert test_fem.fem.image_size_p == 14
         assert test_fem.fem.image_size_f == 16
 
-        pixel_count_max = (160*160)//2
-        data = (pixel_count_max & 0x1FFFF) -1
+        pixel_count_max = (160 * 160) // 2
+        data = (pixel_count_max & 0x1FFFF) - 1
         test_fem.fem.x10g_rdma.write.assert_has_calls(
             [call(address_pixel_count, data, ANY),
                 call(address_pixel_size, 0x3, ANY)]
@@ -191,7 +174,7 @@ class TestFem():
         )
 
     def test_set_image_size_wrong_pixel(self, test_fem):
-
+        """Test setting wrong pixel size handled ok."""
         test_fem.fem.set_image_size(102, 288, 0, 16)
 
         assert test_fem.fem.image_size_x == 102
@@ -202,7 +185,7 @@ class TestFem():
         assert not test_fem.fem.x10g_rdma.write.called
 
     def test_data_stream(self, test_fem):
-        ''' Also covers frame_gate_settings(), frame_gate_trigger() '''
+        """Also covers frame_gate_settings(), frame_gate_trigger()."""
         frame_num = 10
         frame_gap = 0
         # data_stream subtracts 1 from frame_num before
@@ -236,17 +219,18 @@ class TestFem():
         test_fem.fem.s1_sph = s1_sph
         test_fem.fem.sph_s2 = sph_s2
         test_fem.fem.calculate_frame_rate()
-        #
         duration = 1
         test_fem.fem.set_duration(duration)
         assert test_fem.fem.number_frames == 7154
 
     def test_get_health(self, test_fem):
+        """Test obtaining health variable works."""
         health = False
         test_fem.fem.health = health
         assert test_fem.fem.get_health() is health
 
     def test_get_id(self, test_fem):
+        """Test setting id works."""
         new_id = 2
         test_fem.fem.id = new_id
         assert test_fem.fem.get_id() == new_id
@@ -261,7 +245,7 @@ class TestFem():
             mock_loop.instance().call_later.assert_called_with(1.0, test_fem.fem.poll_sensors)
 
     def test_connect_hardware_fails(self, test_fem):
-
+        """Test that connecting with hardware handles failure."""
         with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
 
             # Fein error connecting to camera
@@ -276,9 +260,10 @@ class TestFem():
             rdma_mock.side_effect = Exception()
             test_fem.fem.connect_hardware()
             time.sleep(0.1)
-            assert test_fem.fem._get_status_error() == "Uncaught Exception; Failed to establish camera connection: "
+            error = "Uncaught Exception; Failed to establish camera connection: "
+            assert test_fem.fem._get_status_error() == error
 
-        # Don't Mock, error because we couldn't setup a connection        
+        # Don't Mock, error because we couldn't setup a connection
         test_fem.fem.connect_hardware("test")
 
         time.sleep(0.1)
@@ -292,7 +277,8 @@ class TestFem():
         assert test_fem.fem._get_status_error() == "Connection already established"
 
     def test_connect_hardware(self, test_fem):
-        with patch("hexitec.HexitecFem.RdmaUDP") as mock_rdma:
+        """Test connecting with hardware works."""
+        with patch("hexitec.HexitecFem.RdmaUDP"):
 
             test_fem.fem.connect_hardware("test")
             assert test_fem.fem.hardware_connected is True
@@ -431,7 +417,7 @@ class TestFem():
         assert test_fem.fem._get_status_error() == error
 
     def test_accessor_functions(self, test_fem):
-
+        """Test access functions handle bools."""
         number_frames = 1001
         test_fem.fem.set_number_frames(number_frames)
         assert test_fem.fem.get_number_frames() == number_frames
@@ -684,18 +670,19 @@ class TestFem():
         side = [empty_signals, full_signals, empty_signals, full_signals, transfer_ongoing,
                 transfer_completed,
                 empty_signals, full_signals, number_frames, s_frame_last_length, s_frame_max_length,
-                s_frame_min_length, s_frame_number, s_frame_last_clock_cycles, s_frame_max_clock_cycles,
-                s_frame_min_clock_cycles, s_frame_data_total, s_frame_data_total_clock_cycles,
-                s_frame_trigger_count, s_frame_in_progress_flag,
+                s_frame_min_length, s_frame_number, s_frame_last_clock_cycles,
+                s_frame_max_clock_cycles, s_frame_min_clock_cycles, s_frame_data_total,
+                s_frame_data_total_clock_cycles, s_frame_trigger_count, s_frame_in_progress_flag,
                 # Frame Gate:
                 fg_frame_last_length, fg_frame_max_length, fg_frame_min_length, fg_frame_number,
                 fg_frame_last_clock_cycles, fg_frame_max_clock_cycles, fg_frame_min_clock_cycles,
                 fg_frame_data_total, fg_frame_data_total_clock_cycles, fg_frame_trigger_count,
                 fg_frame_in_progress_flag,
                 # Input to XAUI
-                xaui_frame_last_length, xaui_frame_max_length, xaui_frame_min_length, xaui_frame_number,
-                xaui_frame_last_clock_cycles, xaui_frame_max_clock_cycles, xaui_frame_min_clock_cycles, 
-                xaui_frame_data_total, xaui_frame_data_total_clock_cycles, xaui_frame_trigger_count,
+                xaui_frame_last_length, xaui_frame_max_length, xaui_frame_min_length,
+                xaui_frame_number, xaui_frame_last_clock_cycles, xaui_frame_max_clock_cycles,
+                xaui_frame_min_clock_cycles, xaui_frame_data_total,
+                xaui_frame_data_total_clock_cycles, xaui_frame_trigger_count,
                 xaui_frame_in_progress_flag]
 
         test_fem.fem.x10g_rdma.read = Mock()
@@ -856,12 +843,12 @@ class TestFem():
         test_fem.fem.calculate_frame_rate = Mock()
 
         test_fem.fem.hexitec_parameters = {'Control-Settings/Gain': '0',
-                                          'Control-Settings/ADC1 Delay': '2',
-                                          'Control-Settings/delay sync signals': '10',
-                                          'Control-Settings/Row -> S1': '5',
-                                          'Control-Settings/S1 -> Sph': '1',
-                                          'Control-Settings/Sph -> S2': '5',
-                                          'Control-Settings/VCAL2 -> VCAL1': '1'} 
+                                           'Control-Settings/ADC1 Delay': '2',
+                                           'Control-Settings/delay sync signals': '10',
+                                           'Control-Settings/Row -> S1': '5',
+                                           'Control-Settings/S1 -> Sph': '1',
+                                           'Control-Settings/Sph -> S2': '5',
+                                           'Control-Settings/VCAL2 -> VCAL1': '1'}
 
         test_fem.fem.set_up_state_machine()
 
@@ -938,7 +925,7 @@ class TestFem():
         for i in range(0, len(cmd) // 4):
             reg_value = 256 * 256 * 256 * cmd[(i * 4)] + 256 * 256 * cmd[(i * 4) + 1] \
                 + 256 * cmd[(i * 4) + 2] + cmd[(i * 4) + 3]
-            register_values.append( reg_value)
+            register_values.append(reg_value)
         return register_values
 
     def test_collect_offsets(self, test_fem):
@@ -1546,7 +1533,113 @@ class TestFem():
             test_fem.fem.load_pwr_cal_read_enables()
         assert exc_info.type is HexitecFemError
         assert exc_info.value.args[0] == "Unknown VSR address! (%s)" % vsr_addr
-        # time.sleep(0.1)
+
+    def test_write_dac_values(self, test_fem):
+        """Test function handles writing dac values ok."""
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.read_response = Mock()
+        vsr_addr = HexitecFem.VSR_ADDRESS[1]
+        test_fem.fem.vsr_addr = vsr_addr
+
+        params = \
+            {'Control-Settings/VCAL': '0.3',
+             'Control-Settings/Uref_mid': '1,000000E+3'}
+
+        test_fem.fem.hexitec_parameters = params
+
+        test_fem.fem.write_dac_values()
+
+        vcal = [0x30, 0x31, 0x39, 0x39]
+        umid = [0x30, 0x35, 0x35, 0x36]
+        hv = [0x30, 0x35, 0x35, 0x35]
+        dctrl = [0x30, 0x30, 0x30, 0x30]
+        rsrv2 = [0x30, 0x38, 0x45, 0x38]
+
+        scommand = [0x23, vsr_addr, test_fem.fem.WRITE_DAC_VAL,
+                    vcal[0], vcal[1], vcal[2], vcal[3],
+                    umid[0], umid[1], umid[2], umid[3],
+                    hv[0], hv[1], hv[2], hv[3],
+                    dctrl[0], dctrl[1], dctrl[2], dctrl[3],
+                    rsrv2[0], rsrv2[1], rsrv2[2], rsrv2[3],
+                    0x0D]
+
+        test_fem.fem.send_cmd.assert_has_calls([
+            call(scommand)
+        ])
+
+    def test_enable_adc(self, test_fem):
+        """Test function handles enables ADCs ok."""
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.read_response = Mock()
+        vsr_addr = HexitecFem.VSR_ADDRESS[0]
+        test_fem.fem.vsr_addr = vsr_addr
+
+        test_fem.fem.enable_adc()
+
+        adc_disable = [0x23, vsr_addr, test_fem.fem.CTRL_ADC_DAC, 0x30, 0x32, 0x0D]
+        enable_sm = [0x23, vsr_addr, test_fem.fem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
+        adc_enable = [0x23, vsr_addr, test_fem.fem.CTRL_ADC_DAC, 0x30, 0x33, 0x0D]
+        adc_set = [0x23, vsr_addr, test_fem.fem.WRITE_REG_VAL, 0x31, 0x36, 0x30, 0x39, 0x0D]
+        aqu1 = [0x23, vsr_addr, test_fem.fem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]
+        aqu2 = [0x23, vsr_addr, test_fem.fem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]
+
+        test_fem.fem.send_cmd.assert_has_calls([
+            call(adc_disable),
+            call(enable_sm),
+            call(adc_enable),
+            call(adc_set),
+            call(aqu1),
+            call(aqu2)
+        ])
+
+    def test_initialise_system(self, test_fem):
+        """Test function initialises the system ok."""
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.read_response = Mock()
+        vsr_addr = HexitecFem.VSR_ADDRESS[0]
+        test_fem.fem.vsr_addr = vsr_addr
+
+        test_fem.fem.selected_sensor = HexitecFem.OPTIONS[2]
+        test_fem.fem.initialise_sensor = Mock()
+        test_fem.fem.set_up_state_machine = Mock()
+        test_fem.fem.write_dac_values = Mock()
+        test_fem.fem.enable_adc = Mock()
+        test_fem.fem.load_pwr_cal_read_enables = Mock()
+        test_fem.fem.calibrate_sensor = Mock()
+
+        test_fem.fem.initialise_system()
+
+        # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
+        read_vsr2_reg08F = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE,
+                            0x38, 0x46, 0x0D]
+        set_vsr2_reg08F = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT,
+                           0x38, 0x46, 0x30, 0x31, 0x0D]
+
+        # Repeat with other VSR board
+        read_vsr1_reg08F = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE,
+                            0x38, 0x46, 0x0D]
+        set_vsr1_reg08F = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT,
+                           0x38, 0x46, 0x30, 0x31, 0x0D]
+
+        disable_sm_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.CLR_REG_BIT,
+                           0x30, 0x31, 0x30, 0x30, 0x0D]
+        disable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.CLR_REG_BIT,
+                           0x30, 0x31, 0x30, 0x30, 0x0D]
+        enable_sm_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT,
+                          0x30, 0x31, 0x30, 0x31, 0x0D]
+        enable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT,
+                          0x30, 0x31, 0x30, 0x31, 0x0D]
+
+        test_fem.fem.send_cmd.assert_has_calls([
+            call(read_vsr2_reg08F),
+            call(set_vsr2_reg08F),
+            call(read_vsr1_reg08F),
+            call(set_vsr1_reg08F),
+            call(disable_sm_vsr1),
+            call(disable_sm_vsr2),
+            call(enable_sm_vsr1),
+            call(enable_sm_vsr2)
+        ])
 
     def test_calculate_frame_rate(self, test_fem):
         """Test calculate_frame_rate works."""
@@ -1556,10 +1649,308 @@ class TestFem():
         test_fem.fem.row_s1 = row_s1
         test_fem.fem.s1_sph = s1_sph
         test_fem.fem.sph_s2 = sph_s2
+        test_fem.fem.duration_enabled = True
         test_fem.fem.calculate_frame_rate()
         assert test_fem.fem.frame_rate == 7154.079227920547
 
-# duration VS duration:  1 1
-# frames:  7154.079227920547
-# .number_frames:  7154
-# Rowe, S1, S2:  5 1 5
+    def test_read_pwr_voltages_vsr1(self, test_fem):
+        """Test function handles power voltages ok."""
+        test_fem.fem.send_cmd = Mock()
+        response = "02E405D108B000020BF90FD207EF088F12281A4400000001"
+        test_fem.fem.read_response = Mock(return_value=response)
+        vsr_addr = HexitecFem.VSR_ADDRESS[0]
+        test_fem.fem.vsr_addr = vsr_addr
+        test_fem.fem.debug = True
+
+        test_fem.fem.read_pwr_voltages()
+
+        # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
+        power_command = [0x23, vsr_addr, HexitecFem.READ_PWR_VOLT, 0x0D]
+        time.sleep(0.1)
+        test_fem.fem.send_cmd.assert_has_calls([
+            call(power_command, False)
+        ])
+        assert test_fem.fem.vsr1_hv == -2.001293772893632
+
+    def test_read_pwr_voltages_vsr2(self, test_fem):
+        """Test function handles power voltages ok."""
+        test_fem.fem.send_cmd = Mock()
+        response = "02E505D008C400040BFD0FE807F008A612201A4600030000"
+        test_fem.fem.read_response = Mock(return_value=response)
+        vsr_addr = HexitecFem.VSR_ADDRESS[1]
+        test_fem.fem.vsr_addr = vsr_addr
+        test_fem.fem.debug = True
+
+        test_fem.fem.read_pwr_voltages()
+
+        # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
+        power_command = [0x23, vsr_addr, HexitecFem.READ_PWR_VOLT, 0x0D]
+        time.sleep(0.1)
+        test_fem.fem.send_cmd.assert_has_calls([
+            call(power_command, False)
+        ])
+        assert test_fem.fem.vsr2_hv == -0.37647571428567517
+
+    def test_get_hv_value_handles_value_error(self, test_fem):
+        """Test function handles HV value error."""
+        return_value = test_fem.fem.get_hv_value("0")
+        assert return_value == -1
+
+    def test_read_temperatures_humidity_values_vsr2(self, test_fem):
+        """Test function handle sensor values ok."""
+        test_fem.fem.send_cmd = Mock()
+        response = "7C00270802A702B002D60F"
+        test_fem.fem.read_response = Mock(return_value=response)
+        vsr_addr = HexitecFem.VSR_ADDRESS[1]
+        test_fem.fem.vsr_addr = vsr_addr
+        test_fem.fem.debug = True
+
+        test_fem.fem.read_temperatures_humidity_values()
+
+        command = [0x23, vsr_addr, 0x52, 0x0D]
+        vsr2_ambient = 38.27437499999999
+        vsr2_humidity = 13.05851834897383
+        vsr2_asic1 = 42.4375
+        vsr2_asic2 = 43.0
+        vsr2_adc = 45.375
+
+        test_fem.fem.send_cmd.assert_has_calls([
+            call(command, False)
+        ])
+        assert test_fem.fem.vsr2_ambient == vsr2_ambient
+        assert test_fem.fem.vsr2_humidity == vsr2_humidity
+        assert test_fem.fem.vsr2_asic1 == vsr2_asic1
+        assert test_fem.fem.vsr2_asic2 == vsr2_asic2
+        assert test_fem.fem.vsr2_adc == vsr2_adc
+
+    def test_read_temperatures_humidity_values_vsr1(self, test_fem):
+        """Test function handle sensor values ok."""
+        test_fem.fem.send_cmd = Mock()
+        response = "78882A7002BC0A0002C90F"
+        test_fem.fem.read_response = Mock(return_value=response)
+        vsr_addr = HexitecFem.VSR_ADDRESS[0]
+        test_fem.fem.vsr_addr = vsr_addr
+        test_fem.fem.debug = True
+
+        test_fem.fem.read_temperatures_humidity_values()
+
+        command = [0x23, vsr_addr, 0x52, 0x0D]
+        vsr1_ambient = 35.8934033203125
+        vsr1_humidity = 14.721751735713742
+        vsr1_asic1 = 43.75
+        vsr1_asic2 = 160.0
+        vsr1_adc = 44.5625
+
+        test_fem.fem.send_cmd.assert_has_calls([
+            call(command, False)
+        ])
+        assert test_fem.fem.vsr1_ambient == vsr1_ambient
+        assert test_fem.fem.vsr1_humidity == vsr1_humidity
+        assert test_fem.fem.vsr1_asic1 == vsr1_asic1
+        assert test_fem.fem.vsr1_asic2 == vsr1_asic2
+        assert test_fem.fem.vsr1_adc == vsr1_adc
+
+    def test_read_temperature_humidity_values_handle_wrong_value(self, test_fem):
+        """Test function handles bad sensor values."""
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.read_response = Mock(return_value="xy")
+        return_value = test_fem.fem.read_temperatures_humidity_values()
+        assert return_value is None
+
+    def test_read_temperature_humidity_values_handle_bad_vsr(self, test_fem):
+        """Test function handles bad sensor values."""
+        test_fem.fem.send_cmd = Mock()
+        test_fem.fem.read_response = Mock(return_value="01")
+        test_fem.fem.read_temperatures_humidity_values()
+        # assert return_value is None
+
+    def test_get_ambient_temperature(self, test_fem):
+        """Test temperature calculation work for different values."""
+        temperature_conversions = []
+        temperature_conversions.append((-41.34875, "0800"))
+        temperature_conversions.append((0.00186401367187, '443e'))
+        temperature_conversions.append((25.0020666504, '68aa'))
+        temperature_conversions.append((60.0007415771, '9ba7'))
+        for temperature, hex_value in temperature_conversions:
+            calculated_temperature = test_fem.fem.get_ambient_temperature(hex_value)
+            assert pytest.approx(calculated_temperature) == temperature
+
+    def test_get_ambient_temperature_fails_bad_input(self, test_fem):
+        """Test function fails bad input."""
+        bad_hex_value = "2g5"
+        return_value = test_fem.fem.get_ambient_temperature(bad_hex_value)
+        assert return_value == -100
+
+    def test_get_humidity(self, test_fem):
+        """Test humidity calculation work for different values."""
+        humidity_conversions = []
+        humidity_conversions.append((0.0006103608758678547, '0c4a'))
+        humidity_conversions.append((20.2226291294728, '35B4'))
+        humidity_conversions.append((40.875715266651405, '6000'))
+        humidity_conversions.append((100.00061036087587, 'd916'))
+        for humidity, hex_value in humidity_conversions:
+            calculated_humidity = test_fem.fem.get_humidity(hex_value)
+            assert pytest.approx(calculated_humidity) == humidity
+
+    def test_get_humidity_fails_bad_input(self, test_fem):
+        """Test function fails bad input."""
+        bad_hex_value = "25%"
+        return_value = test_fem.fem.get_humidity(bad_hex_value)
+        assert return_value == -100
+
+    def test_get_asic_temperature(self, test_fem):
+        """Test function calculates ASIC temperatures correct."""
+        asic_conversions = []
+        asic_conversions.append((0, "0"))
+        asic_conversions.append((25, "190"))
+        asic_conversions.append((42.4375, "02A7"))
+        asic_conversions.append((50, "320"))
+        asic_conversions.append((160, "A00"))
+        for asic, hex_value in asic_conversions:
+            calculated_asic = test_fem.fem.get_asic_temperature(hex_value)
+            assert pytest.approx(calculated_asic) == asic
+
+    def test_get_asic_temperature_fails_bad_input(self, test_fem):
+        """Test function fails bad input."""
+        bad_hex_value = "25.0"
+        return_value = test_fem.fem.get_asic_temperature(bad_hex_value)
+        assert return_value == -100
+
+    def test_get_adc_temperature(self, test_fem):
+        """Test function calculates adc temperatures correct."""
+        adc_conversions = []
+        adc_conversions.append((0, "0"))
+        adc_conversions.append((25, "190"))
+        adc_conversions.append((42.4375, "02A7"))
+        adc_conversions.append((50, "320"))
+        adc_conversions.append((160, "A00"))
+        for adc, hex_value in adc_conversions:
+            calculated_adc = test_fem.fem.get_adc_temperature(hex_value)
+            assert pytest.approx(calculated_adc) == adc
+
+    def test_get_adc_temperature_fails_bad_input(self, test_fem):
+        """Test function fails bad input."""
+        bad_hex_value = "25z"
+        return_value = test_fem.fem.get_adc_temperature(bad_hex_value)
+        assert return_value == -100
+
+    def test_set_hexitec_config(self, test_fem):
+        """Test function handles configuration file ok."""
+        hexitec_path = "/hexitec-detector/control/test/hexitec/config/hexitec_test_config.ini"
+        odin_path = "/u/ckd27546/develop/projects/odin-demo"
+        filename = odin_path + hexitec_path
+
+        test_fem.fem._set_hexitec_config(filename)
+
+        assert test_fem.fem.bias_refresh_interval == 130.0
+        assert test_fem.fem.bias_voltage_refresh is True
+        assert test_fem.fem.time_refresh_voltage_held == 8.0
+        assert test_fem.fem.bias_voltage_settle_time == 4.0
+        assert test_fem.fem.row_s1 == 25
+        assert test_fem.fem.s1_sph == 13
+        assert test_fem.fem.sph_s2 == 57
+
+    def test_set_hexitec_config_fails_invalid_filename(self, test_fem):
+        """Test function fails on invalid file name."""
+        filename = "/invalid/file.name"
+        with pytest.raises(ParameterTreeError) as exc_info:
+            test_fem.fem._set_hexitec_config(filename)
+        assert exc_info.type is ParameterTreeError
+        error = "Error: [Errno 2] No such file or directory: '%s'" % filename
+        assert exc_info.value.args[0] == error
+
+    def test_extract_exponential_fails_out_of_range_value(self, test_fem):
+        """Test function fails on value outside of valid range of values."""
+        hexitec_parameters = {'Control-Settings/Uref_mid': '4,097000E+3'}
+        umid = test_fem.fem._extract_exponential(hexitec_parameters,
+                                                 'Control-Settings/Uref_mid', bit_range=12)
+        assert umid == -1
+
+    def test_extract_exponential_fails_missing_key(self, test_fem):
+        """Test function fails on missing key (i.e. setting)."""
+        hexitec_parameters = {'Control-Settings/U___ref_mid': '1,000000E+3'}
+        umid = test_fem.fem._extract_exponential(hexitec_parameters,
+                                                 'Control-Settings/Uref_mid', bit_range=1)
+        assert umid == -1
+
+    def test_extract_float_fails_out_of_range_value(self, test_fem):
+        """Test function fails on value outside of valid range of values."""
+        hexitec_parameters = {'Control-Settings/VCAL': '3.1'}
+        vcal_value = test_fem.fem._extract_float(hexitec_parameters, 'Control-Settings/VCAL')
+        assert vcal_value == -1
+
+    def test_extract_float_fails_missing_key(self, test_fem):
+        """Test function fails on missing key (i.e. setting)."""
+        hexitec_parameters = {'Control-Settings/___L': '1.3'}
+        vcal_value = test_fem.fem._extract_float(hexitec_parameters,
+                                                 'Control-Settings/VCAL')
+        assert vcal_value == -1
+
+    def test_extract_integer_fails_out_of_range_value(self, test_fem):
+        """Test fails on value outside of valid range."""
+        hexitec_parameters = {'Control-Settings/ADC1 Delay': '-1'}
+        delay = test_fem.fem._extract_integer(hexitec_parameters, 'Control-Settings/ADC1 Delay',
+                                              bit_range=2)
+        assert delay == -1
+
+    def test_extract_integer_fails_missing_key(self, test_fem):
+        """Test function fails on missing key (i.e. setting)."""
+        hexitec_parameters = {'Control-Settings/nonsense': '1.3'}
+        delay = test_fem.fem._extract_integer(hexitec_parameters,
+                                              'Control-Settings/ADC1 Delay', bit_range=2)
+        assert delay == -1
+
+    def test_extract_boolean_fails_invalid_value(self, test_fem):
+        """Test function fails non-Boolean value."""
+        hexitec_parameters = {'Bias_Voltage/Bias_Voltage_Refresh': '_x?'}
+        bias = test_fem.fem._extract_boolean(hexitec_parameters,
+                                             'Bias_Voltage/Bias_Voltage_Refresh')
+        assert bias == -1
+
+    def test_extract_80_bits(self, test_fem):
+        """Test function correctly extracts 80 bits from 4 channels."""
+        vsr = 1
+        all_80b = [(70, 70), (70, 70), (70, 70), (70, 70), (70, 70), (70, 70), (70, 70),
+                   (70, 70), (70, 70), (70, 70)]
+        params = \
+            {'Sensor-Config_V1_S1/ColumnEn_1stChannel': '11111111111111111111',
+             'Sensor-Config_V1_S1/ColumnEn_2ndChannel': '11111111111111111111',
+             'Sensor-Config_V1_S1/ColumnEn_3rdChannel': '11111111111111111111',
+             'Sensor-Config_V1_S1/ColumnEn_4thChannel': '11111111111111111111'}
+
+        channel1 = test_fem.fem._extract_80_bits(params, "ColumnEn_", vsr, 1, "Channel")
+        assert channel1 == all_80b
+
+    def test_extract_80_bits_missing_configuration(self, test_fem):
+        """Test function fails if any of the four channels not configured."""
+        vsr = 1
+        params = {}
+
+        channel1 = test_fem.fem._extract_80_bits(params, "ColumnEn_", vsr, 1, "Channel")
+        assert channel1[0] == (-1, -1)
+
+        params['Sensor-Config_V1_S1/ColumnEn_1stChannel'] = '11111111111111111111'
+
+        channel2 = test_fem.fem._extract_80_bits(params, "ColumnEn_", vsr, 1, "Channel")
+        assert channel2[0] == (-1, -1)
+
+        params['Sensor-Config_V1_S1/ColumnEn_2ndChannel'] = '11111111111111111111'
+
+        channel3 = test_fem.fem._extract_80_bits(params, "ColumnEn_", vsr, 1, "Channel")
+        assert channel3[0] == (-1, -1)
+
+        params['Sensor-Config_V1_S1/ColumnEn_3rdChannel'] = '11111111111111111111'
+
+        channel4 = test_fem.fem._extract_80_bits(params, "ColumnEn_", vsr, 1, "Channel")
+        assert channel4[0] == (-1, -1)
+
+    def test_extract_channel_data_fails_wrong_value_length(self, test_fem):
+        """Test function fails if provided value is a wrong length."""
+        params = {'Sensor-Config_V1_S1/ColumnEn_1stChannel': '111111111111111111'}
+        key = 'Sensor-Config_V1_S1/ColumnEn_1stChannel'
+
+        with pytest.raises(HexitecFemError) as exc_info:
+            first_channel = test_fem.fem.extract_channel_data(params, key)
+            assert first_channel is None
+        assert exc_info.type is HexitecFemError
+        assert exc_info.value.args[0] == "Invalid length of value in '%s'" % key

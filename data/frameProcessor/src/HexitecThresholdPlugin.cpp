@@ -261,12 +261,12 @@ namespace FrameProcessor
             break;
         }
         LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-                        " dataset, frame number: " << frame->get_frame_number());
+                      " dataset, frame number: " << frame->get_frame_number());
         this->push(frame);
       }
       catch (const std::exception& e)
       {
-      LOG4CXX_ERROR(logger_, "HexitecThresholdPlugin failed: " << e.what());
+        LOG4CXX_ERROR(logger_, "HexitecThresholdPlugin failed: " << e.what());
       }
     }
     else
