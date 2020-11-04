@@ -4,35 +4,35 @@ set_udp_registers.py - Python scripting for setting UDP header addresses and por
 Christian Angelsen, STFC Detector Systems Software Group, 2020.
 """
 
-import socket
-import os
 import json
 
 import sys
-from QemCam import *
+from QemCam import QemCam
 from socket import error as socket_error
 
 
 class set_udp_registers():
     """Class for configuring UDP core in firmware."""
 
-    def __init__(self):
+    def __init__(self, json_file, fem_id):
         """Initialize the Object."""
         self.udp_settings = {}
+        self.config_file = json_file
+        self.id_number = fem_id
 
     def read_ip_settings(self):
-        """This function reads the IP, MAC and port settings from the json file.
-            Ripe for re-factoring into several functions..
+        """Read the IP, MAC and port settings from the json file.
+
+        Ripe for re-factoring into several functions..
         """
         try:
-            self.configfile = "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/control/src/hexitec/test_ui/fem_addresses.json"
-            with open(self.configfile, 'r') as f:
+            with open(self.config_file, 'r') as f:
                 self.udp_settings = json.load(f)
         except IOError as e:
-            print("ERROR: % s")
+            print("ERROR opening config file: %s")
             return
         except Exception as e:
-            print("ERROR opening json config file: %s" % e)
+            print("ERROR: %s" % e)
             return
 
         print("Json object .keys()")
@@ -46,7 +46,7 @@ class set_udp_registers():
             print("ERROR establishing camera connection: %s" % e)
             return
 
-        fem_id = "fem_0"
+        fem_id = "fem_{}".format(self.id_number)
         pc = self.udp_settings[fem_id]["pc"]
         fem = self.udp_settings[fem_id]["fem"]
         print("fem_id", fem_id)
@@ -134,8 +134,9 @@ class set_udp_registers():
             print("ERROR disconnecting camera: %s" % e)
 
     def turn_decimal_list_into_hexadecimal_list(self, token_list):
-        """Turns a list of decimal Unicode strings into a list of hexadecimal strings.
-            I.e. [u'10', u'5', u'3', u'2'] Becomes ['0a', '05', '03', '02']
+        """Turn a list of decimal Unicode strings into a list of hexadecimal strings.
+
+        I.e. [u'10', u'5', u'3', u'2'] Becomes ['0a', '05', '03', '02']
         """
         new_list = []
         for element in token_list:
@@ -145,6 +146,7 @@ class set_udp_registers():
         return new_list
 
     def turn_unicode_list_into_string_list(self, token_list):
+        """Turn a list of Unicode strings into a list of hexadecimal strings."""
         new_list = []
         for element in token_list:
             new_list.append(format(int(element, 16), '#04x')[2:])
@@ -161,22 +163,18 @@ class set_udp_registers():
         value = int(value, 16)
 
         try:
-            print(" Setting register %s to value: %s " % (format(register, '#010x'), format(value, '#010x')))
-
             self.qemcamera.x10g_rdma.write(register, value, 'N/A')
-            # print("Register successfully updated.")
+            print(" Updated register %s to value: %s " % (format(register, '#010x'), format(value, '#010x')))
         except socket_error as e:
-            print("ERROR: %s" % e)
+            print("ERROR updating register: %s: %s" % (format(register, '#010x'), e))
 
 
 if __name__ == '__main__':
     try:
-        q = set_udp_registers()
+        q = set_udp_registers(sys.argv[1], sys.argv[2])
         q.read_ip_settings()
     except IndexError:
-        print("There are no commandline arguments to be fed into the script,")
-        print(" how on earth did you manage to create this error?")
-        # print("Usage:")
-        # print("set_udp_registers.py <row_s1> <s1_sph> <sph_s2>")
-        # print("such as:")
-        # print("set_udp_registers.py 135 1 5")
+        print("Usage:")
+        print("set_udp_registers.py <json_file> <fem_id>")
+        print("such as:")
+        print("set_udp_registers.py /u/ckd27546/develop/projects/odin-demo/hexitec-detector/control/src/hexitec/test_ui/fem_addresses.json 0")
