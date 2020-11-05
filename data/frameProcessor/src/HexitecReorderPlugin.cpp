@@ -19,7 +19,7 @@ namespace FrameProcessor
    * The constructor sets up logging used within the class.
    */
   HexitecReorderPlugin::HexitecReorderPlugin() :
-  		sensors_config_(Hexitec::sensorConfigTwo),
+  		sensors_config_(Hexitec::sensorConfigThree),
       image_width_(Hexitec::pixel_columns_per_sensor),
       image_height_(Hexitec::pixel_rows_per_sensor),
       image_pixels_(image_width_ * image_height_),

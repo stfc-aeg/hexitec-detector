@@ -12,11 +12,12 @@
 
 namespace Hexitec {
 
-		static const size_t num_sensors = 2;
+		static const size_t num_sensors = 3;
 		typedef enum {
 			sensorConfigUnknown = -1,
 			sensorConfigOne = 0,			// 1 x 1 sensors
-			sensorConfigTwo = 1				// 2 x 2 sensors
+			sensorConfigTwo = 1,			// 2 x 2 sensors
+			sensorConfigThree = 2			// 2 x 6 sensors
 		} SensorConfigNumber;
 
     typedef struct HexitecSensorLayoutMapEntry
@@ -37,9 +38,9 @@ namespace Hexitec {
     static const uint16_t pixel_rows_per_sensor =  80;
 
     static const size_t primary_packet_size = 8000;
-    static const size_t num_primary_packets[num_sensors] = {1, 6};
+    static const size_t num_primary_packets[num_sensors] = {1, 6, 19};
     static const size_t max_primary_packets = 6;
-    static const size_t tail_packet_size[num_sensors]	= {4800, 3200};
+    static const size_t tail_packet_size[num_sensors]	= {4800, 3200, 1600};
     static const size_t num_tail_packets 		= 1;
 
     static const uint32_t start_of_frame_mask = 1 << 31;

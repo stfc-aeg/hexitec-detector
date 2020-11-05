@@ -31,7 +31,7 @@ const std::string HexitecFrameDecoder::CONFIG_SENSORS_LAYOUT = "sensors_layout";
 //!
 HexitecFrameDecoder::HexitecFrameDecoder() :
     FrameDecoderUDP(),
-		sensors_config_(Hexitec::sensorConfigTwo),
+		sensors_config_(Hexitec::sensorConfigThree),
 		current_frame_seen_(Hexitec::default_frame_number),
     current_frame_buffer_id_(Hexitec::default_frame_number),
     current_frame_buffer_(0),
@@ -770,6 +770,10 @@ void HexitecFrameDecoder::parse_sensors_layout_map(const std::string sensors_lay
     else if ((sensors_layout_[0].sensor_rows_ == 2) && (sensors_layout_[0].sensor_columns_ == 2))
     {
       sensors_config_ = Hexitec::sensorConfigTwo;     // 2 x 2 sensors
+    }
+    else if ((sensors_layout_[0].sensor_rows_ == 2) && (sensors_layout_[0].sensor_columns_ == 6))
+    {
+      sensors_config_ = Hexitec::sensorConfigThree;     // 2 x 6 sensors
     }
 }
 
