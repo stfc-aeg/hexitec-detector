@@ -134,6 +134,7 @@ class HexitecUdpProducer(object):
                 # Prepend header to current packet
                 packet = header.tostring() + self.byteStream[streamPosn:streamPosn + bytesToSend]
 
+                #print("Header: 0x{0:08x} 0x{1:08x}".format(header[0], header[1]))
                 if not self.quiet:
                     print("bytesRemaining: {0:8} Sent: {1:8}".format(bytesRemaining, bytesSent),
                           "Sending data {0:8} through {1:8}..".format(streamPosn,
