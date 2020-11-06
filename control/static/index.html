@@ -102,6 +102,24 @@
       <table class="overall-table" align="center">
         <thead></thead>
         <tbody>
+          <tr>
+            <td>
+              Sensors Layout:&nbsp;
+            </td>
+            <td>
+              <select onchange="selectChange(this.value)">
+                <option value="1x1">1x1 (80x80)</option>
+                <option selected="selected" value="2x2">2x2 (160x160)</option>
+                <option value="2x6">2x6 (160x480)</option>
+              </select>
+            </td>
+            <td>
+              &nbsp;<td><span id="sensors-layout-warning">&nbsp;</span></td>
+            </td>
+          </tr>
+          <tr>
+            <th>Camera&nbsp;</th>
+          </tr>
 
           <!--  -->
           <tr>  
