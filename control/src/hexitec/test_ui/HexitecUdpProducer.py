@@ -45,18 +45,33 @@ class HexitecUdpProducerDefaults(object):
 class HexitecUdpProducer(object):
     """Produce and transmit specified UDP frames."""
 
-    def __init__(self, host, port, frames, interval, display, quiet, filename):
+    def __init__(self, host, port, frames, sensorrows, sensorcolumns,
+                 interval, display, quiet, filename):
         """Initialise object with command line arguments."""
+        pixelsPerRow = 80
+        pixelsPerColumn = 80
         self.host = host
         self.port = port
         self.frames = frames
+        self.pixelrows = sensorrows * pixelsPerRow
+        self.pixelcolumns = sensorcolumns * pixelsPerColumn
         self.interval = interval
         self.display = display
         self.quiet = quiet
         self.filename = filename
 
-        pixelsToRead = self.frames * (80 * 80)
-        bytesToRead = pixelsToRead * 2
+        pixelsToRead  = self.frames * (self.pixelrows * self.pixelcolumns)
+        bytesPerPixel = 2
+        bytesToRead   = pixelsToRead * bytesPerPixel
+
+        # Workout number of primary packets, size of trailing packet
+
+        totalFrameSize = (self.pixelrows * self.pixelcolumns) * bytesPerPixel
+        self.primaryPackets = totalFrameSize // 8000
+        self.trailingPacketSize = totalFrameSize % 8000
+        print(self.pixelrows, self.pixelcolumns)
+        print(self.primaryPackets)
+        print(self.trailingPacketSize)
 
         if os.access(self.filename, os.R_OK):
             print("Selected", self.frames, "frames, ", bytesToRead, "bytes.")
@@ -102,21 +117,27 @@ class HexitecUdpProducer(object):
             frameStartTime = time.time()
 
             # Loop over packets within current frame
-            while ((packetCounter == 0) or (packetCounter % 2) != 0):
+            while (packetCounter < (self.primaryPackets + 1)):
                 header[0] = frame
+                header[1] = 0
 
-                if ((packetCounter % 2) == 0):
+                if (packetCounter < self.primaryPackets):
                     bytesToSend = 8000
-                    header[1] = packetCounter | startOfFrame
+                    if (packetCounter == 0):
+                        header[1] = packetCounter | startOfFrame
+                    else:
+                        header[1] = packetCounter
                 else:
-                    bytesToSend = 4800
+                    bytesToSend = self.trailingPacketSize
                     header[1] = packetCounter | endOfFrame
 
                 # Prepend header to current packet
                 packet = header.tostring() + self.byteStream[streamPosn:streamPosn + bytesToSend]
 
-#                 print("bytesRemaining: {} bytesSent: {}".format(bytesRemaining, bytesSent),
-#                       "Sending data between {} and {}..".format(streamPosn, streamPosn+bytesToSend))
+                if not self.quiet:
+                    print("bytesRemaining: {0:8} Sent: {1:8}".format(bytesRemaining, bytesSent),
+                          "Sending data {0:8} through {1:8}..".format(streamPosn,
+                                                                      streamPosn + bytesToSend))
 
                 # Transmit packet
                 bytesSent += sock.sendto(packet, (self.host, self.port))
@@ -158,6 +179,10 @@ if __name__ == '__main__':
                         help='select destination host IP port')
     parser.add_argument('--frames', '-n', type=int, default=1,
                         help='select number of frames to transmit')
+    parser.add_argument('--sensorrows', '-r', type=int, default=1,
+                        help='number of sensors per row')
+    parser.add_argument('--sensorcolumns', '-c', type=int, default=1,
+                        help='number of sensors per column')
     parser.add_argument('--interval', '-t', type=float, default=0.1,
                         help="select frame interval in seconds")
     parser.add_argument('--display', "-d", action='store_true',
