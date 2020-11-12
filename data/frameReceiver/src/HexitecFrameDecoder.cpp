@@ -31,7 +31,7 @@ const std::string HexitecFrameDecoder::CONFIG_SENSORS_LAYOUT = "sensors_layout";
 //!
 HexitecFrameDecoder::HexitecFrameDecoder() :
     FrameDecoderUDP(),
-		sensors_config_(Hexitec::sensorConfigThree),
+		sensors_config_(Hexitec::sensorConfigTwo),
 		current_frame_seen_(Hexitec::default_frame_number),
     current_frame_buffer_id_(Hexitec::default_frame_number),
     current_frame_buffer_(0),
