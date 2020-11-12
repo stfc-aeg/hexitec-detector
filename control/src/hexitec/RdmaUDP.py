@@ -1,5 +1,5 @@
 """
-RdmaUDP 
+RdmaUDP Class.
 
 Read/Write control access to FEM-II via UDP.
 
@@ -8,17 +8,34 @@ James Edwards 2019, Christian Angelsen, STFC Detector Systems Software Group, 20
 
 import socket
 import struct
-import time
 import logging
 
+
 class RdmaUDP(object):
+    """RdmaUDP Class, writing access to Firmware registers."""
 
     def __init__(self, MasterTxUDPIPAddress='192.168.0.1', MasterTxUDPIPPort=65535,
-                       MasterRxUDPIPAddress='192.168.0.1', MasterRxUDPIPPort=65536,
-                       TargetTxUDPIPAddress='192.168.0.2', TargetTxUDPIPPort=65535,
-                       TargetRxUDPIPAddress='192.168.0.2', TargetRxUDPIPPort=65536,
-                       RxUDPBuf = 1024, UDPMTU=9000, UDPTimeout=10):
+                 MasterRxUDPIPAddress='192.168.0.1', MasterRxUDPIPPort=65536,
+                 TargetTxUDPIPAddress='192.168.0.2', TargetTxUDPIPPort=65535,
+                 TargetRxUDPIPAddress='192.168.0.2', TargetRxUDPIPPort=65536,
+                 RxUDPBuf=1024, UDPMTU=9000, UDPTimeout=10):
+        """
+        Initialize the RdmaUDP object.
 
+        This constructor initializes the RdmaUDP object.
+
+        :param MasterTxUDPIPAddress: PC network interface
+        :param MasterTxUDPIPPort: Communications transmit port
+        :param MasterRxUDPIPAddress: PC network interface
+        :param MasterRxUDPIPPort: Communications receive port
+        :param TargetTxUDPIPAddress: FEM network interface
+        :param TargetTxUDPIPPort: Communications transmit port
+        :param TargetRxUDPIPAddress: FEM network interface
+        :param TargetRxUDPIPPort: Communications receiver port
+        :param RxUDPBuf: UDP receive buffer
+        :param UDPMTU: UDP Maximum Transmission Unit
+        :param UDPTimeout: UDP connection timeout interval
+        """
         self.txsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.rxsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -30,16 +47,18 @@ class RdmaUDP(object):
         try:
             self.rxsocket.bind((MasterRxUDPIPAddress, MasterRxUDPIPPort))
         except socket.error as e:
-            raise socket.error("IP:Port %s:%s because: %s" % (MasterRxUDPIPAddress, MasterRxUDPIPPort, e))
+            raise socket.error("IP:Port %s:%s because: %s" %
+                               (MasterRxUDPIPAddress, MasterRxUDPIPPort, e))
         try:
             self.txsocket.bind((MasterTxUDPIPAddress, MasterTxUDPIPPort))
         except socket.error as e:
-            raise socket.error("IP:Port %s:%s Because: %s" % (MasterTxUDPIPAddress, MasterTxUDPIPPort, e))
+            raise socket.error("IP:Port %s:%s Because: %s" %
+                               (MasterTxUDPIPAddress, MasterTxUDPIPPort, e))
 
         self.rxsocket.setblocking(1)
 
         self.TgtRxUDPIPAddr = TargetRxUDPIPAddress
-        self.TgtRxUDPIPPrt  = TargetRxUDPIPPort
+        self.TgtRxUDPIPPrt = TargetRxUDPIPPort
 
         self.UDPMaxRx = UDPMTU
 
@@ -48,6 +67,7 @@ class RdmaUDP(object):
         self.ack = False
 
     def __del__(self):
+        """Close network sockets."""
         self.txsocket.close()
         self.rxsocket.close()
 
@@ -57,10 +77,11 @@ class RdmaUDP(object):
 
         Sends a read command to the target rx UDP address/port and returns the result.
         @param address: the address to read from
-        @param comment: comment to print out 
+        @param comment: comment to print out
         """
-        command = struct.pack('=BBBBIQBBBBIQQQQQ', 1,0,0,3, address, 0, 9,0,0,255, 0, 0,0,0,0,0)
-        self.txsocket.sendto(command,(self.TgtRxUDPIPAddr,self.TgtRxUDPIPPrt))
+        command = struct.pack('=BBBBIQBBBBIQQQQQ', 1, 0, 0, 3, address,
+                              0, 9, 0, 0, 255, 0, 0, 0, 0, 0, 0)
+        self.txsocket.sendto(command, (self.TgtRxUDPIPAddr, self.TgtRxUDPIPPrt))
 
         if self.ack:
             response = self.rxsocket.recv(self.UDPMaxRx)
@@ -68,7 +89,7 @@ class RdmaUDP(object):
             if len(response) == 56:
                 decoded = struct.unpack('=IIIIQQQQQ', response)
                 data = decoded[3]
-                #logging.debug([hex(val) for val in decoded])
+                # logging.debug([hex(val) for val in decoded])
 
         if self.debug:
             logging.debug('R %08X : %08X %s' % (address, data, comment))
@@ -76,22 +97,22 @@ class RdmaUDP(object):
         return data
 
     def write(self, address, data, comment=''):
-        """
-        Writes data to address
-        """
+        """Write data to address."""
         if self.debug:
             logging.debug('W %08X : %08X %s' % (address, data, comment))
 
-        #create single write command + 5 data cycle nop command for padding
-        command = struct.pack('=BBBBIQBBBBIQQQQQ', 1,0,0,2, address, data, 9,0,0,255,0, 0,0,0,0,0)
+        # create single write command + 5 data cycle nop command for padding
+        command = struct.pack('=BBBBIQBBBBIQQQQQ', 1, 0, 0, 2, address, data,
+                              9, 0, 0, 255, 0, 0, 0, 0, 0, 0)
 
-        #Send the single write command packet
-        self.txsocket.sendto(command,(self.TgtRxUDPIPAddr,self.TgtRxUDPIPPrt))
+        # Send the single write command packet
+        self.txsocket.sendto(command, (self.TgtRxUDPIPAddr, self.TgtRxUDPIPPrt))
 
         if self.ack:
-            #receive acknowledge packet
-            response = self.rxsocket.recv(self.UDPMaxRx)
-            #TODO: Remove as redundant?
+            # receive acknowledge packet
+            # response = self.rxsocket.recv(self.UDPMaxRx)
+            _ = self.rxsocket.recv(self.UDPMaxRx)
+            # TODO: Remove as redundant?
             # #time.sleep(10)
             # if len(response) == 48:
             #     decoded = struct.unpack('=IIIIQQQQ', response)
@@ -100,12 +121,10 @@ class RdmaUDP(object):
         return
 
     def close(self):
+        """Close sockets."""
         self.txsocket.close()
         self.rxsocket.close()
 
-        return
-
     def setDebug(self, enabled=True):
+        """Set debug messaging."""
         self.debug = enabled
-
-        return

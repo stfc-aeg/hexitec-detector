@@ -16,6 +16,7 @@ import threading
 
 #import pdb; pdb.set_trace() # DEBUGGING
 
+
 class HexitecFrame(object):
     """
     Container class for Hexitec frame packet data
@@ -123,11 +124,11 @@ class CsvAction(argparse.Action):
     Comma separated list of values action for argument parser.
     """
     def __init__(self, val_type=None, *args, **kwargs):
-        self.val_type =val_type
+        self.val_type = val_type
         super(CsvAction, self).__init__(*args, **kwargs)
-        
+
     def __call__(self, parser, namespace, value, option_string=None):
-        item_list=[]
+        item_list = []
         try:
             for item_str in value.split(','):
                 item_list.append(self.val_type(item_str))
@@ -135,10 +136,11 @@ class CsvAction(argparse.Action):
             raise argparse.ArgumentError(self, e)
         setattr(namespace, self.dest, item_list)
 
+
 class HexitecFrameProducer(object):
     """
-    Hexitec frame procducer - loads frame packets data from capture file and replays it to
-    a receiver via a UDP socket.
+    Hexitec frame procducer - loads frame packets data from
+    capture file and replays it to a receiver via a UDP socket.
     """
 
     def __init__(self):
@@ -231,7 +233,7 @@ class HexitecFrameProducer(object):
             level=log_level, format='%(levelname)1.1s %(message)s',
             datefmt='%y%m%d %H:%M:%S'
         )
-            
+
         # Initialise the packet capture file reader
         self.pcap = dpkt.pcap.Reader(self.args.pcap_file)
 
@@ -241,7 +243,7 @@ class HexitecFrameProducer(object):
         """
         self.load_pcap()
         self.send_frames()
-        
+
     def load_pcap(self):
         """
         Load frame packets from a packet capture file.
@@ -341,17 +343,17 @@ class HexitecFrameProducer(object):
         )
 
     def send_frames(self):
-        
+
         logging.info("Launching threads to send frames to {} destination ports".format(
             len(self.args.ports)
         ))
-        
+
         send_threads = []
         for port in self.args.ports:
             send_thread = threading.Thread(target=self._send_frames, args=(port,))
             send_threads.append(send_thread)
             send_thread.start()
-            
+
     def _send_frames(self, port):
         """
         Send loaded frames over UDP socket.
@@ -366,7 +368,7 @@ class HexitecFrameProducer(object):
 
         logging.info(
             "Sending %d frames to destination %s:%d ...",
-            frames_to_send, self.args.ip_addr, port 
+            frames_to_send, self.args.ip_addr, port
         )
 
         # Create the UDP socket
@@ -448,6 +450,7 @@ class HexitecFrameProducer(object):
         )
 
         udp_socket.close()
+
 
 if __name__ == '__main__':
 

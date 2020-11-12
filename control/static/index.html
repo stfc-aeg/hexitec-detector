@@ -34,30 +34,19 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">ODIN</a>
+          <a class="navbar-brand" href="https://github.com/stfc-aeg/odin-workshop">ODIN</a>
         </div>
-        <div id="navbar" class="collapse navbar-collapse">
+        <!-- <div id="navbar" class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
             <li class="active"><a href="#">Home</a></li>
             <li><a href="#about">About</a></li>
             <li><a href="#contact">Contact</a></li>
           </ul>
-        </div><!--/.nav-collapse -->
+        </div> -->
+        <!--/.nav-collapse -->
       </div>
     </nav>
     
-    <table class="overall-table" align="center">
-      <thead></thead>
-      <tbody>
-        <tr>
-          <input type="button" class="btn btn-primary" id='storeButton' name="store_enable" data-size="small" value="store">
-          <input type="button" class="btn btn-primary" id='testButton' name="store_enable" data-size="small" value="test_stuff">
-          Adding Apply button:&nbsp;
-          <input type="button" class="btn btn-primary" id='applyButton' name="store_enable" data-size="small" value="apply">
-        </tr>
-      </tbody>
-    </table>
-  
     <!-- HDF plugin settings settings -->
 
     <div class="well sidebar-nav-fixed">
@@ -65,49 +54,6 @@
         <thead></thead>
         <tbody>
 
-          <!-- <tr> 
-            <td>
-              <th>hdf/write&nbsp;</th>
-            </td>
-            <td>&nbsp;</td>
-            <td>
-              <div class="row sidebar-row vertical-align">
-                <div class="col-xs-7">
-                  <input type="checkbox" id='hdfWriteButton' name="hdf_write_enable" data-size="small">
-                </div>
-              </div>
-            </td>
-            <td>
-              &nbsp;<span id="hdf-write-enable-warning">&nbsp;</span>
-            </td>
-          </tr> -->
-
-          <tr>  
-            <td>  
-              FR Config File:&nbsp;
-            </td>
-            <td>
-              <div class="text-rows">
-                <input type="text" id="fr-config-text" onChange='fr_config_changed()' placeholder="fr_config.json" value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/config/fr_hexitec_config.json">
-              </div>
-            </td>
-            <td>
-              &nbsp;<td><span id="fr-config-warning">&nbsp;</span></td>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              FP Config File:&nbsp;
-            </td>
-            <td>
-              <div class="text-columns">
-                <input type="text" id="fp-config-text" onChange='fp_config_changed()' placeholder="fp_config.json" value= "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/config/fp_hexitec_minimum_config.json">
-              </div>
-            </td>
-            <td>
-              &nbsp;<td><span id="fp-config-warning">&nbsp;</span></td>
-            </td>
-          </tr>
           <tr>
             <td>
               hdf/file/path:&nbsp;
@@ -136,11 +82,11 @@
           </tr>
           <tr>
             <td>
-              Hexitec config:&nbsp;
+              Hexitec Config:&nbsp;
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' value= "/u/ckd27546/tmp/win_2x2/hexitec_blankly.ini">
+                <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' value= "control/config/hexitec_unified_CSD__performance.ini">
               </div>
             </td>
             <td>
@@ -185,11 +131,7 @@
                   <input type="checkbox" id='durationButton' name="duration_enable" data-size="small">
                 </div>
               </div>
-            </td>  
-            <td>&nbsp;On = Duration in second, Off = number of frames</td>
-            </td>
           </tr>
-
 
           <tr>
             <td>
@@ -219,18 +161,10 @@
           </tr>
           <tr>
             <td>
-              Test Mode:&nbsp;
+              Apply:&nbsp;
             </td>
             <td>
-              <select onchange="vcalChange(this.value)">
-                <option value="0">0</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option selected="selected" value="3">3</option>
-              </select>
-            </td>
-            <td>
-              &nbsp;<td><span id="vcal-warning">&nbsp;</span></td>
+              <input type="button" class="btn btn-primary" id='applyButton' name="store_enable" data-size="small" value="Apply">
             </td>
           </tr>
           <!-- Single traffic light to indicate system health -->
@@ -244,6 +178,7 @@
               <input type="button" class="btn btn-primary" id='connectButton' name="dc_connect" data-size="small" value="Connect">
               <input type="button" class="btn btn-primary" id='initialiseButton' name="dc_initialise" data-size="small" value="Initialise">
               <input type="button" class="btn btn-primary" id='acquireButton' name="dc_acquire" data-size="small" value="Acquire">
+              <input type="button" class="btn btn-primary" id='cancelButton' name="dc_cancel" data-size="small" value="Cancel">
               <input type="button" class="btn btn-primary" id='disconnectButton' name="dc_disconnect" data-size="small" value="Disconnect">
             </td>
           </tr>
@@ -279,54 +214,316 @@
             <td>
             </td>
           </tr>
-          <!-- Display VSRs' environmental data -->
+          <!-- Display ODIN FP/FR frame/packet info -->
+        </tbody>
+      </table>
+    </div> <!-- well sidebar-nav-fixed -->
+
+    <!-- Hardware settings section -->
+    <div class="well sidebar-nav-fixed">
+      <table class="overall-table" align="center">
+        <thead></thead>
+        <tbody>
+          <tr>
+            <td>
+              <b>&nbsp;Frame rate:&nbsp;</b><span id="frame_rate" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              <b>&nbsp;Frames received:&nbsp;</b><span id="frames_received" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              pkts&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;released:&nbsp;</b><span id="frames_released" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              pkts&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;dropped:&nbsp;</b><span id="frames_dropped" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              pkts&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;timedout:&nbsp;</b><span id="frames_timedout" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              pkts&nbsp;
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <b>&nbsp;acquire start:&nbsp;</b><span id="acquire_start" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              <b>&nbsp;FEM packets_lost:&nbsp;</b><span id="fem_packets_lost" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              pkts&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;FR packets_lost:&nbsp;</b><span id="packets_lost" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              pkts&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;Buffers empty:&nbsp;</b><span id="buffers_empty" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              buffs&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;mapped:&nbsp;</b><span id="buffers_mapped" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              buffs&nbsp;
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <b>&nbsp;acquire stop:&nbsp;</b><span id="acquire_stop" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              <b>&nbsp;vsr1_ambient:&nbsp;</b><span id="vsr1_ambient" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              C&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;humidity:&nbsp;</b><span id="vsr1_humidity" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              %&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;asic1:&nbsp;</b><span id="vsr1_asic1" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              C&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;asic2:&nbsp;</b><span id="vsr1_asic2" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              C&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;adc:&nbsp;</b><span id="vsr1_adc" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              C&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;HV:&nbsp;</b><span id="vsr1_hv" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              V&nbsp;
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <b>&nbsp;acquire time:&nbsp;</b><span id="acquire_time" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              <b>&nbsp;vsr2_ambient:&nbsp;</b><span id="vsr2_ambient" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              C&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;humidity:&nbsp;</b><span id="vsr2_humidity" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              %&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;asic1:&nbsp;</b><span id="vsr2_asic1" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              C&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;asic2:&nbsp;</b><span id="vsr2_asic2" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              C&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;adc:&nbsp;</b><span id="vsr2_adc" style="float:right">&nbsp;</span>  
+            </td>
+            <td>
+              C&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;HV:&nbsp;</b><span id="vsr2_hv" style="float:right">&nbsp;</span>
+            </td>
+            <td>
+              V&nbsp;
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <b>&nbsp;daq start:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b><span id="daq_start">&nbsp;</span>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <b>&nbsp;fem not busy:&nbsp;</b><span id="fem_not_busy">&nbsp;</span>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <b>&nbsp;daq stop:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b><span id="daq_stop">&nbsp;</span>
+            </td>
+          </tr>
+          <!--  -->
           <tr>
             <td>
             </td>
             <td>
             </td>
-            <td>
-              <b>&nbsp;vsr1_ambient:&nbsp;</b><span id="vsr1_ambient">&nbsp;</span>
+            <!-- <td>
+              <b>&nbsp;Frames received:&nbsp;</b><span id="frames_received">&nbsp;</span>
             </td>
             <td>
-              <b>&nbsp;humidity:&nbsp;</b><span id="vsr1_humidity">&nbsp;</span>
+              pkts&nbsp;
             </td>
             <td>
-              <b>&nbsp;asic1:&nbsp;</b><span id="vsr1_asic1">&nbsp;</span>
+              <b>&nbsp;released:&nbsp;</b><span id="frames_released">&nbsp;</span>
             </td>
             <td>
-              <b>&nbsp;asic2:&nbsp;</b><span id="vsr1_asic2">&nbsp;</span>
+              pkts&nbsp;
             </td>
             <td>
-              <b>&nbsp;adc:&nbsp;</b><span id="vsr1_adc">&nbsp;</span>
+              <b>&nbsp;dropped:&nbsp;</b><span id="frames_dropped">&nbsp;</span>
             </td>
             <td>
-              <b>&nbsp;HV:&nbsp;</b><span id="vsr1_hv">&nbsp;</span>
+              pkts&nbsp;
             </td>
+            <td>
+              <b>&nbsp;timedout:&nbsp;</b><span id="frames_timedout">&nbsp;</span>
+            </td>
+            <td>
+              pkts&nbsp;
+            </td> -->
           </tr>
           <tr>
             <td>
             </td>
             <td>
             </td>
+            <!-- <td>
+              <b>&nbsp;fem packets_lost:&nbsp;</b><span id="fem_packets_lost">&nbsp;</span>
+            </td>
             <td>
+              pkts&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;packets_lost:&nbsp;</b><span id="packets_lost">&nbsp;</span>
+            </td>
+            <td>
+              pkts&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;Buffers empty:&nbsp;</b><span id="buffers_empty">&nbsp;</span>
+            </td>
+            <td>
+              buffs&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;mapped:&nbsp;</b><span id="buffers_mapped">&nbsp;</span>
+            </td>
+            <td>
+              buffs&nbsp;
+            </td> -->
+          </tr>
+          <!-- Display VSRs' environmental data -->
+          <tr>
+            <td>
+            </td>
+            <td>
+            </td>
+            <!-- <td>
+              <b>&nbsp;vsr1_ambient:&nbsp;</b><span id="vsr1_ambient">&nbsp;</span>
+            </td>
+            <td>
+              C&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;humidity:&nbsp;</b><span id="vsr1_humidity">&nbsp;</span>
+            </td>
+            <td>
+              %&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;asic1:&nbsp;</b><span id="vsr1_asic1">&nbsp;</span>
+            </td>
+            <td>
+              C&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;asic2:&nbsp;</b><span id="vsr1_asic2">&nbsp;</span>
+            </td>
+            <td>
+              C&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;adc:&nbsp;</b><span id="vsr1_adc">&nbsp;</span>
+            </td>
+            <td>
+              C&nbsp;
+            </td>
+            <td>
+              <b>&nbsp;HV:&nbsp;</b><span id="vsr1_hv">&nbsp;</span>
+            </td>
+            <td>
+              V&nbsp;
+            </td> -->
+          </tr>
+          <tr>
+            <td>
+            </td>
+            <td>
+            </td>
+            <!-- <td>
               <b>&nbsp;vsr2_ambient:&nbsp;</b><span id="vsr2_ambient">&nbsp;</span>
+            </td>
+            <td>
+              C&nbsp;
             </td>
             <td>
               <b>&nbsp;humidity:&nbsp;</b><span id="vsr2_humidity">&nbsp;</span>
             </td>
             <td>
+              %&nbsp;
+            </td>
+            <td>
               <b>&nbsp;asic1:&nbsp;</b><span id="vsr2_asic1">&nbsp;</span>
+            </td>
+            <td>
+              C&nbsp;
             </td>
             <td>
               <b>&nbsp;asic2:&nbsp;</b><span id="vsr2_asic2">&nbsp;</span>
             </td>
             <td>
+              C&nbsp;
+            </td>
+            <td>
               <b>&nbsp;adc:&nbsp;</b><span id="vsr2_adc">&nbsp;</span>  
+            </td>
+            <td>
+              C&nbsp;
             </td>
             <td>
               <b>&nbsp;HV:&nbsp;</b><span id="vsr2_hv">&nbsp;</span>
             </td>
+            <td>
+              V&nbsp;
+            </td> -->
           </tr>
         </tbody>
       </table>
@@ -339,14 +536,6 @@
         <tbody>
           <tr>  
             <td>  
-              <th>Reorder&nbsp;</th>
-            </td>
-            <td>&nbsp;</td>
-            <td>
-            </td>
-          </tr>
-          <tr>  
-            <td>  
               <th>Raw Data&nbsp;</th>
             </td>
             <td>&nbsp;</td>
@@ -354,6 +543,19 @@
               <div class="row sidebar-row vertical-align">
                 <div class="col-xs-7">
                   <input type="checkbox" id='rawDataButton' name="raw_data_enable" data-size="small">
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <th>Processed Data&nbsp;</th>
+            </td>
+            <td>&nbsp;</td>
+            <td>
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
+                  <input type="checkbox" id='processedDataButton' name="processed_data_enable" data-size="small">
                 </div>
               </div>
             </td>
@@ -378,7 +580,7 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="threshold-filename-text" onChange='threshold_filename_changed()' value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/thresh_2018_01_001_400V_20C.txt">
+                <input type="text" id="threshold-filename-text" onChange='threshold_filename_changed()' value="data/config/thresh_2018_01_001_400V_20C.txt">
               </div>
             </td>
           </tr>
@@ -395,7 +597,7 @@
             </td>
             <td>  
               <div class="text-integer">
-                <input type="text" id="threshold-value-text" onChange='threshold_value_changed()' value="0">
+                <input type="text" id="threshold-value-text" onChange='threshold_value_changed()' value="120">
               </div>
             </td>
             <td>
@@ -450,7 +652,7 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="gradients-filename-text" onChange='gradients_filename_changed()' value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/m_2018_01_001_400V_20C.txt">
+                <input type="text" id="gradients-filename-text" onChange='gradients_filename_changed()' value="data/config/m_2018_01_001_400V_20C.txt">
               </div>
             </td>
           </tr>
@@ -465,7 +667,7 @@
             </td>
             <td>
               <div class="text-characters">
-                <input type="text" id="intercepts-filename-text" onChange='intercepts_filename_changed()' value="/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/c_2018_01_001_400V_20C.txt">
+                <input type="text" id="intercepts-filename-text" onChange='intercepts_filename_changed()' value="data/config/c_2018_01_001_400V_20C.txt">
               </div>
             </td>
             <td>
@@ -516,7 +718,7 @@
           </tr>
           <tr>
             <td>
-              Bin Start:&nbsp;
+              <div id="bin_start">Bin Start: [ADU]&nbsp;</div>
             </td>
             <td>
               <div class="text-columns">
@@ -529,7 +731,7 @@
           </tr>
           <tr>
             <td>
-              Bin End:&nbsp;
+              <div id="bin_end">Bin End: [ADU]&nbsp;</div>
             </td>
             <td>
               <div class="text-columns">
@@ -543,7 +745,7 @@
           </tr>
           <tr>
             <td> 
-              Bin Width:&nbsp;
+              <div id="bin_width">Bin Width: [ADU]&nbsp;</div>
             </td>
             <td> 
               <div class="text-columns">

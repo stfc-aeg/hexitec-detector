@@ -386,10 +386,8 @@ void HexitecFrameDecoder::initialise_frame_header(Hexitec::FrameHeader* header_p
   {
     header_ptr->active_fem_idx = (it->second).fem_idx_;
   }
-  //memset(header_ptr->fem_rx_state, 0, sizeof(Hexitec::FemReceiveState));	//  No longer an array, do not need to copy 0's into it
 
   gettime(reinterpret_cast<struct timespec*>(&(header_ptr->frame_start_time)));
-
 }
 
 //! Get a pointer to the next payload buffer.

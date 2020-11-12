@@ -197,79 +197,64 @@ namespace FrameProcessor
     void* input_ptr = static_cast<void *>(
         static_cast<char *>(const_cast<void *>(data_ptr)));
 
-    // Pointer to raw image buffer
-    void* raw_image = NULL;
-
     try
     {
-      // Allocate buffer for raw data
-      raw_image = (void*)malloc(output_image_size);
-      if (raw_image == NULL)
+      FrameMetaData frame_meta;
+
+      // Frame meta data common to both datasets
+      dimensions_t dims(2);
+      dims[0] = image_height_;
+      dims[1] = image_width_;
+      frame_meta.set_dimensions(dims);
+      frame_meta.set_compression_type(no_compression);
+      frame_meta.set_data_type(raw_float);
+      frame_meta.set_frame_number(hdr_ptr->frame_number);
+
+      // For processed_frames dataset, reuse existing meta data as only the dataset name will differ
+
+      // Set the dataset name
+      frame_meta.set_dataset_name("processed_frames");
+
+      boost::shared_ptr<Frame> data_frame;
+      data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
+        output_image_size));
+
+      // Get a pointer to the data buffer in the output frame
+      void* output_ptr = data_frame->get_data_ptr();
+
+      // Turn unsigned short raw pixel data into float data type
+      convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
+                                        static_cast<float *>(output_ptr));
+
+      const std::string& dataset = frame_meta.get_dataset_name();
+      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: " <<
+                    data_frame->get_frame_number());
+      this->push(data_frame);
+
+      // Only construct raw data frame if configured
+      if (write_raw_data_)
       {
-        this->set_error("Failed to allocate temporary buffer for reordered image");
-        throw std::runtime_error("Failed to allocate temporary buffer for raw image");
-      }
-
-      if (raw_image)
-      {
-        // Frame modification now available
-        FrameMetaData frame_meta;
-
-        // Setup of the frame dimensions
-        dimensions_t dims(2);
-        dims[0] = image_height_;
-        dims[1] = image_width_;
-        frame_meta.set_dimensions(dims);
-
-        frame_meta.set_compression_type(no_compression);
-
-        frame_meta.set_data_type(raw_float);
-        frame_meta.set_frame_number(hdr_ptr->frame_number);
-
-        // Only construct raw data frame if configured
-        if (write_raw_data_)
-        {
-          // Set the dataset name
-          frame_meta.set_dataset_name("raw_frames");
-
-          boost::shared_ptr<Frame> raw_frame;
-          raw_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
-                                                                  output_image_size));
-
-          // Get a pointer to the data buffer in the output frame
-          void* output_ptr = raw_frame->get_data_ptr();
-
-          // Turn unsigned short raw pixel data into float data type
-          convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
-            static_cast<float *>(output_ptr));
-
-          LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: " <<
-                        raw_frame->get_frame_number());
-          this->push(raw_frame);
-        }
-
-        // For data dataset, reuse existing meta data as only the dataset name will differ
-
         // Set the dataset name
-        frame_meta.set_dataset_name("data");
+        frame_meta.set_dataset_name("raw_frames");
 
-        boost::shared_ptr<Frame> data_frame;
-        data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
-          output_image_size));
+        boost::shared_ptr<Frame> raw_frame;
+        raw_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
+                                                                output_image_size));
 
         // Get a pointer to the data buffer in the output frame
-        void* output_ptr = data_frame->get_data_ptr();
+        void* output_ptr = raw_frame->get_data_ptr();
 
         // Turn unsigned short raw pixel data into float data type
         convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
-                                          static_cast<float *>(output_ptr));
+          static_cast<float *>(output_ptr));
 
-        LOG4CXX_TRACE(logger_, "Pushing data dataset, frame number: " <<
-                      data_frame->get_frame_number());
-        this->push(data_frame);
-        // Manually update frame_number (until fixed in firmware)
-        frame_number_++;
+        LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: " <<
+                      raw_frame->get_frame_number());
+        this->push(raw_frame);
       }
+
+      // Manually update frame_number (until fixed in firmware)
+      frame_number_++;
     }
     catch (const std::exception& e)
     {
