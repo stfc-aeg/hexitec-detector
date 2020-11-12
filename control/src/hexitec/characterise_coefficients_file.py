@@ -35,4 +35,4 @@ if __name__ == '__main__':
         print("\n")
         print("Data types for calib: float, thresh: int8")
         print("Usage: python characterise_coefficients_file.py <file> <datatype>")
-        print("i.e.: python characterise_coefficients_file.py /u/ckd27546/tmp/m_coeffs.txt float")
+        print("i.e.: python characterise_coefficients_file.py ~/tmp/m_coeffs.txt float")

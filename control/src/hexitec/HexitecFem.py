@@ -6,13 +6,14 @@ Christian Angelsen, STFC Detector Systems Software Group, 2019.
 
 from __future__ import division
 import numpy as np
-# Required to convert str into bool:
+# Required to convert str to bool:
 import distutils.util
 
 import time
 from datetime import datetime
 import logging
 import configparser
+import os
 
 from hexitec.RdmaUDP import RdmaUDP
 
@@ -125,6 +126,11 @@ class HexitecFem():
         self.ignore_busy = False
 
         self.health = True
+
+        # Construct path to hexitec source code
+        cwd = os.getcwd()
+        index = cwd.find("control")
+        self.base_path = cwd[:index]
 
         # Variables supporting frames to duration conversion
         self.row_s1 = 135
@@ -2151,6 +2157,7 @@ class HexitecFem():
 
     def _set_hexitec_config(self, filename):
         """Check whether file exists, load parameters from file."""
+        filename = self.base_path + filename
         try:
             with open(filename, 'r') as f:  # noqa: F841
                 pass

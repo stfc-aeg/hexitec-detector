@@ -2,7 +2,7 @@
 
 Created on Sept 26, 2018
 
-@author: ckd27546
+@author: Christian Angelsen
 """
 
 from __future__ import print_function

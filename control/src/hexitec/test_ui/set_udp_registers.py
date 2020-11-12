@@ -177,4 +177,4 @@ if __name__ == '__main__':
         print("Usage:")
         print("set_udp_registers.py <json_file> <fem_id>")
         print("such as:")
-        print("set_udp_registers.py /u/ckd27546/develop/projects/odin-demo/hexitec-detector/control/src/hexitec/test_ui/fem_addresses.json 0")
+        print("set_udp_registers.py /path/to/control/src/hexitec/test_ui/fem_addresses.json 0")

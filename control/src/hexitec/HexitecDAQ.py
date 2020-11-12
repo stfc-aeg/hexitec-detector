@@ -3,9 +3,8 @@ HexitecDAQ for Hexitec ODIN control.
 
 Christian Angelsen, STFC Detector Systems Software Group
 """
-import logging
 
-from os import path
+import logging
 from functools import partial
 
 from tornado.ioloop import IOLoop
@@ -17,8 +16,8 @@ from hexitec.GenerateConfigFiles import GenerateConfigFiles
 import h5py
 from datetime import datetime
 import collections.abc
-import os.path
 import time
+import os
 
 
 class HexitecDAQ():
@@ -69,6 +68,11 @@ class HexitecDAQ():
 
         self.hdf_file_location = ""
         self.hdf_retry = 0
+
+        # Construct path to hexitec source code
+        cwd = os.getcwd()
+        index = cwd.find("control")
+        self.base_path = cwd[:index]
 
         # ParameterTree variables
 
@@ -510,8 +514,8 @@ class HexitecDAQ():
         self.adapters["fp"].put(command, request)
 
     def _config_odin_data(self, adapter):
-        config = path.join(self.config_dir, self.config_files[adapter])
-        config = path.expanduser(config)
+        config = os.path.join(self.config_dir, self.config_files[adapter])
+        config = os.path.expanduser(config)
         if not config.startswith('/'):
             config = '/' + config
         logging.debug(config)
@@ -548,12 +552,14 @@ class HexitecDAQ():
             raise ParameterTreeError("Must be either 3 or 5")
 
     def _set_gradients_filename(self, gradients_filename):
-        if (path.isfile(gradients_filename) is False):
+        gradients_filename = self.base_path + gradients_filename
+        if (os.path.isfile(gradients_filename) is False):
             raise ParameterTreeError("Gradients file doesn't exist")
         self.gradients_filename = gradients_filename
 
     def _set_intercepts_filename(self, intercepts_filename):
-        if (path.isfile(intercepts_filename) is False):
+        intercepts_filename = self.base_path + intercepts_filename
+        if (os.path.isfile(intercepts_filename) is False):
             raise ParameterTreeError("Intercepts file doesn't exist")
         self.intercepts_filename = intercepts_filename
 
@@ -614,7 +620,8 @@ class HexitecDAQ():
         self.raw_data = raw_data
 
     def _set_threshold_filename(self, threshold_filename):
-        if (path.isfile(threshold_filename) is False):
+        threshold_filename = self.base_path + threshold_filename
+        if (os.path.isfile(threshold_filename) is False):
             raise ParameterTreeError("Threshold file doesn't exist")
         self.threshold_filename = threshold_filename
 

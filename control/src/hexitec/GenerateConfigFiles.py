@@ -6,6 +6,7 @@ Christian Angelsen, STFC Detector Systems Software Group
 
 import tempfile
 import logging
+import os
 from collections import OrderedDict
 
 
@@ -114,7 +115,7 @@ class GenerateConfigFiles():
         # plugin path that follows the same format i.e. ("reorder", "Reorder", "Reorder")
         # "index": "reorder",
         # "name": "HexitecReorderPlugin",
-        # "library": "/u/ckd27546/develop/projects/odin-demo/install/lib/libHexitecReorderPlugin.so"
+        # "library": "~/develop/projects/odin-demo/install/lib/libHexitecReorderPlugin.so"
 
         standard_path = {}
         standard_path['reorder'] = ["reorder", "Reorder", "Reorder"]
@@ -128,10 +129,10 @@ class GenerateConfigFiles():
         # Plugin path that doesn't follow the same format (as the others)
         # "index": "live_view",
         # "name": "LiveViewPlugin",
-        # "library": "/u/ckd27546/develop/projects/odin-demo/install/lib/libLiveViewPlugin.so"
+        # "library": "~/develop/projects/odin-demo/install/lib/libLiveViewPlugin.so"
         # "index": "hdf",
         # "name": "FileWriterPlugin",
-        # "library": "/u/ckd27546/develop/projects/odin-demo/install/lib/libHdf5Plugin.so"
+        # "library": "~/develop/projects/odin-demo/install/lib/libHdf5Plugin.so"
 
         nonstandard_path = {}
         nonstandard_path["live_view"] = ["live_view", "LiveView", "LiveView"]
@@ -168,7 +169,11 @@ class GenerateConfigFiles():
 
         sample_plugins += ["histogram", "live_view", "hdf"]
 
-        odin_path = "/u/ckd27546/develop/projects/odin-demo"
+        # Construct path relative to current working directory
+        cwd = os.getcwd()
+        base_path_index = cwd.find("hexitec-detector")
+        odin_path = cwd[:base_path_index - 1]
+
         store_plugin_paths = ""
 
         # Build config for standard paths

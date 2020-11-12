@@ -8,7 +8,7 @@
 	"rx_address": "127.0.0.1",
 	"rx_ports": "61651",
 	"max_buffer_mem": 840000000,
-	"decoder_path": "/u/ckd27546/develop/projects/odin-demo/install/lib/",
+	"decoder_path": "lib/",
 	"decoder_type": "Hexitec",
 	"decoder_config": {
 	    "enable_packet_logging": false,

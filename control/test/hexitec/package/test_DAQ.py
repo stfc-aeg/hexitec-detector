@@ -8,6 +8,7 @@ import pytest
 import time
 import os.path
 import h5py
+from shutil import copyfile
 
 from odin.adapters.parameter_tree import ParameterTreeError
 
@@ -114,6 +115,16 @@ class DAQTestFixture(object):
             "file_interface": self.fake_fi
         }
 
+        # Construct paths relative to current working directory
+        cwd = os.getcwd()
+        base_path_index = cwd.find("hexitec-detector")
+        base_path = cwd[:base_path_index]
+        self.odin_control_path = base_path + "hexitec-detector/control/"
+        self.odin_data_path = base_path + "hexitec-detector/data/"
+
+        gradients_filename = self.odin_data_path + "config/m_2018_01_001_400V_20C.txt"
+        intercepts_filename = self.odin_data_path + "config/c_2018_01_001_400V_20C.txt"
+
         # Fake parameter tree
         self.parameter_dict = \
             {'odin_version': '0.3.1+102.g01c51d7', 'tornado_version': '4.5.3',
@@ -126,7 +137,7 @@ class DAQTestFixture(object):
                 'health': True, 'status_message': '', 'status_error': '',
                 'initialise_progress': 0,
                 'operation_percentage_complete': 100, 'number_frames': 10, 'duration': 1,
-                'hexitec_config': '~/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/m_2018_01_001_400V_20C.txt', 'read_sensors': None,
+                'hexitec_config': '~/path/to/config_file',
                 'read_sensors': None, 'hardware_connected': True, 'hardware_busy': False,
                 'firmware_date': 'N/A', 'firmware_time': 'N/A',
                 'vsr1_sensors':
@@ -137,15 +148,15 @@ class DAQTestFixture(object):
               {'diagnostics':
                {'daq_start_time': '', 'daq_stop_time': '', 'fem_not_busy': ''},
                'receiver': {'connected': True, 'configured': True, 'config_file': 'fr_hexitec_config.json'},
-               'processor': {'connected': True, 'configured': True, 'config_file': 'fp_hexitec_minimum_config.json'},
+               'processor': {'connected': True, 'configured': True, 'config_file': 'file.json'},
                'file_info': {'enabled': False, 'file_name': 'filename', 'file_dir': '/tmp/'},
                'in_progress': True,
                'config':
                {'addition': {'enable': False, 'pixel_grid_size': 3},
                 'calibration':
                 {'enable': False,
-                 'gradients_filename': '/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/m_2018_01_001_400V_20C.txt',
-                 'intercepts_filename': '/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/c_2018_01_001_400V_20C.txt'},
+                 'gradients_filename': gradients_filename,
+                 'intercepts_filename': intercepts_filename},
                 'discrimination': {'enable': False, 'pixel_grid_size': 3},
                 'histogram':
                 {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10, 'max_frames_received': 10,
@@ -490,18 +501,14 @@ class TestDAQ():
     def test_write_metadata(self, test_daq):
         """Test function works ok."""
         # Need a processed file without meta data (this has been preprepared!)
-        odin_path = "/u/ckd27546/develop/projects/odin-demo"
-        hexitec_path = "/hexitec-detector/control/test/hexitec/data_file"
-        hdf5_file = odin_path + hexitec_path + "/data_without_meta.h5"
+        hdf5_file = test_daq.odin_control_path + "/test/hexitec/data_file/data_without_meta.h5"
 
-        import os.path
         if (os.path.exists(hdf5_file)):
             pass
         else:
             raise Exception("Test HDF5 file not found! (%s)" % hdf5_file)
 
         # Make a copy, run test on this copy
-        from shutil import copyfile
         dummy_file = "/tmp/dummy.h5"
         try:
             copyfile(hdf5_file, dummy_file)
@@ -525,18 +532,14 @@ class TestDAQ():
     def test_write_metadata_handles_ioerror(self, test_daq):
         """Test function handles I/OError appropriately."""
         # Need a processed file without meta data (this has been preprepared!)
-        odin_path = "/u/ckd27546/develop/projects/odin-demo"
-        hexitec_path = "/hexitec-detector/control/test/hexitec/data_file"
-        hdf5_file = odin_path + hexitec_path + "/data_without_meta.h5"
+        hdf5_file = test_daq.odin_control_path + "/test/hexitec/data_file/data_without_meta.h5"
 
-        import os.path
         if (os.path.exists(hdf5_file)):
             pass
         else:
             raise Exception("Test HDF5 file not found! (%s)" % hdf5_file)
 
         # Make a copy, run test on this copy
-        from shutil import copyfile
         dummy_file = "/tmp/dummy.h5"
         try:
             copyfile(hdf5_file, dummy_file)
@@ -562,18 +565,14 @@ class TestDAQ():
     def test_write_metadata_handles_exception(self, test_daq):
         """Test function handles (unexpected) exception."""
         # Need a processed file without meta data (this has been preprepared!)
-        odin_path = "/u/ckd27546/develop/projects/odin-demo"
-        hexitec_path = "/hexitec-detector/control/test/hexitec/data_file"
-        hdf5_file = odin_path + hexitec_path + "/data_without_meta.h5"
+        hdf5_file = test_daq.odin_control_path + "/test/hexitec/data_file/data_without_meta.h5"
 
-        import os.path
         if (os.path.exists(hdf5_file)):
             pass
         else:
             raise Exception("Test HDF5 file not found! (%s)" % hdf5_file)
 
         # Make a copy, run test on this copy
-        from shutil import copyfile
         dummy_file = "/tmp/dummy.h5"
         try:
             copyfile(hdf5_file, dummy_file)
@@ -601,31 +600,40 @@ class TestDAQ():
     # test_write_metadata_handles_missing_file()
     def test_set_gradients_filename(self, test_daq):
         """Tested setting gradients file."""
-        odin_path = "/u/ckd27546/develop/projects/odin-demo"
-        hexitec_path = "/hexitec-detector/data/frameProcessor/"
-        gradients_filename = odin_path + hexitec_path + "m_2018_01_001_400V_20C.txt"
+        gradients_filename = "data/config/m_2018_01_001_400V_20C.txt"
         test_daq.daq._set_gradients_filename(gradients_filename)
-        assert gradients_filename == test_daq.daq.gradients_filename
+
+        # Verify relative paths match:
+        gradients_file = test_daq.daq.gradients_filename
+        index = gradients_file.find("data")
+        verified_filename = gradients_file[index:]
+        assert gradients_filename == verified_filename
 
         with pytest.raises(ParameterTreeError, match="Gradients file doesn't exist"):
             test_daq.daq._set_gradients_filename("rubbish_filename.txt")
 
     def test_set_intercepts_filename(self, test_daq):
         """Test setting intercepts filename."""
-        path = "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/"
-        intercepts_filename = path + "c_2018_01_001_400V_20C.txt"
+        intercepts_filename = "data/config/c_2018_01_001_400V_20C.txt"
         test_daq.daq._set_intercepts_filename(intercepts_filename)
-        assert intercepts_filename == test_daq.daq.intercepts_filename
+        # Verify relative paths match:
+        intercepts_file = test_daq.daq.intercepts_filename
+        index = intercepts_file.find("data")
+        verified_filename = intercepts_file[index:]
+        assert intercepts_filename == verified_filename
 
         with pytest.raises(ParameterTreeError, match="Intercepts file doesn't exist"):
             test_daq.daq._set_intercepts_filename("rubbish_filename.txt")
 
     def test_set_threshold_filename(self, test_daq):
         """Test setting threshold file name."""
-        path = "/u/ckd27546/develop/projects/odin-demo/hexitec-detector/data/frameProcessor/"
-        threshold_filename = path + "thresh_2018_01_001_400V_20C.txt"
+        threshold_filename = "data/config/thresh_2018_01_001_400V_20C.txt"
         test_daq.daq._set_threshold_filename(threshold_filename)
-        assert threshold_filename == test_daq.daq.threshold_filename
+        # Verify relative paths match:
+        threshold_file = test_daq.daq.threshold_filename
+        index = threshold_file.find("data")
+        verified_filename = threshold_file[index:]
+        assert threshold_filename == verified_filename
 
         with pytest.raises(ParameterTreeError, match="Threshold file doesn't exist"):
             test_daq.daq._set_threshold_filename("rubbish_filename.txt")
@@ -633,18 +641,14 @@ class TestDAQ():
     def test_write_metadata_handles_missing_file(self, test_daq):
         """Test function handles specified file not existing."""
         # Need a processed file without meta data
-        odin_path = "/u/ckd27546/develop/projects/odin-demo"
-        hexitec_path = "/hexitec-detector/control/test/hexitec/data_file"
-        hdf5_file = odin_path + hexitec_path + "/data_without_meta.h5"
+        hdf5_file = test_daq.odin_control_path + "/test/hexitec/data_file/data_without_meta.h5"
 
-        import os.path
         if (os.path.exists(hdf5_file)):
             pass
         else:
             raise Exception("Test HDF5 file not found! (%s)" % hdf5_file)
 
         # Make a copy, run test using this copy
-        from shutil import copyfile
         dummy_file = "/tmp/dummy.h5"
         try:
             copyfile(hdf5_file, dummy_file)
@@ -874,25 +878,28 @@ class TestDAQ():
         """Test function handles committing configuration ok."""
         config_dict = \
             {'diagnostics': {'daq_start_time': 0, 'daq_stop_time': 0, 'fem_not_busy': 0},
-             'receiver': {
-                'connected': True, 'configured': True, 'config_file': 'fr_hexitec_config.json'},
-             'processor': {
-                'connected': True, 'configured': False, 'config_file':
-                'fp_hexitec_minimum_config.json'},
-             'file_info': {
-                'enabled': False, 'file_name': 'default_file', 'file_dir': '/tmp/'},
+             'receiver':
+                {'connected': True, 'configured': True, 'config_file': 'fr_hexitec_config.json'},
+             'processor':
+                {'connected': True, 'configured': False, 'config_file': 'file.json'},
+             'file_info':
+                {'enabled': False, 'file_name': 'default_file', 'file_dir': '/tmp/'},
              'in_progress': False,
-             'config': {
-                'addition': {
-                    'enable': False, 'pixel_grid_size': 3}, 'calibration':
-                    {'enable': False,
-                     'gradients_filename': '', 'intercepts_filename': ''}, 'discrimination':
-                    {'enable': False, 'pixel_grid_size': 3}, 'histogram':
+             'config':
+                {'addition':
+                    {'enable': False, 'pixel_grid_size': 3},
+                 'calibration':
+                    {'enable': False, 'gradients_filename': '', 'intercepts_filename': ''},
+                 'discrimination':
+                    {'enable': False, 'pixel_grid_size': 3},
+                 'histogram':
                     {'bin_end': 800, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
-                     'pass_processed': False}, 'reorder': {'raw_data': False}, 'next_frame':
-                    {'enable': False}, 'threshold':
-                    {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 100}},
-                'sensors_layout': '2x2'}
+                     'pass_processed': False},
+                 'reorder': {'raw_data': False},
+                 'next_frame': {'enable': False},
+                 'threshold':
+                    {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 10}},
+                 'sensors_layout': '2x2'}
 
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
 

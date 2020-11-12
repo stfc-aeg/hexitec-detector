@@ -6,6 +6,7 @@ Christian Angelsen, STFC Detector Systems Software Group
 import sys
 import pytest
 import time
+import os
 
 from hexitec.HexitecFem import HexitecFem, HexitecFemError
 from hexitec.adapter import HexitecAdapter, Hexitec
@@ -54,6 +55,13 @@ class FemTestFixture(object):
                 self.fem = HexitecFem(self.detector, self.id, self.ip,
                                       self.ip, self.ip, self.ip)
                 self.fem.connect()
+
+        # Construct paths relative to current working directory
+        cwd = os.getcwd()
+        base_path_index = cwd.find("hexitec-detector")
+        base_path = cwd[:base_path_index]
+        self.odin_control_path = base_path + "hexitec-detector/control"
+        self.odin_data_path = base_path + "hexitec-detector/data"
 
 
 @pytest.fixture()
@@ -1836,9 +1844,7 @@ class TestFem():
 
     def test_set_hexitec_config(self, test_fem):
         """Test function handles configuration file ok."""
-        hexitec_path = "/hexitec-detector/control/test/hexitec/config/hexitec_test_config.ini"
-        odin_path = "/u/ckd27546/develop/projects/odin-demo"
-        filename = odin_path + hexitec_path
+        filename = "control/test/hexitec/config/hexitec_test_config.ini"
 
         test_fem.fem._set_hexitec_config(filename)
 
@@ -1852,11 +1858,14 @@ class TestFem():
 
     def test_set_hexitec_config_fails_invalid_filename(self, test_fem):
         """Test function fails on invalid file name."""
-        filename = "/invalid/file.name"
+        filename = "invalid/file.name"
         with pytest.raises(ParameterTreeError) as exc_info:
             test_fem.fem._set_hexitec_config(filename)
         assert exc_info.type is ParameterTreeError
-        error = "Error: [Errno 2] No such file or directory: '%s'" % filename
+        # Need to work out base path as HexitecFem prefixes that to filename
+        index = test_fem.odin_control_path.find("control")
+        base_path = test_fem.odin_control_path[:index]
+        error = "Error: [Errno 2] No such file or directory: '%s'" % (base_path + filename)
         assert exc_info.value.args[0] == error
 
     def test_extract_exponential_fails_out_of_range_value(self, test_fem):
