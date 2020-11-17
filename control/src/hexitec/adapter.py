@@ -24,7 +24,7 @@ from .HexitecDAQ import HexitecDAQ
 
 # Making checking for integer type Python2/3 independent
 import sys
-if sys.version_info < (3, ):
+if sys.version_info < (3, ):  # pragma: no cover
     integer_types = (int, long,)
     float_types = (float, long,)
 else:
@@ -76,9 +76,17 @@ class HexitecAdapter(ApiAdapter):
         #                   path = "fr/status/frames"
         #        Compare:      /api/0.1/hexitec/, path = ""
         checkAdapters = True if len(path) > 0 else False
+        # print("Path:")
+        # print(" ", path)
+        # print("Request:")
+        # print(" ", request)
+        # print("checkAdapters: ", checkAdapters)
+        # print("adapters.items(), ", self.adapters.items())
         try:
             if checkAdapters:
+                # print("checking adapters")
                 for name, adapter in self.adapters.items():
+                    # print("Not seen this?")
                     if path.startswith(name):
                         tokens = path.split("/")
                         path = "/".join(tokens[1:])
@@ -168,8 +176,7 @@ class HexitecAdapter(ApiAdapter):
         # Pass adapter list to Hexitec class:
         self.hexitec.initialize(self.adapters)
         # # Display all loaded adapters:
-        # logging.debug("\n\n" + "".join(['   {0:16} = {1}\n'.format(k, v)
-        #               for k, v in self.adapters.iteritems()]))
+        # logging.debug(self.adapters.items())
 
 
 class HexitecError(Exception):
@@ -555,7 +562,6 @@ class Hexitec():
     def initialize(self, adapters):
         """Get references to adapters, and pass these to the classes that need to use them."""
         self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
-
         self.daq.initialize(self.adapters)
 
     @run_on_executor(executor='thread_executor')  # noqa: C901
@@ -587,7 +593,7 @@ class Hexitec():
             time_available = self.fems[0].bias_refresh_interval - time_into_window
 
             if time_available < 0:
-                IOLoop.instance().call_later(0.1, self.acquisition)
+                IOLoop.instance().call_later(0.09, self.acquisition)
                 return
 
             frames_before_bias = self.fems[0].frame_rate * time_available
