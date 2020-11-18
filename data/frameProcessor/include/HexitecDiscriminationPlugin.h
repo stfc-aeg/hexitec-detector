@@ -56,9 +56,9 @@ namespace FrameProcessor
 
       void process_frame(boost::shared_ptr<Frame> frame);
 
-      void prepareChargedSharing(float *inFrame);
-      void processDiscrimination(float *extendedFrame, int extendedFrameRows,
-                                int startPosn, int endPosn);
+      void prepare_charged_sharing(float *inFrame);
+      void process_discrimination(float *extendedFrame, int extendedFrameRows,
+                                  int startPosn, int endPosn);
 
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
       std::string sensors_layout_str_;

@@ -166,7 +166,7 @@ namespace FrameProcessor
           static_cast<char *>(const_cast<void *>(data_ptr)));
 
         // Take Frame object at input_pointer, apply CS Discrimination algorithm
-        prepareChargedSharing(static_cast<float *>(input_ptr));
+        prepare_charged_sharing(static_cast<float *>(input_ptr));
 
         LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
                                           << frame->get_frame_number());
@@ -188,7 +188,7 @@ namespace FrameProcessor
    *
    * \param[in] frame - Pointer to the image data to be processed.
    */
-  void HexitecDiscriminationPlugin::prepareChargedSharing(float *frame)
+  void HexitecDiscriminationPlugin::prepare_charged_sharing(float *frame)
   {
     /// extendedFrame contains empty (1-2) pixel(s) on all 4 sides to enable charge
     ///   sharing algorithm execution
@@ -228,7 +228,7 @@ namespace FrameProcessor
     endPosn = extendedFrameSize - (extendedFrameColumns * directional_distance_)
               - directional_distance_;
 
-    processDiscrimination(extendedFrame, extendedFrameRows, startPosn, endPosn);
+    process_discrimination(extendedFrame, extendedFrameRows, startPosn, endPosn);
 
     /// Copy CS frame (i.e. 82x82) back into original (80x80) frame
     rowPtr = frame;
@@ -251,7 +251,7 @@ namespace FrameProcessor
    * \param[in] startPosn - The first pixel in the frame
    * \param[in] endPosn - The final pixel in the frame
    */
-  void HexitecDiscriminationPlugin::processDiscrimination(float *extendedFrame,
+  void HexitecDiscriminationPlugin::process_discrimination(float *extendedFrame,
                                                     int extendedFrameRows, int startPosn,
                                                     int endPosn)
   {
