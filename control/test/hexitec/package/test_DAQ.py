@@ -434,41 +434,51 @@ class TestDAQ(unittest.TestCase):
             mock_loop.instance().call_later.assert_called_with(.5,
                                                                self.test_daq.daq.acquisition_check_loop)
 
-    def test_processing_check_loop(self):
-        """Test processing check loop."""
-        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
+    def test_processing_check_loop_handles_initial_acquisition(self):
+        """Test processing check loop exits initial acquisition without reopening file.
 
-            # Covers lines 254-260
+        Any subsequent acquisition should add meta data but not the initial (fudge) one."""
+        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
             self.test_daq.daq.first_initialisation = True
             self.test_daq.daq.processing_check_loop()
             mock_loop.instance().call_later.assert_called_with(2.0,
                                                                self.test_daq.daq.stop_acquisition)
 
-            # This block actually tests acquisition_check_loop but if I move it
-            # into the previous test function, it fails.....
+    def test_acquisition_check_loop_polls_processing_once_acquisition_complete(self):
+        """Test acquisition check loop polls processing status once fem(s) finished sending data."""
+        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
             self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.acquisition_check_loop()
             self.test_daq.daq.first_initialisation = False
             mock_loop.instance().call_later.assert_called_with(.5,
                                                                self.test_daq.daq.processing_check_loop)
 
-            # Cover lines 274-281
-            # # assert self.test_daq.daq.first_initialisation is True # first_init == False
+    def test_processing_check_loop_polls_file_status_after_processing_complete(self):
+        """Test processing check loop polls for processed file closed once processing done."""
+        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
+            self.test_daq.daq.first_initialisation = False
             self.test_daq.fp_data["value"][0]["hdf"]["frames_processed"] = 10
             self.test_daq.daq.plugin = "hdf"
+            self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.processing_check_loop()
             mock_loop.instance().call_later.assert_called_with(1.0,
                                                                self.test_daq.daq.hdf_closing_loop)
 
-            # Covers lines 296
-            self.test_daq.daq.plugin = "histogram"
-            self.test_daq.daq.parent.fems[0].hardware_busy = True
-            self.test_daq.daq.frame_end_acquisition = 10
-            self.test_daq.daq.processing_check_loop()
-            mock_loop.instance().call_later.assert_called_with(.5,
-                                                               self.test_daq.daq.processing_check_loop)
+    # TODO: Redundant?
+    # def test_processing_check_loop_(self):
+    #     """Test processing check loop."""
+    #     with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
+    #         self.test_daq.daq.plugin = "histogram"
+    #         self.test_daq.daq.first_initialisation = False
+    #         self.test_daq.daq.parent.fems[0].hardware_busy = True
+    #         self.test_daq.daq.frame_end_acquisition = 10
+    #         self.test_daq.daq.processing_check_loop()
+    #         mock_loop.instance().call_later.assert_called_with(.5,
+    #                                                            self.test_daq.daq.processing_check_loop)
 
-            # Covers lines 283-290
+    def test_processing_check_loop_handles_missing_frames(self):
+        """Test processing check loop will stop acquisition if data ceases mid-flow."""
+        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
             self.test_daq.daq.first_initialisation = False
             self.test_daq.daq.parent.fems[0].hardware_busy = True
             self.test_daq.daq.frame_end_acquisition = 10
@@ -476,7 +486,11 @@ class TestDAQ(unittest.TestCase):
             self.test_daq.daq.processing_check_loop()
             mock_loop.instance().add_callback.assert_called_with(self.test_daq.daq.stop_acquisition)
 
-            # Covers lines 292-4
+    def test_processing_check_loop_polling_while_data_being_processed(self):
+        """Test processing check loop polls itself while data coming in."""
+        with patch("hexitec.HexitecDAQ.IOLoop"):
+            self.test_daq.daq.first_initialisation = False
+            self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.frames_processed = 5
             self.test_daq.daq.processing_check_loop()
             assert pytest.approx(self.test_daq.daq.processed_timestamp) == time.time()
@@ -740,8 +754,8 @@ class TestDAQ(unittest.TestCase):
         with pytest.raises(ParameterTreeError, match="Must be either 3 or 5"):
             self.test_daq.daq._set_pixel_grid_size(4)
 
-    def test_set_gradients_filename(self):
-        """Tested setting gradients file."""
+    def test_set_gradients_filename_correct(self):
+        """Test setting gradients file."""
         gradients_filename = "data/config/m_2018_01_001_400V_20C.txt"
         self.test_daq.daq._set_gradients_filename(gradients_filename)
 
@@ -751,10 +765,12 @@ class TestDAQ(unittest.TestCase):
         verified_filename = gradients_file[index:]
         assert gradients_filename == verified_filename
 
+    def test_set_gradients_filename_handles_invalid_file(self):
+        """Test setting gradients file to invalid file raises exception."""
         with pytest.raises(ParameterTreeError, match="Gradients file doesn't exist"):
             self.test_daq.daq._set_gradients_filename("rubbish_filename.txt")
 
-    def test_set_intercepts_filename(self):
+    def test_set_intercepts_filename_correct(self):
         """Test setting intercepts filename."""
         intercepts_filename = "data/config/c_2018_01_001_400V_20C.txt"
         self.test_daq.daq._set_intercepts_filename(intercepts_filename)
@@ -764,10 +780,12 @@ class TestDAQ(unittest.TestCase):
         verified_filename = intercepts_file[index:]
         assert intercepts_filename == verified_filename
 
+    def test_set_intercepts_filename_handles_invalid_file(self):
+        """Test setting intercepts filename to invalid file raises exception."""
         with pytest.raises(ParameterTreeError, match="Intercepts file doesn't exist"):
             self.test_daq.daq._set_intercepts_filename("rubbish_filename.txt")
 
-    def test_set_threshold_filename(self):
+    def test_set_threshold_filename_correct(self):
         """Test setting threshold file name."""
         threshold_filename = "data/config/thresh_2018_01_001_400V_20C.txt"
         self.test_daq.daq._set_threshold_filename(threshold_filename)
@@ -777,6 +795,8 @@ class TestDAQ(unittest.TestCase):
         verified_filename = threshold_file[index:]
         assert threshold_filename == verified_filename
 
+    def test_set_threshold_filename_handles_invalid_file(self):
+        """Test setting threshold file name to invalid file raises exception."""
         with pytest.raises(ParameterTreeError, match="Threshold file doesn't exist"):
             self.test_daq.daq._set_threshold_filename("rubbish_filename.txt")
 
