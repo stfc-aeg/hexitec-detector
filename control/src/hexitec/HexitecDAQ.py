@@ -363,7 +363,6 @@ class HexitecDAQ():
 
     def write_metadata(self, metadata_group, param_tree_dict):
         """Write parameter tree(s) and config files as meta data."""
-
         param_tree_dict = self._flatten_dict(param_tree_dict)
 
         # Build metadata attributes from dictionary

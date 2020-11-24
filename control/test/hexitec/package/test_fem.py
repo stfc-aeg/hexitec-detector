@@ -10,7 +10,7 @@ import sys
 import os
 
 from hexitec.HexitecFem import HexitecFem, HexitecFemError
-from hexitec.adapter import HexitecAdapter, Hexitec
+from hexitec.adapter import HexitecAdapter
 
 from odin.adapters.parameter_tree import ParameterTreeError
 
@@ -66,9 +66,10 @@ class FemTestFixture(object):
 
 
 class TestFem(unittest.TestCase):
-    """Construct test class."""
+    """Unit tests for the fem class."""
 
     def setUp(self):
+        """Set up test fixture for each unit test."""
         self.test_fem = FemTestFixture()
 
     def test_init(self):
@@ -266,7 +267,7 @@ class TestFem(unittest.TestCase):
             rdma_mock.side_effect = Exception()
             self.test_fem.fem.connect_hardware()
             time.sleep(0.1)
-            error = "Uncaught Exception; Failed to establish camera connection: "
+            error = "Uncaught Exception; Camera connection: "
             assert self.test_fem.fem._get_status_error() == error
 
         # Don't Mock, error because we couldn't setup a connection
@@ -844,12 +845,12 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.calculate_frame_rate = Mock()
 
         self.test_fem.fem.hexitec_parameters = {'Control-Settings/Gain': '0',
-                                           'Control-Settings/ADC1 Delay': '2',
-                                           'Control-Settings/delay sync signals': '10',
-                                           'Control-Settings/Row -> S1': '5',
-                                           'Control-Settings/S1 -> Sph': '1',
-                                           'Control-Settings/Sph -> S2': '5',
-                                           'Control-Settings/VCAL2 -> VCAL1': '1'}
+                                                'Control-Settings/ADC1 Delay': '2',
+                                                'Control-Settings/delay sync signals': '10',
+                                                'Control-Settings/Row -> S1': '5',
+                                                'Control-Settings/S1 -> Sph': '1',
+                                                'Control-Settings/Sph -> S2': '5',
+                                                'Control-Settings/VCAL2 -> VCAL1': '1'}
 
         self.test_fem.fem.set_up_state_machine()
 
@@ -1865,14 +1866,14 @@ class TestFem(unittest.TestCase):
         """Test function fails on value outside of valid range of values."""
         hexitec_parameters = {'Control-Settings/Uref_mid': '4,097000E+3'}
         umid = self.test_fem.fem._extract_exponential(hexitec_parameters,
-                                                 'Control-Settings/Uref_mid', bit_range=12)
+                                                      'Control-Settings/Uref_mid', bit_range=12)
         assert umid == -1
 
     def test_extract_exponential_fails_missing_key(self):
         """Test function fails on missing key (i.e. setting)."""
         hexitec_parameters = {'Control-Settings/U___ref_mid': '1,000000E+3'}
         umid = self.test_fem.fem._extract_exponential(hexitec_parameters,
-                                                 'Control-Settings/Uref_mid', bit_range=1)
+                                                      'Control-Settings/Uref_mid', bit_range=1)
         assert umid == -1
 
     def test_extract_float_fails_out_of_range_value(self):
@@ -1885,28 +1886,29 @@ class TestFem(unittest.TestCase):
         """Test function fails on missing key (i.e. setting)."""
         hexitec_parameters = {'Control-Settings/___L': '1.3'}
         vcal_value = self.test_fem.fem._extract_float(hexitec_parameters,
-                                                 'Control-Settings/VCAL')
+                                                      'Control-Settings/VCAL')
         assert vcal_value == -1
 
     def test_extract_integer_fails_out_of_range_value(self):
         """Test fails on value outside of valid range."""
         hexitec_parameters = {'Control-Settings/ADC1 Delay': '-1'}
-        delay = self.test_fem.fem._extract_integer(hexitec_parameters, 'Control-Settings/ADC1 Delay',
-                                              bit_range=2)
+        delay = self.test_fem.fem._extract_integer(hexitec_parameters,
+                                                   'Control-Settings/ADC1 Delay',
+                                                   bit_range=2)
         assert delay == -1
 
     def test_extract_integer_fails_missing_key(self):
         """Test function fails on missing key (i.e. setting)."""
         hexitec_parameters = {'Control-Settings/nonsense': '1.3'}
         delay = self.test_fem.fem._extract_integer(hexitec_parameters,
-                                              'Control-Settings/ADC1 Delay', bit_range=2)
+                                                   'Control-Settings/ADC1 Delay', bit_range=2)
         assert delay == -1
 
     def test_extract_boolean_fails_invalid_value(self):
         """Test function fails non-Boolean value."""
         hexitec_parameters = {'Bias_Voltage/Bias_Voltage_Refresh': '_x?'}
         bias = self.test_fem.fem._extract_boolean(hexitec_parameters,
-                                             'Bias_Voltage/Bias_Voltage_Refresh')
+                                                  'Bias_Voltage/Bias_Voltage_Refresh')
         assert bias == -1
 
     def test_extract_80_bits(self):

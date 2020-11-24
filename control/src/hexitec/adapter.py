@@ -76,17 +76,9 @@ class HexitecAdapter(ApiAdapter):
         #                   path = "fr/status/frames"
         #        Compare:      /api/0.1/hexitec/, path = ""
         checkAdapters = True if len(path) > 0 else False
-        # print("Path:")
-        # print(" ", path)
-        # print("Request:")
-        # print(" ", request)
-        # print("checkAdapters: ", checkAdapters)
-        # print("adapters.items(), ", self.adapters.items())
         try:
             if checkAdapters:
-                # print("checking adapters")
                 for name, adapter in self.adapters.items():
-                    # print("Not seen this?")
                     if path.startswith(name):
                         tokens = path.split("/")
                         path = "/".join(tokens[1:])
@@ -701,12 +693,6 @@ class Hexitec():
         # self.first_initialisation  = True
         # self.fems[0].first_initialisation  = True
         # self.daq.first_initialisation = True
-
-    def _get_status_message(self):
-        return self.status_message
-
-    def _get_status_error(self):
-        return self.status_error
 
     def get_server_uptime(self):
         """

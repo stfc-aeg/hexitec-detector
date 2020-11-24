@@ -14,7 +14,7 @@ import sys
 from odin.adapters.parameter_tree import ParameterTreeError
 
 from hexitec.HexitecDAQ import HexitecDAQ
-from hexitec.adapter import HexitecAdapter, Hexitec
+from hexitec.adapter import HexitecAdapter
 
 if sys.version_info[0] == 3:  # pragma: no cover
     from unittest.mock import Mock, MagicMock, call, patch, ANY, mock_open
@@ -179,9 +179,10 @@ class DAQTestFixture(object):
 
 
 class TestDAQ(unittest.TestCase):
-    """Set up the unit tests."""
+    """Unit tests for DAQ class."""
 
     def setUp(self):
+        """Set up test fixture for each unit test."""
         self.test_daq = DAQTestFixture()
 
     def test_init(self):
@@ -437,7 +438,8 @@ class TestDAQ(unittest.TestCase):
     def test_processing_check_loop_handles_initial_acquisition(self):
         """Test processing check loop exits initial acquisition without reopening file.
 
-        Any subsequent acquisition should add meta data but not the initial (fudge) one."""
+        Any subsequent acquisition should add meta data but not the initial (fudge) one.
+        """
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
             self.test_daq.daq.first_initialisation = True
             self.test_daq.daq.processing_check_loop()
@@ -556,7 +558,8 @@ class TestDAQ(unittest.TestCase):
         """Test the function handles processed file shut but cannot be reopened.
 
         When file writer closes file, function calls prepare_hdf_file which should flag
-        if unable to reopen processed file (to add meta data)."""
+        if unable to reopen processed file (to add meta data).
+        """
         with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File") as mock_h5py:
             with patch("os.path.exists") as mock_exists:
                 self.test_daq.fp_data["value"][0]["hdf"]["writing"] = False
@@ -635,7 +638,6 @@ class TestDAQ(unittest.TestCase):
 
     def test_write_metadata_handles_ioerror(self):
         """Test function handles I/OError appropriately."""
-
         hdf5_file = self.test_daq.odin_control_path + "/test/hexitec/data_file/data_without_meta.h5"
 
         if (os.path.exists(hdf5_file)):
