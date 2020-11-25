@@ -47,12 +47,12 @@ class RdmaUDP(object):
         try:
             self.rxsocket.bind((MasterRxUDPIPAddress, MasterRxUDPIPPort))
         except socket.error as e:
-            raise socket.error("IP:Port %s:%s because: %s" %
+            raise socket.error("Receive socket IP:Port %s:%s %s" %
                                (MasterRxUDPIPAddress, MasterRxUDPIPPort, e))
         try:
             self.txsocket.bind((MasterTxUDPIPAddress, MasterTxUDPIPPort))
         except socket.error as e:
-            raise socket.error("IP:Port %s:%s Because: %s" %
+            raise socket.error("Transmit socket IP:Port %s:%s %s" %
                                (MasterTxUDPIPAddress, MasterTxUDPIPPort, e))
 
         self.rxsocket.setblocking(1)

@@ -431,9 +431,9 @@ class HexitecFem():
             self._set_status_message("Is the camera powered?")
             logging.error("%s" % str(e))
         except Exception as e:
-            self._set_status_error("Uncaught Exception; Failed to establish camera " +
-                                   "connection: %s" % str(e))
-            logging.error("%s" % str(e))
+            error = "Uncaught Exception; Camera connection: %s" % str(e)
+            self._set_status_error(error)
+            logging.error("Camera connection: %s" % str(e))
             # Cannot raise error beyond current thread
 
         print("\n\nReinstate polling before merging with master !\n\n")
@@ -771,7 +771,7 @@ class HexitecFem():
         full_empty = self.x10g_rdma.read(0x60000012, 'Check FULL Signals')
         logging.debug("Check FULL Signals: %s" % full_empty)
 
-    def debug_reg24(self): # pragma: no cover
+    def debug_reg24(self):  # pragma: no cover
         """Debug function: Display contents of register 24."""
         self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE,
                        0x32, 0x34, 0x0D])
@@ -2121,7 +2121,7 @@ class HexitecFem():
                     self.vsr2_adc = self.get_adc_temperature(adc_hex)
         else:
             logging.warning("VSR 0x%s: Sensor data temporarily unavailable" %
-                         format(self.vsr_addr, '02x'))
+                            format(self.vsr_addr, '02x'))
 
     def get_ambient_temperature(self, hex_val):
         """Calculate ambient temperature."""
