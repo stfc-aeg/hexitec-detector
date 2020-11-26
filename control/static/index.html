@@ -35,6 +35,7 @@
             <span class="icon-bar"></span>
           </button>
           <a class="navbar-brand" href="https://github.com/stfc-aeg/odin-workshop">ODIN</a>
+          <a class="navbar-brand" href="https://github.com/stfc-aeg/hexitec-detector/issues/">Known Issues</a>
         </div>
         <!-- <div id="navbar" class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
@@ -530,10 +531,10 @@
     </div> <!-- well sidebar-nav-fixed -->
 
     <!-- Odin Control settings section -->
-    <div class="well sidebar-nav-fixed">
-      <table class="overall-table" align="center">
-        <thead></thead>
-        <tbody>
+
+    <div class="row">
+      <div class="col-sm-4">
+        <table class="">
           <tr>  
             <td>  
               <th>Raw Data&nbsp;</th>
@@ -561,19 +562,75 @@
             </td>
           </tr>
 
+        </table>
+      </div>
+      <div class="col-sm-4">
+        <table class= "">
           <tr>  
-            <td>
-              <th>Threshold&nbsp;</th>
+            <td>  
+              <th>Next Frame&nbsp;</th>
             </td>
             <td>&nbsp;</td>
             <td>
               <div class="row sidebar-row vertical-align">
                 <div class="col-xs-7">
-                  <input type="checkbox" name="threshold_enable" data-size="small" style="visibility:hidden">
+                  <input type="checkbox" name="next_frame_enable" data-size="small">
                 </div>
               </div>
             </td>
           </tr>
+
+          <tr>
+            <td>  
+              <th>Calibration&nbsp;</th>
+            </td>
+            <td>&nbsp;</td>
+            <td>
+              <div class="row sidebar-row vertical-align">
+                <div class="col-xs-7">
+                  <input type="checkbox" name="calibration_enable" data-size="small">
+                </div>
+              </div>
+            </td>
+          </tr>
+
+        </table>
+      </div>
+
+      <div class="col-sm-4">
+        <table class="">
+          <tr>
+            <td>
+              Pixel Grid Size:&nbsp;&nbsp;&nbsp;
+            </td>
+            <td>
+              <div class="text-columns">
+                <input type="text" id="pixel-grid-size-text" onChange='pixel_grid_size_changed()' value="3" size="8">
+              </div>
+            </td>
+            <td>
+              &nbsp;<td><span id="pixel-grid-size-warning">&nbsp;</span></td>
+            </td>
+          </tr>
+          <tr>  
+            <td>  
+              <th>Histogram&nbsp;</th>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+
+    <div class="row">
+      <div class="col-sm-4">
+        <table class="" align="centre">
+          <tr>  
+            <td>
+              <th>Threshold&nbsp;</th>
+            </td>
+          </tr>
+
           <tr>  
             <td>  
               Filename:&nbsp;
@@ -604,48 +661,10 @@
               &nbsp;<span id="threshold-value-warning">&nbsp;</span>
             </td>
           </tr>
-          <tr>
-            <td>
-              Mode:&nbsp;
-            </td>
-            <td>
-              <div class="text-characters">
-                <input type="text" id="threshold-mode-text" onchange='threshold_mode_changed()' value="value" required/>
-              </div>
-            </td>
-            <td></td> <!-- Leave column blank-->
-            <td>
-              &nbsp;<span id="threshold-mode-warning">&nbsp;</span>
-            </td>
-          </tr>
-  
-          <tr>  
-            <td>  
-              <th>Next Frame&nbsp;</th>
-            </td>
-            <td>&nbsp;</td>
-            <td>
-              <div class="row sidebar-row vertical-align">
-                <div class="col-xs-7">
-                  <input type="checkbox" name="next_frame_enable" data-size="small">
-                </div>
-              </div>
-            </td>
-          </tr>
-
-          <tr>
-            <td>  
-              <th>Calibration&nbsp;</th>
-            </td>
-            <td>&nbsp;</td>
-            <td>
-              <div class="row sidebar-row vertical-align">
-                <div class="col-xs-7">
-                  <input type="checkbox" name="calibration_enable" data-size="small">
-                </div>
-              </div>
-            </td>
-          </tr>
+        </table>
+      </div>
+      <div class="col-sm-4">
+        <table class="">
           <tr>
             <td>  
               Gradients:&nbsp;
@@ -676,53 +695,23 @@
               &nbsp;<td><span id="intercepts-filename-warning">&nbsp;</span></td>
             </td>
           </tr>
-
           <tr>
             <td>
               <th>CS: None / Add / Dis:&nbsp;</th>
             </td>
-            <td></td>  <!-- Add empty cell to prevent radio buttons upsetting Page layout -->
-            <td>&nbsp;</td>
-            <td>
-                <input id="cbox1" name="GroupedSwitches" class="bootstrap-switch" type="radio" data-off-text="OFF" data-on-text="ON" checked="true" value="none">
-                <input id="cbox2" name="GroupedSwitches" class="bootstrap-switch" type="radio" data-off-text="OFF" data-on-text="ON"  value="add">
-                <input id="cbox3" name="GroupedSwitches" class="bootstrap-switch" type="radio" data-off-text="OFF" data-on-text="ON"  value="dis">
-             </td>
-          </tr>
-          <tr>
-            <td>
-              Pixel Grid Size:&nbsp;
-            </td>
-            <td>
-              <div class="text-columns">
-                <input type="text" id="pixel-grid-size-text" onChange='pixel_grid_size_changed()' value="3">
-              </div>
-            </td>
-            <td>
-              &nbsp;<td><span id="pixel-grid-size-warning">&nbsp;</span></td>
-            </td>
           </tr>
 
-          <tr>  
-            <td>  
-              <th>Histogram&nbsp;</th>
-            </td>
-            <td>&nbsp;</td>
-            <td>
-              <div class="row sidebar-row vertical-align">
-                <div class="col-xs-7">
-                  <input type="checkbox" name="histogram_enable" data-size="small" style="visibility:hidden">
-                </div>
-              </div>
-            </td>
-          </tr>
+        </table>
+      </div>
+      <div class="col-sm-4">
+        <table class="">
           <tr>
             <td>
               <div id="bin_start">Bin Start: [ADU]&nbsp;</div>
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="bin-start-text" onChange='bin_start_changed()' value="0">
+                <input type="text" id="bin-start-text" onChange='bin_start_changed()' value="0" size="8">
               </div>
             </td>
             <td>
@@ -735,7 +724,7 @@
             </td>
             <td>
               <div class="text-columns">
-                <input type="text" id="bin-end-text" onChange='bin_end_changed()' value="8000">
+                <input type="text" id="bin-end-text" onChange='bin_end_changed()' value="8000" size="8">
               </div>
             </td>
             <td></td>
@@ -749,19 +738,53 @@
             </td>
             <td> 
               <div class="text-columns">
-                <input type="text" id="bin-width-text" onChange='bin_width_changed()' value="10">
+                <input type="text" id="bin-width-text" onChange='bin_width_changed()' value="10" size="8">
               </div>
             </td>
             <td>
               &nbsp;<td><span id="bin-width-warning">&nbsp;</span></td>
             </td>
           </tr>
+        </table>
+      </div>
+    </div>
 
-        </tbody>
-      </table>
-  
-    </div> <!-- well sidebar-nav-fixed -->
-  
+    <div class="row">
+      <div class="col-sm-4">
+        <table class="">
+          <tr>
+            <td>
+              Mode:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            </td>
+            <td>
+              <div class="text-characters">
+                <input type="text" id="threshold-mode-text" onchange='threshold_mode_changed()' value="value" required/>
+              </div>
+            </td>
+            <td></td> <!-- Leave column blank-->
+            <td>
+              &nbsp;<span id="threshold-mode-warning">&nbsp;</span>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="col-sm-4">
+        <table class="">
+          <tr>
+            <td>
+              <input id="cbox1" name="GroupedSwitches" class="bootstrap-switch" type="radio" data-off-text="OFF" data-on-text="NONE" checked="true" value="none">
+              <input id="cbox2" name="GroupedSwitches" class="bootstrap-switch" type="radio" data-off-text="OFF" data-on-text="ADD"  value="add">
+              <input id="cbox3" name="GroupedSwitches" class="bootstrap-switch" type="radio" data-off-text="OFF" data-on-text="DIS"  value="dis">
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="col-sm-4">
+        <table class="">
+
+        </table>
+      </div>
+    </div>  
   
   <!-- Section nicked from LiveView UI.. -->
     <div class="container-fluid">
