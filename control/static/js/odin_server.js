@@ -18,9 +18,13 @@ var system_health = true;
 var fem_error_id = -1;
 var ui_frames = 10;
 
+// Called once, when page 1st loaded
 $( document ).ready(function()
 {
-    // Called once, when page 1st loaded
+    'use strict';
+
+    $('#odin-control-message').html("Disconnected, Idle");
+    $('#odin-control-error').html("No errors");
 
     // Begin with all except connectButton disabled
     document.getElementById("initialiseButton").disabled = true;
@@ -29,56 +33,6 @@ $( document ).ready(function()
     document.getElementById("disconnectButton").disabled = true;
     document.getElementById("offsetsButton").disabled = true;
  
-    $(".bootstrap-switch").bootstrapSwitch({
-        'size': 'midi',
-        'onSwitchChange': function(event, state) {
-
-            charged_sharing_enable = false;
-            discrimination_enable = false;
-            addition_enable = false;
-
-            if ($(this).val() == "add")
-            {
-                addition_enable = true;
-                charged_sharing_enable = true;
-            }
-            if ($(this).val() == "dis")
-            {
-                discrimination_enable = true;
-                charged_sharing_enable = true;
-            }
-            var pixel_grid_size = $('#pixel-grid-size-text').prop('value');
-
-            var addition_payload = {"addition": 
-                                {"enable": addition_enable, 
-                                "pixel_grid_size": parseInt(pixel_grid_size)} };
-
-            var discrimination_payload = {"discrimination": 
-                                {"enable": discrimination_enable, 
-                                "pixel_grid_size": parseInt(pixel_grid_size)} };
-
-            $.ajax({
-                type: "PUT",
-                url: hexitec_url + 'detector/daq/config',
-                contentType: "application/json",
-                data: JSON.stringify(addition_payload),
-                error: function(request, msg, error) {
-                    console.log("FAILED to update Addition plugin settings: " + error);
-                }
-            });
-
-            $.ajax({
-                type: "PUT",
-                url: hexitec_url + 'detector/daq/config',
-                contentType: "application/json",
-                data: JSON.stringify(discrimination_payload),
-                error: function(request, msg, error) {
-                    console.log("FAILED to update Discrimination plugin settings: " + error);
-                }
-            });
-        }
-    })
-
     /// Style checkboxes into ON/OFF sliders
 
     $("[name='duration_enable']").bootstrapSwitch();
@@ -141,9 +95,13 @@ $( document ).ready(function()
         apply_ui_values();
     });
 
+    $('#applyButton2').on('click', function(event) {
+        apply_ui_values();
+    });
+
     $('#connectButton').on('click', function(event) {
         connect_hardware();
-        if (polling_thread_running == false)
+        if (polling_thread_running === false)
         {
             polling_thread_running = true;
             start_polling_thread();
@@ -178,7 +136,156 @@ $( document ).ready(function()
     $('#offsetsButton').on('click', function(event) {
         collect_offsets();
     });
+
+    $('#container1').hide();
+    // $('#2').hide();
+    // $('#container2').show();
+    $('#container2').hide();
+    $('#container3').hide();
+    $('#container4').hide();
+    $('#maincontainer1').click(function() {
+        $('#1').hide('slow');
+        $('#container1').show();
+    });
+
+    $('#maincontainer2').click(function() {
+        $('#2').hide('slow');
+        $('#container2').show();
+    });
+
+    $('#maincontainer3').click(function() {
+        $('#3').hide('slow');
+        $('#container3').show();
+    });
+
+    $('#maincontainer4').click(function() {
+        $('#4').hide('slow');
+        $('#container4').show();
+    });
+
+    $('#container1').click(function() {
+        $('#1').show('slow');
+        $(this).hide();
+    });
+    $('#container2').click(function() {
+        $('#2').show('slow');
+        $(this).hide();
+    });
+    $('#container3').click(function() {
+        $('#3').show('slow');
+        $(this).hide();
+    });
+    $('#container4').click(function() {
+        $('#4').show('slow');
+        $(this).hide();
+    });
+
+    // // EXPERIMENTAL area //
+    
+    // // User may click anywhere on a radio (as you would expect)
+    // if (document.querySelector('input[name="radio_anywhere"]'))
+    // {
+    //     document.querySelectorAll('input[name="radio_anywhere"]').forEach((elem) => {
+    //         elem.addEventListener("change", function(event) {
+    //             var item = event.target.value;
+    //             console.log("Anywhere: " + item);
+    //         });
+    //     });
+    // }
+    
+    // // // User may only click on the actual circle next to the label (or be ignored..)
+    // // var radios = document.forms["formA"].elements["myradio"];
+    // // for(var i = 0, max = radios.length; i < max; i++) {
+    // //     radios[i].onclick = function()
+    // //     {
+    // //         console.log("Bullseye: " + this.value);
+    // //     }
+    // // }
+
+    // // User may only use keyboard keys i.e. tab and arrow keys (or be ignored)
+    // let rajios = document.getElementsByClassName('counted');
+    // for (let i = 0; i < rajios.length; i++)
+    // {
+    //     rajios[i].addEventListener('change', function () 
+    //     {
+    //         console.log("Keyboard: " + this.value);
+    //         if (rajios[i].checked) {
+    //             ;// console.log("if hit, radio: " + i);
+    //         } else if (rajios[i].checked) {
+    //             ;// console.log("else if hit, radio: " + i);
+    //             return "";
+    //         }
+    //     });
+    // }
 });
+
+// Supports selecting Charged Sharing algorithm (none/add/dis Buttons)
+function setCS(e)
+{
+    let target = e.target;
+
+    // Define colours to note which button is selected, and which are unselected
+    selected = '#0000FF';
+    unselected = '#337ab7';
+    target.style.backgroundColor = selected;
+
+    charged_sharing_enable = false;
+    discrimination_enable = false;
+    addition_enable = false;
+
+    switch (target.value)
+    {
+        case "None":
+            document.getElementById("addButton").style.backgroundColor = unselected;
+            document.getElementById("disButton").style.backgroundColor = unselected;
+            break;
+        case "Add":
+            document.getElementById("noneButton").style.backgroundColor = unselected;
+            document.getElementById("disButton").style.backgroundColor = unselected;
+            addition_enable = true;
+            charged_sharing_enable = true;
+            break;
+        case "Dis":
+            document.getElementById("noneButton").style.backgroundColor = unselected;
+            document.getElementById("addButton").style.backgroundColor = unselected;
+            discrimination_enable = true;
+            charged_sharing_enable = true;
+            break;
+        default:
+            console.log("Nope");
+            break;
+    }
+
+    var pixel_grid_size = $('#pixel-grid-size-text').prop('value');
+
+    var addition_payload = {"addition": 
+                        {"enable": addition_enable, 
+                        "pixel_grid_size": parseInt(pixel_grid_size)} };
+
+    var discrimination_payload = {"discrimination": 
+                        {"enable": discrimination_enable, 
+                        "pixel_grid_size": parseInt(pixel_grid_size)} };
+
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config',
+        contentType: "application/json",
+        data: JSON.stringify(addition_payload),
+        error: function(request, msg, error) {
+            console.log("FAILED to update Addition plugin settings: " + error);
+        }
+    });
+
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config',
+        contentType: "application/json",
+        data: JSON.stringify(discrimination_payload),
+        error: function(request, msg, error) {
+            console.log("FAILED to update Discrimination plugin settings: " + error);
+        }
+    });
+}
 
 function collect_offsets()
 {
@@ -270,9 +377,9 @@ function poll_fem()
         var daq_in_progress = response["detector"]["daq"]["in_progress"];
 
         // Enable buttons when connection completed
-        if (hardware_connected == true)
+        if (hardware_connected === true)
         {
-            if (hardware_busy == true)
+            if (hardware_busy === true)
             {
                 toggle_ui_elements(true);   // Disable
             }
@@ -280,7 +387,7 @@ function poll_fem()
             {
                 toggle_ui_elements(false);  // Enable
             }
-            if (daq_in_progress == true)
+            if (daq_in_progress === true)
             {
                 // Enable cancelButton but disable changing file[path]
                 document.getElementById("cancelButton").disabled = false;
@@ -388,14 +495,14 @@ function poll_fem()
         lampDOM = document.getElementById("Green");
 
         // Clear status if camera disconnected, otherwise look for any error
-        if (status_message == "Camera disconnected")
+        if (status_message === "Camera disconnected")
         {
             lampDOM.classList.remove("lampGreen");
             lampDOM.classList.remove("lampRed");
         }
         else
         {
-            if (status_error.length  == 0)
+            if (status_error.length  === 0)
             {
                 lampDOM.classList.add("lampGreen");
             }
@@ -409,7 +516,7 @@ function poll_fem()
         var progress_element = document.getElementById("progress-odin");
         progress_element.value = percentage_complete;
 
-        if (polling_thread_running == true)
+        if (polling_thread_running === true)
         {
             window.setTimeout(poll_fem, 850);
         }
@@ -562,7 +669,7 @@ function apply_ui_values()
         var threshold_mode = $('#threshold-mode-text').prop('value');
         // Update threshold filename if threshold filename mode set
         //  (0: strings equal [filename mode], 1: not [none/value mode])
-        if (threshold_mode.localeCompare("filename") == 0)
+        if (threshold_mode.localeCompare("filename") === 0)
         {
             threshold_filename_changed();
         }
@@ -628,9 +735,11 @@ function threshold_mode_changed()
         data: threshold_mode,
         success: function(result) {
             $('#threshold-mode-warning').html("");
+            document.getElementById("threshold-mode-warning").classList.remove('alert-danger');
         },
         error: function(request, msg, error) {
             $('#threshold-mode-warning').html(error + ": " + format_error(request.responseText));
+            document.getElementById("threshold-mode-warning").classList.add('alert-danger');
         }
     });
 }
@@ -937,7 +1046,7 @@ function setHdfWrite(enable)
             $('#hdf-write-enable-warning').html("");
             // If write enabled, must disable access to config files, 
             //  file path & name and frames (vice versa if disabled)
-            if (hdf_write_enable == true)
+            if (hdf_write_enable === true)
             {
                 $('#hdf-file-path-text').prop('disabled', true);
                 $('#hdf-file-name-text').prop('disabled', true);

@@ -800,7 +800,7 @@ class HexitecFem():
             print("\n")
             logging.debug("  * 02 *** cal_sen, CLR bit5;   Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
-        # Set bit 4 of Reg24: send average picture
+        # Set bit; Reg24, bit4: send average picture
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
         self.read_response()
         if self.debug_register24:  # pragma: no cover
