@@ -80,14 +80,15 @@ body {
 /* Additional styling */
 
 .main-container {
-    /* width:100px;
-    height:50px; */
     margin:10px;
     float:left;
-  }
-  .nav-widget-add {
+}
+.nav-widget-add {
     display:none;
-  }
-  .fixed-width {
+}
+.fixed-width {
     width:60px;
-  }
+}
+.double-width {
+    width:138px;
+}

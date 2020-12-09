@@ -121,39 +121,19 @@
             </tr>
             <tr>
               <td>
-                Hexitec Config:&nbsp;
-              </td>
-              <td>
-                <div class="text-columns">
-                  <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' value= "control/config/hexitec_unified_CSD__performance.ini">
-                </div>
-              </td>
-              <td>
-                &nbsp;<td><span id="hexitec-config-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Apply:&nbsp;
-              </td>
-              <td>
-                <!-- This Apply button does the same kind of work as the one in the Processing section -->
-                <input type="button" class="btn btn-primary" id='applyButton2' name="store_enable" data-size="small" value="Apply">
-              </td>
-            </tr>
-            <tr>
-              <td>
                 System<br>Health:
               </td>
+              <!-- <td>
+                <input type="button" class="btn btn-primary" id='applyButton2' data-size="small" value="Apply">
+              </td> -->
+            </tr>
+            <tr>
               <td>
                 <!-- Single traffic light to indicate system health -->
                 <div id="trafficLight">
                   <div class="lamp" id="Green"></div>
                 </div>
               </td>
-            </tr>
-            <tr>
-              <td></td>
               <td>
                 <input type="button" class="btn btn-primary" id='connectButton' data-size="small" value="Connect">
                 <input type="button" class="btn btn-primary" id='initialiseButton' data-size="small" value="Initialise">
@@ -237,7 +217,7 @@
               </td>
               <td>
                 <div class="text-characters">
-                  <input type="text" id="threshold-filename-text" onChange='threshold_filename_changed()' value="data/config/thresh_2018_01_001_400V_20C.txt">
+                  <input type="text" id="threshold-filename-text" onChange='threshold_filename_changed()' size="42" value="data/config/thresh_2018_01_001_400V_20C.txt">
                 </div>
               </td>
             </tr>
@@ -254,7 +234,7 @@
               </td>
               <td>  
                 <div class="text-integer">
-                  <input type="text" id="threshold-value-text" onChange='threshold_value_changed()' value="120">
+                  <input type="text" id="threshold-value-text" onChange='threshold_value_changed()' size="3" value="120">
                 </div>
               </td>
               <td>
@@ -263,11 +243,11 @@
             </tr>
             <tr>
               <td>
-                Mode:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                Mode:&nbsp;
               </td>
               <td>
                 <div class="text-characters">
-                  <input type="text" id="threshold-mode-text" onchange='threshold_mode_changed()' value="value" required/>
+                  <input type="text" id="threshold-mode-text" onchange='threshold_mode_changed()' size="5" value="value" required/>
                 </div>
               </td>
               <td></td> <!-- Leave column blank-->
@@ -307,7 +287,7 @@
               </td>
               <td>
                 <div class="text-characters">
-                  <input type="text" id="gradients-filename-text" onChange='gradients_filename_changed()' value="data/config/m_2018_01_001_400V_20C.txt">
+                  <input type="text" id="gradients-filename-text" onChange='gradients_filename_changed()' size="42" value="data/config/m_2018_01_001_400V_20C.txt">
                 </div>
               </td>
               <td>
@@ -320,7 +300,7 @@
               </td>
               <td>
                 <div class="text-characters">
-                  <input type="text" id="intercepts-filename-text" onChange='intercepts_filename_changed()' value="data/config/c_2018_01_001_400V_20C.txt">
+                  <input type="text" id="intercepts-filename-text" onChange='intercepts_filename_changed()' size="42" value="data/config/c_2018_01_001_400V_20C.txt">
                 </div>
               </td>
               <td>
@@ -347,7 +327,7 @@
               </td>
               <td>
                 <div class="text-columns">
-                  <input type="text" id="pixel-grid-size-text" onChange='pixel_grid_size_changed()' value="3" size="8">
+                  <input type="text" id="pixel-grid-size-text" onChange='pixel_grid_size_changed()' size="3" value="3">
                 </div>
               </td>
               <td>
@@ -365,7 +345,7 @@
               </td>
               <td>
                 <div class="text-columns">
-                  <input type="text" id="bin-start-text" onChange='bin_start_changed()' value="0" size="8">
+                  <input type="text" id="bin-start-text" onChange='bin_start_changed()' size="3" value="0" size="8">
                 </div>
               </td>
               <td>
@@ -378,7 +358,7 @@
               </td>
               <td>
                 <div class="text-columns">
-                  <input type="text" id="bin-end-text" onChange='bin_end_changed()' value="8000" size="8">
+                  <input type="text" id="bin-end-text" onChange='bin_end_changed()' size="3" value="8000" size="8">
                 </div>
               </td>
               <td></td>
@@ -392,7 +372,7 @@
               </td>
               <td> 
                 <div class="text-columns">
-                  <input type="text" id="bin-width-text" onChange='bin_width_changed()' value="10" size="8">
+                  <input type="text" id="bin-width-text" onChange='bin_width_changed()' size="3" value="10" size="8">
                 </div>
               </td>
               <td>
@@ -405,7 +385,7 @@
               </td>
               <td>
                 <div class="text-columns">
-                  <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' value="/tmp/">
+                  <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' size="42" value="/tmp/">
                 </div>
               </td>
               <td>
@@ -418,7 +398,7 @@
               </td>
               <td>
                 <div class="text-columns">
-                  <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' value="a">
+                  <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' size="42" value="a">
                 </div>
               </td>
               <td>
@@ -430,7 +410,7 @@
                 Sensors Layout:&nbsp;
               </td>
               <td>
-                <select onchange="selectChange(this.value)">
+                <select class="double-width" onchange="selectChange(this.value)">
                   <option value="1x1">1x1 (80x80)</option>
                   <option selected="selected" value="2x2">2x2 (160x160)</option>
                   <option value="2x6">2x6 (160x480)</option>
@@ -458,7 +438,7 @@
               </td>
               <td>
                 <div class="text-frames">
-                  <input type="text" id="frames-text" onChange='frames_changed()' maxlength="40" size="7" value= "10">
+                  <input type="text" id="frames-text" onChange='frames_changed()' maxlength="40" size="3" value= "10">
                 </div>
               </td>
               <td>
@@ -471,7 +451,7 @@
               </td>
               <td>
                 <div class="text-duration">
-                  <input type="text" id="duration-text" onChange='duration_changed()' maxlength="40" size="7" value= "1" disabled="true">
+                  <input type="text" id="duration-text" onChange='duration_changed()' maxlength="40" size="3" value= "1" disabled="true">
                 </div>
               </td>
               <td>
@@ -480,10 +460,23 @@
             </tr>
             <tr>
               <td>
-                Apply:&nbsp;
+                Hexitec Config:&nbsp;
               </td>
               <td>
-                <input type="button" class="btn btn-primary" id='applyButton' name="store_enable" data-size="small" value="Apply">
+                <div class="text-columns">
+                  <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' size="42" value="control/config/hexitec_unified_CSD__performance.ini">
+                </div>
+              </td>
+              <td>
+                &nbsp;<td><span id="hexitec-config-warning">&nbsp;</span></td>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                &nbsp;
+              </td>
+              <td>
+                <input type="button" class="btn btn-primary double-width" id='applyButton' data-size="small" value="Apply All">
               </td>
             </tr>
           </table>

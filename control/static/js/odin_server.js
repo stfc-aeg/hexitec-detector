@@ -17,6 +17,7 @@ var polling_thread_running = false;
 var system_health = true;
 var fem_error_id = -1;
 var ui_frames = 10;
+var cold_initialisation = true;
 
 // Called once, when page 1st loaded
 $( document ).ready(function()
@@ -32,6 +33,8 @@ $( document ).ready(function()
     document.getElementById("cancelButton").disabled = true;
     document.getElementById("disconnectButton").disabled = true;
     document.getElementById("offsetsButton").disabled = true;
+    // Disable connectButton to force user click on Apply button first
+    // document.getElementById("connectButton").disabled = true;
  
     /// Style checkboxes into ON/OFF sliders
 
@@ -83,29 +86,35 @@ $( document ).ready(function()
     //     changeHdfWriteEnable();
     // });
 
-    // Buttons for loading sequence config files, applying settings
-
-    // Load the 12 different sequence files into Odin control
-    $('#storeButton').on('click', function(event) {
-        store_sequence_files();
-    });
-
     // Apply UI configuration choices
     $('#applyButton').on('click', function(event) {
         apply_ui_values();
     });
 
-    $('#applyButton2').on('click', function(event) {
-        apply_ui_values();
-    });
+    // $('#applyButton2').on('click', function(event) {
+    //     document.getElementById("connectButton").disabled = false;
+    //     apply_ui_values();
+    // });
 
     $('#connectButton').on('click', function(event) {
-        connect_hardware();
-        if (polling_thread_running === false)
-        {
-            polling_thread_running = true;
-            start_polling_thread();
+        // On cold initialisation: configure FP, wait 800 ms before connecting
+        //  Any subsequent time: Do not configure FP, connect straightaway
+        let time_delay = 0;
+        if (cold_initialisation) {
+            commit_configuration();
+            hexitec_config_changed();
+            time_delay = 800;
+            cold_initialisation = false;
         }
+
+        setTimeout(function() {
+            connect_hardware();
+            if (polling_thread_running === false)
+            {
+                polling_thread_running = true;
+                start_polling_thread();
+            }
+        }, time_delay);
         document.getElementById("disconnectButton").disabled = false;
         document.getElementById("connectButton").disabled = true;
     });
@@ -206,7 +215,7 @@ $( document ).ready(function()
     // let rajios = document.getElementsByClassName('counted');
     // for (let i = 0; i < rajios.length; i++)
     // {
-    //     rajios[i].addEventListener('change', function () 
+    //     rajios[i].addEventListener('change', function() 
     //     {
     //         console.log("Keyboard: " + this.value);
     //         if (rajios[i].checked) {
@@ -623,11 +632,6 @@ function commit_configuration()
     });
 }
 
-function store_sequence_files()
-{
-    console.log("Not doing nothing..");
-}
-
 function send_sequence_file(path, file)
 {
     // Sends a configuration sequence file to Odin control
@@ -646,6 +650,9 @@ function send_sequence_file(path, file)
 //  load the sequence of plugins corresponding to UI settings
 function apply_ui_values()
 {
+    if (cold_initialisation) {
+        cold_initialisation = false;
+    }
     // Load all UI settings into HexitecDAQ's ParameterTree
 
     // Generate temporary config file(s) loading plugins chain,
@@ -867,7 +874,7 @@ function bin_width_changed()
     });
 }
 
-var changeDurationEnable = function ()
+var changeDurationEnable = function()
 {
     // Change whether duration/frame selected
     duration_enable = $("[name='duration_enable']").bootstrapSwitch('state');
@@ -893,7 +900,7 @@ var changeDurationEnable = function ()
     }
 };
 
-var changeProcessedDataEnable = function ()
+var changeProcessedDataEnable = function()
 {
     // TODO: Temporarily hacked until Odin Control supports bool
     processed_data_enable = $("[name='processed_data_enable']").bootstrapSwitch('state');
@@ -918,7 +925,7 @@ var changeProcessedDataEnable = function ()
     });
 };
 
-var changeRawDataEnable = function ()
+var changeRawDataEnable = function()
 {
     // TODO: Temporarily hacked until Odin control supports bool
     raw_data_enable = $("[name='raw_data_enable']").bootstrapSwitch('state');
@@ -944,7 +951,7 @@ var changeRawDataEnable = function ()
     });
 };
 
-var changeNextFrameEnable = function ()
+var changeNextFrameEnable = function()
 {
     next_frame_enable = $("[name='next_frame_enable']").bootstrapSwitch('state');
     $.ajax({
