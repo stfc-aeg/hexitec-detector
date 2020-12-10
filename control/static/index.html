@@ -109,7 +109,7 @@
     </div>
 
     <div class="row">
-      <div class="col-sm-8">
+      <div class="col-sm-6">
         <div id="1" class="main-container">
           <a href="#" id="maincontainer1" class="rem-widget">Hide Acquisition</a>
           <table>
@@ -166,6 +166,95 @@
               </td>
             </tr>
           </table>
+        </div> <!-- "main-container" -->
+      </div> <!-- col-sm-4 -->
+
+      <div class="col-sm-6">
+        <div id="4" class="main-container">
+          <a href="#" id="maincontainer4" class="rem-widget">Hide Live View</a>
+          <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Live View</p>
+            <!-- Section nicked from LiveView UI.. -->
+            <div class="container-fluid">
+              <div class="row fluid-row">
+                <div class="col-sm-8">
+                  <div class="sidebar-nav-fixed">
+                    <div class="container-fluid">
+                      <div class="row sidebar-title">
+                        <!-- <h3>Live View Demo</h3> -->
+                      </div>
+                      <div class="row sidebar-row vertical-align">
+                        <div class="col-xs-5">
+                          <b>Auto&#8209;update:</b> 
+                        </div>
+                        <div class="col-xs-7">
+                          <input type="checkbox" name="liveview_enable" data-size="small">
+                        </div>
+                      </div>
+                      <div class="row sidebar-row vertical-align">
+                        <div class="col-xs-5">
+                          <b>Colour&nbsp;map:</b> 
+                        </div>
+                        <div class="col-xs-7">
+                          <select class="form-control" id="colormap_select">
+                          </select>
+                        </div>
+                      </div>
+                      <div class="row sidebar-row vertical-align">
+                        <div class="col-xs-5">
+                          <b>Clipping:</b> 
+                        </div>
+                        <div class="col-xs-7">
+                          <input type="checkbox" name="clip_enable" data-size="small":">
+                        </div>
+                      </div>
+                      <div class="row sidebar-row vertical-align row-bold">
+                        <div class="col-xs-4 text-left" id="clip_min">&nbsp;</div>
+                        <div class="col-xs-4 text-center">Range</div>
+                        <div class="col-xs-4 text-right" id="clip_max">&nbsp;</div>
+                      </div>
+                      <div class="row sidebar-row sidebar-row-full">
+                        <div class="col-xs12 range-col">
+                          <input id="clip_range"
+                            type="text" value="" data-slider-id="clip-range" 
+                            data-slider-min="0" data-slider-max="100" 
+                            data-slider-step="1" data-slider-value="[0,100]"
+                          />
+                        </div>
+                      </div>
+                      <div class="row sidebar-row vertical-align">
+                        <div class="col-xs-5">
+                          <b>Auto&#8209;sizing:</b> 
+                        </div>
+                        <div class="col-xs-7">
+                          <input type="checkbox" name="autosize_enable" data-size="small":">
+                        </div>
+                      </div>
+                      <div class="row sidebar-row vertical-align row-bold">
+                        <div class="col-xs-4 text-left" id="clip_min">0%</div>
+                        <div class="col-xs-4 text-center">Size</div>
+                        <div class="col-xs-4 text-right" id="clip_max">100%</div>
+                      </div>
+                      <div class="row sidebar-row sidebar-row-full">
+                        <div class="col-xs12 range-col">
+                          <input id="size_range"
+                            type="text" value="" data-slider-id="size-range" 
+                            data-slider-min="0" data-slider-max="100" 
+                            data-slider-step="1" data-slider-value="100"
+                          />
+                        </div>
+                      </div>
+                    </div> <!-- container-fluid --> 
+                  </div> <!-- sidebar-nav-fixed -->
+                </div> <!-- col-sm-8 -->
+          
+                <div class="col-sm-4">
+                  <div id="liveview_container" class="odin-server live-image">
+                    <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image'>
+                  </div> <!-- odin-server -->
+                </div> <!-- col-sm-4 -->
+              </div> <!-- row fluid-row -->
+            </div> <!-- container-fluid-->
+
         </div> <!-- "main-container" -->
       </div> <!-- col-sm-4 -->
     </div> <!-- row -->
@@ -636,10 +725,16 @@
                 <td>
                   <b>&nbsp;daq start:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b><span id="daq_start">&nbsp;</span>
                 </td>
+                <td>
+                  <b>&nbsp;vsr1_sync:&nbsp;</b><span id="vsr1_sync" style="float:right">&nbsp;X</span>
+                </td>
               </tr>
               <tr>
                 <td>
                   <b>&nbsp;fem not busy:&nbsp;</b><span id="fem_not_busy">&nbsp;</span>
+                </td>
+                <td>
+                  <b>&nbsp;vsr2_sync:&nbsp;</b><span id="vsr2_sync" style="float:right">&nbsp;X</span>
                 </td>
               </tr>
               <tr>
@@ -655,94 +750,6 @@
     </div> <!-- row -->
 
     <div class="row">
-      <div class="col-sm-8">
-        <div id="4" class="main-container">
-          <a href="#" id="maincontainer4" class="rem-widget">Hide Live View</a>
-          <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Live View</p>
-            <!-- Section nicked from LiveView UI.. -->
-            <div class="container-fluid">
-              <div class="row fluid-row">
-                <div class="col-sm-8">
-                  <div class="sidebar-nav-fixed">
-                    <div class="container-fluid">
-                      <div class="row sidebar-title">
-                        <!-- <h3>Live View Demo</h3> -->
-                      </div>
-                      <div class="row sidebar-row vertical-align">
-                        <div class="col-xs-5">
-                          <b>Auto&#8209;update:</b> 
-                        </div>
-                        <div class="col-xs-7">
-                          <input type="checkbox" name="liveview_enable" data-size="small">
-                        </div>
-                      </div>
-                      <div class="row sidebar-row vertical-align">
-                        <div class="col-xs-5">
-                          <b>Colour&nbsp;map:</b> 
-                        </div>
-                        <div class="col-xs-7">
-                          <select class="form-control" id="colormap_select">
-                          </select>
-                        </div>
-                      </div>
-                      <div class="row sidebar-row vertical-align">
-                        <div class="col-xs-5">
-                          <b>Clipping:</b> 
-                        </div>
-                        <div class="col-xs-7">
-                          <input type="checkbox" name="clip_enable" data-size="small":">
-                        </div>
-                      </div>
-                      <div class="row sidebar-row vertical-align row-bold">
-                        <div class="col-xs-4 text-left" id="clip_min">&nbsp;</div>
-                        <div class="col-xs-4 text-center">Range</div>
-                        <div class="col-xs-4 text-right" id="clip_max">&nbsp;</div>
-                      </div>
-                      <div class="row sidebar-row sidebar-row-full">
-                        <div class="col-xs12 range-col">
-                          <input id="clip_range"
-                            type="text" value="" data-slider-id="clip-range" 
-                            data-slider-min="0" data-slider-max="100" 
-                            data-slider-step="1" data-slider-value="[0,100]"
-                          />
-                        </div>
-                      </div>
-                      <div class="row sidebar-row vertical-align">
-                        <div class="col-xs-5">
-                          <b>Auto&#8209;sizing:</b> 
-                        </div>
-                        <div class="col-xs-7">
-                          <input type="checkbox" name="autosize_enable" data-size="small":">
-                        </div>
-                      </div>
-                      <div class="row sidebar-row vertical-align row-bold">
-                        <div class="col-xs-4 text-left" id="clip_min">0%</div>
-                        <div class="col-xs-4 text-center">Size</div>
-                        <div class="col-xs-4 text-right" id="clip_max">100%</div>
-                      </div>
-                      <div class="row sidebar-row sidebar-row-full">
-                        <div class="col-xs12 range-col">
-                          <input id="size_range"
-                            type="text" value="" data-slider-id="size-range" 
-                            data-slider-min="0" data-slider-max="100" 
-                            data-slider-step="1" data-slider-value="100"
-                          />
-                        </div>
-                      </div>
-                    </div> <!-- container-fluid --> 
-                  </div> <!-- sidebar-nav-fixed -->
-                </div> <!-- col-sm-8 -->
-          
-                <div class="col-sm-4">
-                  <div id="liveview_container" class="odin-server live-image">
-                    <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image'>
-                  </div> <!-- odin-server -->
-                </div> <!-- col-sm-4 -->
-              </div> <!-- row fluid-row -->
-            </div> <!-- container-fluid-->
-
-        </div> <!-- "main-container" -->
-      </div> <!-- col-sm-4 -->
     </div> <!-- row -->
 
   

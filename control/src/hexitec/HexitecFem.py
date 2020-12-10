@@ -171,6 +171,7 @@ class HexitecFem():
         self.vsr1_asic2 = 0
         self.vsr1_adc = 0
         self.vsr1_hv = 0
+        self.vsr1_sync = -1
 
         self.vsr2_ambient = 0
         self.vsr2_humidity = 0
@@ -178,6 +179,7 @@ class HexitecFem():
         self.vsr2_asic2 = 0
         self.vsr2_adc = 0
         self.vsr2_hv = 0
+        self.vsr2_sync = -1
 
         self.read_firmware_version = True
         self.firmware_date = "N/A"
@@ -215,6 +217,8 @@ class HexitecFem():
             "hardware_busy": (lambda: self.hardware_busy, None),
             "firmware_date": (lambda: self.firmware_date, None),
             "firmware_time": (lambda: self.firmware_time, None),
+            "vsr1_sync": (lambda: self.vsr1_sync, None),
+            "vsr2_sync": (lambda: self.vsr2_sync, None),
             "vsr1_sensors": {
                 "ambient": (lambda: self.vsr1_ambient, None),
                 "humidity": (lambda: self.vsr1_humidity, None),
@@ -866,6 +870,11 @@ class HexitecFem():
             logging.debug("Both Links on VSR 1 synchronised")
         else:
             logging.debug(synced)
+
+        if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
+            self.vsr1_sync = synced
+        elif (self.vsr_addr == HexitecFem.VSR_ADDRESS[1]):
+            self.vsr2_sync = synced
 
         # Clear training enable
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x43, 0x30, 0x0D])

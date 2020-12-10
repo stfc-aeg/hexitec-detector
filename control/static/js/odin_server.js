@@ -493,6 +493,9 @@ function poll_fem()
             $('#vsr2_adc').html(fems[fem]["vsr2_sensors"]["adc"].toFixed(2));
             $('#vsr2_hv').html(fems[fem]["vsr2_sensors"]["hv"].toFixed(3));
 
+            $('#vsr1_sync').html(fems[fem]["vsr1_sync"]);
+            $('#vsr2_sync').html(fems[fem]["vsr2_sync"]);
+
             // console.log("fem id: '" + fems[fem]["id"] + "' health: '" + fems[fem]["health"] + "' stat msg: '" + fems[fem]["status_message"] + "'.");
         }
 
