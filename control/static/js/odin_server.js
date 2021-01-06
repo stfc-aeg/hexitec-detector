@@ -33,9 +33,7 @@ $( document ).ready(function()
     document.getElementById("cancelButton").disabled = true;
     document.getElementById("disconnectButton").disabled = true;
     document.getElementById("offsetsButton").disabled = true;
-    // Disable connectButton to force user click on Apply button first
-    // document.getElementById("connectButton").disabled = true;
- 
+
     /// Style checkboxes into ON/OFF sliders
 
     $("[name='duration_enable']").bootstrapSwitch();
@@ -91,11 +89,6 @@ $( document ).ready(function()
         apply_ui_values();
     });
 
-    // $('#applyButton2').on('click', function(event) {
-    //     document.getElementById("connectButton").disabled = false;
-    //     apply_ui_values();
-    // });
-
     $('#connectButton').on('click', function(event) {
         // On cold initialisation: configure FP, wait 800 ms before connecting
         //  Any subsequent time: Do not configure FP, connect straightaway
@@ -147,8 +140,6 @@ $( document ).ready(function()
     });
 
     $('#container1').hide();
-    // $('#2').hide();
-    // $('#container2').show();
     $('#container2').hide();
     $('#container3').hide();
     $('#container4').hide();
@@ -189,43 +180,6 @@ $( document ).ready(function()
         $(this).hide();
     });
 
-    // // EXPERIMENTAL area //
-    
-    // // User may click anywhere on a radio (as you would expect)
-    // if (document.querySelector('input[name="radio_anywhere"]'))
-    // {
-    //     document.querySelectorAll('input[name="radio_anywhere"]').forEach((elem) => {
-    //         elem.addEventListener("change", function(event) {
-    //             var item = event.target.value;
-    //             console.log("Anywhere: " + item);
-    //         });
-    //     });
-    // }
-    
-    // // // User may only click on the actual circle next to the label (or be ignored..)
-    // // var radios = document.forms["formA"].elements["myradio"];
-    // // for(var i = 0, max = radios.length; i < max; i++) {
-    // //     radios[i].onclick = function()
-    // //     {
-    // //         console.log("Bullseye: " + this.value);
-    // //     }
-    // // }
-
-    // // User may only use keyboard keys i.e. tab and arrow keys (or be ignored)
-    // let rajios = document.getElementsByClassName('counted');
-    // for (let i = 0; i < rajios.length; i++)
-    // {
-    //     rajios[i].addEventListener('change', function() 
-    //     {
-    //         console.log("Keyboard: " + this.value);
-    //         if (rajios[i].checked) {
-    //             ;// console.log("if hit, radio: " + i);
-    //         } else if (rajios[i].checked) {
-    //             ;// console.log("else if hit, radio: " + i);
-    //             return "";
-    //         }
-    //     });
-    // }
 });
 
 // Supports selecting Charged Sharing algorithm (none/add/dis Buttons)
@@ -261,7 +215,7 @@ function setCS(e)
             charged_sharing_enable = true;
             break;
         default:
-            console.log("Nope");
+            console.log("You must have added a fourth button, Neither None/Add/Dis pressed");
             break;
     }
 
@@ -453,13 +407,6 @@ function poll_fem()
         $('#daq_stop').html(daq_stop);
         $('#fem_not_busy').html(fem_not_busy);
 
-        // <b>&nbsp;daq start:&nbsp;</b><span id="daq_start">&nbsp;</span>
-        // <b>&nbsp;daq stop:&nbsp;</b><span id="daq_stop">&nbsp;</span>
-        // <b>&nbsp;fem not busy:&nbsp;</b><span id="fem_not_busy">&nbsp;</span>
-        // "daq_start_time": (lambda: self.daq_start_time, None),
-        // "daq_stop_time": (lambda: self.daq_stop_time, None),
-        // "fem_not_busy": (lambda: self.fem_not_busy, None),
-
         // Obtain overall adapter(.py's) status
 
         var status_message = adapter_status["status_message"];
@@ -531,10 +478,6 @@ function poll_fem()
         if (polling_thread_running === true)
         {
             window.setTimeout(poll_fem, 850);
-        }
-        else
-        {
-            console.log("Stopping the polling thread");
         }
     });
 }
@@ -700,20 +643,26 @@ function apply_ui_values()
 
 function threshold_filename_changed()
 {
-    var threshold_filename = $('#threshold-filename-text').prop('value');
-    threshold_filename = JSON.stringify(threshold_filename);
-    $.ajax({
-        type: "PUT",
-        url: hexitec_url + 'detector/daq/config/threshold/threshold_filename',
-        contentType: "application/json",
-        data: threshold_filename,
-        success: function(result) {
-            $('#threshold-filename-warning').html("");
-        },
-        error: function(request, msg, error) {
-            $('#threshold-filename-warning').html(error + ": " + format_error(request.responseText));
-        }
-    });
+    // Update threshold filename if threshold filename mode set
+    //  (0: strings equal [filename mode], 1: not [none/value mode])
+    var threshold_mode = $('#threshold-mode-text').prop('value');
+    if (threshold_mode.localeCompare("filename") === 0)
+    {
+        var threshold_filename = $('#threshold-filename-text').prop('value');
+        threshold_filename = JSON.stringify(threshold_filename);
+        $.ajax({
+            type: "PUT",
+            url: hexitec_url + 'detector/daq/config/threshold/threshold_filename',
+            contentType: "application/json",
+            data: threshold_filename,
+            success: function(result) {
+                $('#threshold-filename-warning').html("");
+            },
+            error: function(request, msg, error) {
+                $('#threshold-filename-warning').html(error + ": " + format_error(request.responseText));
+            }
+        });
+    }
 }
 
 function threshold_value_changed()
@@ -737,12 +686,11 @@ function threshold_value_changed()
 function threshold_mode_changed()
 {
     var threshold_mode = $('#threshold-mode-text').prop('value');
-    threshold_mode = JSON.stringify(threshold_mode);
     $.ajax({
         type: "PUT",
         url: hexitec_url + 'detector/daq/config/threshold/threshold_mode',
         contentType: "application/json",
-        data: threshold_mode,
+        data: JSON.stringify(threshold_mode),
         success: function(result) {
             $('#threshold-mode-warning').html("");
             document.getElementById("threshold-mode-warning").classList.remove('alert-danger');
@@ -752,47 +700,61 @@ function threshold_mode_changed()
             document.getElementById("threshold-mode-warning").classList.add('alert-danger');
         }
     });
+    // Check valid filename/Update threshold filename if threshold filename mode set
+    //  (0: strings equal [filename mode], 1: not [none/value mode])
+    if (threshold_mode.localeCompare("filename") === 0)
+    {
+        threshold_filename_changed();
+    }
 }
 
 function gradients_filename_changed()
 {
-    var gradients_filename = $('#gradients-filename-text').prop('value');
-    gradients_filename = JSON.stringify(gradients_filename);
-    $.ajax({
-        type: "PUT",
-        url: hexitec_url + 'detector/daq/config/calibration/gradients_filename',
-        contentType: "application/json",
-        data: gradients_filename,
-        success: function(result) {
-            $('#gradients-filename-warning').html("");
-        },
-        error: function(request, msg, error) {
-            $('#gradients-filename-warning').html(error + ": " + format_error(request.responseText));
-        }
-    });
+    // Only check/update gradients filename if calibration is enabled
+    if (calibration_enable === true)
+    {
+        var gradients_filename = $('#gradients-filename-text').prop('value');
+        gradients_filename = JSON.stringify(gradients_filename);
+        $.ajax({
+            type: "PUT",
+            url: hexitec_url + 'detector/daq/config/calibration/gradients_filename',
+            contentType: "application/json",
+            data: gradients_filename,
+            success: function(result) {
+                $('#gradients-filename-warning').html("");
+            },
+            error: function(request, msg, error) {
+                $('#gradients-filename-warning').html(error + ": " + format_error(request.responseText));
+            }
+        });
+    }
 }
 
 function intercepts_filename_changed()
 {
-    var intercepts_filename = $('#intercepts-filename-text').prop('value');
-    intercepts_filename = JSON.stringify(intercepts_filename);
-    $.ajax({
-        type: "PUT",
-        url: hexitec_url + 'detector/daq/config/calibration/intercepts_filename',
-        contentType: "application/json",
-        data: intercepts_filename,
-        success: function(result) {
-            $('#intercepts-filename-warning').html("");
-        },
-        error: function(request, msg, error) {
-            $('#intercepts-filename-warning').html(error + ": " + format_error(request.responseText));
-        }
-    });
+    // Only check/update intercepts filename if calibration is enabled
+    if (calibration_enable === true)
+    {
+        var intercepts_filename = $('#intercepts-filename-text').prop('value');
+        intercepts_filename = JSON.stringify(intercepts_filename);
+        $.ajax({
+            type: "PUT",
+            url: hexitec_url + 'detector/daq/config/calibration/intercepts_filename',
+            contentType: "application/json",
+            data: intercepts_filename,
+            success: function(result) {
+                $('#intercepts-filename-warning').html("");
+            },
+            error: function(request, msg, error) {
+                $('#intercepts-filename-warning').html(error + ": " + format_error(request.responseText));
+            }
+        });
+    }
 }
 
 function pixel_grid_size_changed()
 {
-    // Sends setting to both Addition, Discrimination plugins
+    // Sends the setting to both Addition, Discrimination plugins
 
     var pixel_grid_size = $('#pixel-grid-size-text').prop('value');
     pixel_grid_size = JSON.stringify(parseInt( pixel_grid_size));
@@ -932,7 +894,6 @@ var changeRawDataEnable = function()
 {
     // TODO: Temporarily hacked until Odin control supports bool
     raw_data_enable = $("[name='raw_data_enable']").bootstrapSwitch('state');
-    console.log("changeRawDataEnable called, changing to: " + raw_data_enable);
     $.ajax({
         type: "PUT",
         url: hexitec_url + 'fp/config/reorder/raw_data',  // Targets FP Plugin directly
@@ -1000,6 +961,13 @@ var changeCalibrationEnable = function()
             console.log("calibration enable couldn't be changed");
         }
     });
+
+    // If calibration now enabled, check coefficient files are valid
+    if (calibration_enable)
+    {
+        gradients_filename_changed();
+        intercepts_filename_changed()
+    }
 };
 
 var changeHdfWriteEnable = function()
@@ -1021,23 +989,6 @@ var selectChange = function(sensors_layout)
         },
         error: function(request, msg, error) {
             $('#sensors-layout-warning').html(error + ": " + format_error(request.responseText));
-        }
-    });
-}
-
-var vcalChange = function(vcal)
-{
-    // Sets which calibration image to use (3 = normal data)
-    $.ajax({
-        type: "PUT",
-        url: hexitec_url + 'detector',
-        contentType: "application/json",
-        data: JSON.stringify({"vcal": parseInt(vcal)}),
-        success: function(result) {
-            $('#vcal-warning').html("");
-        },
-        error: function(request, msg, error) {
-            $('#vcal-warning').html(error + ": " + format_error(request.responseText));
         }
     });
 }
@@ -1185,8 +1136,7 @@ function hexitec_config_changed()
 
 function frames_changed()
 {
-    // var ui_frames = $('#frames-text').val();
-    ui_frames = $('#frames-text').prop('value');
+    var ui_frames = $('#frames-text').prop('value');
     $.ajax({
         type: "PUT",
         url: hexitec_url + 'detector/acquisition/number_frames',

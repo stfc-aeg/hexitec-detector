@@ -311,8 +311,6 @@ class HexitecDAQ():
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
             self.hdf_file_location = self.file_dir + self.file_name + '_000001.h5'
-            print("hdf_file_location: ", self.hdf_file_location)
-            print(os.path.exists(self.hdf_file_location))
             # Check file exists before reopening to add metadata
             if os.path.exists(self.hdf_file_location):
                 self.prepare_hdf_file()

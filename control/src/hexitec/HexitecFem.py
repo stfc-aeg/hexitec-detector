@@ -415,7 +415,7 @@ class HexitecFem():
         IOLoop.instance().call_later(1.0, self.poll_sensors)
 
     def connect_hardware(self, msg=None):
-        """Connect with hardware, wait 10 seconds for the VSRs' microcontrollers to initialise."""
+        """Connect with hardware, wait 10 seconds for the VSRs' FPGAs to initialise."""
         try:
             if self.hardware_connected:
                 raise ParameterTreeError("Connection already established")
@@ -424,9 +424,9 @@ class HexitecFem():
             self.operation_percentage_complete = 0
             self._set_status_message("Connecting to camera..")
             self.cam_connect()
-            self._set_status_message("Camera connected. Waiting for microcontrollers \
+            self._set_status_message("Camera connected. Waiting for VSRs' FPGAs \
                 to initialise..")
-            self._wait_while_microcontrollers_initialise()
+            self._wait_while_fpgas_initialise()
             self.initialise_progress = 0
         except ParameterTreeError as e:
             self._set_status_error("%s" % str(e))
@@ -440,10 +440,10 @@ class HexitecFem():
             logging.error("Camera connection: %s" % str(e))
             # Cannot raise error beyond current thread
 
-        print("\n\nReinstate polling before merging with master !\n\n")
-        # # Start polling thread (connect successfully set up)
-        # if len(self.status_error) == 0:
-        #     self._start_polling()
+        # print("\n\nReinstate polling before merging with master !\n\n")
+        # Start polling thread (connect successfully set up)
+        if len(self.status_error) == 0:
+            self._start_polling()
 
     @run_on_executor(executor='thread_executor')
     def initialise_hardware(self, msg=None):
@@ -555,15 +555,15 @@ class HexitecFem():
         """Get debug messages status."""
         return self.debug
 
-    def _wait_while_microcontrollers_initialise(self):
-        """Set up to wait 10 seconds to allow VSRs' microcontrollers to initialise."""
+    def _wait_while_fpgas_initialise(self):
+        """Set up to wait 10 seconds to allow VSRs' FPGAs to initialise."""
         self.hardware_busy = True
         self.start = time.time()
         self.delay = 10
         IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
 
     def initialisation_check_loop(self):
-        """Check for error and call itself after a second until 10 second delay fulfilled."""
+        """Check for error and call itself each second until 10 second delay fulfilled."""
         if len(self.status_error) > 0:
             self.operation_percentage_complete = 0
             self.hardware_busy = False
@@ -574,7 +574,7 @@ class HexitecFem():
             IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
         else:
             self.hardware_busy = False
-            self._set_status_message("Camera connected. Microcontrollers initialised.")
+            self._set_status_message("Camera connected. FPGAs initialised.")
 
     def send_cmd(self, cmd, track_progress=True):
         """Send a command string to the microcontroller."""

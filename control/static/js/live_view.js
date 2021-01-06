@@ -176,13 +176,11 @@ var LiveViewApp = (function()
     {
         var new_size = size_event.value;
         img_scaling = new_size / 100;
-        console.log("CHANGED img_scaling to " + img_scaling);
         resizeImage();
     };
 
     var changeColormap = function(value)
     {
-        console.log("Colormap changed to " + value)
         $.ajax({
             type: "PUT",
             url: api_url,

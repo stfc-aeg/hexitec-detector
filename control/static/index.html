@@ -238,7 +238,7 @@
                         <div class="col-xs12 range-col">
                           <input id="size_range"
                             type="text" value="" data-slider-id="size-range" 
-                            data-slider-min="0" data-slider-max="100" 
+                            data-slider-min="0" data-slider-max="200" 
                             data-slider-step="1" data-slider-value="100"
                           />
                         </div>
@@ -300,6 +300,22 @@
                 <th>Threshold&nbsp;</th>
               </td>
             </tr>
+            <tr>
+              <td>
+                Mode:&nbsp;
+              </td>
+              <td>
+                <select class="double-width" id="threshold-mode-text" onchange="threshold_mode_changed(this.value)">
+                  <option value="filename">filename</option>
+                  <option selected="selected" value="value">value</option>
+                  <option value="none">none</option>
+                </select>
+              </td>
+              <td></td> <!-- Leave column blank-->
+              <td>
+                &nbsp;<span id="threshold-mode-warning">&nbsp;</span>
+              </td>
+            </tr>
             <tr>  
               <td>  
                 Filename:&nbsp;
@@ -309,14 +325,14 @@
                   <input type="text" id="threshold-filename-text" onChange='threshold_filename_changed()' size="42" value="data/config/thresh_2018_01_001_400V_20C.txt">
                 </div>
               </td>
+              <td>
+              </td>
+              <td>
+              </td>
+              <td>
+                &nbsp;<span id="threshold-filename-warning">&nbsp;</span>
+              </td>
             </tr>
-            <td>
-            </td>
-            <td>
-            </td>
-            <td>
-              &nbsp;<span id="threshold-filename-warning">&nbsp;</span>
-            </td>
             <tr>
               <td>  
                 Value:&nbsp;
@@ -328,20 +344,6 @@
               </td>
               <td>
                 &nbsp;<span id="threshold-value-warning">&nbsp;</span>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Mode:&nbsp;
-              </td>
-              <td>
-                <div class="text-characters">
-                  <input type="text" id="threshold-mode-text" onchange='threshold_mode_changed()' size="5" value="value" required/>
-                </div>
-              </td>
-              <td></td> <!-- Leave column blank-->
-              <td>
-                &nbsp;<span id="threshold-mode-warning">&nbsp;</span>
               </td>
             </tr>
             <tr>  
@@ -510,10 +512,14 @@
               </td>
             </tr>
             <tr>
-              <th>Camera&nbsp;</th>
+              <td>
+                <th>Camera&nbsp;</th>
+              </td>
             </tr>
             <tr>  
-              <th>Mode&nbsp;</th>
+              <td>
+                Mode&nbsp;
+              </td>
               <td>
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
