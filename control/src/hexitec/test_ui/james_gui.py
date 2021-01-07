@@ -1216,7 +1216,7 @@ def load_image():
     send_cmd(enable_sm)
     read_response()
 
-def life_saver():
+def initialise_system():
     # Does init, load, set up, write, enable, calibrate all in one fell swoooop
     start = time.time()
     try:
@@ -1313,9 +1313,9 @@ button0 = tk.Button(frame,
 button0.pack(side=tk.BOTTOM)
 
 button101 = tk.Button(frame,
-                      text="LIFE-SAVER",
+                      text="INIT_SYSTEM",
                       fg="CYAN",
-                      command=life_saver)
+                      command=initialise_system)
 button101.pack(side=tk.BOTTOM)
 
 button2 = tk.Button(frame, 
