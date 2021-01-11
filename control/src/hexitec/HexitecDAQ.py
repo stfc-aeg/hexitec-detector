@@ -108,9 +108,9 @@ class HexitecDAQ():
 
         self.threshold_filename = ""
         self.threshold_mode = "value"
-        self.threshold_value = 100
+        self.threshold_value = 120
 
-        self.rows, self.columns = 80, 80
+        self.rows, self.columns = 160, 160
         self.pixels = self.rows * self.columns
         self.number_frames = 10
         # Diagnostics
@@ -311,8 +311,6 @@ class HexitecDAQ():
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
             self.hdf_file_location = self.file_dir + self.file_name + '_000001.h5'
-            print("hdf_file_location: ", self.hdf_file_location)
-            print(os.path.exists(self.hdf_file_location))
             # Check file exists before reopening to add metadata
             if os.path.exists(self.hdf_file_location):
                 self.prepare_hdf_file()
@@ -680,10 +678,21 @@ class HexitecDAQ():
         store_config, execute_config = self.gcf.generate_config_files()
         command = "config/config_file/"
         request = ApiAdapterRequest(store_config, content_type="application/json")
-        self.adapters["fp"].put(command, request)
+
+        response = self.adapters["fp"].put(command, request)
+        status_code = response.status_code
+        if (status_code != 200):
+            error = "Error {} parsing store json config file in fp adapter".format(status_code)
+            logging.error(error)
+            self.parent.fems[0]._set_status_error(error)
 
         request = ApiAdapterRequest(execute_config, content_type="application/json")
-        self.adapters["fp"].put(command, request)
+        response = self.adapters["fp"].put(command, request)
+        status_code = response.status_code
+        if (status_code != 200):
+            error = "Error {} parsing execute json config file in fp adapter".format(status_code)
+            logging.error(error)
+            self.parent.fems[0]._set_status_error(error)
 
         # Allow FP time to process above PUT requests before configuring plugin settings
         IOLoop.instance().call_later(0.4, self.submit_configuration)

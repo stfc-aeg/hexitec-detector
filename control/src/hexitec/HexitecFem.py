@@ -171,6 +171,7 @@ class HexitecFem():
         self.vsr1_asic2 = 0
         self.vsr1_adc = 0
         self.vsr1_hv = 0
+        self.vsr1_sync = -1
 
         self.vsr2_ambient = 0
         self.vsr2_humidity = 0
@@ -178,6 +179,7 @@ class HexitecFem():
         self.vsr2_asic2 = 0
         self.vsr2_adc = 0
         self.vsr2_hv = 0
+        self.vsr2_sync = -1
 
         self.read_firmware_version = True
         self.firmware_date = "N/A"
@@ -215,6 +217,8 @@ class HexitecFem():
             "hardware_busy": (lambda: self.hardware_busy, None),
             "firmware_date": (lambda: self.firmware_date, None),
             "firmware_time": (lambda: self.firmware_time, None),
+            "vsr1_sync": (lambda: self.vsr1_sync, None),
+            "vsr2_sync": (lambda: self.vsr2_sync, None),
             "vsr1_sensors": {
                 "ambient": (lambda: self.vsr1_ambient, None),
                 "humidity": (lambda: self.vsr1_humidity, None),
@@ -411,7 +415,7 @@ class HexitecFem():
         IOLoop.instance().call_later(1.0, self.poll_sensors)
 
     def connect_hardware(self, msg=None):
-        """Connect with hardware, wait 10 seconds for the VSRs' microcontrollers to initialise."""
+        """Connect with hardware, wait 10 seconds for the VSRs' FPGAs to initialise."""
         try:
             if self.hardware_connected:
                 raise ParameterTreeError("Connection already established")
@@ -420,9 +424,9 @@ class HexitecFem():
             self.operation_percentage_complete = 0
             self._set_status_message("Connecting to camera..")
             self.cam_connect()
-            self._set_status_message("Camera connected. Waiting for microcontrollers \
+            self._set_status_message("Camera connected. Waiting for VSRs' FPGAs \
                 to initialise..")
-            self._wait_while_microcontrollers_initialise()
+            self._wait_while_fpgas_initialise()
             self.initialise_progress = 0
         except ParameterTreeError as e:
             self._set_status_error("%s" % str(e))
@@ -436,10 +440,10 @@ class HexitecFem():
             logging.error("Camera connection: %s" % str(e))
             # Cannot raise error beyond current thread
 
-        print("\n\nReinstate polling before merging with master !\n\n")
-        # # Start polling thread (connect successfully set up)
-        # if len(self.status_error) == 0:
-        #     self._start_polling()
+        # print("\n\nReinstate polling before merging with master !\n\n")
+        # Start polling thread (connect successfully set up)
+        if len(self.status_error) == 0:
+            self._start_polling()
 
     @run_on_executor(executor='thread_executor')
     def initialise_hardware(self, msg=None):
@@ -551,15 +555,15 @@ class HexitecFem():
         """Get debug messages status."""
         return self.debug
 
-    def _wait_while_microcontrollers_initialise(self):
-        """Set up to wait 10 seconds to allow VSRs' microcontrollers to initialise."""
+    def _wait_while_fpgas_initialise(self):
+        """Set up to wait 10 seconds to allow VSRs' FPGAs to initialise."""
         self.hardware_busy = True
         self.start = time.time()
         self.delay = 10
         IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
 
     def initialisation_check_loop(self):
-        """Check for error and call itself after a second until 10 second delay fulfilled."""
+        """Check for error and call itself each second until 10 second delay fulfilled."""
         if len(self.status_error) > 0:
             self.operation_percentage_complete = 0
             self.hardware_busy = False
@@ -570,7 +574,7 @@ class HexitecFem():
             IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
         else:
             self.hardware_busy = False
-            self._set_status_message("Camera connected. Microcontrollers initialised.")
+            self._set_status_message("Camera connected. FPGAs initialised.")
 
     def send_cmd(self, cmd, track_progress=True):
         """Send a command string to the microcontroller."""
@@ -800,7 +804,7 @@ class HexitecFem():
             print("\n")
             logging.debug("  * 02 *** cal_sen, CLR bit5;   Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
-        # Set bit 4 of Reg24: send average picture
+        # Set bit; Reg24, bit4: send average picture
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
         self.read_response()
         if self.debug_register24:  # pragma: no cover
@@ -866,6 +870,11 @@ class HexitecFem():
             logging.debug("Both Links on VSR 1 synchronised")
         else:
             logging.debug(synced)
+
+        if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
+            self.vsr1_sync = synced
+        elif (self.vsr_addr == HexitecFem.VSR_ADDRESS[1]):
+            self.vsr2_sync = synced
 
         # Clear training enable
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x43, 0x30, 0x0D])

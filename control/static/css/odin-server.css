@@ -58,7 +58,7 @@ body {
     left: 0;
 }
 
-/* Test traffic lights.. */
+/* Traffic lights, utilised by System Health */
 
 .lamp {
     height: 30px;
@@ -75,4 +75,20 @@ body {
 }
 .lampGreen {
     background-color: green;
+}
+
+/* Additional styling */
+
+.main-container {
+    margin:10px;
+    float:left;
+}
+.nav-widget-add {
+    display:none;
+}
+.fixed-width {
+    width:60px;
+}
+.double-width {
+    width:138px;
 }
