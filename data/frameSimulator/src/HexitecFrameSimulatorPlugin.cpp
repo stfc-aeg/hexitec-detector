@@ -1,0 +1,231 @@
+#include <string>
+
+#include "HexitecFrameSimulatorPlugin.h"
+#include "FrameSimulatorOptionsHexitec.h"
+
+#include <cstdlib>
+#include <time.h>
+#include <iostream>
+#include <algorithm>
+#include <boost/lexical_cast.hpp>
+
+#include "version.h"
+
+namespace FrameSimulator {
+
+
+    /** Construct a HexitecFrameSimulatorPlugin
+    * setup an instance of the logger
+    * initialises data and frame counts
+    */
+    HexitecFrameSimulatorPlugin::HexitecFrameSimulatorPlugin() : FrameSimulatorPluginUDP() {
+        //Setup logging for the class
+        logger_ = Logger::getLogger("FS.HexitecFrameSimulatorPlugin");
+        logger_->setLevel(Level::getAll());
+
+        total_packets = 0;
+        total_bytes = 0;
+
+        current_frame_num = -1;
+        sensors_config_ = Hexitec::sensorConfigTwo;
+    }
+
+    void HexitecFrameSimulatorPlugin::populate_options(po::options_description& config) {
+        
+        FrameSimulatorPluginUDP::populate_options(config);
+
+        opt_image_pattern_json.add_option_to(config);
+    }
+
+    bool HexitecFrameSimulatorPlugin::setup(const po::variables_map& vm) {
+        LOG4CXX_DEBUG(logger_, "Setting Up Hexitec Frame Simulator Plugin");
+
+        //Extract Optional arguments for this plugin
+        boost::optional<std::string> image_pattern_json;
+
+        opt_image_pattern_json.get_val(vm, image_pattern_json);
+        if(image_pattern_json) {
+            image_pattern_json_path_ = image_pattern_json.get();
+        }
+
+        LOG4CXX_DEBUG(logger_, "Using Image Pattern from file: " << image_pattern_json_path_);
+
+        //actually read out the data from the image file
+        boost::property_tree::ptree img_tree;
+        boost::property_tree::json_parser::read_json(image_pattern_json_path_, img_tree);
+        
+        num_pixels_ = Hexitec::pixel_columns_per_sensor * Hexitec::pixel_rows_per_sensor;
+        pixel_data_ = new uint16_t[num_pixels_];
+        int x = 0;
+        BOOST_FOREACH(boost::property_tree::ptree::value_type &row, img_tree.get_child("img"))
+        {
+
+            BOOST_FOREACH(boost::property_tree::ptree::value_type &cell, row.second)
+            {
+                pixel_data_[x] = cell.second.get_value<uint16_t>();
+                x++;
+            }
+        }
+
+        return FrameSimulatorPluginUDP::setup(vm);
+    }
+
+    /** Extracts the frames from the pcap data file buffer
+     * \param[in] data - pcap data
+     * \param[in] size
+     */
+    void HexitecFrameSimulatorPlugin::extract_frames(const u_char *data, const int &size) {
+
+        LOG4CXX_DEBUG(logger_, "Extracting Frame(s) from packet");
+        //get first 8 bytes, turn into header
+        //check header flags
+        const Hexitec::PacketHeader* packet_hdr = reinterpret_cast<const Hexitec::PacketHeader*>(data);
+
+        uint32_t frame_number = packet_hdr->frame_counter;
+        uint32_t packet_number_flags = packet_hdr->packet_number_flags;
+
+        bool is_SOF = packet_number_flags & Hexitec::start_of_frame_mask;
+        bool is_EOF = packet_number_flags & Hexitec::end_of_frame_mask;
+        uint32_t packet_number = packet_number_flags & Hexitec::packet_number_mask;
+
+        if(is_SOF) {
+            LOG4CXX_DEBUG(logger_, "SOF Marker for Frame " << frame_number << " at packet "
+                << packet_number << " total " << total_packets);
+
+            if(packet_number != 0) {
+                LOG4CXX_WARN(logger_, "Detected SOF marker on packet !=0");
+            }
+
+            //it is new frame, so we create a new frame and add it to the list
+            UDPFrame frame(frame_number);
+            frames_.push_back(frame);
+            frames_[frames_.size() - 1].SOF_markers.push_back(frame_number);
+        }
+
+        if(is_EOF) {
+            LOG4CXX_DEBUG(logger_, "EOF Marker for Frame " << frame_number << " at packet "
+                << packet_number << " total " << total_packets);
+
+            frames_[frames_.size() - 1].EOF_markers.push_back(frame_number);
+        }
+
+        //create new packet, copy packet data and push into frame
+        boost::shared_ptr<Packet> pkt(new Packet());
+        unsigned char *datacp = new unsigned char[size];
+        memcpy(datacp, data, size);
+        pkt->data = datacp;
+        pkt->size = size;
+        frames_[frames_.size() - 1].packets.push_back(pkt);
+
+        total_packets++;
+
+    }
+
+    /** Creates a number of frames
+     *
+     * @param num_frames - number of frames to create
+     */
+    void HexitecFrameSimulatorPlugin::create_frames(const int &num_frames) {
+        LOG4CXX_DEBUG(logger_, "Creating Frames");
+
+        //calculate number of pixel image bytes in frame
+        std::size_t image_bytes = num_pixels_ * sizeof(uint16_t);
+
+        //allocate buffer for packet data including header
+        u_char* head_packet_data = new u_char[Hexitec::primary_packet_size + sizeof(Hexitec::PacketHeader)];
+        u_char* tail_packet_data = new u_char[Hexitec::tail_packet_size[sensors_config_] + sizeof(Hexitec::PacketHeader)];
+        
+        // Loop over specified number of frames to generate packet and frame data
+        for (int frame = 0; frame < num_frames; frame++) {
+            
+            u_char* data_ptr = reinterpret_cast<u_char*>(pixel_data_);
+
+            uint32_t packet_number = 0;
+            uint32_t packet_flags = 0;
+
+            // Setup Head Packet Header
+            Hexitec::PacketHeader* head_packet_header = 
+                reinterpret_cast<Hexitec::PacketHeader*>(head_packet_data);
+            packet_flags =
+                (packet_number & Hexitec::packet_number_mask) | Hexitec::start_of_frame_mask;
+            
+            head_packet_header->frame_counter = frame;
+            head_packet_header->packet_number_flags = packet_flags;
+
+            //copy data into Head Packet
+            memcpy((head_packet_data + sizeof(Hexitec::PacketHeader)), data_ptr, Hexitec::primary_packet_size);
+
+            //Pass head packet to Frame Extraction
+            this->extract_frames(head_packet_data, Hexitec::primary_packet_size + sizeof(Hexitec::PacketHeader));
+
+            //change packet number and data_ptr for the tail header
+            packet_number = 1;
+            data_ptr += Hexitec::primary_packet_size;
+            //Now the same for the Tail Packet Header and Data
+            Hexitec::PacketHeader* tail_packet_header = 
+                reinterpret_cast<Hexitec::PacketHeader*>(tail_packet_data);
+            packet_flags =
+                (packet_number & Hexitec::packet_number_mask) | Hexitec::end_of_frame_mask;
+            
+            tail_packet_header->frame_counter = frame;
+            tail_packet_header->packet_number_flags = packet_flags;
+
+            //copy data into Head Packet
+            memcpy((tail_packet_data + sizeof(Hexitec::PacketHeader)), data_ptr, Hexitec::tail_packet_size[sensors_config_]);
+
+            //Pass head packet to Frame Extraction
+            this->extract_frames(tail_packet_data, Hexitec::tail_packet_size[sensors_config_] + sizeof(Hexitec::PacketHeader));
+        }
+
+        delete [] head_packet_data;
+        delete [] tail_packet_data;
+        delete [] pixel_data_;
+
+    }
+
+   /**
+    * Get the plugin major version number.
+    *
+    * \return major version number as an integer
+    */
+    int HexitecFrameSimulatorPlugin::get_version_major() {
+        return ODIN_DATA_VERSION_MAJOR;
+    }
+
+    /**
+     * Get the plugin minor version number.
+     *
+     * \return minor version number as an integer
+     */
+    int HexitecFrameSimulatorPlugin::get_version_minor() {
+        return ODIN_DATA_VERSION_MINOR;
+    }
+
+    /**
+     * Get the plugin patch version number.
+     *
+     * \return patch version number as an integer
+     */
+    int HexitecFrameSimulatorPlugin::get_version_patch() {
+        return ODIN_DATA_VERSION_PATCH;
+    }
+
+    /**
+     * Get the plugin short version (e.g. x.y.z) string.
+     *
+     * \return short version as a string
+     */
+    std::string HexitecFrameSimulatorPlugin::get_version_short() {
+        return ODIN_DATA_VERSION_STR_SHORT;
+    }
+
+    /**
+     * Get the plugin long version (e.g. x.y.z-qualifier) string.
+     *
+     * \return long version as a string
+     */
+    std::string HexitecFrameSimulatorPlugin::get_version_long() {
+        return ODIN_DATA_VERSION_STR;
+    }
+
+}
