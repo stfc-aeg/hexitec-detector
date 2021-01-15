@@ -15,6 +15,7 @@ using namespace log4cxx::helpers;
 #include <map>
 #include <string>
 #include <stdexcept>
+#include <boost/algorithm/string.hpp>
 
 #include "ClassLoader.h"
 #include "FrameSimulatorPluginUDP.h"
@@ -22,6 +23,8 @@ using namespace log4cxx::helpers;
 
 
 namespace FrameSimulator {
+
+    typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
     /** HexitecFrameSimulatorPlugin
      *
@@ -65,6 +68,15 @@ namespace FrameSimulator {
 
         std::string image_pattern_json_path_;
 
+        std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
+        HexitecSensorLayoutMap sensors_layout_;
+        std::string sensors_layout_str_;
+        int image_width_;
+        int image_height_;
+
+        // sensors_config_ map number of sensors to frame and packet structures,
+        // see HexitecDefinitions.h for more details
+        bool set_sensors_config(int sensor_rows, int sensor_columns);
         Hexitec::SensorConfigNumber sensors_config_;
     };
 

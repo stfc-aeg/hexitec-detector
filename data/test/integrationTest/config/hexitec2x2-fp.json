@@ -19,8 +19,8 @@
         "plugin": {
             "load": {
                 "index":"reorder",
-                "name":"MercuryReorderPlugin",
-                "library":"${INSTALL_PREFIX}/lib/libMercuryReorderPlugin.so"
+                "name":"HexitecReorderPlugin",
+                "library":"${INSTALL_PREFIX}/lib/libHexitecReorderPlugin.so"
             }
         }
     },
@@ -63,23 +63,23 @@
                 "processed_frames" : {
                     "cmd": "create",
                     "datatype": "float",
-                    "dims": [80, 80],
-                    "chunks": [1, 80, 80],
+                    "dims": [160, 160],
+                    "chunks": [1, 160, 160],
                     "compression": "none"
                 },
                 "raw_frames" : {
                     "cmd": "create",
                     "datatype": "float",
-                    "dims": [80, 80],
-                    "chunks": [1, 80, 80],
+                    "dims": [160, 160],
+                    "chunks": [1, 160, 160],
                     "compression": "none"
                 }
             },
             "file": {
-                "path":""
+                "path":"/tmp/"
             },
             "frames": 10,
-            "acquisition_id":"test_1",
+            "acquisition_id":"hxt2x2_fp",
             "write": true
         }
     }

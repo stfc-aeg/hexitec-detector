@@ -1,6 +1,6 @@
 [
     {
-        "decoder_type": "Mercury",
+        "decoder_type": "Hexitec",
         "decoder_path": "${INSTALL_PREFIX}/lib",
         "rx_ports": "61649",
         "decoder_config": {

@@ -15,7 +15,7 @@
         "simulator": {
             "process": false,
             "command": "${ODIN_PREFIX}\/bin\/frameSimulator",
-            "pos-args": "Mercury",
+            "pos-args": "Hexitec",
             "sleep": 1
         },
         "test": {
@@ -36,12 +36,12 @@
     },
     "receiver":
     {
-        "json_file": "${INSTALL_PREFIX}\/test_config\/mercury-fr.json",
+        "json_file": "${INSTALL_PREFIX}\/test_config\/hexitec2x2-fr.json",
         "m": "500000000"
     },
     "processor":
     {
-        "json_file": "${INSTALL_PREFIX}\/test_config\/mercury-fp.json"
+        "json_file": "${INSTALL_PREFIX}\/test_config\/hexitec2x2-fp.json"
     },
     "test":
     {

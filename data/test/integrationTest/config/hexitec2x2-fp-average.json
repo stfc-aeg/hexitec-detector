@@ -19,8 +19,8 @@
         "plugin": {
             "load": {
                 "index":"reorder",
-                "name":"MercuryReorderPlugin",
-                "library":"${INSTALL_PREFIX}/lib/libMercuryReorderPlugin.so"
+                "name":"HexitecReorderPlugin",
+                "library":"${INSTALL_PREFIX}/lib/libHexitecReorderPlugin.so"
             }
         }
     },
@@ -28,8 +28,8 @@
         "plugin": {
             "load": {
                 "index":"addition",
-                "name":"MercuryAdditionPlugin",
-                "library":"${INSTALL_PREFIX}/lib/libMercuryAdditionPlugin.so"
+                "name":"HexitecAdditionPlugin",
+                "library":"${INSTALL_PREFIX}/lib/libHexitecAdditionPlugin.so"
             }
         }
     },
@@ -37,8 +37,8 @@
         "plugin": {
             "load": {
                 "index":"histogram",
-                "name":"MercuryHistogramPlugin",
-                "library":"${INSTALL_PREFIX}/lib/libMercuryHistogramPlugin.so"
+                "name":"HexitecHistogramPlugin",
+                "library":"${INSTALL_PREFIX}/lib/libHexitecHistogramPlugin.so"
             }
         }
     },
@@ -117,15 +117,15 @@
                 "processed_frames" : {
                     "cmd": "create",
                     "datatype": "float",
-                    "dims": [80, 80],
-                    "chunks": [1, 80, 80],
+                    "dims": [160, 160],
+                    "chunks": [1, 160, 160],
                     "compression": "none"
                 },
                 "raw_frames" : {
                     "cmd": "create",
                     "datatype": "float",
-                    "dims": [80, 80],
-                    "chunks": [1, 80, 80],
+                    "dims": [160, 160],
+                    "chunks": [1, 160, 160],
                     "compression": "none"
                 },
                 "spectra_bins" : {
@@ -138,8 +138,8 @@
                 "pixel_spectra" : {
                     "cmd": "create",
                     "datatype": "float",
-                    "dims": [6400, 800],
-                    "chunks": [1, 6400, 800],
+                    "dims": [25600, 800],
+                    "chunks": [1, 25600, 800],
                     "compression": "none"
                 },
                 "summed_spectra" : {
@@ -154,7 +154,7 @@
                 "path":"/tmp/"
             },
             "frames": 10,
-            "acquisition_id":"whatever_2",
+            "acquisition_id":"hxt2x2_fp_ave_1",
             "write": true
         }
     }

@@ -4,13 +4,13 @@
             "process": true,
             "command": "${ODIN_PREFIX}\/bin\/frameReceiver",
             "pos-args": "",
-            "sleep": 10
+            "sleep": 5
         },
         "processor": {
             "process": true,
             "command": "${ODIN_PREFIX}\/bin\/frameProcessor",
             "pos-args": "",
-            "sleep": 10
+            "sleep": 5
         },
         "simulator": {
             "process": false,
@@ -31,8 +31,9 @@
         "frames": "10",
         "dest-ip": "127.0.0.1",
         "ports": "61649",
-        "pattern-path": "${INSTALL_PREFIX}\/test_config\/patterns\/CSD_average.json",
-        "interval": "1"
+        "pattern-path": "${INSTALL_PREFIX}\/test_config\/patterns\/CSD_2x2_average.json",
+        "interval": "1",
+        "sensors_layout": "2x2"
     },
     "receiver":
     {
