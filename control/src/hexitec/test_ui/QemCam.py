@@ -63,7 +63,7 @@ class QemCam(object):
     
     def print_ram_depth(self):
         ram_depth = self.x10g_rdma.read(0xB0000010, 'qem sequencer ram depth reg 0')
-        print("%-32s %-8i" % ("-> sequencer ram depth :" ,ram_depth/8 ))
+        print("%-32s %-8i" % ("-> sequencer ram depth :" ,ram_depth//8 ))
         time.sleep(self.delay)
         return
     
@@ -137,7 +137,7 @@ class QemCam(object):
         number_bytes = pixel_count_max * 2
         number_bytes_r4 = pixel_count_max % 4
         number_bytes_r8 = number_bytes % 8
-        first_packets = number_bytes/self.strm_mtu
+        first_packets = number_bytes//self.strm_mtu
         last_packet_size = number_bytes % self.strm_mtu
         lp_number_bytes_r8 = last_packet_size % 8
         lp_number_bytes_r32 = last_packet_size % 32
@@ -162,7 +162,7 @@ class QemCam(object):
         number_bytes = pixel_count_max * 2
         number_bytes_r4 = pixel_count_max % 4
         number_bytes_r8 = number_bytes % 8
-        first_packets = number_bytes/self.strm_mtu
+        first_packets = number_bytes//self.strm_mtu
         last_packet_size = number_bytes % self.strm_mtu
         lp_number_bytes_r8 = last_packet_size % 8
         lp_number_bytes_r32 = last_packet_size % 32
@@ -170,10 +170,10 @@ class QemCam(object):
         # calculate pixel packing settings
         if p_size >= 11 and p_size <= 14 and f_size == 16:
             pixel_extract = self.pixel_extract.index(p_size)
-            pixel_count_max = pixel_count_max/2
+            pixel_count_max = pixel_count_max//2
         elif p_size == 8 and f_size == 8:
             pixel_extract = self.pixel_extract.index(p_size*2)
-            pixel_count_max = pixel_count_max/4
+            pixel_count_max = pixel_count_max//4
         else:
             size_status =size_status + 1
             

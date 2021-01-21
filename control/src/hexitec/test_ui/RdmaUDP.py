@@ -86,7 +86,7 @@ class RdmaUDP(object):
         return
 
     def block_read(self, address, length, comment=''):
-        length = length/4 - 1
+        length = length//4 - 1
         command = struct.pack('=BBBBI', length,0,0,0,1, address)
 
         self.txsocket.sendto(command,(self.TargetRxUDPIPAddr,self.TargetRxUDPIPPrt))
@@ -109,7 +109,7 @@ class RdmaUDP(object):
             print('W %08X : %08X %s' % (address, data, comment))
 
         #create block write command
-        length = len(data)/4-1
+        length = len(data)//4-1
         command = struct.pack('=BBBBI', length,0,0,0, address)
         command= command+data
         print(len(command))

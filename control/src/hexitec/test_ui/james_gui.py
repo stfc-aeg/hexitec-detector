@@ -145,7 +145,7 @@ def send_cmd(cmd):
         cmd.append(13)
     print("Length of command - ", len(cmd), len(cmd)%4)      
     #print cmd
-    for i in range(0, len(cmd)/4):
+    for i in range(0, len(cmd)//4):
         
         #print format(cmd[(i*4)+3], '02x'), format(cmd[(i*4)+2], '02x'), format(cmd[(i*4)+1], '02x'), format(cmd[(i*4)], '02x') 
         #reg_value = 256*256*256*cmd[(i*4)+3] + 256*256*cmd[(i*4)+2] + 256*cmd[(i*4)+1] + cmd[(i*4)] 
@@ -161,7 +161,7 @@ def display_voltages(f):
     for i in range(1, len(f)-2, 4):
         s = 0
         s = s + get_dec(f[i+3]) + get_dec(f[i+2])*16 + get_dec(f[i+1])*256 + get_dec(f[i])*4096
-        j =(i-2)/4+1
+        j =(i-2)//4+1
         if j == 9:
             print("Voltage %.d %.2f" %(j+1, s*2.048/4096))
         else:
@@ -201,13 +201,13 @@ def read_response():
       if debug: print("Got data:- ") 
       dat = qemcamera.x10g_rdma.read(0xE0000200, 'Data')
       if debug: print("Bytes are:- ") 
-      daty = dat/256/256/256%256
+      daty = dat//256//256//256%256
       f.append(daty)
       if debug: print(format(daty, '02x'))
-      daty = dat/256/256%256
+      daty = dat//256//256%256
       f.append(daty)
       if debug: print(format(daty, '02x'))
-      daty = dat/256%256
+      daty = dat//256%256
       f.append(daty)
       if debug: print(format(daty, '02x'))
       daty = dat%256
