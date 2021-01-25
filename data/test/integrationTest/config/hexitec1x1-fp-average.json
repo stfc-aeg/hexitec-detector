@@ -75,20 +75,20 @@
         }
     },
     {
-	"addition": {
-	    "sensors_layout": "2x2"
-	}
+        "addition": {
+	    "sensors_layout": "1x1"
+        }
     },
     {
         "reorder": {
-	    "sensors_layout": "2x2",
+	    "sensors_layout": "1x1",
             "raw_data": true
         }
     },
     {
         "histogram": {
-            "max_frames_received": 2,
-	    "sensors_layout": "2x2"
+            "max_frames_received": 10,
+	    "sensors_layout": "1x1"
         }
     },
     {
@@ -124,15 +124,15 @@
                 "processed_frames" : {
                     "cmd": "create",
                     "datatype": "float",
-                    "dims": [160, 160],
-                    "chunks": [1, 160, 160],
+                    "dims": [80, 80],
+                    "chunks": [1, 80, 80],
                     "compression": "none"
                 },
                 "raw_frames" : {
                     "cmd": "create",
                     "datatype": "float",
-                    "dims": [160, 160],
-                    "chunks": [1, 160, 160],
+                    "dims": [80, 80],
+                    "chunks": [1, 80, 80],
                     "compression": "none"
                 },
                 "spectra_bins" : {
@@ -145,8 +145,8 @@
                 "pixel_spectra" : {
                     "cmd": "create",
                     "datatype": "float",
-                    "dims": [25600, 800],
-                    "chunks": [1, 25600, 800],
+                    "dims": [6400, 800],
+                    "chunks": [1, 6400, 800],
                     "compression": "none"
                 },
                 "summed_spectra" : {
@@ -160,7 +160,7 @@
             "file": {
                 "path":"/tmp/"
             },
-            "acquisition_id":"2x2_test",
+            "acquisition_id":"1x1_HistoDebuggery",
             "write": true
         }
     }

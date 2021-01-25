@@ -1,11 +1,11 @@
 {
     "Test":
     {
-        "output_file": "test_ave_2x2_000001.h5",
+        "output_file": "test_ave_1x1_000001.h5",
         "frames": "10",
         "dimensions": "3",
-        "width": "160",
-        "height": "160",
+        "width": "80",
+        "height": "80",
         "dataset": "processed_frames",
         "type": "float",
         "data": {

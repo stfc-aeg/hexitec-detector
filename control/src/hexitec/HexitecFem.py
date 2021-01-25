@@ -836,9 +836,10 @@ class HexitecFem():
         # # Set bit; Register 0x24, bit5 (disable VCAL)
         # self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
         # self.read_response()
-        # (vsr2, vsr1) = self.debug_reg24()
-        # print("\n")
-        # logging.debug("  * X6 *** cal_sen, SET b5;     Reg 0x24: %s, %s ***" % (vsr2, vsr1))
+        # if self.debug_register24:  # pragma: no cover
+        #     (vsr2, vsr1) = self.debug_reg24()
+        #     print("\n")
+        #     logging.debug("  * X6 *** cal_sen, SET b5;     Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
             self.x10g_rdma.write(0x60000002, 1, 'Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
