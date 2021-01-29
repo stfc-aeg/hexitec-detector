@@ -379,10 +379,15 @@ class HexitecDAQ():
             self.config_ds = {}
             str_type = h5py.special_dtype(vlen=str)
 
-            # Write contents of config files
-            for param_file in ('detector/fems/fem_0/hexitec_config',
-                               'detector/daq/config/calibration/gradients_filename',
-                               'detector/daq/config/calibration/intercepts_filename'):
+            # Write contents of config file, and selected coefficients file(s)
+            file_name = ['detector/fems/fem_0/hexitec_config']
+            if self.calibration_enable:
+                file_name.append('detector/daq/config/calibration/gradients_filename')
+                file_name.append('detector/daq/config/calibration/intercepts_filename')
+            if self.threshold_mode == self.THRESHOLDOPTIONS[1]:  # = "filename"
+                file_name.append('detector/daq/config/threshold/threshold_filename')
+
+            for param_file in file_name:
                 # Only attempt to open file if it exists
                 file_name = param_tree_dict[param_file]
                 if os.path.isfile(file_name):
@@ -401,7 +406,7 @@ class HexitecDAQ():
                         return -2
                     logging.debug("Key '%s'; Successfully read file '%s'" % (param_file, file_name))
                 else:
-                    logging.debug("Key: %s's file: %s. Doesn't exist!" % (param_file, file_name))
+                    logging.error("Key: %s's file: %s. Doesn't exist!" % (param_file, file_name))
         return 0
 
     def _flatten_dict(self, d, parent_key='', sep='/'):
