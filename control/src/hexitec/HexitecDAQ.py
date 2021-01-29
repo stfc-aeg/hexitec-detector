@@ -401,7 +401,7 @@ class HexitecDAQ():
                         return -2
                     logging.debug("Key '%s'; Successfully read file '%s'" % (param_file, file_name))
                 else:
-                    logging.debug("Key: %s's file: %s. Doesn't exist!" % (param_file, file_name))
+                    logging.error("Key: %s's file: %s. Doesn't exist!" % (param_file, file_name))
         return 0
 
     def _flatten_dict(self, d, parent_key='', sep='/'):

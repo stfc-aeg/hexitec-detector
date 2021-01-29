@@ -785,6 +785,16 @@ class HexitecFem():
         vsr1 = self.read_response().strip("\r")
         return (vsr2, vsr1)
 
+    def debug_reg89(self):  # pragma: no cover
+        """Debug function: Display contents of register 89."""
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE,
+                       0x38, 0x39, 0x0D])
+        vsr2 = self.read_response().strip("\r")
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE,
+                       0x38, 0x39, 0x0D])
+        vsr1 = self.read_response().strip("\r")
+        return (vsr2, vsr1)
+
     def calibrate_sensor(self):  # noqa: C901
         """Calibrate sensors attached to targeted VSR."""
         if self.sensors_layout == HexitecFem.READOUTMODE[0]:
@@ -804,13 +814,13 @@ class HexitecFem():
             print("\n")
             logging.debug("  * 02 *** cal_sen, CLR bit5;   Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
-        # Set bit; Reg24, bit4: send average picture
-        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
-        self.read_response()
-        if self.debug_register24:  # pragma: no cover
-            (vsr2, vsr1) = self.debug_reg24()
-            print("\n")
-            logging.debug("  * 03 *** cal_sen, SET bit4;   Reg 0x24: %s, %s ***" % (vsr2, vsr1))
+        # # Set bit; Reg24, bit4: send average picture
+        # self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
+        # self.read_response()
+        # if self.debug_register24:  # pragma: no cover
+        #     (vsr2, vsr1) = self.debug_reg24()
+        #     print("\n")
+        #     logging.debug("  * 03 *** cal_sen, SET bit4;   Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
         logging.debug("Set bit 6")
         # Clear bit; Register 0x24, bit6: test mode
@@ -823,23 +833,24 @@ class HexitecFem():
             print("\n")
             logging.debug("  * 04 *** cal_sen, CLR bit6;   Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
-        # Slows data coll'ns down (by adding 8k extra frames..)       # JE original
-        # Set bit; Register 0x24, bit5 (disable VCAL), bit1 (capture average picture)
-        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x32, 0x32, 0x0D])
-        self.read_response()
-        if self.debug_register24:  # pragma: no cover
-            (vsr2, vsr1) = self.debug_reg24()
-            print("\n")
-            logging.debug("  * 05 *** cal_sen, SET b5,b1;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
-
-        # #Makes data acquisition as fast as it should be (no extra 8k for offsets..)    # My mod
-        # # Set bit; Register 0x24, bit5 (disable VCAL)
-        # self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
+        # # # FL 26/01: Comment this out
+        # # Slows data coll'ns down (by adding 8k extra frames..)       # JE original
+        # # Set bit; Register 0x24, bit5 (disable VCAL), bit1 (capture average picture)
+        # self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x32, 0x32, 0x0D])
         # self.read_response()
         # if self.debug_register24:  # pragma: no cover
         #     (vsr2, vsr1) = self.debug_reg24()
         #     print("\n")
-        #     logging.debug("  * X6 *** cal_sen, SET b5;     Reg 0x24: %s, %s ***" % (vsr2, vsr1))
+        #     logging.debug("  * 05 *** cal_sen, SET b5,b1;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
+
+        #Makes data acquisition as fast as it should be (no extra 8k for offsets..)    # My mod
+        # Set bit; Register 0x24, bit5 (disable VCAL)
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
+        self.read_response()
+        if self.debug_register24:  # pragma: no cover
+            (vsr2, vsr1) = self.debug_reg24()
+            print("\n")
+            logging.debug("  * X6 *** cal_sen, SET b5;     Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
             self.x10g_rdma.write(0x60000002, 1, 'Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
@@ -946,6 +957,17 @@ class HexitecFem():
         logging.debug("Check FULL Signals: %s" % full_empty)
 
         return synced
+
+    def print_firmware_info(self):
+        """Prints info on loaded firmware
+            0x80: F/W customer ID
+            0x81: F/W Project ID
+            0x82: F/W Version ID."""
+        print("__________F/W Customer, Project, and Version IDs__________")
+        for index in range(3):
+            (vsr2, vsr1) = self.debug_register(0x38, 0x30+index)
+            print("   Register 0x8{}, VSR2: {} VSR1: {}".format(index, vsr2, vsr1))
+        print("__________________________________________________________")
 
     def acquire_data(self):  # noqa: C901
         """Acquire data, polls fem for completion and reads out fem monitors."""
@@ -1314,6 +1336,9 @@ class HexitecFem():
         Stop state machine, gathers offsets, calculats average picture, re-starts state machine.
         """
         try:
+            # Displays all registers and contents:
+            # self.dump_all_registers()
+
             if self.hardware_connected is not True:
                 raise ParameterTreeError("Can't collect offsets while disconnected")
             if self.hardware_busy:
@@ -1334,17 +1359,18 @@ class HexitecFem():
             logging.debug("Reading back register 24; VSR1: '%s' VSR2: '%s'" %
                           (vsr1.replace('\r', ''), vsr2.replace('\r', '')))
 
-            # Set bit; Register 0x24, bit4: send average picture
-            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0],
-                          HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
-            self.read_response()
-            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1],
-                          HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
-            self.read_response()
-            if self.debug_register24:  # pragma: no cover
-                (vsr2, vsr1) = self.debug_reg24()
-                print("\n")
-                logging.debug("  * 09 *** coll_off, SET b4;    Reg 0x24: %s, %s ***" % (vsr2, vsr1))
+            # # # FL 26/01: Comment this out
+            # # Set bit; Register 0x24, bit4: send average picture
+            # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0],
+            #               HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
+            # self.read_response()
+            # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1],
+            #               HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
+            # self.read_response()
+            # if self.debug_register24:  # pragma: no cover
+            #     (vsr2, vsr1) = self.debug_reg24()
+            #     print("\n")
+            #     logging.debug("  * 09 *** coll_off, SET b4;    Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
             # Send reg value; Register 0x24, bits5,1: disable VCAL, capture average picture:
             enable_dc_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SEND_REG_VALUE,
@@ -1395,8 +1421,17 @@ class HexitecFem():
 
             # 5. Wait > 8192 * frame time (1 second)
 
+            # TODO: Replace hardcoded delay with polling Reg 0x89, but not working right now
             time.sleep(1)
-
+            # time.sleep(0.25)
+            # count = 0
+            # while count < 20:
+            #     (vsr2, vsr1) = self.debug_reg89()
+            #     int_value = int(vsr2[1:]), int(vsr1[1:])
+            #     print("     Reg0x89: {}".format(int_value))
+            #     count += 1
+            #     time.sleep(1)
+            # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             # 6. Stop state machine
 
             self.send_cmd(disable_sm_vsr1)
@@ -1839,10 +1874,10 @@ class HexitecFem():
         enable_sm = [0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
         adc_enable = [0x23, self.vsr_addr, HexitecFem.CTRL_ADC_DAC, 0x30, 0x33, 0x0D]
         adc_set = [0x23, self.vsr_addr, HexitecFem.WRITE_REG_VAL, 0x31, 0x36, 0x30, 0x39, 0x0D]
-        # Send reg value; Register 0x24, bits5,1: disable VCAL, capture average picture:
-        aqu1 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]
-        # Send reg value; Register 0x24, bits5,3: disable VCAL, enable spectroscopic mode:
-        aqu2 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]
+        # # Send reg value; Register 0x24, bits5,1: disable VCAL, capture average picture:
+        # aqu1 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]
+        # # Send reg value; Register 0x24, bits5,3: disable VCAL, enable spectroscopic mode:
+        # aqu2 = [0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]
 
         self.send_cmd(adc_disable)
         self.read_response()
@@ -1854,18 +1889,18 @@ class HexitecFem():
 
         self.send_cmd(adc_set)
         self.read_response()
-        self.send_cmd(aqu1)
-        self.read_response()
-        if self.debug_register24:  # pragma: no cover
-            (vsr2, vsr1) = self.debug_reg24()
-            print("\n")
-            logging.debug("  * 13 *** ena_adc,  SET b1,5;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
-        self.send_cmd(aqu2)
-        self.read_response()
-        if self.debug_register24:  # pragma: no cover
-            (vsr2, vsr1) = self.debug_reg24()
-            print("\n")
-            logging.debug("  * 14 *** ena_adc,  SET b3,5;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
+        # self.send_cmd(aqu1)
+        # self.read_response()
+        # if self.debug_register24:  # pragma: no cover
+        #     (vsr2, vsr1) = self.debug_reg24()
+        #     print("\n")
+        #     logging.debug("  * 13 *** ena_adc,  SET b1,5;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
+        # self.send_cmd(aqu2)
+        # self.read_response()
+        # if self.debug_register24:  # pragma: no cover
+        #     (vsr2, vsr1) = self.debug_reg24()
+        #     print("\n")
+        #     logging.debug("  * 14 *** ena_adc,  SET b3,5;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
         # Disable ADC test testmode
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.WRITE_REG_VAL, 0x30, 0x44, 0x30, 0x30, 0x0d])
@@ -2416,6 +2451,30 @@ class HexitecFem():
                     print("   " + section + "/" + key + " => " + value.strip("\""))
         if debug:  # pragma: no cover
             print("---------------------------------------------------------------------")
+
+    def debug_register(self, msb, lsb):  # pragma: no cover
+        """Debug function: Display contents of register."""
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE,
+                       msb, lsb, 0x0D])
+        vsr2 = self.read_response().strip("\r")
+        self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE,
+                       msb, lsb, 0x0D])
+        vsr1 = self.read_response().strip("\r")
+        return (vsr2, vsr1)
+
+    def dump_all_registers(self):
+        """Dump register 0x00 - 0xff contents to screen.
+
+            aSpect's address format: 0x3F -> 0x33, 0x46 (i.e. msb, lsb)
+            See HEX_ASCII_CODE, and section 3.3, page 11 of revision 0.5:
+            aS_AM_Hexitec_VSR_Interface.pdf"""
+        for msb in range(16):
+            for lsb in range(16):
+                (vsr2, vsr1) = self.debug_register(self.HEX_ASCII_CODE[msb], self.HEX_ASCII_CODE[lsb])
+                print("Register: {}{}: Address words: {} ({}) {} ({}), VSR2: {} VSR1: {}".format(hex(msb), hex(lsb)[-1],
+                      self.HEX_ASCII_CODE[msb], hex(self.HEX_ASCII_CODE[msb]),
+                      self.HEX_ASCII_CODE[lsb], hex(self.HEX_ASCII_CODE[lsb]),
+                      vsr2, vsr1))
 
 
 class HexitecFemError(Exception):
