@@ -26,6 +26,17 @@ qemcamera.camera_ctrl_ip_addr='10.0.2.1'
 qemcamera.server_data_ip_addr = "10.0.4.2"
 qemcamera.camera_data_ip_addr = "10.0.4.1"
 
+print("james_gui.Py:")
+print("  RDMA IP addresses")
+print("	\tserver_ctrl_ip_addr	{}".format(qemcamera.server_ctrl_ip_addr))
+print("	\tcamera_ctrl_ip_addr	{}".format(qemcamera.camera_ctrl_ip_addr))
+
+# 10G image stream Ip addresses
+print("  Image Stream IP addresses")
+print("	\tserver_data_ip_addr	{}".format(qemcamera.server_data_ip_addr))
+print("	\tcamera_data_ip_addr	{}".format(qemcamera.camera_data_ip_addr))
+print("___________________________________________________________ ")
+
 vsr_addr = 0x90
 global number_of_frames
 global debug

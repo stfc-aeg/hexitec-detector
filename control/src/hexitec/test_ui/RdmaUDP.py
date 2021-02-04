@@ -6,7 +6,19 @@ import time
 
 class RdmaUDP(object):
 
-    def __init__(self, MasterTxUDPIPAddress='192.168.0.1', MasterTxUDPIPPort=65535, MasterRxUDPIPAddress='192.168.0.1', MasterRxUDPIPPort=65536,TargetTxUDPIPAddress='192.168.0.2', TargetTxUDPIPPort=65535, TargetRxUDPIPAddress='192.168.0.2', TargetRxUDPIPPort=65536, RxUDPBuf = 1024, UDPMTU=9000, UDPTimeout=10):
+    def __init__(self, MasterTxUDPIPAddress='192.168.0.1', MasterTxUDPIPPort=65535, MasterRxUDPIPAddress='192.168.0.1', MasterRxUDPIPPort=65536,
+                 TargetTxUDPIPAddress='192.168.0.2', TargetTxUDPIPPort=65535,  #TODD: NEVER used !!!!!
+                 TargetRxUDPIPAddress='192.168.0.2', TargetRxUDPIPPort=65536, RxUDPBuf = 1024, UDPMTU=9000, UDPTimeout=10):
+
+        print("RdmaUDP:")
+        print("  RDMA IP addresses")
+        print("	\trxsocket.bind({}, {})".format(MasterRxUDPIPAddress, MasterRxUDPIPPort))
+        print("	\ttxsocket.bind({}, {})".format(MasterTxUDPIPAddress, MasterTxUDPIPPort))
+
+        print("  Target, read & write target this through txsocket")
+        print("	\tTargetRxUDPIPAddress	{}".format(TargetRxUDPIPAddress))
+        print("	\tTargetRxUDPIPPort   	{}".format(TargetRxUDPIPPort))
+        print("___________________________________________________________ ")
 
         self.txsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.rxsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -86,7 +98,7 @@ class RdmaUDP(object):
         return
 
     def block_read(self, address, length, comment=''):
-        length = length/4 - 1
+        length = length//4 - 1
         command = struct.pack('=BBBBI', length,0,0,0,1, address)
 
         self.txsocket.sendto(command,(self.TargetRxUDPIPAddr,self.TargetRxUDPIPPrt))
@@ -109,7 +121,7 @@ class RdmaUDP(object):
             print('W %08X : %08X %s' % (address, data, comment))
 
         #create block write command
-        length = len(data)/4-1
+        length = len(data)//4-1
         command = struct.pack('=BBBBI', length,0,0,0, address)
         command= command+data
         print(len(command))

@@ -13,16 +13,22 @@ import numpy as np
 
 class ImageStreamUDP(object):
 
-    def __init__(self, MasterTxUDPIPAddress='192.168.0.1', MasterTxUDPIPPort=65535, MasterRxUDPIPAddress='192.168.0.1', MasterRxUDPIPPort=65536,TargetTxUDPIPAddress='192.168.0.2', TargetTxUDPIPPort=65535, TargetRxUDPIPAddress='192.168.0.2', TargetRxUDPIPPort=65536, RxUDPBuf = 1024, UDPMTU=9000, UDPTimeout=10):
+    def __init__(self, MasterTxUDPIPAddress='192.168.0.1', MasterTxUDPIPPort=65535, MasterRxUDPIPAddress='192.168.0.1', MasterRxUDPIPPort=65536,
+                 TargetTxUDPIPAddress='192.168.0.2', TargetTxUDPIPPort=65535,  # TODO: REDUNDANT, NEVER USED !!!!!
+                 TargetRxUDPIPAddress='192.168.0.2', TargetRxUDPIPPort=65536, RxUDPBuf = 1024, UDPMTU=9000, UDPTimeout=10):
+
+        print("ImageStreamUDP")
+        print("  RDMA IP addresses")
+        print("	\t rxsocket.bind({}, {})".format(MasterRxUDPIPAddress, MasterRxUDPIPPort))
+        print("	\t txsocket.bind({}, {})".format(MasterTxUDPIPAddress, MasterTxUDPIPPort))
+        print("___________________________________________________________ ")
 
         self.txsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.rxsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         self.rxsocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, RxUDPBuf)
 
-        print("Rx: ", MasterRxUDPIPAddress, MasterRxUDPIPPort)
         self.rxsocket.bind((MasterRxUDPIPAddress, MasterRxUDPIPPort))
-        print("Tx: ", MasterTxUDPIPAddress, MasterTxUDPIPPort)
         self.txsocket.bind((MasterTxUDPIPAddress, MasterTxUDPIPPort))
 
         #self.rxsocket.settimeout(None)
@@ -31,8 +37,9 @@ class ImageStreamUDP(object):
         self.rxsocket.setblocking(1)
         #self.txsocket.setblocking(1)
 
-        self.TgtRxUDPIPAddr = TargetRxUDPIPAddress
-        self.TgtRxUDPIPPrt  = TargetRxUDPIPPort
+        # TODO: Redundant, never used:
+        # self.TgtRxUDPIPAddr = TargetRxUDPIPAddress
+        # self.TgtRxUDPIPPrt  = TargetRxUDPIPPort
 
         self.UDPMaxRx = UDPMTU
 
