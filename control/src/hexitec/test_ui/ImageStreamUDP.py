@@ -43,14 +43,14 @@ class ImageStreamUDP(object):
         self.ack = False
 
         self.image_size_p = 2
-        self.image_size_x = 256
-        self.sensor_image_1d = np.uint16(np.random.rand(256 * 256) * 32768)
+        self.image_size_x = 256    
+        self.sensor_image_1d = np.uint16(np.random.rand(256*256)*32768) 
         self.image_size_y = 256
-        self.image_mtu = 8000
-        self.num_pkt = (self.image_size_x * self.image_size_y * self.image_size_p) // self.image_mtu
+        self.image_mtu    = 8000
+        self.num_pkt      = (self.image_size_x * self.image_size_y * self.image_size_p) // self.image_mtu
 
-        self.sensor_image = np.uint16(np.random.rand(256, 256) * 16384)
-        self.sensor_image_1d = np.uint16(np.random.rand(256 * 256) * 16384)
+        self.sensor_image = np.uint16(np.random.rand(256,256)*16384)
+        self.sensor_image_1d = np.uint16(np.random.rand(256*256)*16384)
 
     def __del__(self):
         self.txsocket.close()
@@ -66,18 +66,20 @@ class ImageStreamUDP(object):
         self.sensor_image = np.uint16(np.random.rand(x_size, y_size) * 65535)
         self.sensor_image_1d = np.uint16(np.random.rand(x_size * y_size) * 65535)
         self.sensor_image_ro = np.uint16(np.random.rand(x_size * y_size) * 65535)
-        data_size = x_size * y_size * f_size // 8
+        data_size = x_size * y_size * f_size//8
         self.num_pkt = data_size // self.image_mtu
         data_rem = data_size % self.image_mtu
-        if data_rem != 0:
+        if data_rem != 0: 
             self.num_pkt = self.num_pkt + 1
 
         print(x_size, y_size, f_size, self.num_pkt)
 
+        return
+
     def get_image(self):
         pkt_num = 0
         insert_point = 0
-        while pkt_num < self.num_pkt:
+        while pkt_num < self.num_pkt:   
             #receive packet up to 8K Bytes
             pkt = self.rxsocket.recv(9000)
             #extract trailer
@@ -86,9 +88,9 @@ class ImageStreamUDP(object):
                 pkt_top = pkt_len - 8
                 frame_number = (ord(pkt[pkt_top+3]) << 24) + (ord(pkt[pkt_top+2]) << 16) + (ord(pkt[pkt_top+1]) << 8) + ord(pkt[pkt_top+0])
                 packet_number = (ord(pkt[pkt_top+7]) << 24) + (ord(pkt[pkt_top+6]) << 16) + (ord(pkt[pkt_top+5]) << 8) + ord(pkt[pkt_top+4])
-                # pkt_top = 8
-                # data2 = (ord(pkt[pkt_top+3]) << 24) + (ord(pkt[pkt_top+2]) << 16) + (ord(pkt[pkt_top+1]) << 8) + ord(pkt[pkt_top+0])
-                # data3 = (ord(pkt[pkt_top+7]) << 24) + (ord(pkt[pkt_top+6]) << 16) + (ord(pkt[pkt_top+5]) << 8) + ord(pkt[pkt_top+4])
+                #pkt_top = 8
+                #data2 = (ord(pkt[pkt_top+3]) << 24) + (ord(pkt[pkt_top+2]) << 16) + (ord(pkt[pkt_top+1]) << 8) + ord(pkt[pkt_top+0])
+                #data3 = (ord(pkt[pkt_top+7]) << 24) + (ord(pkt[pkt_top+6]) << 16) + (ord(pkt[pkt_top+5]) << 8) + ord(pkt[pkt_top+4])
                 # print trailer
                 pkt_str = "%08X %08X %08X %08X %08X" % (pkt_num, pkt_len, frame_number, packet_number)
                 print(pkt_str)
@@ -113,13 +115,14 @@ class ImageStreamUDP(object):
                     pixel_count = pixel_count + 1
         print("Pixel Count A")
         print(pixel_count)
+        #self.sensor_image = self.sensor_image_1d.reshape(self.image_size_x,self.image_size_y)
         self.sensor_image = self.sensor_image_ro.reshape(self.image_size_x, self.image_size_y)
         return self.sensor_image
 
     def get_image_set(self, num_images):
         image_array = np.zeros((num_images, self.image_size_x, self.image_size_y), dtype=np.uint16)
         img_num = 0
-        while img_num <= num_images - 1:
+        while img_num <= num_images-1:
             pkt_num = 1
             insert_point = 0
             while pkt_num <= self.num_pkt:
@@ -129,7 +132,7 @@ class ImageStreamUDP(object):
                 pkt_len = len(pkt)
                 print("Image Number:-", img_num)
                 print("Packet Length:-", pkt_len)
-                pld_len = (pkt_len - 8) // 2
+                pld_len = (pkt_len-8)//2
 
                 pkt_array_1d = np.fromstring(pkt[8:], dtype=np.uint16, count=pld_len)
                 self.sensor_image_1d[insert_point:insert_point + pld_len] = pkt_array_1d
