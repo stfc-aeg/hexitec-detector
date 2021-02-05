@@ -9,40 +9,43 @@ Created on Wed Jan 16 08:02:14 2019
 import tkinter as tk
 import time
 import datetime
-from QemCam import *
+from QemCam import QemCam
+
 
 class TestGuiError(Exception):
     """Simple exception class for script to wrap lower-level exceptions."""
 
     pass
 
-qemcamera = QemCam()
+
+vsr_addr = 0x90
+global number_of_frames
+global debug
+
+debug = False
+qemcamera = QemCam(debug)
 
 # 10G RDMA IP addresses      
-qemcamera.server_ctrl_ip_addr='10.0.2.2'
-qemcamera.camera_ctrl_ip_addr='10.0.2.1'
+qemcamera.server_ctrl_ip_addr = "10.0.2.2"
+qemcamera.camera_ctrl_ip_addr = "10.0.2.1"
 
 # 10G image stream Ip addresses
 qemcamera.server_data_ip_addr = "10.0.4.2"
 qemcamera.camera_data_ip_addr = "10.0.4.1"
 
-print("james_gui.Py:")
-print("  RDMA IP addresses")
-print("	\tserver_ctrl_ip_addr	{}".format(qemcamera.server_ctrl_ip_addr))
-print("	\tcamera_ctrl_ip_addr	{}".format(qemcamera.camera_ctrl_ip_addr))
+if debug:
+    print("james_gui.py:")
+    print("  RDMA IP addresses")
+    print("	\tserver_ctrl_ip_addr	{}".format(qemcamera.server_ctrl_ip_addr))
+    print("	\tcamera_ctrl_ip_addr	{}".format(qemcamera.camera_ctrl_ip_addr))
 
-# 10G image stream Ip addresses
-print("  Image Stream IP addresses")
-print("	\tserver_data_ip_addr	{}".format(qemcamera.server_data_ip_addr))
-print("	\tcamera_data_ip_addr	{}".format(qemcamera.camera_data_ip_addr))
-print("___________________________________________________________ ")
+    # 10G image stream Ip addresses
+    print("  Image Stream IP addresses")
+    print("	\tserver_data_ip_addr	{}".format(qemcamera.server_data_ip_addr))
+    print("	\tcamera_data_ip_addr	{}".format(qemcamera.camera_data_ip_addr))
+    print("___________________________________________________________ ")
 
-vsr_addr = 0x90
-global number_of_frames
-global debug
-debug = False
-
-number_of_frames = 20  
+number_of_frames = 20
 
 #VSR_SEL = [
 #"VSR1",
@@ -156,7 +159,7 @@ def send_cmd(cmd):
         cmd.append(13)
     print("Length of command - ", len(cmd), len(cmd)%4)      
     #print cmd
-    for i in range(0, len(cmd)/4):
+    for i in range(0, len(cmd) // 4):
         
         #print format(cmd[(i*4)+3], '02x'), format(cmd[(i*4)+2], '02x'), format(cmd[(i*4)+1], '02x'), format(cmd[(i*4)], '02x') 
         #reg_value = 256*256*256*cmd[(i*4)+3] + 256*256*cmd[(i*4)+2] + 256*cmd[(i*4)+1] + cmd[(i*4)] 
@@ -172,7 +175,7 @@ def display_voltages(f):
     for i in range(1, len(f)-2, 4):
         s = 0
         s = s + get_dec(f[i+3]) + get_dec(f[i+2])*16 + get_dec(f[i+1])*256 + get_dec(f[i])*4096
-        j =(i-2)/4+1
+        j =(i-2)//4+1
         if j == 9:
             print("Voltage %.d %.2f" %(j+1, s*2.048/4096))
         else:
@@ -212,13 +215,13 @@ def read_response():
       if debug: print("Got data:- ") 
       dat = qemcamera.x10g_rdma.read(0xE0000200, 'Data')
       if debug: print("Bytes are:- ") 
-      daty = dat/256/256/256%256
+      daty = dat // 256 // 256 // 256%256
       f.append(daty)
       if debug: print(format(daty, '02x'))
-      daty = dat/256/256%256
+      daty = dat // 256 // 256%256
       f.append(daty)
       if debug: print(format(daty, '02x'))
-      daty = dat/256%256
+      daty = dat // 256%256
       f.append(daty)
       if debug: print(format(daty, '02x'))
       daty = dat%256
@@ -253,12 +256,21 @@ def read_response():
 def cam_connect():
     global label1
     label1.config(text="Links not locked")
-    qemcamera.connect()  
-    print("Camera is connected")
-    send_cmd([0x23, 0x90, 0xE3, 0x0D])
-    time.sleep(1)
-    send_cmd([0x23, 0x91, 0xE3, 0x0D])
-    print("Enable modules")
+    success = qemcamera.connect()
+    if (success):
+        print("Camera is connected")
+        send_cmd([0x23, 0x90, 0xE3, 0x0D])
+        time.sleep(1)
+        send_cmd([0x23, 0x91, 0xE3, 0x0D])
+        print("Wait 10 seconds for VSRs' FPGAs to initialise..")
+        waiting = "."
+        for index in range(10):
+            print("\r{}".format(waiting))
+            waiting += "."
+            time.sleep(1)
+        print("Enable modules")
+    else:
+        print("\nFailed to establish connection!\nAborted.")
 
     
 def cam_disconnect(): 
@@ -1284,7 +1296,7 @@ frame.pack()
 variable1 = tk.StringVar(frame)
 variable1.set(OPTIONS[0]) # default value
 variable2 = tk.StringVar(frame)
-variable2.set(IMAGE[3]) # default value
+variable2.set(IMAGE[0]) # default value
 variable3 = tk.StringVar(frame)
 variable3.set(SETCLR[0]) # default value
 variable4 = tk.StringVar(frame)
