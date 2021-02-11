@@ -87,7 +87,7 @@
     },
     {
         "histogram": {
-            "max_frames_received": 2,
+            "max_frames_received": 10,
 	    "sensors_layout": "2x2"
         }
     },
@@ -160,6 +160,7 @@
             "file": {
                 "path":"/tmp/"
             },
+	    "frames": 10,
             "acquisition_id":"2x2_test",
             "write": true
         }
