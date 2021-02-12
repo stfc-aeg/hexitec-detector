@@ -440,10 +440,10 @@ class HexitecFem():
             logging.error("Camera connection: %s" % str(e))
             # Cannot raise error beyond current thread
 
-        print("\n\nReinstate polling before merging with master !\n\n")
-        # # Start polling thread (connect successfully set up)
-        # if len(self.status_error) == 0:
-        #     self._start_polling()
+        # print("\n\nReinstate polling before merging with master !\n\n")
+        # Start polling thread (connect successfully set up)
+        if len(self.status_error) == 0:
+            self._start_polling()
 
     @run_on_executor(executor='thread_executor')
     def initialise_hardware(self, msg=None):
@@ -1387,9 +1387,9 @@ class HexitecFem():
             enable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT,
                               0x30, 0x31, 0x30, 0x31, 0x0D]
             disable_sm_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.CLR_REG_BIT,
-                               0x30, 0x31, 0x30, 0x30, 0x0D]
+                               0x30, 0x31, 0x30, 0x31, 0x0D]
             disable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.CLR_REG_BIT,
-                               0x30, 0x31, 0x30, 0x30, 0x0D]
+                               0x30, 0x31, 0x30, 0x31, 0x0D]
 
             # 1. System is fully initialised (Done already)
 
@@ -1916,9 +1916,9 @@ class HexitecFem():
         enable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT,
                           0x30, 0x31, 0x30, 0x31, 0x0D]
         disable_sm_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.CLR_REG_BIT,
-                           0x30, 0x31, 0x30, 0x30, 0x0D]
+                           0x30, 0x31, 0x30, 0x31, 0x0D]
         disable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.CLR_REG_BIT,
-                           0x30, 0x31, 0x30, 0x30, 0x0D]
+                           0x30, 0x31, 0x30, 0x31, 0x0D]
 
         # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
         self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE,
