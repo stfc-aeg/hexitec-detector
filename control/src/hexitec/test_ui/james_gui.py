@@ -175,9 +175,9 @@ def display_voltages(f):
         s = s + get_dec(f[i+3]) + get_dec(f[i+2])*16 + get_dec(f[i+1])*256 + get_dec(f[i])*4096
         j = (i-2)//4+1
         if j == 9:
-            print("Voltage %.d %.2f" %(j+1, s*2.048/4096))
+            print("Voltage %.d %.2f" % (j+1, s*2.048/4096))
         else:
-            print("Voltage %.d %.2f" %(j+1, s*3.3/4096))
+            print("Voltage %.d %.2f" % (j+1, s*3.3/4096))
 
 
 #  Simple function to return the decimal value of a number in ASCII(0-9, A-F)
@@ -211,22 +211,12 @@ def read_response():
         dat = qemcamera.x10g_rdma.read(0xE0000200, 'Data')
         daty = dat // 256 // 256 // 256%256
         f.append(daty)
-        if debug:
-            print("Got data:- ")
-            print("Bytes are:- ")
-            print(format(daty, '02x'))
         daty = dat // 256 // 256%256
         f.append(daty)
-        if debug:
-            print(format(daty, '02x'))
         daty = dat // 256%256
         f.append(daty)
-        if debug:
-            print(format(daty, '02x'))
         daty = dat%256
         f.append(daty)
-        if debug:
-            print(format(daty, '02x'))
         data_counter = data_counter + 1
         if empty_count == ABORT_VALUE:
             raise TestGuiError("Abort in read_response()")
@@ -234,6 +224,9 @@ def read_response():
         empty_count = 0
 
     if debug:
+        print("Got data; Bytes are:- ")
+        hexadecimal_f = [format(i, '02x') for i in f]
+        print(hexadecimal_f)
         print("Counter is :- ", data_counter)
         print("Length is:-", len(f))
     fifo_empty = qemcamera.x10g_rdma.read(0xE0000011, 'Data')
@@ -244,7 +237,7 @@ def read_response():
         s = s + chr(f[i])
 
     if debug:
-        print("String :- ", s)
+        print("String :- ", s.encode())
         print(f[0])
         print(f[1])
 
@@ -374,10 +367,8 @@ def calibrate_sensor():
     if variable8.get() == READOUTMODE[0]:
         print("Reading out single sensor")
         qemcamera.set_image_size(80, 80, 14, 16)
-        mux_mode = 0
     elif variable8.get() == READOUTMODE[1]:
         #qemcamera.x10g_rdma.write(0x60000002, 4, 'Enable State Machine')
-        mux_mode = 8
         qemcamera.set_image_size(160, 160, 14, 16)
         print("Reading out 2x2 sensors")
 
@@ -1151,7 +1142,7 @@ def initialise_system():
         print(("Failed to initialise VSR1: %s" % e))
         return
     stop = time.time()
-    print(" -=-=-=-=- Took %s seconds -=-=-=-=-" %(stop - start))
+    print(" -=-=-=-=- Took %s seconds -=-=-=-=-" % (stop - start))
 
 
 root = tk.Tk()
