@@ -1,0 +1,86 @@
+[
+    {
+        "fr_setup": {
+            "fr_ready_cnxn":"tcp://127.0.0.1:5001",
+            "fr_release_cnxn":"tcp://127.0.0.1:5002"
+        },
+    "meta_endpoint":"tcp://*:5008"
+    },
+    {
+        "plugin": {
+            "load": {
+                "index":"hdf",
+                "name":"FileWriterPlugin",
+                "library":"${ODIN_PREFIX}/lib/libHdf5Plugin.so"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "load": {
+                "index":"reorder",
+                "name":"HexitecReorderPlugin",
+                "library":"${INSTALL_PREFIX}/lib/libHexitecReorderPlugin.so"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "connect": {
+                "index":"reorder",
+                "connection":"frame_receiver"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "connect": {
+                "index":"hdf",
+                "connection":"reorder"
+            }
+        }
+    },
+    {
+        "reorder": {
+            "raw_data": true
+        }
+    },
+    {
+        "hdf": {
+            "dataset": "processed_frames"
+        }
+    },
+
+    {
+        "hdf": {
+            "dataset": "raw_frames"
+        }
+    },
+
+    {
+        "hdf": {
+            "dataset": {
+                "processed_frames" : {
+                    "cmd": "create",
+                    "datatype": "float",
+                    "dims": [160, 160],
+                    "chunks": [1, 160, 160],
+                    "compression": "none"
+                },
+                "raw_frames" : {
+                    "cmd": "create",
+                    "datatype": "float",
+                    "dims": [160, 160],
+                    "chunks": [1, 160, 160],
+                    "compression": "none"
+                }
+            },
+            "file": {
+                "path":"/tmp/"
+            },
+            "frames": 10,
+            "acquisition_id":"hxt2x2_fp",
+            "write": true
+        }
+    }
+]

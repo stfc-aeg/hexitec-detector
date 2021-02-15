@@ -1,4 +1,4 @@
-"""Support Mercury integration tests; Turns a PNG file into equivalent json file.
+"""Support Hexitec integration tests; Turns a PNG file into equivalent json file.
 
 Christian Angelsen, STFC Detector Systems Software Group
 """
@@ -17,7 +17,7 @@ import json
 import sys
 
 
-def turn_png_into_json(png_file):
+def turn_png_into_json(png_file, rows, columns):
     """Take file.png and writes its values (scaled up) into file.json."""
     # reading png image
     try:
@@ -25,7 +25,11 @@ def turn_png_into_json(png_file):
     except FileNotFoundError as e:
         print("File error: {}".format(e))
         return
-    (rows, columns) = (80, 80)
+
+    if (rows > im.shape[0]) or (columns > im.shape[1]):
+        print(" Requested {} by {} but file dimensions: {} by {}. ".format(rows, columns, im.shape[0], im.shape[1]))
+        print(" Abort..")
+        return
     lum = im[:rows, :columns]
 
     # Characterise values in PNG file
@@ -73,8 +77,15 @@ def turn_png_into_json(png_file):
 
 
 if __name__ == '__main__':
-    try:
-        turn_png_into_json(sys.argv[1])
-    except IndexError:
-        print("Usage:")
-        print("turn_png_into_json.py /path/to/my.png")
+    # print("\ncommandline arguments: ", sys.argv)
+    usage = "python turn_png_into_json.py /path/to/my.png <rows> <columns>"
+    if (len(sys.argv) != 4):
+        print("Wrong arguments supplied, should look like:")
+        print(usage)
+    else:
+        try:
+            rows, columns = int(sys.argv[2]), int(sys.argv[3])
+            turn_png_into_json(sys.argv[1], rows, columns)
+        except IndexError:
+            print("\nUsage:")
+            print(usage)

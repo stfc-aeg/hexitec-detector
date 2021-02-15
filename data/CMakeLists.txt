@@ -18,6 +18,12 @@ set(FRAMERECEIVER_DIR ${HEXITEC_SOURCE_DIR}/frameReceiver)
 # Set the frameProcessor directory
 set(FRAMEPROCESSOR_DIR ${HEXITEC_SOURCE_DIR}/frameProcessor)
 
+# Set the frameSimulator directory
+set(FRAMESIMULATOR_DIR ${HEXITEC_SOURCE_DIR}/frameSimulator)
+
+# Set the integrationTest directory
+set(TEST_DIR ${HEXITEC_SOURCE_DIR}/test)
+
 # Appends the cmake/modules path inside the MAKE_MODULE_PATH variable which stores the
 # directories of additional CMake modules (ie. MacroOutOfSourceBuild.cmake):
 set(CMAKE_MODULE_PATH ${HEXITEC_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
@@ -60,8 +66,14 @@ include_directories(${COMMON_DIR}/include)
 # Add the frameReceiver subdirectory
 add_subdirectory(${FRAMERECEIVER_DIR})
 
-# Add the frameReceiver subdirectory
+# Add the frameProcessor subdirectory
 add_subdirectory(${FRAMEPROCESSOR_DIR})
+
+# Add the frameSimulator subdirectory
+add_subdirectory(${FRAMESIMULATOR_DIR})
+
+# Add the integrationTest subdirectory
+add_subdirectory(${TEST_DIR})
 
 # Add the doc subdirectory
 #add_subdirectory(doc)

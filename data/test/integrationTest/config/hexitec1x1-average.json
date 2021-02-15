@@ -1,0 +1,52 @@
+{
+    "Main": {
+        "receiver": {
+            "process": true,
+            "command": "${ODIN_PREFIX}\/bin\/frameReceiver",
+            "pos-args": "",
+            "sleep": 5
+        },
+        "processor": {
+            "process": true,
+            "command": "${ODIN_PREFIX}\/bin\/frameProcessor",
+            "pos-args": "",
+            "sleep": 5
+        },
+        "simulator": {
+            "process": false,
+            "command": "${ODIN_PREFIX}\/bin\/frameSimulator",
+            "pos-args": "Hexitec",
+            "sleep": 1
+        },
+        "test": {
+            "process": false,
+            "command": "${ODIN_PREFIX}\/bin\/frameTests",
+            "pos-args": "",
+            "sleep": 1
+        }
+    },
+    "simulator":
+    {
+        "lib-path": "${INSTALL_PREFIX}\/lib",
+        "frames": "10",
+        "dest-ip": "127.0.0.1",
+        "ports": "61649",
+        "pattern-path": "${INSTALL_PREFIX}\/test_config\/patterns\/CSD_average.json",
+        "interval": "1",
+	"sensors_layout": "1x1"
+    },
+    "receiver":
+    {
+        "json_file": "${INSTALL_PREFIX}\/test_config\/hexitec1x1-fr.json",
+        "m": "500000000"
+    },
+    "processor":
+    {
+        "json_file": "${INSTALL_PREFIX}\/test_config\/hexitec1x1-fp-average.json"
+    },
+    "test":
+    {
+        "json": "${INSTALL_PREFIX}\/test_config\/test1x1-average.json",
+        "log_level": "all"
+    }
+}
