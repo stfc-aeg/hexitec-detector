@@ -558,7 +558,6 @@ def acquire_data():
         delay = 0.10
         #
         resp = 0
-        #for wait in range(40):
         while resp < 1:
             resp = qemcamera.x10g_rdma.read(0x60000014, 'Check data transfer completed?')
             # print("Transfer complete = ", resp)

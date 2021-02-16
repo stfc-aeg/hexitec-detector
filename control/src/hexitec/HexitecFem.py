@@ -440,10 +440,10 @@ class HexitecFem():
             logging.error("Camera connection: %s" % str(e))
             # Cannot raise error beyond current thread
 
-        print("\n\nReinstate polling before merging with master !\n\n")
-        # # Start polling thread (connect successfully set up)
-        # if len(self.status_error) == 0:
-        #     self._start_polling()
+        # print("\n\nReinstate polling before merging with master !\n\n")
+        # Start polling thread (connect successfully set up)
+        if len(self.status_error) == 0:
+            self._start_polling()
 
     @run_on_executor(executor='thread_executor')
     def initialise_hardware(self, msg=None):
