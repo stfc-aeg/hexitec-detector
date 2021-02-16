@@ -453,7 +453,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.start = time.time() - 10
         self.test_fem.fem.operation_percentage_complete = 90
         self.test_fem.fem.initialisation_check_loop()
-        status = "Camera connected. Microcontrollers initialised."
+        status = "Camera connected. FPGAs initialised."
         assert self.test_fem.fem.status_message == status
 
     def test_send_cmd(self):
@@ -951,11 +951,9 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.send_cmd.assert_has_calls([
             call([0x23, vsr1, HexitecFem.READ_REG_VALUE, 0x32, 0x34, 0x0D]),
             call([0x23, vsr2, HexitecFem.READ_REG_VALUE, 0x32, 0x34, 0x0D]),
-            call([0x23, vsr1, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D]),
-            call([0x23, vsr2, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D]),
             # 2. Stop the state machine
-            call([0x23, vsr1, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x30, 0x0D]),
-            call([0x23, vsr2, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x30, 0x0D]),
+            call([0x23, vsr1, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]),
+            call([0x23, vsr2, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]),
             # 3. Set register 0x24 to 0x22
             call([0x23, vsr1, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]),
             call([0x23, vsr2, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]),
@@ -963,8 +961,8 @@ class TestFem(unittest.TestCase):
             call([0x23, vsr1, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]),
             call([0x23, vsr2, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]),
             # 5 (wait 1 second), 6. Stop the state machine
-            call([0x23, vsr1, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x30, 0x0D]),
-            call([0x23, vsr2, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x30, 0x0D]),
+            call([0x23, vsr1, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]),
+            call([0x23, vsr2, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]),
             # 7. Set register 0x24 to 0x28
             call([0x23, vsr1, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]),
             call([0x23, vsr2, HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]),
@@ -1582,16 +1580,12 @@ class TestFem(unittest.TestCase):
         enable_sm = [0x23, vsr_addr, self.test_fem.fem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31, 0x0D]
         adc_enable = [0x23, vsr_addr, self.test_fem.fem.CTRL_ADC_DAC, 0x30, 0x33, 0x0D]
         adc_set = [0x23, vsr_addr, self.test_fem.fem.WRITE_REG_VAL, 0x31, 0x36, 0x30, 0x39, 0x0D]
-        aqu1 = [0x23, vsr_addr, self.test_fem.fem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32, 0x0D]
-        aqu2 = [0x23, vsr_addr, self.test_fem.fem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38, 0x0D]
 
         self.test_fem.fem.send_cmd.assert_has_calls([
             call(adc_disable),
             call(enable_sm),
             call(adc_enable),
-            call(adc_set),
-            call(aqu1),
-            call(aqu2)
+            call(adc_set)
         ])
 
     def test_initialise_system(self):
@@ -1624,9 +1618,9 @@ class TestFem(unittest.TestCase):
                            0x38, 0x46, 0x30, 0x31, 0x0D]
 
         disable_sm_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.CLR_REG_BIT,
-                           0x30, 0x31, 0x30, 0x30, 0x0D]
+                           0x30, 0x31, 0x30, 0x31, 0x0D]
         disable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.CLR_REG_BIT,
-                           0x30, 0x31, 0x30, 0x30, 0x0D]
+                           0x30, 0x31, 0x30, 0x31, 0x0D]
         enable_sm_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT,
                           0x30, 0x31, 0x30, 0x31, 0x0D]
         enable_sm_vsr2 = [0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT,
