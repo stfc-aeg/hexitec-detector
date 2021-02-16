@@ -4,7 +4,6 @@ GenerateConfigFiles: Creates a temporary file according to user UI selections.
 Christian Angelsen, STFC Detector Systems Software Group
 """
 
-import tempfile
 import logging
 import os
 from collections import OrderedDict
@@ -86,10 +85,6 @@ class GenerateConfigFiles():
         """
         store_temp_name = "/tmp/_tmp_store.txt"
         self.store_temp = open(store_temp_name, mode='w+t')
-
-        # >>> tempfile.NamedTemporaryFile(mode='w+t').name.split("/")
-        # ['', 'tmp', 'tmp6xM4wn']
-        # >>> '/tmp/tmp6xM4wn'.split("/") => ['', 'tmp', 'tmp6xM4wn']
 
         # Generate a unique index name
         (blank, folder, filename) = store_temp_name.split("/")

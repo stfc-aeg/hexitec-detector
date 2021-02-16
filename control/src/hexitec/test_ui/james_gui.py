@@ -188,7 +188,7 @@ def get_dec(a):
             r = a - 48
         if a > 57:
             r = a - 55
-    return(r)
+    return r
 
 
 # Displays the returned response from the microcontroller

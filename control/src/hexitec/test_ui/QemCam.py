@@ -36,12 +36,9 @@ class QemCam(object):
         self.image_size_p    = 0x8
         self.image_size_f    = 0x8
 
-        # self.pixel_extract   = [16, 14, 13, 12, 11]
-        #
         self.debug_level = -1
         self.delay = 0
         self.strm_mtu = 8000
-        self.rdma_mtu = 8000
         #
         self.frame_time = 1
 
@@ -127,25 +124,6 @@ class QemCam(object):
         address = self.receiver | 0x05
         # print "%-32s %08X" % ("-> set data cdn idelay control word:", data_cdn_word)
         self.x10g_rdma.write(address, data_cdn_word, "data_cdn_ivsr word")
-
-    def set_pixel_count_per_image(self, pixel_count_max):
-        number_bytes = pixel_count_max * 2
-        number_bytes_r4 = pixel_count_max % 4
-        number_bytes_r8 = number_bytes % 8
-        first_packets = number_bytes // self.strm_mtu
-        last_packet_size = number_bytes % self.strm_mtu
-        lp_number_bytes_r8 = last_packet_size % 8
-        lp_number_bytes_r32 = last_packet_size % 32
-        size_status = number_bytes_r4 + number_bytes_r8 + lp_number_bytes_r8 + lp_number_bytes_r32
-
-        if size_status != 0:
-            print("%-32s %8i %8i %8i %8i %8i %8i" % ("-> size error", number_bytes, number_bytes_r4,
-                                                     number_bytes_r8, first_packets,
-                                                     lp_number_bytes_r8, lp_number_bytes_r32))
-        else:
-            address = self.receiver | 0x01
-            data = (pixel_count_max & 0x1FFFF) - 1
-            self.x10g_rdma.write(address, data, "pixel count max")
 
     def set_image_size(self, x_size, y_size, p_size, f_size):
         # set image size globals
