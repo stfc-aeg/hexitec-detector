@@ -14,10 +14,10 @@ import logging
 class RdmaUDP(object):
     """RdmaUDP Class, writing access to Firmware registers."""
 
-    def __init__(self, MasterTxUDPIPAddress='192.168.0.1', MasterTxUDPIPPort=65535,
-                 MasterRxUDPIPAddress='192.168.0.1', MasterRxUDPIPPort=65536,
-                 TargetTxUDPIPAddress='192.168.0.2', TargetTxUDPIPPort=65535,
-                 TargetRxUDPIPAddress='192.168.0.2', TargetRxUDPIPPort=65536,
+    def __init__(self, MasterTxUDPIPAddress='192.168.0.1', MasterTxUDPIPPort=61650,
+                 MasterRxUDPIPAddress='192.168.0.1', MasterRxUDPIPPort=61651,
+                 TargetTxUDPIPAddress='192.168.0.2', TargetTxUDPIPPort=61650,
+                 TargetRxUDPIPAddress='192.168.0.2', TargetRxUDPIPPort=61651,
                  RxUDPBuf=1024, UDPMTU=9000, UDPTimeout=10):
         """
         Initialize the RdmaUDP object.

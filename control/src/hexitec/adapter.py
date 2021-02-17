@@ -273,6 +273,8 @@ class Hexitec():
         self.status_error = ""
 
         self.dbgCount = 0
+        self.slowest_time = 0.0
+        self.fastest_time = 10.0
 
         detector = ParameterTree({
             "fems": fem_tree,
@@ -309,7 +311,7 @@ class Hexitec():
 
         self._start_polling()
 
-    @run_on_executor(executor='thread_executor')
+    # @run_on_executor(executor='thread_executor')
     def _start_polling(self):
         IOLoop.instance().add_callback(self.polling)
 
@@ -319,6 +321,7 @@ class Hexitec():
         Check if acquire completed (if initiated), for error(s) and
         whether daq/fem watchdogs timed out
         """
+        f_start = time.time()
         for fem in self.fems:
             if fem.acquisition_completed:
                 histogram_status = self._get_od_status('fp').get('histogram',
@@ -399,6 +402,13 @@ class Hexitec():
                 self.fems[0]._set_status_message("Processing interrupted")
         # print("")
 
+        f_duration = time.time() - f_start
+        if (f_duration < self.fastest_time):
+            self.fastest_time = f_duration
+        else:
+            if (f_duration > self.slowest_time):
+                self.slowest_time = f_duration
+        print("   this: {:.7f} f: {:.7f} s: {:.7f} !!! <<==".format(f_duration, self.fastest_time, self.slowest_time))
         IOLoop.instance().call_later(1.0, self.polling)
 
     def shutdown_processing(self):
