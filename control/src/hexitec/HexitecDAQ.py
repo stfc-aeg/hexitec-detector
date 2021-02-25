@@ -276,7 +276,6 @@ class HexitecDAQ():
         # print("")
 
         if processing_status['frames_processed'] == self.frame_end_acquisition:
-            print("  ***  Process'g DONE - proc_check_loop *** \n")
             delay = 1.0
             IOLoop.instance().call_later(delay, self.stop_acquisition)
             logging.debug("Acquisition Complete")
@@ -494,7 +493,6 @@ class HexitecDAQ():
         request.body = "{}".format(0)
         self.adapters["fp"].put(command, request)
 
-        self.file_writing = writing
         # send command to Odin Data
         command = "config/hdf/file/path"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
@@ -514,6 +512,9 @@ class HexitecDAQ():
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         request.body = "{}".format(self.number_frames)
         self.adapters["fp"].put(command, request)
+
+        # Finally, update self_writing so FEM(s) can safely begin sending data
+        self.file_writing = writing
 
     def _config_odin_data(self, adapter):
         config = os.path.join(self.config_dir, self.config_files[adapter])
@@ -730,8 +731,3 @@ class HexitecDAQ():
             self.plugin = "hdf"
         else:
             self.plugin = "histogram"
-
-        # print("\n\n *** self.plugin: %s ***" % self.plugin)
-        # print(" *** master dset: %s ***" % self.master_dataset)
-        # print(" *** extra  dset: %s ***" % self.extra_datasets)
-        # print(" *** pass_proc'd(%s), raw_frms(%s) ***\n\n" % (self.pass_processed, self.raw_data))

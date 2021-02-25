@@ -521,7 +521,7 @@ class TestDAQ(unittest.TestCase):
         dummy_file = "/tmp/dummy.h5"
         try:
             copyfile(hdf5_file, dummy_file)
-        except FileNotFoundError as e:  # pragma: no cover
+        except FileNotFoundError as e:
             raise Exception("Error copying HDF file: %s" % e)
 
         try:
@@ -619,7 +619,7 @@ class TestDAQ(unittest.TestCase):
         dummy_file = "/tmp/dummy.h5"
         try:
             copyfile(hdf5_file, dummy_file)
-        except FileNotFoundError as e:  # pragma: no cover
+        except FileNotFoundError as e:
             raise Exception("Error copying HDF file: %s" % e)
 
         # Prepare, open file, fake parameter tree, create a meta-data group
@@ -649,7 +649,7 @@ class TestDAQ(unittest.TestCase):
         dummy_file = "/tmp/dummy.h5"
         try:
             copyfile(hdf5_file, dummy_file)
-        except FileNotFoundError as e:  # pragma: no cover
+        except FileNotFoundError as e:
             raise Exception("Error copying HDF file: %s" % e)
 
         try:
@@ -682,7 +682,7 @@ class TestDAQ(unittest.TestCase):
         dummy_file = "/tmp/dummy.h5"
         try:
             copyfile(hdf5_file, dummy_file)
-        except FileNotFoundError as e:  # pragma: no cover
+        except FileNotFoundError as e:
             raise Exception("Error copying HDF file: %s" % e)
 
         try:

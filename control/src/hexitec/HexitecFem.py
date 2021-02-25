@@ -22,7 +22,6 @@ from socket import error as socket_error
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from tornado.ioloop import IOLoop
-from tornado.concurrent import run_on_executor
 
 
 class HexitecFem():
@@ -119,6 +118,7 @@ class HexitecFem():
         self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
 
         self.number_frames = 10
+        self.number_frames_backed_up = 0
 
         self.first_initialisation = True
         self.hardware_connected = False
@@ -236,6 +236,7 @@ class HexitecFem():
                 "hv": (lambda: self.vsr2_hv, None),
             }
         }
+        self.waited = 0.0
 
         self.param_tree = ParameterTree(param_tree_dict)
 
@@ -445,7 +446,6 @@ class HexitecFem():
         # if len(self.status_error) == 0:
         #     self._start_polling()
 
-    @run_on_executor(executor='thread_executor')
     def initialise_hardware(self, msg=None):
         """Initialise sensors, load enables, etc to initialise both VSR boards."""
         try:
@@ -490,7 +490,6 @@ class HexitecFem():
             self._set_status_error("Uncaught Exception; Camera initialisation failed: %s" % str(e))
             logging.error("%s" % str(e))
 
-    @run_on_executor(executor='thread_executor')
     def collect_data(self, msg=None):
         """Acquire data from camera."""
         try:
@@ -508,14 +507,6 @@ class HexitecFem():
             self.operation_percentage_steps = 100
             self._set_status_message("Acquiring data..")
             self.acquire_data()
-            self.operation_percentage_complete = 100
-            self.initialise_progress = 0
-            # Acquisition completed, note completion
-            self.acquisition_completed = True
-            # Don't clear hardware_busy, wait for acquire_data() to clear it
-            if self.first_initialisation:
-                self._set_status_message("Initialisation from cold completed")
-                self.first_initialisation = False
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to collect data: %s" % str(e))
             logging.error("%s" % str(e))
@@ -958,11 +949,13 @@ class HexitecFem():
 
         return synced
 
-    def print_firmware_info(self):
-        """Prints info on loaded firmware
-            0x80: F/W customer ID
-            0x81: F/W Project ID
-            0x82: F/W Version ID."""
+    def print_firmware_info(self):  # pragma: no cover
+        """Print info on loaded firmware.
+
+        0x80: F/W customer ID
+        0x81: F/W Project ID
+        0x82: F/W Version ID.
+        """
         print("__________F/W Customer, Project, and Version IDs__________")
         for index in range(3):
             (vsr2, vsr1) = self.debug_register(0x38, 0x30+index)
@@ -973,7 +966,7 @@ class HexitecFem():
         """Acquire data, polls fem for completion and reads out fem monitors."""
         # If called as part of cold initialisation, only need one frame so
         #   temporarily overwrite UI's number of frames for this call only
-        number_frames = self.number_frames
+        self.number_frames_backed_up = self.number_frames
         if self.first_initialisation:
             # Don't set to 1, as rdma write subtracts 1 (and 0 = continuous readout!)
             self.number_frames = 2
@@ -1026,21 +1019,40 @@ class HexitecFem():
         # How to convert datetime object to float?
         self.acquire_timestamp = time.time()
 
-        waited = 0.0
-        delay = 0.10
-        resp = 0
-        while True:
-            resp = self.x10g_rdma.read(0x60000014, 'Check data transfer completed?')
-            if resp > 0:
-                break
-            time.sleep(delay)
-            waited += delay
+        self.waited = 0.1
+        IOLoop.instance().call_later(0.1, self.check_acquire_finished)
+
+    def check_acquire_finished(self):
+        """Check whether all data transferred, until completed or cancelled by user."""
+        try:
+            delay = 0.10
+            reply = 0
+            # Stop if user clicked on Cancel button
             if (self.stop_acquisition):
-                logging.error(" -=-=-=- HEXITECFEM INSTRUCTED TO STOP ACQUISITION -=-=-=-")
-                break
+                logging.debug(" -=-=-=- HexitecFem told to cancel acquisition -=-=-=-")
+                self.acquire_data_completed()
+            else:
+                reply = self.x10g_rdma.read(0x60000014, 'Check data transfer completed?')
+                if reply > 0:
+                    self.acquire_data_completed()
+                else:
+                    self.waited += delay
+                    IOLoop.instance().call_later(delay, self.check_acquire_finished)
+        except (HexitecFemError, ParameterTreeError) as e:
+            self._set_status_error("Failed to collect data: %s" % str(e))
+            logging.error("%s" % str(e))
+        except Exception as e:
+            self._set_status_error("Uncaught Exception; Data collection failed: %s" % str(e))
+            logging.error("%s" % str(e))
 
+        # Acquisition interrupted
+        self.acquisition_completed = True
+        if self.first_initialisation:
+            self.first_initialisation_done_update_gui()
+
+    def acquire_data_completed(self):
+        """Reset variables and read out Firmware monitors post data transfer."""
         self.acquire_stop_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
-
         # Stop the state machine
         self.x10g_rdma.write(0x60000002, 0, 'Dis-Enable State Machine')
 
@@ -1055,11 +1067,14 @@ class HexitecFem():
             self.operation_percentage_complete = 100
             self.initialise_progress = 0
             self.hardware_busy = False
-            raise HexitecFemError("Acquire interrupted")
+            self.acquisition_completed = True
+            if self.first_initialisation:
+                self.first_initialisation_done_update_gui()
+            raise HexitecFemError("User cancelled Acquire")
         else:
-            logging.debug("Capturing {} frames took {} s".format(str(self.number_frames),
-                                                                 str(waited)))
-            duration = "Requested %s frame(s), took %s seconds" % (self.number_frames, str(waited))
+            waited = str(self.waited)
+            logging.debug("Capturing {} frames took {} s".format(str(self.number_frames), waited))
+            duration = "Requested {} frame(s), took {} seconds".format(self.number_frames, waited)
             self._set_status_message(duration)
             # Save duration to separate parameter tree entry:
             self.acquisition_duration = duration
@@ -1162,8 +1177,20 @@ class HexitecFem():
         stop_ = datetime.strptime(self.acquire_stop_time, HexitecFem.DATE_FORMAT)
         self.acquire_time = (stop_ - start_).total_seconds()
 
+        # Wrap up by updating GUI
+
+        self.operation_percentage_complete = 100
+        self.initialise_progress = 0
+        # Acquisition completed, note completion
+        self.acquisition_completed = True
         if self.first_initialisation:
-            self.number_frames = number_frames
+            self.first_initialisation_done_update_gui()
+            self._set_status_message("Initialisation from cold completed")
+
+    def first_initialisation_done_update_gui(self):
+        """Reset related variables."""
+        self.first_initialisation = False
+        self.number_frames = self.number_frames_backed_up
 
     def set_up_state_machine(self):
         """Set up state machine, optionally with values from hexitec ini file."""
@@ -1329,7 +1356,6 @@ class HexitecFem():
 
         logging.debug("Finished Setting up state machine")
 
-    @run_on_executor(executor='thread_executor')
     def collect_offsets(self):
         """Run collect offsets sequence.
 
@@ -1348,7 +1374,7 @@ class HexitecFem():
 
             self.hardware_busy = True
             self.operation_percentage_complete = 0
-            self.operation_percentage_steps = 15
+            self.operation_percentage_steps = 1
 
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0],
                           HexitecFem.READ_REG_VALUE, 0x32, 0x34, 0x0D])
@@ -2126,7 +2152,7 @@ class HexitecFem():
             initial_value = int(sensors_values[1])
         except ValueError as e:
             logging.error("Failed to readout intelligible sensor values: %s" % e)
-            return
+            return None
 
         if initial_value == HexitecFem.SENSORS_READOUT_OK:
             ambient_hex = sensors_values[1:5]
@@ -2428,7 +2454,7 @@ class HexitecFem():
         parser.read(filename)
         for section in parser.sections():
             if debug:  # pragma: no cover
-                print('Section:', section)
+                print("Section: ", section)
             for key, value in parser.items(section):
                 parameter_dict[section + "/" + key] = value.strip("\"")
                 if debug:  # pragma: no cover
@@ -2446,12 +2472,13 @@ class HexitecFem():
         vsr1 = self.read_response().strip("\r")
         return (vsr2, vsr1)
 
-    def dump_all_registers(self):
+    def dump_all_registers(self):  # pragma: no cover
         """Dump register 0x00 - 0xff contents to screen.
 
-            aSpect's address format: 0x3F -> 0x33, 0x46 (i.e. msb, lsb)
-            See HEX_ASCII_CODE, and section 3.3, page 11 of revision 0.5:
-            aS_AM_Hexitec_VSR_Interface.pdf"""
+        aSpect's address format: 0x3F -> 0x33, 0x46 (i.e. msb, lsb)
+        See HEX_ASCII_CODE, and section 3.3, page 11 of revision 0.5:
+        aS_AM_Hexitec_VSR_Interface.pdf
+        """
         for msb in range(16):
             for lsb in range(16):
                 (vsr2, vsr1) = self.debug_register(self.HEX_ASCII_CODE[msb], self.HEX_ASCII_CODE[lsb])

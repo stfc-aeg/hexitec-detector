@@ -258,7 +258,7 @@ class TestFem(unittest.TestCase):
             # Fein error connecting to camera
             rdma_mock.side_effect = HexitecFemError()
             self.test_fem.fem.connect_hardware()
-            time.sleep(0.1)
+
             assert self.test_fem.fem._get_status_error() == "Failed to connect with camera: "
             assert self.test_fem.fem._get_status_message() == "Is the camera powered?"
 
@@ -266,21 +266,12 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.hardware_connected = False
             rdma_mock.side_effect = Exception()
             self.test_fem.fem.connect_hardware()
-            time.sleep(0.1)
+
             error = "Uncaught Exception; Camera connection: "
             assert self.test_fem.fem._get_status_error() == error
 
         # Don't Mock, error because we couldn't setup a connection
         self.test_fem.fem.connect_hardware("test")
-
-        time.sleep(0.1)
-        # assert self.test_fem.fem._get_status_error() == "Failed to setup Control connection:"
-
-        # Provoke error by pretending connection already exists
-        self.test_fem.fem.hardware_connected = True
-
-        self.test_fem.fem.connect_hardware("test")
-        time.sleep(0.1)
         assert self.test_fem.fem._get_status_error() == "Connection already established"
 
     def test_connect_hardware(self):
@@ -293,7 +284,6 @@ class TestFem(unittest.TestCase):
     def test_initialise_hardware_fails_if_not_connected(self):
         """Test function fails when no connection established."""
         self.test_fem.fem.initialise_hardware()
-        time.sleep(0.1)
         error = "Failed to initialise camera: No connection established"
         assert self.test_fem.fem._get_status_error() == error
 
@@ -302,7 +292,6 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.hardware_busy = True
         self.test_fem.fem.initialise_hardware()
-        time.sleep(0.1)
         error = "Failed to initialise camera: Hardware sensors busy initialising"
         assert self.test_fem.fem.status_error == error
 
@@ -313,7 +302,6 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.initialise_system = Mock()
         self.test_fem.fem.initialise_system.side_effect = AttributeError()
         self.test_fem.fem.initialise_hardware()
-        time.sleep(0.1)
         error = "Uncaught Exception; Camera initialisation failed: "
         assert self.test_fem.fem.status_error == error
 
@@ -356,8 +344,6 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.hardware_busy = True
         self.test_fem.fem.ignore_busy = False
         self.test_fem.fem.collect_data()
-
-        time.sleep(0.1)
         error = "Failed to collect data: Hardware sensors busy initialising"
         assert self.test_fem.fem._get_status_error() == error
 
@@ -365,8 +351,6 @@ class TestFem(unittest.TestCase):
         """Test function fails without established hardware connection."""
         self.test_fem.fem.hardware_connected = False
         self.test_fem.fem.collect_data("test")
-
-        time.sleep(0.1)
         assert self.test_fem.fem._get_status_error() == "Failed to collect data: No connection established"
 
     def test_collect_data_fails_on_exception(self):
@@ -376,7 +360,6 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.acquire_data = Mock()
         self.test_fem.fem.acquire_data.side_effect = AttributeError()
         self.test_fem.fem.collect_data()
-        time.sleep(0.1)
         error = "Uncaught Exception; Data collection failed: "
         assert self.test_fem.fem.status_error == error
 
@@ -391,24 +374,18 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.acquisition_completed = False
         self.test_fem.fem.acquire_data = Mock()
         self.test_fem.fem.collect_data()
-
-        time.sleep(0.1)
-        assert self.test_fem.fem.operation_percentage_complete == 100
+        assert self.test_fem.fem.operation_percentage_steps == 100
         assert self.test_fem.fem.initialise_progress == 0
-        assert self.test_fem.fem.acquisition_completed is True
-        assert self.test_fem.fem.first_initialisation is False
 
     def test_disconnect_hardware(self):
         """Test the function works ok."""
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.disconnect_hardware()
-
         assert self.test_fem.fem.hardware_connected is False
 
     def test_disconnect_hardware_fails_without_connection(self):
         """Test function fails without established hardware connection."""
         self.test_fem.fem.hardware_connected = False
-
         self.test_fem.fem.disconnect_hardware()
         error = "Failed to disconnect: No connection to disconnect"
         assert self.test_fem.fem._get_status_error() == error
@@ -478,21 +455,17 @@ class TestFem(unittest.TestCase):
     def test_read_response(self):
         """Test function works ok."""
         self.test_fem.fem.set_debug(True)
-
         return_values = [0, 714158145, 0, 808520973, 0, 13]
         self.test_fem.fem.x10g_rdma.read = Mock()
         self.test_fem.fem.x10g_rdma.read.side_effect = return_values
-
         address = 0xE0000011
         status = self.test_fem.fem.read_response()
-
         self.test_fem.fem.x10g_rdma.read.assert_called_with(address, ANY)
         assert status == '\x910A01\r\r'
 
     def test_read_response_failed(self):
         """Test the function fails receiving badly formatted data."""
         self.test_fem.fem.x10g_rdma.read = Mock(return_value=1)
-
         with pytest.raises(HexitecFemError) as exc_info:
             self.test_fem.fem.read_response()
         assert exc_info.type is HexitecFemError
@@ -508,7 +481,6 @@ class TestFem(unittest.TestCase):
         """Test function handles socket error."""
         self.test_fem.fem.connect = Mock()
         self.test_fem.fem.connect.side_effect = socket_error()
-
         with pytest.raises(HexitecFemError) as exc_info:
             self.test_fem.fem.cam_connect()
         assert exc_info.type is HexitecFemError
@@ -534,10 +506,8 @@ class TestFem(unittest.TestCase):
         """Test function handles attribute error."""
         self.test_fem.fem.send_cmd = Mock()
         self.test_fem.fem.send_cmd.side_effect = AttributeError()
-
         with pytest.raises(HexitecFemError) as exc_info:
             self.test_fem.fem.cam_disconnect()
-        time.sleep(0.1)
         assert exc_info.type is HexitecFemError
         assert self.test_fem.fem.hardware_connected is False
 
@@ -560,7 +530,6 @@ class TestFem(unittest.TestCase):
             call(0x60000004, 0, ANY),
             call(0x60000001, 2, ANY),
         ])
-
         assert self.test_fem.fem.vsr_addr == self.test_fem.fem.VSR_ADDRESS[0]
 
     def test_initialise_sensor2(self):
@@ -582,23 +551,35 @@ class TestFem(unittest.TestCase):
             call(0x60000004, 4, ANY),
             call(0x60000001, 2, ANY),
         ])
-
         assert self.test_fem.fem.vsr_addr == self.test_fem.fem.VSR_ADDRESS[1]
 
     def test_calibrate_sensor_1_sensor(self):
         """Test function handles single sensor."""
         self.test_fem.fem.sensors_layout = self.test_fem.fem.READOUTMODE[0]
+        self.test_fem.fem.vsr_addr = self.test_fem.fem.VSR_ADDRESS[1]
         self.test_fem.fem.selected_sensor = HexitecFem.OPTIONS[2]
         self.test_fem.fem.read_response = Mock(return_value="06")
         self.test_fem.fem.send_cmd = Mock()
         self.test_fem.fem.x10g_rdma.read = Mock()
         self.test_fem.fem.x10g_rdma.read.side_effects = 65535
         self.test_fem.fem.debug = True
-
         self.test_fem.fem.calibrate_sensor()
-
         assert self.test_fem.fem.image_size_x == 80
         assert self.test_fem.fem.image_size_y == 80
+
+    def test_calibrate_sensor_2x2_sensors(self):
+        """Test function handles 2x2 sensors."""
+        self.test_fem.fem.sensors_layout = self.test_fem.fem.READOUTMODE[1]
+        self.test_fem.fem.vsr_addr = self.test_fem.fem.VSR_ADDRESS[0]
+        self.test_fem.fem.selected_sensor = HexitecFem.OPTIONS[0]
+        self.test_fem.fem.read_response = Mock(return_value="06")
+        self.test_fem.fem.send_cmd = Mock()
+        self.test_fem.fem.x10g_rdma.read = Mock()
+        self.test_fem.fem.x10g_rdma.read.side_effects = 65535
+        self.test_fem.fem.debug = True
+        self.test_fem.fem.calibrate_sensor()
+        assert self.test_fem.fem.image_size_x == 160
+        assert self.test_fem.fem.image_size_y == 160
 
     def test_calibrate_sensor_fails_wrong_rdma_read(self):
         """Test function handles rdma read return wrong value."""
@@ -695,49 +676,38 @@ class TestFem(unittest.TestCase):
             call(0x60000011, ANY),
             call(0x60000012, ANY),
             call(0x60000011, ANY),
-            call(0x60000012, ANY),
-            call(0x60000014, ANY),  # Transfer ongoing
-            call(0x60000014, ANY),  # Transfer completed
-            call(0x60000011, ANY),
-            call(0x60000012, ANY),
-            call(0xD0000001, ANY),
-            # Output from Sensor
-            call(0x70000010, ANY),
-            call(0x70000011, ANY),
-            call(0x70000012, ANY),
-            call(0x70000013, ANY),
-            call(0x70000014, ANY),
-            call(0x70000015, ANY),
-            call(0x70000016, ANY),
-            call(0x70000017, ANY),
-            call(0x70000018, ANY),
-            call(0x70000019, ANY),
-            call(0x7000001A, ANY),
-            # Output from Frame Gate
-            call(0x80000010, 'frame last length'),
-            call(0x80000011, 'frame max length'),
-            call(0x80000012, 'frame min length'),
-            call(0x80000013, 'frame number'),
-            call(0x80000014, 'frame last clock cycles'),
-            call(0x80000015, 'frame max clock cycles'),
-            call(0x80000016, 'frame min clock cycles'),
-            call(0x80000017, 'frame data total'),
-            call(0x80000018, 'frame data total clock cycles'),
-            call(0x80000019, 'frame trigger count'),
-            call(0x8000001A, 'frame in progress flag'),
-            # Input to XAUI
-            call(0x90000010, 'frame last length'),
-            call(0x90000011, 'frame max length'),
-            call(0x90000012, 'frame min length'),
-            call(0x90000013, 'frame number'),
-            call(0x90000014, 'frame last clock cycles'),
-            call(0x90000015, 'frame max clock cycles'),
-            call(0x90000016, 'frame min clock cycles'),
-            call(0x90000017, 'frame data total'),
-            call(0x90000018, 'frame data total clock cycles'),
-            call(0x90000019, 'frame trigger count'),
-            call(0x9000001A, 'frame in progress flag'),
+            call(0x60000012, ANY)
         ])
+
+    def test_check_acquire_finished_handles_cancel(self):
+        """Test check_acquire_finished calls acquire_data_completed if acquire cancelled."""
+        with patch("hexitec.HexitecFem.IOLoop"):
+            self.test_fem.fem.stop_acquisition = True
+            self.test_fem.fem.x10g_rdma.write = Mock()
+            self.test_fem.fem.check_acquire_finished()
+            assert self.test_fem.fem.stop_acquisition is False
+
+    def test_check_acquire_finished_handles_all_data_sent(self):
+        """Test check_acquire_finished calls acquire_data_completed if all data transferred."""
+        with patch("hexitec.HexitecFem.IOLoop"):
+            self.test_fem.fem.stop_acquisition = False
+            self.test_fem.fem.x10g_rdma.read = Mock()
+            self.test_fem.fem.x10g_rdma.read.side_effect = [1]  # >0 Signals all data sent
+            self.test_fem.fem.x10g_rdma.write = Mock()
+
+            self.test_fem.fem.check_acquire_finished()
+            assert self.test_fem.fem.hardware_busy is False
+
+    def test_check_acquire_finished_handles_data_being_transmitted(self):
+        """Test check_acquire_finished handles normal data transmission."""
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.stop_acquisition = False
+            self.test_fem.fem.x10g_rdma.read = Mock()
+            self.test_fem.fem.x10g_rdma.read.side_effect = [0]  # >0 Signals all data sent
+
+            self.test_fem.fem.check_acquire_finished()
+            mock_loop.instance().call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
+            assert self.test_fem.fem.waited == 0.1
 
     def test_acquire_data_single_sensor(self):
         """Test function handles single sensor selected."""
@@ -808,7 +778,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.acquire_data()
         # Calls to self.test_fem.fem.x10g_rdma.read() already covered in previous unit test
 
-    def test_acquire_data_handles_manual_stop(self):
+    def test_acquire_data_completed_handles_manual_stop(self):
         """Test function handles user stopping acquisition."""
         self.test_fem.fem.sensors_layout = HexitecFem.READOUTMODE[0]
         self.test_fem.fem.selected_sensor = HexitecFem.OPTIONS[0]
@@ -830,12 +800,240 @@ class TestFem(unittest.TestCase):
             fake_sleep.side_effect = None
 
             with pytest.raises(HexitecFemError) as exc_info:
-                self.test_fem.fem.acquire_data()
+                self.test_fem.fem.acquire_data_completed()
             assert exc_info.type is HexitecFemError
-            assert exc_info.value.args[0] == "Acquire interrupted"
+            assert exc_info.value.args[0] == "User cancelled Acquire"
 
         assert self.test_fem.fem.operation_percentage_complete == 100
         assert self.test_fem.fem.hardware_busy is False
+        assert self.test_fem.fem.acquisition_completed is True
+        assert self.test_fem.fem.first_initialisation is False
+
+    def test_acquire_data_completed_vsr2_works(self):
+        """Test function handles normal end of acquisition, targeting VSR2."""
+        from datetime import datetime
+        DATE_FORMAT = self.test_fem.fem.DATE_FORMAT
+        self.test_fem.fem.acquire_start_time = '%s' % (datetime.now().strftime(DATE_FORMAT))
+        self.test_fem.fem.first_initialisation = True
+        self.test_fem.fem.sensors_layout = HexitecFem.READOUTMODE[1]
+        self.test_fem.fem.selected_sensor = HexitecFem.OPTIONS[2]
+        self.test_fem.fem.debug = True
+
+        empty_signals = 65535
+        full_signals = 255
+        number_frames = 2
+        # Output from Sensor
+        s_frame_last_length = 51200
+        s_frame_max_length = 76960
+        s_frame_min_length = 51200
+        s_frame_number = 9
+        s_frame_last_clock_cycles = 23015
+        s_frame_max_clock_cycles = 4112394392
+        s_frame_min_clock_cycles = 23015
+        s_frame_data_total = 538080
+        s_frame_data_total_clock_cycles = 1278212083
+        s_frame_trigger_count = 0
+        s_frame_in_progress_flag = 0
+        # Output from frame Gate
+        fg_frame_last_length = 51200
+        fg_frame_max_length = 51200
+        fg_frame_min_length = 51200
+        fg_frame_number = 6
+        fg_frame_last_clock_cycles = 23015
+        fg_frame_max_clock_cycles = 4112417407
+        fg_frame_min_clock_cycles = 23015
+        fg_frame_data_total = 307200
+        fg_frame_data_total_clock_cycles = 1278186053
+        fg_frame_trigger_count = 0
+        fg_frame_in_progress_flag = 0
+        # Input to XAUI
+        xaui_frame_last_length = 51200
+        xaui_frame_max_length = 51200
+        xaui_frame_min_length = 51200
+        xaui_frame_number = 6
+        xaui_frame_last_clock_cycles = 23015
+        xaui_frame_max_clock_cycles = 4112417407
+        xaui_frame_min_clock_cycles = 23015
+        xaui_frame_data_total = 307200
+        xaui_frame_data_total_clock_cycles = 1278186053
+        xaui_frame_trigger_count = 0
+        xaui_frame_in_progress_flag = 0
+
+        side = [empty_signals, full_signals, number_frames, s_frame_last_length, s_frame_max_length,
+                s_frame_min_length, s_frame_number, s_frame_last_clock_cycles,
+                s_frame_max_clock_cycles, s_frame_min_clock_cycles, s_frame_data_total,
+                s_frame_data_total_clock_cycles, s_frame_trigger_count, s_frame_in_progress_flag,
+                # Frame Gate:
+                fg_frame_last_length, fg_frame_max_length, fg_frame_min_length, fg_frame_number,
+                fg_frame_last_clock_cycles, fg_frame_max_clock_cycles, fg_frame_min_clock_cycles,
+                fg_frame_data_total, fg_frame_data_total_clock_cycles, fg_frame_trigger_count,
+                fg_frame_in_progress_flag,
+                # Input to XAUI
+                xaui_frame_last_length, xaui_frame_max_length, xaui_frame_min_length,
+                xaui_frame_number, xaui_frame_last_clock_cycles, xaui_frame_max_clock_cycles,
+                xaui_frame_min_clock_cycles, xaui_frame_data_total,
+                xaui_frame_data_total_clock_cycles, xaui_frame_trigger_count,
+                xaui_frame_in_progress_flag
+                ]
+
+        self.test_fem.fem.x10g_rdma.read = Mock()
+        self.test_fem.fem.x10g_rdma.read.side_effect = side
+        self.test_fem.fem.acquire_data_completed()
+
+        self.test_fem.fem.x10g_rdma.read.assert_has_calls([
+            call(0x60000011, ANY),
+            call(0x60000012, ANY),
+            call(0xD0000001, ANY),
+            # Output from Sensor
+            call(0x70000010, ANY),
+            call(0x70000011, ANY),
+            call(0x70000012, ANY),
+            call(0x70000013, ANY),
+            call(0x70000014, ANY),
+            call(0x70000015, ANY),
+            call(0x70000016, ANY),
+            call(0x70000017, ANY),
+            call(0x70000018, ANY),
+            call(0x70000019, ANY),
+            call(0x7000001A, ANY),
+            # Output from Frame Gate
+            call(0x80000010, 'frame last length'),
+            call(0x80000011, 'frame max length'),
+            call(0x80000012, 'frame min length'),
+            call(0x80000013, 'frame number'),
+            call(0x80000014, 'frame last clock cycles'),
+            call(0x80000015, 'frame max clock cycles'),
+            call(0x80000016, 'frame min clock cycles'),
+            call(0x80000017, 'frame data total'),
+            call(0x80000018, 'frame data total clock cycles'),
+            call(0x80000019, 'frame trigger count'),
+            call(0x8000001A, 'frame in progress flag'),
+            # Input to XAUI
+            call(0x90000010, 'frame last length'),
+            call(0x90000011, 'frame max length'),
+            call(0x90000012, 'frame min length'),
+            call(0x90000013, 'frame number'),
+            call(0x90000014, 'frame last clock cycles'),
+            call(0x90000015, 'frame max clock cycles'),
+            call(0x90000016, 'frame min clock cycles'),
+            call(0x90000017, 'frame data total'),
+            call(0x90000018, 'frame data total clock cycles'),
+            call(0x90000019, 'frame trigger count'),
+            call(0x9000001A, 'frame in progress flag'),
+        ])
+
+    def test_acquire_data_completed_vsr1_works(self):
+        """Test function handles normal end of acquisition, targeting VSR1."""
+        from datetime import datetime
+        DATE_FORMAT = self.test_fem.fem.DATE_FORMAT
+        self.test_fem.fem.acquire_start_time = '%s' % (datetime.now().strftime(DATE_FORMAT))
+        self.test_fem.fem.first_initialisation = True
+        self.test_fem.fem.sensors_layout = HexitecFem.READOUTMODE[1]
+        self.test_fem.fem.selected_sensor = HexitecFem.OPTIONS[0]
+        self.test_fem.fem.debug = True
+
+        empty_signals = 65535
+        full_signals = 255
+        number_frames = 2
+        # Output from Sensor
+        s_frame_last_length = 51200
+        s_frame_max_length = 76960
+        s_frame_min_length = 51200
+        s_frame_number = 9
+        s_frame_last_clock_cycles = 23015
+        s_frame_max_clock_cycles = 4112394392
+        s_frame_min_clock_cycles = 23015
+        s_frame_data_total = 538080
+        s_frame_data_total_clock_cycles = 1278212083
+        s_frame_trigger_count = 0
+        s_frame_in_progress_flag = 0
+        # Output from frame Gate
+        fg_frame_last_length = 51200
+        fg_frame_max_length = 51200
+        fg_frame_min_length = 51200
+        fg_frame_number = 6
+        fg_frame_last_clock_cycles = 23015
+        fg_frame_max_clock_cycles = 4112417407
+        fg_frame_min_clock_cycles = 23015
+        fg_frame_data_total = 307200
+        fg_frame_data_total_clock_cycles = 1278186053
+        fg_frame_trigger_count = 0
+        fg_frame_in_progress_flag = 0
+        # Input to XAUI
+        xaui_frame_last_length = 51200
+        xaui_frame_max_length = 51200
+        xaui_frame_min_length = 51200
+        xaui_frame_number = 6
+        xaui_frame_last_clock_cycles = 23015
+        xaui_frame_max_clock_cycles = 4112417407
+        xaui_frame_min_clock_cycles = 23015
+        xaui_frame_data_total = 307200
+        xaui_frame_data_total_clock_cycles = 1278186053
+        xaui_frame_trigger_count = 0
+        xaui_frame_in_progress_flag = 0
+
+        side = [empty_signals, full_signals, number_frames, s_frame_last_length, s_frame_max_length,
+                s_frame_min_length, s_frame_number, s_frame_last_clock_cycles,
+                s_frame_max_clock_cycles, s_frame_min_clock_cycles, s_frame_data_total,
+                s_frame_data_total_clock_cycles, s_frame_trigger_count, s_frame_in_progress_flag,
+                # Frame Gate:
+                fg_frame_last_length, fg_frame_max_length, fg_frame_min_length, fg_frame_number,
+                fg_frame_last_clock_cycles, fg_frame_max_clock_cycles, fg_frame_min_clock_cycles,
+                fg_frame_data_total, fg_frame_data_total_clock_cycles, fg_frame_trigger_count,
+                fg_frame_in_progress_flag,
+                # Input to XAUI
+                xaui_frame_last_length, xaui_frame_max_length, xaui_frame_min_length,
+                xaui_frame_number, xaui_frame_last_clock_cycles, xaui_frame_max_clock_cycles,
+                xaui_frame_min_clock_cycles, xaui_frame_data_total,
+                xaui_frame_data_total_clock_cycles, xaui_frame_trigger_count,
+                xaui_frame_in_progress_flag
+                ]
+
+        self.test_fem.fem.x10g_rdma.read = Mock()
+        self.test_fem.fem.x10g_rdma.read.side_effect = side
+        self.test_fem.fem.acquire_data_completed()
+
+        self.test_fem.fem.x10g_rdma.read.assert_has_calls([
+            call(0x60000011, ANY),
+            call(0x60000012, ANY),
+            call(0xD0000001, ANY),
+            # Output from Sensor
+            call(0x70000010, ANY),
+            call(0x70000011, ANY),
+            call(0x70000012, ANY),
+            call(0x70000013, ANY),
+            call(0x70000014, ANY),
+            call(0x70000015, ANY),
+            call(0x70000016, ANY),
+            call(0x70000017, ANY),
+            call(0x70000018, ANY),
+            call(0x70000019, ANY),
+            call(0x7000001A, ANY),
+            # Output from Frame Gate
+            call(0x80000010, 'frame last length'),
+            call(0x80000011, 'frame max length'),
+            call(0x80000012, 'frame min length'),
+            call(0x80000013, 'frame number'),
+            call(0x80000014, 'frame last clock cycles'),
+            call(0x80000015, 'frame max clock cycles'),
+            call(0x80000016, 'frame min clock cycles'),
+            call(0x80000017, 'frame data total'),
+            call(0x80000018, 'frame data total clock cycles'),
+            call(0x80000019, 'frame trigger count'),
+            call(0x8000001A, 'frame in progress flag'),
+            # Input to XAUI
+            call(0x90000010, 'frame last length'),
+            call(0x90000011, 'frame max length'),
+            call(0x90000012, 'frame min length'),
+            call(0x90000013, 'frame number'),
+            call(0x90000014, 'frame last clock cycles'),
+            call(0x90000015, 'frame max clock cycles'),
+            call(0x90000016, 'frame min clock cycles'),
+            call(0x90000017, 'frame data total'),
+            call(0x90000018, 'frame data total clock cycles'),
+            call(0x90000019, 'frame trigger count'),
+            call(0x9000001A, 'frame in progress flag'),
+        ])
 
     def test_set_up_state_machine(self):
         """Test function works ok."""
@@ -944,10 +1142,6 @@ class TestFem(unittest.TestCase):
 
         vsr1 = HexitecFem.VSR_ADDRESS[0]
         vsr2 = HexitecFem.VSR_ADDRESS[1]
-        # Because collect_offsets() runs in a separate thread, need a brief pause
-        #   otherwise calls to send_cmd() will take place after the assert block below.
-        time.sleep(1.3)
-
         self.test_fem.fem.send_cmd.assert_has_calls([
             call([0x23, vsr1, HexitecFem.READ_REG_VALUE, 0x32, 0x34, 0x0D]),
             call([0x23, vsr2, HexitecFem.READ_REG_VALUE, 0x32, 0x34, 0x0D]),
@@ -977,9 +1171,7 @@ class TestFem(unittest.TestCase):
     def test_collect_offsets_handles_hardware_disconnected(self):
         """Test function handles hardware disconnected."""
         self.test_fem.fem.hardware_connected = False
-
         self.test_fem.fem.collect_offsets()
-        time.sleep(0.1)
         error = "Can't collect offsets while disconnected: Can't collect offsets while disconnected"
         assert self.test_fem.fem._get_status_error() == error
 
@@ -987,9 +1179,7 @@ class TestFem(unittest.TestCase):
         """Test function handles hardware busy."""
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.hardware_busy = True
-
         self.test_fem.fem.collect_offsets()
-        time.sleep(0.1)
         error = "Can't collect offsets while disconnected: Hardware sensors busy initialising"
         assert self.test_fem.fem._get_status_error() == error
 
@@ -997,11 +1187,9 @@ class TestFem(unittest.TestCase):
         """Test function fails unexpected exception."""
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.hardware_busy = False
-
         self.test_fem.fem.send_cmd = Mock()
         self.test_fem.fem.send_cmd.side_effect = AttributeError()
         self.test_fem.fem.collect_offsets()
-        time.sleep(0.1)
         error = "Uncaught Exception; Failed to collect offsets: "
         assert self.test_fem.fem.status_error == error
 
@@ -1528,7 +1716,6 @@ class TestFem(unittest.TestCase):
         """Test function handles unknown VSR address."""
         vsr_addr = 25
         self.test_fem.fem.vsr_addr = vsr_addr
-
         with pytest.raises(HexitecFemError) as exc_info:
             self.test_fem.fem.load_pwr_cal_read_enables()
         assert exc_info.type is HexitecFemError
@@ -1546,7 +1733,6 @@ class TestFem(unittest.TestCase):
              'Control-Settings/Uref_mid': '1,000000E+3'}
 
         self.test_fem.fem.hexitec_parameters = params
-
         self.test_fem.fem.write_dac_values()
 
         vcal = [0x30, 0x31, 0x39, 0x39]
@@ -1662,7 +1848,6 @@ class TestFem(unittest.TestCase):
 
         # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
         power_command = [0x23, vsr_addr, HexitecFem.READ_PWR_VOLT, 0x0D]
-        time.sleep(0.1)
         self.test_fem.fem.send_cmd.assert_has_calls([
             call(power_command, False)
         ])
@@ -1681,7 +1866,6 @@ class TestFem(unittest.TestCase):
 
         # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
         power_command = [0x23, vsr_addr, HexitecFem.READ_PWR_VOLT, 0x0D]
-        time.sleep(0.1)
         self.test_fem.fem.send_cmd.assert_has_calls([
             call(power_command, False)
         ])
@@ -1757,8 +1941,8 @@ class TestFem(unittest.TestCase):
         """Test function handles bad sensor values."""
         self.test_fem.fem.send_cmd = Mock()
         self.test_fem.fem.read_response = Mock(return_value="01")
-        self.test_fem.fem.read_temperatures_humidity_values()
-        # assert return_value is None
+        return_value = self.test_fem.fem.read_temperatures_humidity_values()
+        assert return_value is None
 
     def test_get_ambient_temperature(self):
         """Test temperature calculation work for different values."""
