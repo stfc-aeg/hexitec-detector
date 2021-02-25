@@ -631,7 +631,8 @@ class TestDAQ(unittest.TestCase):
 
         # Create a meta-data group
         metadata_group = hdf_file.create_group("hexitec")
-
+        self.test_daq.daq.calibration_enable = True
+        self.test_daq.daq.threshold_mode = "filename"
         self.test_daq.daq.write_metadata(metadata_group, self.test_daq.parameter_dict)
 
         hdf_file.close()

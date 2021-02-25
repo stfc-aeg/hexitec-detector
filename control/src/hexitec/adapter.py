@@ -234,9 +234,12 @@ class Hexitec():
                 camera_data_ip_addr=defaults.fem["camera_data_ip"]
             ))
 
+        self.fem_health = {}
         fem_tree = {}
         for fem in self.fems:
             fem_tree["fem_{}".format(fem.id)] = fem.param_tree
+            # Populate fem(s) health dictionary
+            self.fem_health["fem_{}".format(fem.id)] = True
 
         # Bias (clock) tracking variables #
         self.bias_clock_running = False
@@ -297,7 +300,8 @@ class Hexitec():
                 "fem_id": (lambda: self.fem_id, None),
                 "system_health": (lambda: self.health, None),
                 "status_message": (lambda: self.status_message, None),
-                "status_error": (lambda: self.status_error, None)
+                "status_error": (lambda: self.status_error, None),
+                "fem_health": (lambda: self.fem_health, None)
             }
         })
 
@@ -339,6 +343,7 @@ class Hexitec():
             # TODO: Also check sensor values?
             # ..
             health = fem.get_health()
+            self.fem_health["fem_{}".format(fem.id)] = health
             # Only note current id if system is in health
             if self.health:
                 self.fem_id = fem.get_id()

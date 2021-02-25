@@ -425,8 +425,8 @@ class HexitecFem():
             self.operation_percentage_complete = 0
             self._set_status_message("Connecting to camera..")
             self.cam_connect()
-            self._set_status_message("Camera connected. Waiting for VSRs' FPGAs \
-                to initialise..")
+            msg = "Camera connected. Waiting for VSRs' FPGAs to initialise.."
+            self._set_status_message(msg)
             self._wait_while_fpgas_initialise()
             self.initialise_progress = 0
         except ParameterTreeError as e:
