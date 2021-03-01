@@ -325,11 +325,32 @@ class Hexitec():
         whether daq/fem watchdogs timed out.
         """
         # f_start = time.time()
+        # Poll fem(s) acquisition & health status
+        self.poll_fems()
+
+        # Watchdog: Watch FEM in case no data from hardware triggered by fem.acquire_data()
+        self.check_fem_watchdog()
+
+        # TODO: WATCHDOG, monitor HexitecDAQ rate of frames_processed updated.. (Break if stalled)
+        self.check_daq_watchdog()
+
+        # Debug: Characterise execution times of polling loop
+        # f_duration = time.time() - f_start
+        # if (f_duration < self.fastest_time):
+        #     self.fastest_time = f_duration
+        # else:
+        #     if (f_duration > self.slowest_time):
+        #         self.slowest_time = f_duration
+        # print("   this: {:.7f} f: {:.7f} s: {:.7f} !!! <<==".format(f_duration, self.fastest_time, self.slowest_time))
+
+        IOLoop.instance().call_later(1.0, self.polling)
+
+    def poll_fems(self):
+        """Poll fem(s) for their acquisition and health status."""
         for fem in self.fems:
             if fem.acquisition_completed:
                 histogram_status = self._get_od_status('fp').get('histogram',
                                                                  {'frames_processed': 0})
-
                 # Either cold initialisation (first_initialisation is True, therefore only 2 frames
                 # expected) or, ordinary collection (self.number_frames frames expected)
                 if ((self.first_initialisation and (histogram_status['frames_processed'] == 2))
@@ -351,9 +372,10 @@ class Hexitec():
                 self.status_message = fem._get_status_message()
                 self.health = self.health and health
 
-        # Watchdogs
+    def check_fem_watchdog(self):
+        """Check data sent when FEM acquiring data."""
         if self.acquisition_in_progress:
-            # print("")
+
             # logging.debug(" (%s) v (%s) => acq_in_prog, hw_busy" % (self.acquisition_in_progress,
             #                                                         self.fems[0].hardware_busy))
             # logging.debug("   {0:.6f}  acquire_timestamp".format(self.fems[0].acquire_timestamp))
@@ -362,6 +384,7 @@ class Hexitec():
             # compare = self.daq.processed_timestamp == self.fems[0].acquire_timestamp
             # logging.debug("   {0:.6f} processed - acquire".format(differ))
             # logging.debug("   {} cmp proc'd v acquir".format(compare))
+
             # TODO: Monitor Fem in case no data from following fem.acquire_data()
             if (self.fems[0].hardware_busy):
                 # #
@@ -387,7 +410,12 @@ class Hexitec():
         #     self.time_waiting_for_data_arrival = 0
         # # logging.debug("      (%s)          ==>>           daq_in_prog" % self.daq.in_progress)
 
-        # TODO: WATCHDOG, monitor HexitecDAQ rate of frames_processed updated.. (Break if stalled)
+    def check_daq_watchdog(self):
+        """Monitor DAQ's frames_processed while data processed.
+
+        Ensure frames_processed increments, completes within reasonable time of acquisition.
+        Failure to do so indicate missing/dropped packet(s), stop processing if stalled.
+        """
         if self.daq.in_progress:
             processed_timestamp = self.daq.processed_timestamp
             delta_time = time.time() - processed_timestamp
@@ -404,17 +432,6 @@ class Hexitec():
                         ".format(delta_time, self.daq_rx_timeout,
                                  self.daq.frame_end_acquisition, self.daq.frames_processed))
                 self.fems[0]._set_status_message("Processing interrupted")
-        # print("")
-
-        # Debug: Characterise execution times of polling loop
-        # f_duration = time.time() - f_start
-        # if (f_duration < self.fastest_time):
-        #     self.fastest_time = f_duration
-        # else:
-        #     if (f_duration > self.slowest_time):
-        #         self.slowest_time = f_duration
-        # print("   this: {:.7f} f: {:.7f} s: {:.7f} !!! <<==".format(f_duration, self.fastest_time, self.slowest_time))
-        IOLoop.instance().call_later(1.0, self.polling)
 
     def shutdown_processing(self):
         """Stop processing in daq."""
@@ -643,7 +660,6 @@ class Hexitec():
     def await_daq_ready(self):
         """Wait until daq has configured, enabled file writer."""
         if (self.daq.file_writing is False):
-            # print("   adp, daq still FALSE")
             IOLoop.instance().call_later(0.05, self.await_daq_ready)
         else:
             # Add additional 8 ms delay to ensure file writer's file open before first frame arrives
@@ -665,13 +681,10 @@ class Hexitec():
         self.fem_start_timestamp = time.time()
 
         # # DEBUG:
-        # float("{:.5f}".format(1.51234e-03))
         # differ = self.fem_start_timestamp - self.daq_target
         # differ = float("{:.5f}".format(differ))
         # self.list_time_differences.append(differ)
-        # print("\n\n___________________________________________________________")
-        # print("     between daq/collect_data, in seconds: ", self.list_time_differences)
-        # print("___________________________________________________________\n\n")
+        # print("\n\n   between daq/collect_data, in seconds: ", self.list_time_differences, "\n\n")
 
         IOLoop.instance().call_later(self.total_delay, self.check_fem_finished_sending_data)
 
