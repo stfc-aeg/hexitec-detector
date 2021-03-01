@@ -862,6 +862,7 @@ var changeDurationEnable = function()
     {
         $('#duration-text').prop('disabled', true);
         $('#frames-text').prop('disabled', false);
+        frames_changed();
     }
 };
 
