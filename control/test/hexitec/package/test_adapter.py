@@ -78,6 +78,9 @@ class DetectorAdapterTestFixture(object):
                     "reorder": {
                         "raw_data": False
                     },
+                    "histogram": {
+                        "frames_processed": 2
+                    },
                 }
             ]
         }
@@ -115,7 +118,7 @@ class TestAdapter(unittest.TestCase):
         """Set up test fixture for each unit test."""
         self.test_adapter = DetectorAdapterTestFixture()
 
-    # @pytest.mark.skip("")
+    # @pytest.mark.skip("Test Skipped")
     def test_adapter_get(self):
         """Test that a call to the detector adapter's GET method returns the correct response."""
         # Hack: Initialise adapters in adapter.py
@@ -261,6 +264,38 @@ class TestDetector(unittest.TestCase):
             detector = Hexitec(options)
 
         assert len(detector.fems) == 2
+
+    def test_poll_fems(self):
+        """Test poll fem works."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.fems[0].acquisition_completed = True
+        self.test_adapter.detector.fems[0].health = True
+        self.test_adapter.detector.poll_fems()
+        # Ensure shutdown_processing() was called [it changes the following bool]
+        assert self.test_adapter.detector.acquisition_in_progress is False
+
+    def test_check_fem_watchdog(self):
+        """Test fem watchdog works."""
+        self.test_adapter.detector.acquisition_in_progress = True
+        self.test_adapter.detector.fems[0].hardware_busy = True
+        self.test_adapter.detector.fems[0].acquire_timestamp = time.time()
+        self.test_adapter.detector.fem_tx_timeout = 0
+        self.test_adapter.detector.check_fem_watchdog()
+        # Ensure shutdown_processing() was called [it changes the following two bools]
+        assert self.test_adapter.detector.daq.shutdown_processing is True
+        assert self.test_adapter.detector.acquisition_in_progress is False
+
+    def test_check_daq_watchdog(self):
+        """Test daq watchdog works."""
+        self.test_adapter.detector.daq.in_progress = True
+        # Ensure time difference is three seconds while timeout artificially at 0 seconds
+        self.test_adapter.detector.daq.processed_timestamp = time.time() - 3
+        self.test_adapter.detector.daq_rx_timeout = 0
+
+        self.test_adapter.detector.check_daq_watchdog()
+        # Ensure shutdown_processing() was called [it changes the following two bools]
+        assert self.test_adapter.detector.daq.shutdown_processing is True
+        assert self.test_adapter.detector.acquisition_in_progress is False
 
     def test_detector_shutdown_processing_correct(self):
         """Test function shuts down processing."""
@@ -418,7 +453,6 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.set_duration(duration)
         assert self.test_adapter.detector.duration == duration
 
-    # @pytest.mark.skip("WIP")
     def test_detector_initialize(self):
         """Test function can initialise adapters."""
         adapters = {

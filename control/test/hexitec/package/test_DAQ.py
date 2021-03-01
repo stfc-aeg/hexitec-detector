@@ -373,9 +373,9 @@ class TestDAQ(unittest.TestCase):
         }
         config = {"configuration_complete": False}
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop, \
-             patch("hexitec.HexitecDAQ.ApiAdapterRequest") as mock_request, \
-             patch.dict(self.test_daq.fr_data['value'][0]['status'], config, clear=True), \
-             patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
+            patch("hexitec.HexitecDAQ.ApiAdapterRequest") as mock_request, \
+                patch.dict(self.test_daq.fr_data['value'][0]['status'], config, clear=True), \
+                patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
 
             self.test_daq.daq.first_initialisation = False
             self.test_daq.daq.start_acquisition(10)
@@ -398,8 +398,8 @@ class TestDAQ(unittest.TestCase):
         }
 
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop, \
-             patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
-             patch.dict(self.test_daq.fr_data, new_fr_data, clear=True):
+            patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
+                patch.dict(self.test_daq.fr_data, new_fr_data, clear=True):
 
             self.test_daq.daq.start_acquisition(10)
 
@@ -415,8 +415,8 @@ class TestDAQ(unittest.TestCase):
         }
 
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop, \
-             patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
-             patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
+            patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
+                patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
 
             self.test_daq.daq.start_acquisition(10)
 
@@ -533,10 +533,10 @@ class TestDAQ(unittest.TestCase):
         metadata_group = hdf_file.create_group("hexitec")
 
         # Mock open to throw IOError
-        with patch("builtins.open", mock_open(read_data="data")), \
-             patch("os.path.isfile") as mock_isfile:
-            mock_isfile.return_value = False
-            self.test_daq.daq.write_metadata(metadata_group, self.test_daq.parameter_dict)
+        with patch("builtins.open", mock_open(read_data="data")):
+            with patch("os.path.isfile") as mock_isfile:
+                mock_isfile.return_value = False
+                self.test_daq.daq.write_metadata(metadata_group, self.test_daq.parameter_dict)
         hdf_file.close()
 
     def test_hdf_closing_loop_waits_while_file_open(self):
