@@ -1,0 +1,42 @@
+name: Run Python Tests
+on:
+  push:
+    branches:
+      - automate_testing
+  pull_request:
+    branches:
+      - automate_testing
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Python 3
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Install Odin-data
+        run: |
+          git clone https://github.com/odin-detector/odin-data.git
+          cd odin-data/tools/python/
+          python setup.py develop
+          cd ../../../
+      - name: Install Odin-control
+        run: |
+          git clone https://github.com/odin-detector/odin-control.git
+          cd odin-control/
+          python setup.py develop
+      - name: Configure hexitec-detector Control
+        run: |
+          cd control/
+          python setup.py develop
+      - name: Run Tox
+        run: |
+          cd control/
+          tox
+
+

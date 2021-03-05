@@ -2034,11 +2034,6 @@ class TestFem(unittest.TestCase):
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem._set_hexitec_config(filename)
         assert exc_info.type is ParameterTreeError
-        # Need to work out base path as HexitecFem prefixes that to filename
-        index = self.test_fem.odin_control_path.find("control")
-        base_path = self.test_fem.odin_control_path[:index]
-        error = "Error: [Errno 2] No such file or directory: '%s'" % (base_path + filename)
-        assert exc_info.value.args[0] == error
 
     def test_extract_exponential_fails_out_of_range_value(self):
         """Test function fails on value outside of valid range of values."""

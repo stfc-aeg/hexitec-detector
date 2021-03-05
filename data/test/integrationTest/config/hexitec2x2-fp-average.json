@@ -158,7 +158,7 @@
                 }
             },
             "file": {
-                "path":"/tmp/"
+                "path":""
             },
 	    "frames": 10,
             "acquisition_id":"2x2_test",
