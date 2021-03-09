@@ -34,23 +34,23 @@ class DetectorAdapterTestFixture(object):
         }
         # TODO: Below "hack" prevents polling randomly failing tests relying on add_callback
         # assertion; Needs reworking once watchdog(s) ready to be unit tested
-        with patch('hexitec.adapter.HexitecFem'), patch('hexitec.adapter.HexitecDAQ'), \
-             patch('hexitec.adapter.Hexitec._start_polling'):  # TODO: To be amended
+        with patch('hexitec.adapter.HexitecFem'), patch('hexitec.adapter.HexitecDAQ'):
+            with patch('hexitec.adapter.Hexitec._start_polling'):  # TODO: To be amended
 
-            self.adapter = HexitecAdapter(**self.options)
-            self.detector = self.adapter.hexitec  # shortcut, makes assert lines shorter
-            self.path = "detector/acquisition/number_frames"
-            self.put_data = 1024
-            self.request = Mock()
-            self.request.configure_mock(
-                headers={'Accept': 'application/json', 'Content-Type': 'application/json'},
-                body=self.put_data
-            )
-            self.request_again = Mock()
-            self.request_again.configure_mock(
-                headers={'Accept': 'application/json', 'Content-Type': 'application/json'},
-                body=5
-            )
+                self.adapter = HexitecAdapter(**self.options)
+                self.detector = self.adapter.hexitec  # shortcut, makes assert lines shorter
+                self.path = "detector/acquisition/number_frames"
+                self.put_data = 1024
+                self.request = Mock()
+                self.request.configure_mock(
+                    headers={'Accept': 'application/json', 'Content-Type': 'application/json'},
+                    body=self.put_data
+                )
+                self.request_again = Mock()
+                self.request_again.configure_mock(
+                    headers={'Accept': 'application/json', 'Content-Type': 'application/json'},
+                    body=5
+                )
         self.fake_fp = MagicMock()
         self.fake_fi = MagicMock()
 

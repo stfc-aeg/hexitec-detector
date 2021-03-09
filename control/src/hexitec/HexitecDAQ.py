@@ -345,30 +345,37 @@ class HexitecDAQ():
         parent_tree_dict = self.parent.param_tree.get('')
         error_code = self.write_metadata(parent_metadata_group, parent_tree_dict)
 
-        # TODO: returns < 0 if XML issues, 0 if fine
-        # if (error_code == 0)
-        #    # ..
         # TODO: Hacked until frame_process_adapter updated to use parameter tree
         hdf_metadata_group = hdf_file.create_group("hdf")
         hdf_tree_dict = self.adapters['fp']._param
+        # Only "hexitec" group contain filename entries, ignore return value of write_metadata
         self.write_metadata(hdf_metadata_group, hdf_tree_dict)
 
-        for fem in self.parent.fems:
-            fem._set_status_message("Meta data added")
+        if (error_code == 0):
+            for fem in self.parent.fems:
+                fem._set_status_message("Meta data added")
+        else:
+            for fem in self.parent.fems:
+                fem._set_status_error("Meta data writer unable to access file(s)!")
+
         hdf_file.close()
         self.in_progress = False
 
-    def write_metadata(self, metadata_group, param_tree_dict):
-        """Write parameter tree(s) and config files as meta data."""
-        param_tree_dict = self._flatten_dict(param_tree_dict)
-
-        # Build metadata attributes from dictionary
+    def build_metadata_attributes(self, param_tree_dict, metadata_group):
+        """Build metadata attributes from parameter tree."""
         for param, val in param_tree_dict.items():
             if val is None:
                 # Replace None or TypeError will be thrown as:
                 #   ("Object dtype dtype('O') has no native HDF5 equivalent")
                 val = "N/A"
             metadata_group.attrs[param] = val
+        return metadata_group
+
+    def write_metadata(self, metadata_group, param_tree_dict):
+        """Write parameter tree(s) and config files as meta data."""
+        param_tree_dict = self._flatten_dict(param_tree_dict)
+        # Build metadata attributes from dictionary
+        self.build_metadata_attributes(param_tree_dict, metadata_group)
 
         # Only write parent's (Hexitec class) parameter tree's config files once
         if metadata_group.name == u'/hexitec':
@@ -387,6 +394,8 @@ class HexitecDAQ():
                 file_name.append('detector/daq/config/threshold/threshold_filename')
 
             for param_file in file_name:
+                if param_file not in param_tree_dict:
+                    continue
                 # Only attempt to open file if it exists
                 file_name = param_tree_dict[param_file]
                 if os.path.isfile(file_name):
@@ -406,6 +415,7 @@ class HexitecDAQ():
                     logging.debug("Key '%s'; Successfully read file '%s'" % (param_file, file_name))
                 else:
                     logging.error("Key: %s's file: %s. Doesn't exist!" % (param_file, file_name))
+                    return -3
         return 0
 
     def _flatten_dict(self, d, parent_key='', sep='/'):
@@ -714,8 +724,8 @@ class HexitecDAQ():
 
                 for param_key in self.param_tree.tree['config'].get(plugin):
 
-                    # print "config/%s/%s" % (plugin, param_key), " -> ", \
-                    #         self.param_tree.tree['config'][plugin][param_key].get("")
+                    # print("config/%s/%s" % (plugin, param_key), " -> ", \
+                    #         self.param_tree.tree['config'][plugin][param_key].get(""))
 
                     # Don't send histograms' pass_processed, since Odin Control do not support bool
                     if param_key != "pass_processed":

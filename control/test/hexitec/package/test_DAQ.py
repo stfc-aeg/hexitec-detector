@@ -3,12 +3,10 @@
 Christian Angelsen, STFC Detector Systems Software Group
 """
 
-from shutil import copyfile
 import unittest
 import os.path
 import pytest
 import time
-import h5py
 import sys
 
 from odin.adapters.parameter_tree import ParameterTreeError
@@ -466,18 +464,6 @@ class TestDAQ(unittest.TestCase):
             mock_loop.instance().call_later.assert_called_with(1.0,
                                                                self.test_daq.daq.hdf_closing_loop)
 
-    # TODO: Redundant?
-    # def test_processing_check_loop_(self):
-    #     """Test processing check loop."""
-    #     with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
-    #         self.test_daq.daq.plugin = "histogram"
-    #         self.test_daq.daq.first_initialisation = False
-    #         self.test_daq.daq.parent.fems[0].hardware_busy = True
-    #         self.test_daq.daq.frame_end_acquisition = 10
-    #         self.test_daq.daq.processing_check_loop()
-    #         mock_loop.instance().call_later.assert_called_with(.5,
-    #                                                            self.test_daq.daq.processing_check_loop)
-
     def test_processing_check_loop_handles_missing_frames(self):
         """Test processing check loop will stop acquisition if data ceases mid-flow."""
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
@@ -507,37 +493,69 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq.stop_acquisition()
         assert self.test_daq.daq.file_writing is False
 
-    # def test_write_metadata_handles_missing_file(self):
-    #     """Test function handles specified file not existing."""
-    #     # Need a processed file without meta data
-    #     hdf5_file = self.test_daq.odin_control_path + "test/hexitec/data_file/data_without_meta.h5"
+    def test_write_metadata_works(self):
+        """Test write_metadata function."""
+        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"), patch("h5py._hl.group.Group") as h5_group:
+            meta_group = h5_group
+            meta_group.name = u'/hexitec'
+            param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
+            self.test_daq.daq.calibration_enable = True
+            self.test_daq.daq.threshold_mode = self.test_daq.daq.THRESHOLDOPTIONS[1]  # = "filename"
 
-    #     if (os.path.exists(hdf5_file)):
-    #         pass
-    #     else:
-    #         raise Exception("Test HDF5 file not found! (%s)" % hdf5_file)
+            with patch("builtins.open", mock_open(read_data="data")):
+                with patch("os.path.isfile") as mock_isfile:
+                    mock_isfile.return_value = True
+                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict)
 
-    #     # Make a copy, run test using this copy
-    #     dummy_file = "/tmp/dummy.h5"
-    #     try:
-    #         copyfile(hdf5_file, dummy_file)
-    #     except FileNotFoundError as e:
-    #         raise Exception("Error copying HDF file: %s" % e)
+            key = 'detector/fems/fem_0/hexitec_config'
+            assert key in self.test_daq.daq.config_ds
+            assert rc_value == 0
 
-    #     try:
-    #         hdf_file = h5py.File(dummy_file, 'r+')
-    #     except IOError as e:
-    #         raise Exception("Error opening hdf5 file!: %s" % e)
+    def test_write_metadata_handles_IOError(self):
+        """Test write_metadata handles file reading error."""
+        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"), patch("h5py._hl.group.Group") as h5_group:
+            meta_group = h5_group
+            meta_group.name = u'/hexitec'
+            param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
 
-    #     # Create a meta-data group
-    #     metadata_group = hdf_file.create_group("hexitec")
+            with patch("builtins.open", mock_open(read_data="data")) as mock_file:
+                mock_file.side_effect = IOError(Mock())
 
-    #     # Mock open to throw IOError
-    #     with patch("builtins.open", mock_open(read_data="data")):
-    #         with patch("os.path.isfile") as mock_isfile:
-    #             mock_isfile.return_value = False
-    #             self.test_daq.daq.write_metadata(metadata_group, self.test_daq.parameter_dict)
-    #     hdf_file.close()
+                with patch("os.path.isfile") as mock_isfile:
+                    mock_isfile.return_value = True
+
+                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict)
+            assert rc_value == -1
+
+    def test_write_metadata_handles_exception(self):
+        """Test write_metadata handles general file I/O exception."""
+        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"), patch("h5py._hl.group.Group") as h5_group:
+            meta_group = h5_group
+            meta_group.name = u'/hexitec'
+            param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
+
+            with patch("builtins.open", mock_open(read_data="data")) as mock_file:
+                mock_file.side_effect = Exception(Mock())
+
+                with patch("os.path.isfile") as mock_isfile:
+                    mock_isfile.return_value = True
+
+                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict)
+            assert rc_value == -2
+
+    def test_write_metadata_handles_file_missing(self):
+        """Test write_metadata handles missing file."""
+        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"), patch("h5py._hl.group.Group") as h5_group:
+            meta_group = h5_group
+            meta_group.name = u'/hexitec'
+            param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
+
+            with patch("builtins.open", mock_open(read_data="data")):
+                with patch("os.path.isfile") as mock_isfile:
+                    mock_isfile.return_value = False
+
+                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict)
+            assert rc_value == -3
 
     def test_hdf_closing_loop_waits_while_file_open(self):
         """Test the function waits while file being written."""
@@ -577,13 +595,26 @@ class TestDAQ(unittest.TestCase):
 
     def test_prepare_hdf_file(self):
         """Test that function prepares processed file."""
-        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File") as mock_file:
+        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"):
             self.test_daq.daq.in_progress = True
-            self.test_daq.daq.write_metadata = mock_file
+            self.test_daq.daq.write_metadata = Mock(return_value=0)
             self.test_daq.daq.prepare_hdf_file()
 
             assert self.test_daq.daq.hdf_retry == 0
             assert self.test_daq.daq.in_progress is False
+            assert self.test_daq.daq.parent.fems[0].status_message == "Meta data added"
+
+    def test_prepare_hdf_file_fails_inaccessible_config_files(self):
+        """Test that function flags if a config file is inaccessible to write_metadata."""
+        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"):
+            self.test_daq.daq.in_progress = True
+            self.test_daq.daq.write_metadata = Mock(return_value=-1)
+            self.test_daq.daq.prepare_hdf_file()
+
+            assert self.test_daq.daq.hdf_retry == 0
+            assert self.test_daq.daq.in_progress is False
+            error = "Meta data writer unable to access file(s)!"
+            assert self.test_daq.daq.parent.fems[0].status_error == error
 
     def test_prepare_hdf_file_fails_ioerror(self):
         """Test function handles repeated I/O error."""
@@ -604,103 +635,6 @@ class TestDAQ(unittest.TestCase):
 
         d = self.test_daq.daq._flatten_dict(test_dict)
         assert d == flattened_dict
-
-    # def test_write_metadata(self):
-    #     """Test function works ok."""
-    #     # Need a processed file without meta data (this has been preprepared!)
-    #     hdf5_file = self.test_daq.odin_control_path + "test/hexitec/data_file/data_without_meta.h5"
-
-    #     if (os.path.exists(hdf5_file)):
-    #         pass
-    #     else:
-    #         raise Exception("Test HDF5 file not found! (%s)" % hdf5_file)
-
-    #     # Make a copy, run test on this copy
-    #     dummy_file = "/tmp/dummy.h5"
-    #     try:
-    #         copyfile(hdf5_file, dummy_file)
-    #     except FileNotFoundError as e:
-    #         raise Exception("Error copying HDF file: %s" % e)
-
-    #     # Prepare, open file, fake parameter tree, create a meta-data group
-
-    #     try:
-    #         hdf_file = h5py.File(dummy_file, 'r+')
-    #     except IOError as e:
-    #         raise Exception("Error opening hdf5 file!: %s" % e)
-
-    #     # Create a meta-data group
-    #     metadata_group = hdf_file.create_group("hexitec")
-    #     self.test_daq.daq.calibration_enable = True
-    #     self.test_daq.daq.threshold_mode = "filename"
-    #     self.test_daq.daq.write_metadata(metadata_group, self.test_daq.parameter_dict)
-
-    #     hdf_file.close()
-
-    # def test_write_metadata_handles_ioerror(self):
-    #     """Test function handles I/OError appropriately."""
-    #     hdf5_file = self.test_daq.odin_control_path + "test/hexitec/data_file/data_without_meta.h5"
-
-    #     if (os.path.exists(hdf5_file)):
-    #         pass
-    #     else:
-    #         raise Exception("Test HDF5 file not found! (%s)" % hdf5_file)
-
-    #     # Make a copy, run test on this copy
-    #     dummy_file = "/tmp/dummy.h5"
-    #     try:
-    #         copyfile(hdf5_file, dummy_file)
-    #     except FileNotFoundError as e:
-    #         raise Exception("Error copying HDF file: %s" % e)
-
-    #     try:
-    #         hdf_file = h5py.File(dummy_file, 'r+')
-    #     except IOError as e:
-    #         raise Exception("Error opening hdf5 file!: %s" % e)
-
-    #     # Create a meta-data group
-    #     metadata_group = hdf_file.create_group("hexitec")
-
-    #     # Mock open to throw IOError
-    #     with patch("builtins.open", mock_open(read_data="data")) as mock_file:
-    #         mock_file.side_effect = IOError(Mock())
-
-    #         self.test_daq.daq.write_metadata(metadata_group, self.test_daq.parameter_dict)
-
-    #     hdf_file.close()
-
-    # def test_write_metadata_handles_exception(self):
-    #     """Test function handles (unexpected) exception."""
-    #     # Need a processed file without meta data (this has been preprepared!)
-    #     hdf5_file = self.test_daq.odin_control_path + "test/hexitec/data_file/data_without_meta.h5"
-
-    #     if (os.path.exists(hdf5_file)):
-    #         pass
-    #     else:
-    #         raise Exception("Test HDF5 file not found! (%s)" % hdf5_file)
-
-    #     # Make a copy, run test on this copy
-    #     dummy_file = "/tmp/dummy.h5"
-    #     try:
-    #         copyfile(hdf5_file, dummy_file)
-    #     except FileNotFoundError as e:
-    #         raise Exception("Error copying HDF file: %s" % e)
-
-    #     try:
-    #         hdf_file = h5py.File(dummy_file, 'r+')
-    #     except IOError as e:
-    #         raise Exception("Error opening hdf5 file!: %s" % e)
-
-    #     # Create a meta-data group
-    #     metadata_group = hdf_file.create_group("hexitec")
-
-    #     # Mock open to throw IOError
-    #     with patch("builtins.open", mock_open(read_data="data")) as mock_file:
-    #         mock_file.side_effect = Exception(Mock())
-
-    #         self.test_daq.daq.write_metadata(metadata_group, self.test_daq.parameter_dict)
-
-    #     hdf_file.close()
 
     def test_set_number_frames(self):
         """Test function sets number of frames."""
