@@ -12,7 +12,7 @@ from collections import OrderedDict
 class GenerateConfigFiles():
     """Accepts Parameter tree from hexitecDAQ's "/config" branch to generate json file."""
 
-    def __init__(self, param_tree, number_histograms,
+    def __init__(self, param_tree, number_histograms, compression_type="none",
                  master_dataset="processed_frames", extra_datasets=[]):
         """
         Initialize the GenerateConfigFiles object.
@@ -25,6 +25,7 @@ class GenerateConfigFiles():
         """
         self.param_tree = param_tree
         self.number_histograms = number_histograms
+        self.compression_type = compression_type
         self.master_dataset = master_dataset
         self.extra_datasets = extra_datasets
 
@@ -83,7 +84,7 @@ class GenerateConfigFiles():
         The store config file contains the actual configuration.
         The execute config file is used to execute the configuration of the store file.
         """
-        store_temp_name = "/tmp/_tmp_store.txt"
+        store_temp_name = "/tmp/_tmp_store.json"
         self.store_temp = open(store_temp_name, mode='w+t')
 
         # Generate a unique index name
@@ -268,14 +269,18 @@ class GenerateConfigFiles():
                         {'''
 
         for dataset in self.extra_datasets:
+            # datatype is float for processed_frames, uint16 for raw_frames
+            datatype = "float"
+            if dataset == "raw_frames":
+                datatype = "uint16"
             store_plugin_config += '''
                             "%s":''' % dataset + '''
                             {
                                 "cmd": "create",
-                                "datatype": "float",
+                                "datatype": "%s",''' % (datatype) + '''
                                 "dims": [%s, %s],''' % (rows, columns) + '''
                                 "chunks": [1, %s, %s],''' % (rows, columns) + '''
-                                "compression": "none"
+                                "compression": "%s"''' % self.compression_type + '''
                             },'''
 
         store_plugin_config += '''
@@ -285,7 +290,7 @@ class GenerateConfigFiles():
                                 "datatype": "float",
                                 "dims": [%s],''' % (self.number_histograms) + '''
                                 "chunks": [1, %s],''' % (self.number_histograms) + '''
-                                "compression": "none"
+                                "compression": "%s"''' % self.compression_type + '''
                             },
                             "pixel_spectra":
                             {
@@ -293,7 +298,7 @@ class GenerateConfigFiles():
                                 "datatype": "float",
                                 "dims": [%s, %s],''' % (pixels, self.number_histograms) + '''
                                 "chunks": [1, %s, %s],''' % (pixels, self.number_histograms) + '''
-                                "compression": "none"
+                                "compression": "%s"''' % self.compression_type + '''
                             },
                             "summed_spectra":
                             {
@@ -301,7 +306,7 @@ class GenerateConfigFiles():
                                 "datatype": "uint64",
                                 "dims": [%s],''' % (self.number_histograms) + '''
                                 "chunks": [1, %s],''' % (self.number_histograms) + '''
-                                "compression": "none"
+                                "compression": "%s"''' % self.compression_type + '''
                             }
                         }
                     }
@@ -348,7 +353,7 @@ class GenerateConfigFiles():
     }
 ]''' % self.index_name
 
-        execute_temp_name = "/tmp/_tmp_execute.txt"
+        execute_temp_name = "/tmp/_tmp_execute.json"
         self.execute_temp = open(execute_temp_name, mode='w+t')
 
         # Put together the execute sequence file
@@ -386,11 +391,11 @@ if __name__ == '__main__':
     bin_width = param_tree['config']['histogram']['bin_width']
     number_histograms = int((bin_end - bin_start) / bin_width)
     master_dataset = "raw_frames"
-    # extra_datasets = [master_dataset, "raw_frames"]
-    extra_datasets = [master_dataset]
+    extra_datasets = [master_dataset, "processed_frames"]
+    # extra_datasets = [master_dataset]
 
-    gcf = GenerateConfigFiles(param_tree, number_histograms, master_dataset=master_dataset,
-                              extra_datasets=extra_datasets)
+    gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="BSLZ4",
+                              master_dataset=master_dataset, extra_datasets=extra_datasets)
     s, e = gcf.generate_config_files()
 
     print("GFC returned config files\n Store:   %s\n Execute: %s\n" % (s, e))

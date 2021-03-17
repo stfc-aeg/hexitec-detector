@@ -62,6 +62,8 @@ namespace FrameProcessor
       static const std::string CONFIG_SENSORS_LAYOUT;
       /** Configuration constant for setting frame number **/
       static const std::string CONFIG_FRAME_NUMBER;
+      /** Configuration constant for compression type **/
+      static const std::string COMPRESSION_TYPE;
 
       void process_lost_packets(boost::shared_ptr<Frame>& frame);
       void process_frame(boost::shared_ptr<Frame> frame);
@@ -70,11 +72,14 @@ namespace FrameProcessor
       // Convert pixels from unsigned short to float type without reordering
       void convert_pixels_without_reordering(unsigned short *in,
                                             float *out);
+      void copy_pixels_without_reordering(unsigned short *in, unsigned short *out);
 
       std::size_t reordered_image_size();
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
       std::string sensors_layout_str_;
       HexitecSensorLayoutMap sensors_layout_;
+      std::string compression_type_str_;
+      CompressionType compression_type_;
 
       bool write_raw_data_;
 
@@ -90,6 +95,7 @@ namespace FrameProcessor
       int image_pixels_;
       /** Packet loss counter **/
       int packets_lost_;
+  
       /** Overwrite UDP frame number until firmware resets
        * it before each acquisition **/
       uint32_t frame_number_;

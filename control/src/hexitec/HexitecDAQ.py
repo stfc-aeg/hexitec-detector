@@ -30,6 +30,7 @@ class HexitecDAQ():
     """
 
     THRESHOLDOPTIONS = ["value", "filename", "none"]
+    COMPRESSIONOPTIONS = ["none", "blosc", "LZ4", "BSLZ4"]
 
     # Define timestamp format
     DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
@@ -77,6 +78,7 @@ class HexitecDAQ():
         # ParameterTree variables
 
         self.sensors_layout = "2x2"
+        self.compression_type = "none"
 
         # Note that these four enable(s) are cosmetic only - written as meta data
         #   actual control is exercised by odin_server.js via sequence config files
@@ -177,6 +179,7 @@ class HexitecDAQ():
                     "threshold_value": (lambda: self.threshold_value, self._set_threshold_value)
                 }
             },
+            "compression_type": (self._get_compression_type, self._set_compression_type),
             "sensors_layout": (self._get_sensors_layout, self._set_sensors_layout)
         })
         self.update_rows_columns_pixels()
@@ -672,6 +675,16 @@ class HexitecDAQ():
         self.update_datasets_frame_dimensions()
         self.update_histogram_dimensions()
 
+    def _get_compression_type(self):
+        return self.compression_type
+
+    def _set_compression_type(self, compression_type):
+        if compression_type in self.COMPRESSIONOPTIONS:
+            self.compression_type = compression_type
+        else:
+            error = "Invalid compression type; Valid options: {}".format(self.COMPRESSIONOPTIONS)
+            raise ParameterTreeError(error)
+
     def commit_configuration(self):
         """Generate and sends the FP config files."""
         # Generate JSON config file determining which plugins, the order to chain them, etc
@@ -688,10 +701,13 @@ class HexitecDAQ():
             self.extra_datasets.append(self.master_dataset)
 
         self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
+                                       compression_type=self.compression_type,
                                        master_dataset=self.master_dataset,
                                        extra_datasets=self.extra_datasets)
 
         store_config, execute_config = self.gcf.generate_config_files()
+        # store_config = "/tmp/blosc_store.json"
+        # execute_config = "/tmp/blosc_execute.json"
         command = "config/config_file/"
         request = ApiAdapterRequest(store_config, content_type="application/json")
 
