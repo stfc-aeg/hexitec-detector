@@ -2,9 +2,6 @@ import h5py
 import numpy as np
 import argparse
 
-from nose.tools import assert_equals, assert_true, assert_false,\
-    assert_equal, assert_not_equal
-
 
 class DatasetChecker:
 
@@ -33,7 +30,6 @@ class DatasetChecker:
                             hits += 1
                 print("self.data[{}][{}][{}]; Sum so far = {}".format(i, j, k, hits))
         return hits
-
 
 
 if __name__ == "__main__":

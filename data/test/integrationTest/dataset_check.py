@@ -2,8 +2,7 @@ import h5py
 import numpy as np
 import argparse
 
-from nose.tools import assert_equals, assert_true, assert_false,\
-    assert_equal, assert_not_equal
+from nose.tools import assert_true, assert_equal
 
 
 class DatasetChecker:
