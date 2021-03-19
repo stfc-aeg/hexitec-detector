@@ -684,8 +684,9 @@ class TestFem(unittest.TestCase):
         with patch("hexitec.HexitecFem.IOLoop"):
             self.test_fem.fem.stop_acquisition = True
             self.test_fem.fem.x10g_rdma.write = Mock()
-            self.test_fem.fem.check_acquire_finished()
-            assert self.test_fem.fem.stop_acquisition is False
+            self.test_fem.fem.acquire_data_completed = Mock()
+            rc_value = self.test_fem.fem.check_acquire_finished()
+            assert rc_value is None
 
     def test_check_acquire_finished_handles_all_data_sent(self):
         """Test check_acquire_finished calls acquire_data_completed if all data transferred."""
@@ -694,9 +695,9 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.x10g_rdma.read = Mock()
             self.test_fem.fem.x10g_rdma.read.side_effect = [1]  # >0 Signals all data sent
             self.test_fem.fem.x10g_rdma.write = Mock()
-
-            self.test_fem.fem.check_acquire_finished()
-            assert self.test_fem.fem.hardware_busy is False
+            self.test_fem.fem.acquire_data_completed = Mock()
+            rc_value = self.test_fem.fem.check_acquire_finished()
+            assert rc_value is None
 
     def test_check_acquire_finished_handles_data_being_transmitted(self):
         """Test check_acquire_finished handles normal data transmission."""
@@ -708,6 +709,32 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.check_acquire_finished()
             mock_loop.instance().call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
             assert self.test_fem.fem.waited == 0.1
+
+    def test_check_acquire_finished_handles_HexitecFemError(self):
+        """Test check_choir_finished handles HexitecFemError exception."""
+        self.test_fem.fem.stop_acquisition = True
+        self.test_fem.fem.acquisition_completed = False
+        self.test_fem.fem.acquire_data_completed = Mock()
+        e_msg = "Bad Error"
+        self.test_fem.fem.acquire_data_completed.side_effect = HexitecFemError(e_msg)
+
+        self.test_fem.fem.check_acquire_finished()
+        error = "Failed to collect data: {}".format(e_msg)
+        assert self.test_fem.fem._get_status_error() == error
+        assert self.test_fem.fem.acquisition_completed is True
+
+    def test_check_acquire_finished_handles_exception(self):
+        """Test check_choir_finished handles bog standard exception."""
+        self.test_fem.fem.stop_acquisition = True
+        self.test_fem.fem.acquisition_completed = False
+        self.test_fem.fem.acquire_data_completed = Mock()
+        e_msg = "Badder Error"
+        self.test_fem.fem.acquire_data_completed.side_effect = Exception(e_msg)
+
+        self.test_fem.fem.check_acquire_finished()
+        error = "Uncaught Exception; Data collection failed: {}".format(e_msg)
+        assert self.test_fem.fem._get_status_error() == error
+        assert self.test_fem.fem.acquisition_completed is True
 
     def test_acquire_data_single_sensor(self):
         """Test function handles single sensor selected."""

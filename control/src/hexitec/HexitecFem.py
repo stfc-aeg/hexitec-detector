@@ -1031,10 +1031,12 @@ class HexitecFem():
             if (self.stop_acquisition):
                 logging.debug(" -=-=-=- HexitecFem told to cancel acquisition -=-=-=-")
                 self.acquire_data_completed()
+                return
             else:
                 reply = self.x10g_rdma.read(0x60000014, 'Check data transfer completed?')
                 if reply > 0:
                     self.acquire_data_completed()
+                    return
                 else:
                     self.waited += delay
                     IOLoop.instance().call_later(delay, self.check_acquire_finished)
