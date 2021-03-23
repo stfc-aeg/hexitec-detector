@@ -677,6 +677,17 @@ class HexitecDAQ():
         # Generate JSON config file determining which plugins, the order to chain them, etc
         parameter_tree = self.param_tree.get('')
 
+        # Delete any existing datasets
+        command = "config/hdf/delete_datasets"
+        request = ApiAdapterRequest("", content_type="application/json")
+
+        response = self.adapters["fp"].put(command, request)
+        status_code = response.status_code
+        if (status_code != 200):
+            error = "Error {} deleting existing datasets in fp adapter".format(status_code)
+            logging.error(error)
+            self.parent.fems[0]._set_status_error(error)
+
         self.extra_datasets = []
         self.master_dataset = "spectra_bins"
 
