@@ -977,7 +977,7 @@ var changeHdfWriteEnable = function()
     setHdfWrite(hdf_write_enable);
 };
 
-var selectChange = function(sensors_layout)
+var sensorsLayoutChange = function(sensors_layout)
 {
     // Sets hardware sensors Configuration; i.e. number of rows and columns of sensors
     $.ajax({
@@ -990,6 +990,23 @@ var selectChange = function(sensors_layout)
         },
         error: function(request, msg, error) {
             $('#sensors-layout-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+}
+
+var compressionChange = function(compression)
+{
+    // Sets compression on (blosc) or off (none)
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq',
+        contentType: "application/json",
+        data: JSON.stringify({"compression_type": compression}),
+        success: function(result) {
+            $('#compression-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#compression-warning').html(error + ": " + format_error(request.responseText));
         }
     });
 }

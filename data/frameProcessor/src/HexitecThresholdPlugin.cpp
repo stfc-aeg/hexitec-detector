@@ -10,10 +10,10 @@
 
 namespace FrameProcessor
 {
-  const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE  = "threshold_mode";
-  const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE = "threshold_value";
-  const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE  = "threshold_filename";
-  const std::string HexitecThresholdPlugin::CONFIG_SENSORS_LAYOUT  = "sensors_layout";
+  const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE   = "threshold_mode";
+  const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE  = "threshold_value";
+  const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE   = "threshold_filename";
+  const std::string HexitecThresholdPlugin::CONFIG_SENSORS_LAYOUT   = "sensors_layout";
 
   /**
    * The constructor sets up logging used within the class.
@@ -34,7 +34,7 @@ namespace FrameProcessor
     threshold_value_      = 0;
     threshold_per_pixel_  = (uint16_t *) calloc(image_pixels_, sizeof(uint16_t));
 
-    /// Set threshold mode to none (initially; 0=none, 1=value ,2=file)
+    /// Set threshold mode to none (initially; 0=none, 1=value, 2=file)
     threshold_mode_ = (ThresholdMode)0;
 
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
@@ -82,11 +82,11 @@ namespace FrameProcessor
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
    * 
-   * - sensors_layout_str_  <=> sensors_layout
-   * - max_frames_received_ <=> max_frames_received
-   * - threshold_mode_      <=> threshold_mode
-   * - threshold_value_     <=> threshold_value
-   * - threshold_filename_  <=> threshold_file
+   * - sensors_layout_str_    <=> sensors_layout
+   * - max_frames_received_   <=> max_frames_received
+   * - threshold_mode_        <=> threshold_mode
+   * - threshold_value_       <=> threshold_value
+   * - threshold_filename_    <=> threshold_file
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -154,6 +154,7 @@ namespace FrameProcessor
         }
       }
     }
+
   }
 
   void HexitecThresholdPlugin::requestConfiguration(OdinData::IpcMessage& reply)
@@ -163,9 +164,9 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
     int mode = int(threshold_mode_);
     std::string mode_str = determineThresholdMode(mode);
-    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE , mode_str);
+    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE, mode_str);
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE, threshold_value_);
-    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE , threshold_filename_);
+    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE, threshold_filename_);
   }
 
   /**

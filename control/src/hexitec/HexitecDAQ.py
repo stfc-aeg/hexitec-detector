@@ -30,7 +30,7 @@ class HexitecDAQ():
     """
 
     THRESHOLDOPTIONS = ["value", "filename", "none"]
-    COMPRESSIONOPTIONS = ["none", "blosc", "LZ4", "BSLZ4"]
+    COMPRESSIONOPTIONS = ["none", "blosc"]
 
     # Define timestamp format
     DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
@@ -706,8 +706,7 @@ class HexitecDAQ():
                                        extra_datasets=self.extra_datasets)
 
         store_config, execute_config = self.gcf.generate_config_files()
-        # store_config = "/tmp/blosc_store.json"
-        # execute_config = "/tmp/blosc_execute.json"
+
         command = "config/config_file/"
         request = ApiAdapterRequest(store_config, content_type="application/json")
 

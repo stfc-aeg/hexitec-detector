@@ -25,6 +25,7 @@ class GenerateConfigFiles():
         """
         self.param_tree = param_tree
         self.number_histograms = number_histograms
+        #COMPRESSIONOPTIONS = ["none", "blosc"]
         self.compression_type = compression_type
         self.master_dataset = master_dataset
         self.extra_datasets = extra_datasets
@@ -113,32 +114,35 @@ class GenerateConfigFiles():
         # "name": "HexitecReorderPlugin",
         # "library": "~/develop/projects/odin-demo/install/lib/libHexitecReorderPlugin.so"
 
-        standard_path = {}
-        standard_path['reorder'] = ["reorder", "Reorder", "Reorder"]
-        standard_path['threshold'] = ["threshold", "Threshold", "Threshold"]
-        standard_path['next_frame'] = ["next_frame", "NextFrame", "NextFrame"]
-        standard_path["calibration"] = ["calibration", "Calibration", "Calibration"]
-        standard_path["addition"] = ["addition", "Addition", "Addition"]
-        standard_path["discrimination"] = ["discrimination", "Discrimination", "Discrimination"]
-        standard_path["histogram"] = ["histogram", "Histogram", "Histogram"]
+        # Hexitec plugins (These also follow a uniform naming convention)
+        hexitec_plugins = {}
+        hexitec_plugins['reorder'] = ["reorder", "Reorder", "Reorder"]
+        hexitec_plugins['threshold'] = ["threshold", "Threshold", "Threshold"]
+        hexitec_plugins['next_frame'] = ["next_frame", "NextFrame", "NextFrame"]
+        hexitec_plugins["calibration"] = ["calibration", "Calibration", "Calibration"]
+        hexitec_plugins["addition"] = ["addition", "Addition", "Addition"]
+        hexitec_plugins["discrimination"] = ["discrimination", "Discrimination", "Discrimination"]
+        hexitec_plugins["histogram"] = ["histogram", "Histogram", "Histogram"]
 
         # Plugin path that doesn't follow the same format (as the others)
-        # "index": "live_view",
-        # "name": "LiveViewPlugin",
-        # "library": "~/develop/projects/odin-demo/install/lib/libLiveViewPlugin.so"
-        # "index": "hdf",
-        # "name": "FileWriterPlugin",
-        # "library": "~/develop/projects/odin-demo/install/lib/libHdf5Plugin.so"
+        # "live_view", "LiveViewPlugin      "install/lib/libLiveViewPlugin.so"
+        # "hdf",       "FileWriterPlugin",  "install/lib/libHdf5Plugin.so"
+        # "blosc",     "BloscPlugin",       "install/lib/libBloscPlugin.so"
 
-        nonstandard_path = {}
-        nonstandard_path["live_view"] = ["live_view", "LiveView", "LiveView"]
-        nonstandard_path['hdf'] = ["hdf", "FileWriter", "Hdf5"]
+        # Odin plugins
+        odin_plugins = {}
+        odin_plugins["live_view"] = ["live_view", "LiveView", "LiveView"]
+        odin_plugins['hdf'] = ["hdf", "FileWriter", "Hdf5"]
+        odin_plugins['blosc'] = ["blosc", "Blosc", "Blosc"]
 
+        # Work out pixel dimensions
         sensors_layout = self.param_tree['sensors_layout']
         rows_of_sensors, columns_of_sensors = int(sensors_layout[0]), int(sensors_layout[2])
         rows = rows_of_sensors * 80
         columns = columns_of_sensors * 80
         pixels = rows * columns
+
+        # Extract configuration from HexitecDAQ config
         d = self.param_tree['config']
 
         # Sort parameter tree dict into R, T, N, C, A, D, H plugin order
@@ -146,24 +150,33 @@ class GenerateConfigFiles():
                     'discrimination', 'histogram']
         config = OrderedDict(sorted(d.items(), key=lambda i: keyorder.index(i[0])))
 
-        # Check parameter tree if next/calib/CS (i.e. optional) plugins to be added:
+        # Determine plugin chain (to configure frameProcessor)
 
-        list_optional_plugins = ["next_frame", "calibration", "addition", "discrimination"]
-        sample_plugins = ["reorder", "threshold"]
+        # Reorder, threshold always mandatory
+        plugin_chain = ["reorder", "threshold"]
 
+        # User selectable plugins
+        optional_plugins = ["next_frame", "calibration", "addition", "discrimination"]
+
+        # Any optional plugin(s) to be added?
         for key in config:
-            if key not in list_optional_plugins:
+            if key not in optional_plugins:
                 continue
             try:
                 if config[key]['enable']:
-                    sample_plugins.append(key)
+                    plugin_chain.append(key)
             except KeyError:
                 # KeyError thrown if plugin doesn't have "enable" key
                 print("Plugin %s missing 'enable' setting!" % key)
                 logging.debug("Plugin %s missing 'enable' setting!" % key)
                 raise Exception("Plugin %s missing 'enable' setting!" % key)
 
-        sample_plugins += ["histogram", "live_view", "hdf"]
+        plugin_chain += ["histogram", "live_view"]
+
+        # Add blosc if compression selected
+        if self.compression_type == "blosc":
+            plugin_chain.append("blosc")
+        plugin_chain += ["hdf"]
 
         # Construct path relative to current working directory
         cwd = os.getcwd()
@@ -172,9 +185,9 @@ class GenerateConfigFiles():
 
         store_plugin_paths = ""
 
-        # Build config for standard paths
-        for plugin in sample_plugins:
-            if plugin in standard_path:
+        # Build config for Hexitec plugins (uniform naming)
+        for plugin in plugin_chain:
+            if plugin in hexitec_plugins:
                 store_plugin_paths += ''',
                 {
                     "plugin": {
@@ -184,12 +197,12 @@ class GenerateConfigFiles():
                             "library": "%s/install/lib/libHexitec%sPlugin.so"
                         }
                     }
-                }''' % (standard_path[plugin][0], standard_path[plugin][1],
-                        odin_path, standard_path[plugin][2])
+                }''' % (hexitec_plugins[plugin][0], hexitec_plugins[plugin][1],
+                        odin_path, hexitec_plugins[plugin][2])
 
-        # Build config for Non-standard paths
-        for plugin in sample_plugins:
-            if plugin in nonstandard_path:
+        # Build config for Odin plugins (differing names)
+        for plugin in plugin_chain:
+            if plugin in odin_plugins:
                 store_plugin_paths += ''',
                 {
                     "plugin": {
@@ -199,13 +212,26 @@ class GenerateConfigFiles():
                             "library": "%s/install/lib/lib%sPlugin.so"
                         }
                     }
-                }''' % (nonstandard_path[plugin][0], nonstandard_path[plugin][1],
-                        odin_path, nonstandard_path[plugin][2])
+                }''' % (odin_plugins[plugin][0], odin_plugins[plugin][1],
+                        odin_path, odin_plugins[plugin][2])
 
-        store_plugin_connect = ""
+        # Chain plugins together, with live view branchded off reorder on separate (dead end) branch
+        store_plugin_connect = ''',
+                {
+                    "plugin": {
+                        "connect": {
+                            "index": "live_view",
+                            "connection": "reorder"
+                        }
+                    }
+                }'''
+
+        # Remove live_view from main plugin chain
+        plugin_chain.remove("live_view")
+
         previous_plugin = "frame_receiver"
-        # Chain together plugins starting with frame receiver
-        for plugin in sample_plugins:
+        # Chain together all other selected plugins, from frame receiver until hdf
+        for plugin in plugin_chain:
             store_plugin_connect += ''',
                 {
                     "plugin": {
@@ -217,11 +243,12 @@ class GenerateConfigFiles():
                 }''' % (plugin, previous_plugin)
             previous_plugin = plugin
 
-        # Set plugins' settings
+        # Configure plugins' settings
+
         store_plugin_config = ""
         unique_setting = ""
-        for plugin in sample_plugins:
-            # rinse and repeat for all except final two plugins of any chain
+        for plugin in plugin_chain:
+            # rinse and repeat for all (except live view, hdf, and blosc if selected)
             if plugin not in ["live_view", "hdf"]:
 
                 # Get unique_setting(s) according to plugin
@@ -243,7 +270,7 @@ class GenerateConfigFiles():
                 store_plugin_config += ''',
                 {
                     "%s": {%s
-                    "sensors_layout": "%s"
+                        "sensors_layout": "%s"
                     }
                 }''' % (plugin, unique_setting, sensors_layout)
                 unique_setting = ""
@@ -260,6 +287,18 @@ class GenerateConfigFiles():
                     }
                 }'''
 
+        # Configure blosc if selected
+        if self.compression_type == "blosc":
+            store_plugin_config += ''',
+                {
+                    "blosc": {
+                        "compressor": 1,
+                        "shuffle": 0,
+                        "level": 4,
+                        "threads": 1
+                    }
+                }'''
+
         store_plugin_config += ''',
                 {
                     "hdf":
@@ -267,6 +306,13 @@ class GenerateConfigFiles():
                         "master": "%s",''' % self.master_dataset + '''
                         "dataset":
                         {'''
+
+        # Blosc settings are common across all datasets, define them once only:
+        blosc_settings = '''
+                                "compression": "%s",
+                                "blosc_compressor": 1,
+                                "blosc_shuffle": 0,
+                                "blosc_level": 4''' % self.compression_type
 
         for dataset in self.extra_datasets:
             # datatype is float for processed_frames, uint16 for raw_frames
@@ -276,37 +322,29 @@ class GenerateConfigFiles():
             store_plugin_config += '''
                             "%s":''' % dataset + '''
                             {
-                                "cmd": "create",
                                 "datatype": "%s",''' % (datatype) + '''
                                 "dims": [%s, %s],''' % (rows, columns) + '''
-                                "chunks": [1, %s, %s],''' % (rows, columns) + '''
-                                "compression": "%s"''' % self.compression_type + '''
+                                "chunks": [1, %s, %s],%s''' % (rows, columns, blosc_settings) + '''
                             },'''
 
         store_plugin_config += '''
                             "spectra_bins":
                             {
-                                "cmd": "create",
                                 "datatype": "float",
                                 "dims": [%s],''' % (self.number_histograms) + '''
-                                "chunks": [1, %s],''' % (self.number_histograms) + '''
-                                "compression": "%s"''' % self.compression_type + '''
+                                "chunks": [1, %s],%s''' % (self.number_histograms, blosc_settings) + '''
                             },
                             "pixel_spectra":
                             {
-                                "cmd": "create",
                                 "datatype": "float",
                                 "dims": [%s, %s],''' % (pixels, self.number_histograms) + '''
-                                "chunks": [1, %s, %s],''' % (pixels, self.number_histograms) + '''
-                                "compression": "%s"''' % self.compression_type + '''
+                                "chunks": [1, %s, %s],%s''' % (pixels, self.number_histograms, blosc_settings) + '''
                             },
                             "summed_spectra":
                             {
-                                "cmd": "create",
                                 "datatype": "uint64",
                                 "dims": [%s],''' % (self.number_histograms) + '''
-                                "chunks": [1, %s],''' % (self.number_histograms) + '''
-                                "compression": "%s"''' % self.compression_type + '''
+                                "chunks": [1, %s],%s''' % (self.number_histograms, blosc_settings) + '''
                             }
                         }
                     }
@@ -373,9 +411,9 @@ if __name__ == '__main__':
                   # The 'config' nested dictionary control which plugin(s) are loaded:
                   'config':
                   {'calibration':
-                   {'enable': False, 'intercepts_filename': '', 'gradients_filename': ''},
+                   {'enable': True, 'intercepts_filename': '', 'gradients_filename': ''},
                    'addition':
-                   {'enable': False, 'pixel_grid_size': 3},
+                   {'enable': True, 'pixel_grid_size': 3},
                    'discrimination': {'enable': False, 'pixel_grid_size': 5},
                    'histogram':
                    {'max_frames_received': 10, 'bin_end': 8000, 'bin_width': 10.0, 'bin_start': 0},
@@ -394,7 +432,7 @@ if __name__ == '__main__':
     extra_datasets = [master_dataset, "processed_frames"]
     # extra_datasets = [master_dataset]
 
-    gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="BSLZ4",
+    gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="none",
                               master_dataset=master_dataset, extra_datasets=extra_datasets)
     s, e = gcf.generate_config_files()
 

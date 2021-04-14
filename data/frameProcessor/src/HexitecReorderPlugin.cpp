@@ -14,7 +14,6 @@ namespace FrameProcessor
   const std::string HexitecReorderPlugin::CONFIG_RAW_DATA         = "raw_data";
   const std::string HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT   = "sensors_layout";
   const std::string HexitecReorderPlugin::CONFIG_FRAME_NUMBER     = "frame_number";
-  const std::string HexitecReorderPlugin::COMPRESSION_TYPE        = "compression_type";
 
   /**
    * The constructor sets up logging used within the class.
@@ -33,8 +32,6 @@ namespace FrameProcessor
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecReorderPlugin version " <<
                   this->get_version_long() << " loaded.");
-    compression_type_ = no_compression;
-    compression_type_str_ = "none";
 
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
@@ -84,7 +81,6 @@ namespace FrameProcessor
    * - packets_lost_          <=> dropped_packets
    * - write_raw_data_        <=> raw_data
    * - frame_number_          <=> frame_number
-   * - compression_type_str_  <=> compression_type
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -112,15 +108,6 @@ namespace FrameProcessor
       frame_number_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_FRAME_NUMBER);
       LOG4CXX_DEBUG(logger_, " *** RESET frame_number to be " << frame_number_);
     }
-
-    if (config.has_param(HexitecReorderPlugin::COMPRESSION_TYPE))
-    {
-      compression_type_str_ = config.get_param<std::string>(HexitecReorderPlugin::COMPRESSION_TYPE);
-      compression_type_ = get_compression_from_string(compression_type_str_);
-      // Overwrite compression string with string representation of enumerated value.
-      // Will replace any illegal compression type with "unknown"
-      compression_type_str_ = get_compress_from_enum(compression_type_);
-    }
   }
 
   void HexitecReorderPlugin::requestConfiguration(OdinData::IpcMessage& reply)
@@ -131,7 +118,6 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_DROPPED_PACKETS, packets_lost_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_RAW_DATA, write_raw_data_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_FRAME_NUMBER, frame_number_);
-    reply.set_param(base_str + HexitecReorderPlugin::COMPRESSION_TYPE, compression_type_str_);
   }
 
   /**
@@ -147,7 +133,6 @@ namespace FrameProcessor
     status.set_param(get_name() + "/packets_lost", packets_lost_);
     status.set_param(get_name() + "/raw_data", write_raw_data_);
     status.set_param(get_name() + "/frame_number", frame_number_);
-    status.set_param(get_name() + "/compression_type", compression_type_str_);
   }
 
   /**
@@ -216,24 +201,24 @@ namespace FrameProcessor
 
     try
     {
-      FrameMetaData frame_meta;
+      FrameMetaData processed_meta;
 
       // Frame meta data common to both datasets
       dimensions_t dims(2);
       dims[0] = image_height_;
       dims[1] = image_width_;
-      frame_meta.set_dimensions(dims);
-      frame_meta.set_compression_type(compression_type_);
-      frame_meta.set_data_type(raw_float);
-      frame_meta.set_frame_number(hdr_ptr->frame_number);
+      processed_meta.set_dimensions(dims);
+      processed_meta.set_compression_type(no_compression);
+      processed_meta.set_data_type(raw_float);
+      processed_meta.set_frame_number(hdr_ptr->frame_number);
 
       // For processed_frames dataset, reuse existing meta data as only the dataset name will differ
 
       // Set the dataset name
-      frame_meta.set_dataset_name("processed_frames");
+      processed_meta.set_dataset_name("processed_frames");
 
       boost::shared_ptr<Frame> data_frame;
-      data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(frame_meta,
+      data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(processed_meta,
         output_image_size));
 
       // Get a pointer to the data buffer in the output frame
@@ -243,7 +228,7 @@ namespace FrameProcessor
       convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
                                         static_cast<float *>(output_ptr));
 
-      const std::string& dataset = frame_meta.get_dataset_name();
+      const std::string& dataset = processed_meta.get_dataset_name();
       LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: " <<
                     data_frame->get_frame_number());
       this->push(data_frame);
@@ -258,7 +243,7 @@ namespace FrameProcessor
         dims[0] = image_height_;
         dims[1] = image_width_;
         raw_meta.set_dimensions(dims);
-        raw_meta.set_compression_type(compression_type_);
+        raw_meta.set_compression_type(no_compression);
         raw_meta.set_data_type(raw_16bit);
         raw_meta.set_frame_number(hdr_ptr->frame_number);
         const std::size_t raw_image_size = image_width_ * image_height_ * sizeof(unsigned short);

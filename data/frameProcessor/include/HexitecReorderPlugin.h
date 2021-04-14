@@ -62,8 +62,6 @@ namespace FrameProcessor
       static const std::string CONFIG_SENSORS_LAYOUT;
       /** Configuration constant for setting frame number **/
       static const std::string CONFIG_FRAME_NUMBER;
-      /** Configuration constant for compression type **/
-      static const std::string COMPRESSION_TYPE;
 
       void process_lost_packets(boost::shared_ptr<Frame>& frame);
       void process_frame(boost::shared_ptr<Frame> frame);
@@ -78,8 +76,6 @@ namespace FrameProcessor
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
       std::string sensors_layout_str_;
       HexitecSensorLayoutMap sensors_layout_;
-      std::string compression_type_str_;
-      CompressionType compression_type_;
 
       bool write_raw_data_;
 

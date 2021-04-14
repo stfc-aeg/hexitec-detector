@@ -61,8 +61,6 @@ namespace FrameProcessor
       static const std::string CONFIG_THRESHOLD_VALUE;
       /** Configuration constant for threshold file **/
       static const std::string CONFIG_THRESHOLD_FILE;
-      /** Configuration constant for Hardware sensors **/
-      static const std::string CONFIG_SENSORS_LAYOUT;
 
       void process_frame(boost::shared_ptr<Frame> frame);
       std::size_t thresholded_image_size();

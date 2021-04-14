@@ -37,51 +37,51 @@ namespace FrameProcessor
    */
   class HexitecNextFramePlugin : public FrameProcessorPlugin
   {
-  public:
-    HexitecNextFramePlugin();
-    virtual ~HexitecNextFramePlugin();
+    public:
+      HexitecNextFramePlugin();
+      virtual ~HexitecNextFramePlugin();
 
-    int get_version_major();
-    int get_version_minor();
-    int get_version_patch();
-    std::string get_version_short();
-    std::string get_version_long();
+      int get_version_major();
+      int get_version_minor();
+      int get_version_patch();
+      std::string get_version_short();
+      std::string get_version_long();
 
-    void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
-    void requestConfiguration(OdinData::IpcMessage& reply);
-    void status(OdinData::IpcMessage& status);
-    bool reset_statistics(void);
+      void configure(OdinData::IpcMessage& config, OdinData::IpcMessage& reply);
+      void requestConfiguration(OdinData::IpcMessage& reply);
+      void status(OdinData::IpcMessage& status);
+      bool reset_statistics(void);
 
-  private:
-    /** Configuration constant for Hardware sensors **/
-    static const std::string CONFIG_SENSORS_LAYOUT;
+    private:
+      /** Configuration constant for Hardware sensors **/
+      static const std::string CONFIG_SENSORS_LAYOUT;
 
-    std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
-    std::string sensors_layout_str_;
-    HexitecSensorLayoutMap sensors_layout_;
+      std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
+      std::string sensors_layout_str_;
+      HexitecSensorLayoutMap sensors_layout_;
 
-    void process_frame(boost::shared_ptr<Frame> frame);
-    void apply_algorithm(float *in);
+      void process_frame(boost::shared_ptr<Frame> frame);
+      void apply_algorithm(float *in);
 
-    /** Pointer to logger **/
-    LoggerPtr logger_;
-    /** Image width **/
-    int image_width_;
-    /** Image height **/
-    int image_height_;
-    /** Image pixel count **/
-    int image_pixels_;
-    /** Keep a copy of previous data frame **/
-    float *last_frame_;
+      /** Pointer to logger **/
+      LoggerPtr logger_;
+      /** Image width **/
+      int image_width_;
+      /** Image height **/
+      int image_height_;
+      /** Image pixel count **/
+      int image_pixels_;
+      /** Keep a copy of previous data frame **/
+      float *last_frame_;
 
-    long long last_frame_number_;
+      long long last_frame_number_;
 
-    // DEBUGGING functions:
-    int debugFrameCounter;
-    std::ofstream outFile;
-    void writeFile(std::string filePrefix, float *frame);
+      // DEBUGGING functions:
+      int debugFrameCounter;
+      std::ofstream outFile;
+      void writeFile(std::string filePrefix, float *frame);
 
-    void reset_last_frame_values();
+      void reset_last_frame_values();
   };
 
   /**
