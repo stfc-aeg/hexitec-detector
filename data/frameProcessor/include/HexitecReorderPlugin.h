@@ -56,8 +56,6 @@ namespace FrameProcessor
     private:
       /** Configuration constant for clearing out dropped packet counters **/
       static const std::string CONFIG_DROPPED_PACKETS;
-      /** Configuration constant for writing raw data (or not) **/
-      static const std::string CONFIG_RAW_DATA;
       /** Configuration constant for Hardware sensors **/
       static const std::string CONFIG_SENSORS_LAYOUT;
       /** Configuration constant for setting frame number **/
@@ -76,8 +74,6 @@ namespace FrameProcessor
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
       std::string sensors_layout_str_;
       HexitecSensorLayoutMap sensors_layout_;
-
-      bool write_raw_data_;
 
       /** Pointer to logger **/
       LoggerPtr logger_;

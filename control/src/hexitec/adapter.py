@@ -21,6 +21,15 @@ from odin._version import get_versions
 from .HexitecFem import HexitecFem
 from .HexitecDAQ import HexitecDAQ
 
+# Making checking for integer type Python2/3 independent
+import sys
+if sys.version_info < (3, ):  # pragma: no cover
+    integer_types = (int, long,)
+    float_types = (float, long,)
+else:
+    integer_types = (int,)
+    float_types = (float,)
+
 
 class HexitecAdapter(ApiAdapter):
     """

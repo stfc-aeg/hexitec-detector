@@ -75,20 +75,18 @@
         }
     },
     {
-	"addition": {
-	    "sensors_layout": "2x2"
-	}
+        "addition": {
+            "sensors_layout": "2x2"
+        }
     },
     {
         "reorder": {
-	    "sensors_layout": "2x2",
-            "raw_data": true
+    	    "sensors_layout": "2x2"
         }
     },
     {
         "histogram": {
-            "max_frames_received": 10,
-	    "sensors_layout": "2x2"
+            "max_frames_received": 10
         }
     },
     {

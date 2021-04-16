@@ -11,7 +11,6 @@
 namespace FrameProcessor
 {
   const std::string HexitecReorderPlugin::CONFIG_DROPPED_PACKETS  = "packets_lost";
-  const std::string HexitecReorderPlugin::CONFIG_RAW_DATA         = "raw_data";
   const std::string HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT   = "sensors_layout";
   const std::string HexitecReorderPlugin::CONFIG_FRAME_NUMBER     = "frame_number";
 
@@ -24,8 +23,7 @@ namespace FrameProcessor
       image_height_(Hexitec::pixel_rows_per_sensor),
       image_pixels_(image_width_ * image_height_),
       packets_lost_(0),
-      frame_number_(0),
-      write_raw_data_(true)
+      frame_number_(0)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecReorderPlugin");
@@ -79,7 +77,6 @@ namespace FrameProcessor
    * 
    * - sensors_layout_str_    <=> sensors_layout
    * - packets_lost_          <=> dropped_packets
-   * - write_raw_data_        <=> raw_data
    * - frame_number_          <=> frame_number
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
@@ -98,11 +95,6 @@ namespace FrameProcessor
       packets_lost_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS);
     }
 
-    if (config.has_param(HexitecReorderPlugin::CONFIG_RAW_DATA))
-    {
-      write_raw_data_ = config.get_param<bool>(HexitecReorderPlugin::CONFIG_RAW_DATA);
-    }
-
     if (config.has_param(HexitecReorderPlugin::CONFIG_FRAME_NUMBER))
     {
       frame_number_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_FRAME_NUMBER);
@@ -116,7 +108,6 @@ namespace FrameProcessor
   	std::string base_str = get_name() + "/";
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_DROPPED_PACKETS, packets_lost_);
-    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_RAW_DATA, write_raw_data_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_FRAME_NUMBER, frame_number_);
   }
 
@@ -131,7 +122,6 @@ namespace FrameProcessor
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecReorderPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/packets_lost", packets_lost_);
-    status.set_param(get_name() + "/raw_data", write_raw_data_);
     status.set_param(get_name() + "/frame_number", frame_number_);
   }
 
@@ -233,38 +223,33 @@ namespace FrameProcessor
                     data_frame->get_frame_number());
       this->push(data_frame);
 
-      // Only construct raw data frame if configured
-      if (write_raw_data_)
-      {
-        FrameMetaData raw_meta;
+      // Construct raw data frame
 
-        // Frame meta data common to both datasets
-        dimensions_t dims(2);
-        dims[0] = image_height_;
-        dims[1] = image_width_;
-        raw_meta.set_dimensions(dims);
-        raw_meta.set_compression_type(no_compression);
-        raw_meta.set_data_type(raw_16bit);
-        raw_meta.set_frame_number(hdr_ptr->frame_number);
-        const std::size_t raw_image_size = image_width_ * image_height_ * sizeof(unsigned short);
-        // Set the dataset name
-        raw_meta.set_dataset_name("raw_frames");
+      FrameMetaData raw_meta;
 
-        boost::shared_ptr<Frame> raw_frame;
-        raw_frame = boost::shared_ptr<Frame>(new DataBlockFrame(raw_meta,
-                                                                raw_image_size));
+      // Frame meta data common to both datasets
+      raw_meta.set_dimensions(dims);
+      raw_meta.set_compression_type(no_compression);
+      raw_meta.set_data_type(raw_16bit);
+      raw_meta.set_frame_number(hdr_ptr->frame_number);
+      const std::size_t raw_image_size = image_width_ * image_height_ * sizeof(unsigned short);
+      // Set the dataset name
+      raw_meta.set_dataset_name("raw_frames");
 
-        // Get a pointer to the data buffer in the output frame
-        void* output_ptr = raw_frame->get_data_ptr();
+      boost::shared_ptr<Frame> raw_frame;
+      raw_frame = boost::shared_ptr<Frame>(new DataBlockFrame(raw_meta,
+                                                              raw_image_size));
 
-        // Turn unsigned short raw pixel data into unsigned short frame
-        copy_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
-          static_cast<unsigned short *>(output_ptr));
+      // Get a pointer to the data buffer in the output frame
+      output_ptr = raw_frame->get_data_ptr();
 
-        LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: " <<
-                      raw_frame->get_frame_number());
-        this->push(raw_frame);
-      }
+      // Turn unsigned short raw pixel data into unsigned short frame
+      copy_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
+        static_cast<unsigned short *>(output_ptr));
+
+      LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: " <<
+                    raw_frame->get_frame_number());
+      this->push(raw_frame);
 
       // Manually update frame_number (until fixed in firmware)
       frame_number_++;

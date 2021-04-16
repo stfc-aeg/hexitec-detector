@@ -897,7 +897,7 @@ var changeRawDataEnable = function()
     raw_data_enable = $("[name='raw_data_enable']").bootstrapSwitch('state');
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'fp/config/reorder/raw_data',  // Targets FP Plugin directly
+        url: hexitec_url + 'fp/config/histogram/pass_raw',  // Targets FP Plugin directly
         contentType: "application/json",
         data: JSON.stringify(raw_data_enable),
         error: function(request, msg, error) {
@@ -907,7 +907,7 @@ var changeRawDataEnable = function()
 
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/daq/config/reorder/raw_data',  // Targets DAQ adapter
+        url: hexitec_url + 'detector/daq/config/histogram/pass_raw',  // Targets DAQ adapter
         contentType: "application/json",
         data: JSON.stringify(raw_data_enable),
         error: function(request, msg, error) {

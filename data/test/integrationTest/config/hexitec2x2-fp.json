@@ -42,7 +42,7 @@
     },
     {
         "reorder": {
-            "raw_data": true
+            "sensors_layout": "1x1"
         }
     },
     {
