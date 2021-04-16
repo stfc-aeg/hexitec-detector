@@ -269,7 +269,6 @@ class GenerateConfigFiles():
                         config[plugin]['pixel_grid_size']
                 if plugin == "histogram":
                     unique_setting = self.histogram_settings(config[plugin])
-                    print(" histogram's unique_setting: {}".format(unique_setting))
 
                 store_plugin_config += ''',
                 {
