@@ -11,7 +11,7 @@
             "load": {
                 "index":"hdf",
                 "name":"FileWriterPlugin",
-                "library":"${ODIN_PREFIX}/lib/libHdf5Plugin.so"
+                "library":"${INSTALL_PREFIX}/lib/libHdf5Plugin.so"
             }
         }
     },
@@ -69,14 +69,11 @@
                 },
                 "raw_frames" : {
                     "cmd": "create",
-                    "datatype": "float",
+                    "datatype": "uint16",
                     "dims": [160, 160],
                     "chunks": [1, 160, 160],
                     "compression": "none"
                 }
-            },
-            "file": {
-                "path":"/tmp/"
             },
             "frames": 10,
             "acquisition_id":"hxt2x2_fp",
