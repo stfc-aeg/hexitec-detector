@@ -1,4 +1,4 @@
-install(FILES config/hexitec2x2.json DESTINATION test_config)
+install(FILES config/hexitec2x2-gradient.json DESTINATION test_config)
 install(FILES config/hexitec2x2-average.json DESTINATION test_config)
 install(FILES config/hexitec2x2-fp.json DESTINATION test_config)
 install(FILES config/hexitec2x2-fp-average.json DESTINATION test_config)
