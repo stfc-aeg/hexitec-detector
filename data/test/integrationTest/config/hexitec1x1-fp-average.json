@@ -11,7 +11,7 @@
             "load": {
                 "index":"hdf",
                 "name":"FileWriterPlugin",
-                "library":"${ODIN_PREFIX}/lib/libHdf5Plugin.so"
+                "library":"${INSTALL_PREFIX}/lib/libHdf5Plugin.so"
             }
         }
     },
@@ -129,7 +129,7 @@
                 },
                 "raw_frames" : {
                     "cmd": "create",
-                    "datatype": "float",
+                    "datatype": "uint16",
                     "dims": [80, 80],
                     "chunks": [1, 80, 80],
                     "compression": "none"
@@ -156,10 +156,8 @@
                     "compression": "none"
                 }
             },
-            "file": {
-                "path":"/tmp/"
-            },
-            "acquisition_id":"1x1_HistoDebuggery",
+            "frames": 10,
+            "acquisition_id":"1x1_test",
             "write": true
         }
     }
