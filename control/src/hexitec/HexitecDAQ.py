@@ -98,7 +98,8 @@ class HexitecDAQ():
 
         self.max_frames_received = 10
         self.pass_processed = False
-        self.raw_data = False
+        self.pass_raw = False
+
         # Look at histogram/hdf to determine when processing finished:
         self.plugin = "histogram"
         self.master_dataset = "spectra_bins"
@@ -164,10 +165,8 @@ class HexitecDAQ():
                     "bin_width": (lambda: self.bin_width, self._set_bin_width),
                     "max_frames_received": (lambda: self.max_frames_received,
                                             self._set_max_frames_received),
-                    "pass_processed": (lambda: self.pass_processed, self._set_pass_processed)
-                },
-                "reorder": {
-                    "raw_data": (lambda: self.raw_data, self._set_raw_data)
+                    "pass_processed": (lambda: self.pass_processed, self._set_pass_processed),
+                    "pass_raw": (lambda: self.pass_raw, self._set_pass_raw)
                 },
                 "next_frame": {
                     "enable": (lambda: self.next_frame_enable, self._set_next_frame_enable)
@@ -632,8 +631,8 @@ class HexitecDAQ():
     def _set_pass_processed(self, pass_processed):
         self.pass_processed = pass_processed
 
-    def _set_raw_data(self, raw_data):
-        self.raw_data = raw_data
+    def _set_pass_raw(self, pass_raw):
+        self.pass_raw = pass_raw
 
     def _set_threshold_filename(self, threshold_filename):
         threshold_filename = self.base_path + threshold_filename
@@ -704,7 +703,7 @@ class HexitecDAQ():
         self.extra_datasets = []
         self.master_dataset = "spectra_bins"
 
-        if self.raw_data:
+        if self.pass_raw:
             self.master_dataset = "raw_frames"
             self.extra_datasets.append(self.master_dataset)
         if self.pass_processed:
@@ -742,28 +741,24 @@ class HexitecDAQ():
     def submit_configuration(self):
         """Send each ParameterTree value to the corresponding FP plugin."""
         # Loop overall plugins in ParameterTree, updating fp's settings except reorder
-        # TODO: Include reorder when odin control supports raw_data (i.e. bool)
-
         for plugin in self.param_tree.tree.get("config"):
 
-            if plugin != "reorder":
+            for param_key in self.param_tree.tree['config'].get(plugin):
 
-                for param_key in self.param_tree.tree['config'].get(plugin):
+                # print("config/%s/%s" % (plugin, param_key), " -> ", \
+                #         self.param_tree.tree['config'][plugin][param_key].get(""))
 
-                    # print("config/%s/%s" % (plugin, param_key), " -> ", \
-                    #         self.param_tree.tree['config'][plugin][param_key].get(""))
+                # Don't send histogram's pass_raw, pass_processed, since Odin Control do not support bool
+                if param_key not in ["pass_processed", "pass_raw"]:
 
-                    # Don't send histograms' pass_processed, since Odin Control do not support bool
-                    if param_key != "pass_processed":
+                    command = "config/%s/%s" % (plugin, param_key)
 
-                        command = "config/%s/%s" % (plugin, param_key)
-
-                        payload = self.param_tree.tree['config'][plugin][param_key].get()
-                        request = ApiAdapterRequest(str(payload), content_type="application/json")
-                        self.adapters["fp"].put(command, request)
+                    payload = self.param_tree.tree['config'][plugin][param_key].get()
+                    request = ApiAdapterRequest(str(payload), content_type="application/json")
+                    self.adapters["fp"].put(command, request)
 
         # Which plugin determines when processing finished?
-        if (self.raw_data or self.pass_processed):
+        if (self.pass_raw or self.pass_processed):
             self.plugin = "hdf"
         else:
             self.plugin = "histogram"

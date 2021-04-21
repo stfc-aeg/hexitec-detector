@@ -81,8 +81,7 @@
     },
     {
         "reorder": {
-	        "sensors_layout": "2x2",
-            "raw_data": true
+	        "sensors_layout": "2x2"
         }
     },
     {

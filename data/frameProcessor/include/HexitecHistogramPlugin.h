@@ -69,8 +69,10 @@ namespace FrameProcessor
       static const std::string CONFIG_FRAMES_PROCESSED;
       /** Configuration constant for histograms written **/
       static const std::string CONFIG_HISTOGRAMS_WRITTEN;
-      /** Configuration constant for pass processed (dataset) **/
+      /** Configuration constant for passing processed_frames to hdf **/
       static const std::string CONFIG_PASS_PROCESSED;
+      /** Configuration constant for passing raw_frames to hdf **/
+      static const std::string CONFIG_PASS_RAW;
 
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
       std::string sensors_layout_str_;
@@ -104,6 +106,7 @@ namespace FrameProcessor
       int reset_histograms_;
       int histograms_written_;
       bool pass_processed_;
+      bool pass_raw_;
 
       int bin_start_;
       int bin_end_;

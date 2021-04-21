@@ -20,6 +20,7 @@ namespace FrameProcessor
   const std::string HexitecHistogramPlugin::CONFIG_FRAMES_PROCESSED   = "frames_processed";
   const std::string HexitecHistogramPlugin::CONFIG_HISTOGRAMS_WRITTEN = "histograms written";
   const std::string HexitecHistogramPlugin::CONFIG_PASS_PROCESSED     = "pass_processed";
+  const std::string HexitecHistogramPlugin::CONFIG_PASS_RAW           = "pass_raw";
 
 
   /**
@@ -33,7 +34,8 @@ namespace FrameProcessor
       flush_histograms_(0),
       histograms_written_(0),
       frames_processed_(0),
-      pass_processed_(true)
+      pass_processed_(true),
+      pass_raw_(true)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecHistogramPlugin");
@@ -167,6 +169,7 @@ namespace FrameProcessor
    * - flush_histograms_    <=> flush_histograms
    * - reset_histograms_    <=> reset_histograms
    * - pass_processed_      <=> pass_processed
+   * - pass_raw_            <=> pass_raw
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -233,6 +236,11 @@ namespace FrameProcessor
       pass_processed_ = config.get_param<bool>(HexitecHistogramPlugin::CONFIG_PASS_PROCESSED);
     }
 
+    if (config.has_param(HexitecHistogramPlugin::CONFIG_PASS_RAW))
+    {
+      pass_raw_ = config.get_param<bool>(HexitecHistogramPlugin::CONFIG_PASS_RAW);
+    }
+
     // (Re-)Initialise memory
     initialiseHistograms();
   }
@@ -250,6 +258,7 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_FRAMES_PROCESSED, frames_processed_);
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_HISTOGRAMS_WRITTEN, histograms_written_);
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_PASS_PROCESSED, pass_processed_);
+    reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_PASS_RAW, pass_raw_);
   }
 
   /**
@@ -270,6 +279,7 @@ namespace FrameProcessor
     status.set_param(get_name() + "/frames_processed", frames_processed_);
     status.set_param(get_name() + "/histograms_written", histograms_written_);
     status.set_param(get_name() + "/pass_processed", pass_processed_);
+    status.set_param(get_name() + "/pass_raw", pass_raw_);
   }
 
   /**
@@ -301,9 +311,12 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                        << frame->get_frame_number());
-      this->push(frame);
+      if (pass_raw_)
+      {
+        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+                                          << frame->get_frame_number());
+        this->push(frame);
+      }
     }
     else if (dataset.compare(std::string("processed_frames")) == 0)
     {

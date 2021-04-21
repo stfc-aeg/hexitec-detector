@@ -75,9 +75,6 @@ class DetectorAdapterTestFixture(object):
                         "frames_processed": 0,
                         "writing": True
                     },
-                    "reorder": {
-                        "raw_data": False
-                    },
                     "histogram": {
                         "frames_processed": 2
                     },

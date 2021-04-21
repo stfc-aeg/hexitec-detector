@@ -76,10 +76,7 @@ class DAQTestFixture(object):
                         "frames_written": 0,
                         "frames_processed": 0,
                         "writing": True
-                    },
-                    "reorder": {
-                        "raw_data": False
-                    },
+                    }
                 }
             ]
         }
@@ -159,8 +156,7 @@ class DAQTestFixture(object):
                 'discrimination': {'enable': False, 'pixel_grid_size': 3},
                 'histogram':
                 {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10, 'max_frames_received': 10,
-                 'pass_processed': False},
-                'reorder': {'raw_data': False},
+                 'pass_processed': False, 'pass_raw': True},
                 'next_frame': {'enable': False},
                 'threshold':
                 {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 120}},
@@ -797,15 +793,15 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq._set_pass_processed(pass_processed)
         assert pass_processed == self.test_daq.daq.pass_processed
 
-    def test_set_raw_data(self):
-        """Test function sets raw data bool."""
-        raw_data = True
-        self.test_daq.daq._set_raw_data(raw_data)
-        assert raw_data is self.test_daq.daq.raw_data
+    def test_set_pass_raw(self):
+        """Test function sets pass_raw bool."""
+        pass_raw = True
+        self.test_daq.daq._set_pass_raw(pass_raw)
+        assert pass_raw is self.test_daq.daq.pass_raw
 
-        raw_data = False
-        self.test_daq.daq._set_raw_data(raw_data)
-        assert raw_data is self.test_daq.daq.raw_data
+        pass_raw = False
+        self.test_daq.daq._set_pass_raw(pass_raw)
+        assert pass_raw is self.test_daq.daq.pass_raw
 
     def test_set_threshold_mode(self):
         """Test function sets threshold mode."""
@@ -848,8 +844,7 @@ class TestDAQ(unittest.TestCase):
                     {'enable': False, 'pixel_grid_size': 3},
                  'histogram':
                     {'bin_end': 800, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
-                     'pass_processed': False},
-                 'reorder': {'raw_data': False},
+                     'pass_processed': False, 'pass_raw': True},
                  'next_frame': {'enable': False},
                  'threshold':
                     {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 10}},
@@ -858,7 +853,7 @@ class TestDAQ(unittest.TestCase):
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
 
             self.test_daq.daq.param_tree.get = Mock(return_value=config_dict)
-            self.test_daq.daq.raw_data = True
+            self.test_daq.daq.pass_raw = True
             self.test_daq.daq.pass_processed = True
 
             self.test_daq.daq.commit_configuration()
@@ -881,8 +876,7 @@ class TestDAQ(unittest.TestCase):
         #         'calibration': {'enable': False, 'gradients_filename': '', 'intercepts_filename': ''},
         #         'discrimination': {'enable': False, 'pixel_grid_size': 3},
         #         'histogram': {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
-        #                       'pass_processed': False},
-        #         'reorder': {'raw_data': False},
+        #                       'pass_processed': False, 'pass_raw': True},
         #         'next_frame': {'enable': False},
         #         'threshold': {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 100}
         #     }
@@ -896,7 +890,7 @@ class TestDAQ(unittest.TestCase):
 
             self.test_daq.daq.param_tree.tree['config'].get = Mock(return_value={"enable": False})
 
-            self.test_daq.daq.raw_data = True
+            self.test_daq.daq.pass_raw = True
             self.test_daq.daq.pass_processed = True
 
             self.test_daq.daq.submit_configuration()
@@ -914,7 +908,7 @@ class TestDAQ(unittest.TestCase):
             self.test_daq.daq.param_tree.tree.get = Mock(return_value=config_dict)
             self.test_daq.daq.param_tree.tree['config'].get = Mock(return_value={"pixel_grid_size": 5})
 
-            self.test_daq.daq.raw_data = False
+            self.test_daq.daq.pass_raw = False
             self.test_daq.daq.pass_processed = False
 
             self.test_daq.daq.submit_configuration()
@@ -925,7 +919,7 @@ class TestDAQ(unittest.TestCase):
             ])
 
 # GFC will turn parameter tree into:
-#   OrderedDict([('reorder', {'raw_data': True}), ('threshold', {'threshold_value': 99,
+#   OrderedDict([('threshold', {'threshold_value': 99,
 # 'threshold_filename': '', 'threshold_mode': 'none'}), ('next_frame', {'enable': True}),
 # ('calibration', {'enable': False, 'intercepts_filename': '', 'gradients_filename': ''}),
 # ('addition', {'enable': False, 'pixel_grid_size': 3}), ('discrimination', {'enable': False,

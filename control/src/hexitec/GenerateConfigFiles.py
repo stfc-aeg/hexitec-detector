@@ -25,7 +25,7 @@ class GenerateConfigFiles():
         """
         self.param_tree = param_tree
         self.number_histograms = number_histograms
-        #COMPRESSIONOPTIONS = ["none", "blosc"]
+        # Compression Options are ["none", "blosc"]
         self.compression_type = compression_type
         self.master_dataset = master_dataset
         self.extra_datasets = extra_datasets
@@ -71,8 +71,14 @@ class GenerateConfigFiles():
             histogram_config = '''
                         "bin_start": %s,
                         "bin_end": %s,
-                        "bin_width": %s,''' % \
-                (histogram['bin_start'], histogram['bin_end'], histogram['bin_width'])
+                        "bin_width": %s,
+                        "max_frames_received": %s,
+                        "pass_processed": %s,
+                        "pass_raw": %s,''' % \
+                (histogram['bin_start'], histogram['bin_end'], histogram['bin_width'],
+                 histogram['max_frames_received'],
+                 self.boolean_to_string(histogram['pass_processed']),
+                 self.boolean_to_string(histogram['pass_raw']))
         except KeyError:
             logging.error("Error extracting histogram_settings!")
             print("Error extracting histogram_settings!")
@@ -252,9 +258,6 @@ class GenerateConfigFiles():
             if plugin not in ["live_view", "hdf"]:
 
                 # Get unique_setting(s) according to plugin
-                if plugin == "reorder":
-                    unique_setting = '''\n                        "raw_data": %s,''' % \
-                        self.boolean_to_string(config[plugin]['raw_data'])
                 if plugin == "threshold":
                     unique_setting = self.threshold_settings(config[plugin])
                 if plugin == "next_frame":
@@ -416,12 +419,11 @@ if __name__ == '__main__':
                    {'enable': True, 'pixel_grid_size': 3},
                    'discrimination': {'enable': False, 'pixel_grid_size': 5},
                    'histogram':
-                   {'max_frames_received': 10, 'bin_end': 8000, 'bin_width': 10.0, 'bin_start': 0},
+                   {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
+                    'pass_processed': False, 'pass_raw': True},
                    'next_frame': {'enable': True},
                    'threshold':
-                   {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'},
-                   'reorder': {'raw_data': True}
-                   },
+                   {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'}},
                   'processor': {'config_file': '', 'configured': False, 'connected': False}}
 
     bin_end = param_tree['config']['histogram']['bin_end']

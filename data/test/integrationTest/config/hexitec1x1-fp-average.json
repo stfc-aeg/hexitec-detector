@@ -76,19 +76,18 @@
     },
     {
         "addition": {
-	    "sensors_layout": "1x1"
+            "sensors_layout": "1x1"
         }
     },
     {
         "reorder": {
-	    "sensors_layout": "1x1",
-            "raw_data": true
+            "sensors_layout": "1x1"
         }
     },
     {
         "histogram": {
             "max_frames_received": 10,
-	    "sensors_layout": "1x1"
+            "sensors_layout": "1x1"
         }
     },
     {
