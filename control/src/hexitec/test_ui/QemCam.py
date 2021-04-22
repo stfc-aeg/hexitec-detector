@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
@@ -25,16 +24,16 @@ class QemCam(object):
         self.server_data_ip_addr = "10.0.4.2"
         self.camera_data_ip_addr = "10.0.4.1"
         # qem 1 base addresses
-        self.top_reg         = 0x60000000
-        self.mon_data_in     = 0x70000000
-        self.sequencer       = 0xB0000000
-        self.receiver        = 0xC0000000
-        self.frm_gate        = 0xD0000000
+        self.top_reg = 0x60000000
+        self.mon_data_in = 0x70000000
+        self.sequencer = 0xB0000000
+        self.receiver = 0xC0000000
+        self.frm_gate = 0xD0000000
         #
-        self.image_size_x    = 0x100
-        self.image_size_y    = 0x100
-        self.image_size_p    = 0x8
-        self.image_size_f    = 0x8
+        self.image_size_x = 0x100
+        self.image_size_y = 0x100
+        self.image_size_p = 0x8
+        self.image_size_f = 0x8
 
         self.debug_level = -1
         self.delay = 0
@@ -54,84 +53,18 @@ class QemCam(object):
 
         self.x10g_stream = ImageStreamUDP(self.server_data_ip_addr, 61650, self.server_data_ip_addr, 61651,
                                           self.camera_data_ip_addr, 61651, 1000000000, 9000, 20, self.debug)
-        #self.x10g_stream.setDebug(False)
-        #self.x10g_stream.ack = False
+        # self.x10g_stream.setDebug(False)
+        # self.x10g_stream.ack = False
 
         return self.x10g_rdma.error_OK
 
-    def print_ram_depth(self):
-        ram_depth = self.x10g_rdma.read(0xB0000010, "qem sequencer ram depth reg 0")
-        print("%-32s %-8i" % ("-> sequencer ram depth: ", ram_depth // 8))
-        time.sleep(self.delay)
-
-    def stop_sequencer(self):
-        #print "%-32s %s" % ("-> Stopping sequencer:", "")
-        self.x10g_rdma.write(0xB0000000, 0x0, "qem seq null")
-        time.sleep(self.delay)
-        self.x10g_rdma.write(0xB0000000, 0x2, "qem seq stop")
-        time.sleep(self.delay)
-
-    def start_sequencer(self):
-        #print "%-32s %s" % ("-> Starting sequencer:", "")
-        self.x10g_rdma.write(0xB0000000, 0x0, "qem seq null")
-        time.sleep(self.delay)
-        self.x10g_rdma.write(0xB0000000, 0x1, "qem seq stop")
-        time.sleep(self.delay)
-
-    def set_test_mode(self):
-        self.x10g_rdma.write(self.receiver, 0x1, "select camera test mode")
-
-    def unset_test_mode(self):
-        self.x10g_rdma.write(self.receiver, 0x0, "select camera test mode")
-
-    def start_test_mode(self):
-        self.x10g_rdma.write(self.receiver, 0x3, "select camera test mode")
-
-    def get_aligner_status(self):
-        address = self.receiver | 0x14
-        aligner_status = self.x10g_rdma.read(address, "aligner status word")
-        aligner_status_0 = aligner_status & 0xFFFF
-        aligner_status_1 = aligner_status >> 16 & 0xFFFF
-        #print "%-32s %04X %04X" % ("-> aligner status:", aligner_status_1, aligner_status_0)
-        time.sleep(self.delay)
-        return [aligner_status_1, aligner_status_0]
-
-    def set_idelay(self, data_1=0x00, cdn_1=0x00, data_0=0x00, cdn_0=0x00):
-        #print data_1, cdn_1, data_0, cdn_0
-        data_cdn_word = data_1 << 24 | cdn_1 << 16 | data_0 << 8 | cdn_0
-        address = self.receiver | 0x02
-        #print "%-32s %08X" % ("-> set data cdn idelay control word:", data_cdn_word)
-        self.x10g_rdma.write(address, data_cdn_word, "data_cdn_idelay word")
-        #issue load command
-        address = self.receiver | 0x00
-        self.x10g_rdma.write(address, 0x00, "set delay load low")
-        self.x10g_rdma.write(address, 0x10, "set delay load high")
-        self.x10g_rdma.write(address, 0x00, "set delay load low")
-        address = self.receiver | 0x12
-        data_cdn_idelay_word = self.x10g_rdma.read(address, "data_cdn_idelay word")
-        return data_cdn_idelay_word
-
-    def set_ivsr(self, data_1=0x00, data_0=0x00, cdn_1=0x00, cdn_0=0x00):
-        # print data_1, cdn_1, data_0, cdn_0
-        data_cdn_word = data_1 << 24 | data_0 << 16 | cdn_1 << 8 | cdn_0
-        address = self.receiver | 0x03
-        # print "%-32s %08X" % ("-> set data cdn idelay control word:", data_cdn_word)
-        self.x10g_rdma.write(address, data_cdn_word, "data_cdn_ivsr word")
-
-    def set_scsr(self, data_1=0x00, data_0=0x00, cdn_1=0x00, cdn_0=0x00):
-        # print data_1, cdn_1, data_0, cdn_0
-        data_cdn_word = data_1 << 24 | data_0 << 16 | cdn_1 << 8 | cdn_0
-        address = self.receiver | 0x05
-        # print "%-32s %08X" % ("-> set data cdn idelay control word:", data_cdn_word)
-        self.x10g_rdma.write(address, data_cdn_word, "data_cdn_ivsr word")
-
     def set_image_size(self, x_size, y_size, p_size, f_size):
-        # set image size globals
+        # Set image size globals
         self.image_size_x = x_size
         self.image_size_y = y_size
         self.image_size_p = p_size
         self.image_size_f = f_size
-        # check parameters againts ethernet packet and local link frame size compatibility
+        # Check parameters againts ethernet packet and local link frame size compatibility
         pixel_count_max = x_size * y_size
         number_bytes = pixel_count_max * 2
         number_bytes_r4 = pixel_count_max % 4
@@ -141,7 +74,7 @@ class QemCam(object):
         lp_number_bytes_r8 = last_packet_size % 8
         lp_number_bytes_r32 = last_packet_size % 32
         size_status = number_bytes_r4 + number_bytes_r8 + lp_number_bytes_r8 + lp_number_bytes_r32
-        # calculate pixel packing settings
+        # Calculate pixel packing settings
         if p_size >= 11 and p_size <= 14 and f_size == 16:
             pixel_count_max = pixel_count_max // 2
         elif p_size == 8 and f_size == 8:
@@ -149,7 +82,7 @@ class QemCam(object):
         else:
             size_status = size_status + 1
 
-        # set up registers if no size errors
+        # Set up registers if no size errors
         if size_status != 0:
             print("%-32s %8i %8i %8i %8i %8i %8i" % ("-> size error", number_bytes, number_bytes_r4,
                                                      number_bytes_r8, first_packets,
@@ -162,48 +95,6 @@ class QemCam(object):
 
         self.x10g_stream.set_image_size(x_size, y_size, f_size)
 
-    def get_idelay_lock_status(self):
-        address = self.receiver | 0x13
-        #print "%-32s %08X" % ("-> set data cdn idelay control word:", data_cdn_word)
-        data_locked_word = self.x10g_rdma.read(address, "data_cdn_idelay word")
-        data_locked_flag = data_locked_word & 0x00000001
-        return data_locked_flag
-
-    def get_cdn_data_timing_values(self):
-        address = self.receiver | 0x16
-        cdn_data_timing_word_0 = self.x10g_rdma.read(address, "cdn-data timing word")
-        address = self.receiver | 0x17
-        cdn_data_timing_word_1 = self.x10g_rdma.read(address, "cdn-data timing word")
-        address = self.receiver | 0x15
-        cdn_data_timing_valid_word = self.x10g_rdma.read(address, "cdn-data timing word")
-
-        cdn_cdn_gap_0  = cdn_data_timing_word_0 >> 0 & 0xFF
-        cdn_sub_pat_0  = cdn_data_timing_word_0 >> 8 & 0xFF
-        cdn_dat_gap_0  = cdn_data_timing_word_0 >> 16 & 0xFF
-        data_sub_pat_0 = cdn_data_timing_word_0 >> 24 & 0xFF
-        cdn_data_timing_bytes_0 = [cdn_cdn_gap_0, cdn_sub_pat_0, cdn_dat_gap_0, data_sub_pat_0]
-
-        cdn_cdn_gap_1  = cdn_data_timing_word_1 >> 0 & 0xFF
-        cdn_sub_pat_1  = cdn_data_timing_word_1 >> 8 & 0xFF
-        cdn_dat_gap_1  = cdn_data_timing_word_1 >> 16 & 0xFF
-        data_sub_pat_1 = cdn_data_timing_word_1 >> 24 & 0xFF
-        cdn_data_timing_bytes_1 = [cdn_cdn_gap_1, cdn_sub_pat_1, cdn_dat_gap_1, data_sub_pat_1]
-
-        cdn_data_timing_valid_flag_0 = cdn_data_timing_valid_word & 0x01
-        cdn_data_timing_valid_flag_1 = cdn_data_timing_valid_word >> 1 & 0x01
-        return [cdn_data_timing_bytes_1, cdn_data_timing_bytes_0,
-                cdn_data_timing_valid_flag_0, cdn_data_timing_valid_flag_1]
-
-    def turn_rdma_debug_on(self):
-        self.x10g_rdma.debug = True
-
-    def turn_rdma_debug_off(self):
-        self.x10g_rdma.debug = False
-
-    def restart_sequencer(self):
-        self.stop_sequencer()
-        self.start_sequencer()
-
     def frame_gate_trigger(self):
         self.x10g_rdma.write(self.frm_gate + 0, 0x0, "frame gate trigger off")
         self.x10g_rdma.write(self.frm_gate + 0, 0x1, "frame gate trigger on")
@@ -215,7 +106,6 @@ class QemCam(object):
 
     def display_image_stream(self, num_images):
         self.frame_gate_settings(0, 0)
-        #self.frame_gate_settings(num_images-1, 0)
         image_count = 1
         while image_count <= num_images:
             self.frame_gate_trigger()
@@ -228,9 +118,9 @@ class QemCam(object):
     def log_image_stream(self, file_name, num_images):
         self.frame_gate_settings(num_images - 1, 0)
         self.frame_gate_trigger()
-        #get the image set
+        # Get the image set
         image_set = self.x10g_stream.get_image_set(num_images)
-        #write to hdf5 file
+        # Write to hdf5 file
         file_name = file_name + ".h5"
         h5f = h5py.File(file_name, "w")
         h5f.create_dataset("dataset_1", data=image_set)
@@ -243,9 +133,9 @@ class QemCam(object):
     def log_image_stream_bin(self, file_name, num_images):
         self.frame_gate_settings(num_images - 1, 0)
         self.frame_gate_trigger()
-        #get the image set
+        # Get the image set
         image_set = self.x10g_stream.get_image_set(num_images)
-        #write to binary file n * x * y uint16
+        # Write to binary file n * x * y uint16
         file_name = file_name + ".bin"
 
         f = open(file_name, "wb")
@@ -253,42 +143,6 @@ class QemCam(object):
         f.close()
 
         print("written array:", image_set.shape, image_set.dtype, "->", file_name)
-
-    def frame_stats(self):
-        self.x10g_rdma.read(self.mon_data_in + 0x10, "frame last length")
-        self.x10g_rdma.read(self.mon_data_in + 0x11, "frame max length")
-        self.x10g_rdma.read(self.mon_data_in + 0x12, "frame min length")
-        self.x10g_rdma.read(self.mon_data_in + 0x13, "frame number")
-        self.x10g_rdma.read(self.mon_data_in + 0x14, "frame last clock cycles")
-        self.x10g_rdma.read(self.mon_data_in + 0x15, "frame max clock cycles")
-        self.x10g_rdma.read(self.mon_data_in + 0x16, "frame min clock cycles")
-        self.x10g_rdma.read(self.mon_data_in + 0x17, "frame data total")
-        self.x10g_rdma.read(self.mon_data_in + 0x18, "frame data total clock cycles")
-        self.x10g_rdma.read(self.mon_data_in + 0x19, "frame trigger count")
-        self.x10g_rdma.read(self.mon_data_in + 0x1A, "frame in progress flag")
-
-    def i2c_read(self, i2c_addr=0x0):
-        print("-> set clock not implemented yet...")
-        #setup i2c read command - read + address + data
-        address = self.top_reg | 0x08
-        i2c_address = i2c_addr & 0x7F
-        i2c_cmd_addr_data = 0x8000 | i2c_address << 8
-        self.x10g_rdma.write(address, i2c_cmd_addr_data, "i2c cmd-address-data")
-        # i2c trigger command
-        address = self.top_reg | 0x09
-        self.x10g_rdma.write(address, 0x0, "i2c trigger low")
-        self.x10g_rdma.write(address, 0x1, "i2c trigger high")
-        self.x10g_rdma.write(address, 0x0, "i2c trigger low")
-        #poll until done
-        time.sleep(0.01)
-        # check error status
-        i2c_status = self.x10g_rdma.read(address, 0x0, "i2c status")
-        if i2c_status != 0x0:
-            print("%-32s %1X" % ("-> i2c satus:", i2c_status))
-        # read i2c data
-        address = self.top_reg | 0x18
-        i2c_data = self.x10g_rdma.read(address, "i2c read data") & 0xFF
-        return i2c_data
 
     def disconnect(self):
         self.x10g_rdma.close()

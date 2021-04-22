@@ -29,7 +29,7 @@ class set_udp_registers():
             with open(self.config_file, 'r') as f:
                 self.udp_settings = json.load(f)
         except IOError as e:
-            print("ERROR opening config file: %s")
+            print("ERROR opening config file: %s" % e)
             return
         except Exception as e:
             print("ERROR: %s" % e)

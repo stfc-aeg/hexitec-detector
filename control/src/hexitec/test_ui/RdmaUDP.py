@@ -48,10 +48,9 @@ class RdmaUDP(object):
             self.error_OK = False
 
         self.rxsocket.setblocking(1)
-        #self.txsocket.setblocking(1)
 
         self.TgtRxUDPIPAddr = TargetRxUDPIPAddress
-        self.TgtRxUDPIPPrt  = TargetRxUDPIPPort
+        self.TgtRxUDPIPPrt = TargetRxUDPIPPort
 
         self.UDPMaxRx = UDPMTU
 
@@ -72,7 +71,6 @@ class RdmaUDP(object):
             if len(response) == 56:
                 decoded = struct.unpack('=IIIIQQQQQ', response)
                 data = decoded[3]
-                #print [hex(val) for val in decoded]
 
         if self.debug:
             print('R %08X : %08X %s' % (address, data, comment))
@@ -83,20 +81,18 @@ class RdmaUDP(object):
         if self.debug:
             print('W %08X : %08X %s' % (address, data, comment))
 
-        #create single write command + 5 data cycle nop command for padding
+        # Create single write command + 5 data cycle nop command for padding
         command = struct.pack('=BBBBIQBBBBIQQQQQ', 1, 0, 0, 2, address,
                               data, 9, 0, 0, 255, 0, 0, 0, 0, 0, 0)
 
-        #Send the single write command packet
+        # Send the single write command packet
         self.txsocket.sendto(command, (self.TgtRxUDPIPAddr, self.TgtRxUDPIPPrt))
 
         if self.ack:
-            #receive acknowledge packet
+            # Receive acknowledge packet
             response = self.rxsocket.recv(self.UDPMaxRx)
-            #time.sleep(10)
             if len(response) == 48:
                 decoded = struct.unpack('=IIIIQQQQ', response)
-                #print decoded
 
     def block_read(self, address, length, comment=''):
         length = length // 4 - 1
@@ -106,12 +102,6 @@ class RdmaUDP(object):
 
         if self.ack:
             response = self.rxsocket.recv(self.UDPMaxRx)
-            # time.sleep(10)
-            # decoded = struct.unpack('=I', response)
-            # decoded = 0x00000000
-            # print len(response)
-            # if self.debug:
-            #     print('R %08X : %08X %s' % (address, decoded, comment))
 
         return response
 
@@ -120,37 +110,33 @@ class RdmaUDP(object):
         if self.debug:
             print('W %08X : %08X %s' % (address, data, comment))
 
-        #create block write command
+        # Create block write command
         length = len(data) // 4 - 1
         command = struct.pack('=BBBBI', length, 0, 0, 0, address)
         command = command + data
         print(len(command))
 
-        #Send the single write command packet
+        # Send the single write command packet
         self.txsocket.sendto(command, (self.TgtRxUDPIPAddr, self.TgtRxUDPIPPrt))
 
         if self.ack:
-            #receive acknowledge packet
+            # Receive acknowledge packet
             response = self.rxsocket.recv(self.UDPMaxRx)
-            #time.sleep(10)
-            #decoded = struct.unpack('=II', response)
             print(len(response))
 
     def block_nop(self, comment=''):
         if self.debug:
             print('W %08X : %08X %s' % (comment))
 
-        #create block nop command
+        # Create block nop command
         command = struct.pack('=BBBBIQQQQQ', 255, 0, 0, 4, 0, 0, 0, 0, 0, 0)
 
-        #Send the single write command packet
+        # Send the single write command packet
         self.txsocket.sendto(command, (self.TargetRxUDPIPAddr, self.TargetRxUDPIPPrt))
 
         if self.ack:
-            #receive acknowledge packet
+            # Receive acknowledge packet
             response = self.rxsocket.recv(self.UDPMaxRx)
-            #time.sleep(10)
-            #decoded = struct.unpack('=I', response)
             print(len(response))
 
     def close(self):

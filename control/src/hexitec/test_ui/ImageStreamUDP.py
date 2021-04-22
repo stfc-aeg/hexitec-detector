@@ -34,7 +34,6 @@ class ImageStreamUDP(object):
         self.txsocket.bind((MasterTxUDPIPAddress, MasterTxUDPIPPort))
 
         self.rxsocket.setblocking(1)
-        #self.txsocket.setblocking(1)
 
         self.UDPMaxRx = UDPMTU
 
@@ -43,13 +42,13 @@ class ImageStreamUDP(object):
         self.ack = False
 
         self.image_size_p = 2
-        self.image_size_x = 256    
-        self.sensor_image_1d = np.uint16(np.random.rand(256*256)*32768) 
+        self.image_size_x = 256
+        self.sensor_image_1d = np.uint16(np.random.rand(256*256)*32768)
         self.image_size_y = 256
-        self.image_mtu    = 8000
-        self.num_pkt      = (self.image_size_x * self.image_size_y * self.image_size_p) // self.image_mtu
+        self.image_mtu = 8000
+        self.num_pkt = (self.image_size_x * self.image_size_y * self.image_size_p) // self.image_mtu
 
-        self.sensor_image = np.uint16(np.random.rand(256,256)*16384)
+        self.sensor_image = np.uint16(np.random.rand(256, 256)*16384)
         self.sensor_image_1d = np.uint16(np.random.rand(256*256)*16384)
 
     def __del__(self):
@@ -69,7 +68,7 @@ class ImageStreamUDP(object):
         data_size = x_size * y_size * f_size//8
         self.num_pkt = data_size // self.image_mtu
         data_rem = data_size % self.image_mtu
-        if data_rem != 0: 
+        if data_rem != 0:
             self.num_pkt = self.num_pkt + 1
 
         print(x_size, y_size, f_size, self.num_pkt)
@@ -79,26 +78,22 @@ class ImageStreamUDP(object):
     def get_image(self):
         pkt_num = 0
         insert_point = 0
-        while pkt_num < self.num_pkt:   
-            #receive packet up to 8K Bytes
+        while pkt_num < self.num_pkt:
+            # Receive packet up to 8K Bytes
             pkt = self.rxsocket.recv(9000)
-            #extract trailer
+            # Extract trailer
             pkt_len = len(pkt)
-            if self.check_trailer == True:
+            if self.check_trailer:
                 pkt_top = pkt_len - 8
                 frame_number = (ord(pkt[pkt_top+3]) << 24) + (ord(pkt[pkt_top+2]) << 16) + (ord(pkt[pkt_top+1]) << 8) + ord(pkt[pkt_top+0])
                 packet_number = (ord(pkt[pkt_top+7]) << 24) + (ord(pkt[pkt_top+6]) << 16) + (ord(pkt[pkt_top+5]) << 8) + ord(pkt[pkt_top+4])
-                #pkt_top = 8
-                #data2 = (ord(pkt[pkt_top+3]) << 24) + (ord(pkt[pkt_top+2]) << 16) + (ord(pkt[pkt_top+1]) << 8) + ord(pkt[pkt_top+0])
-                #data3 = (ord(pkt[pkt_top+7]) << 24) + (ord(pkt[pkt_top+6]) << 16) + (ord(pkt[pkt_top+5]) << 8) + ord(pkt[pkt_top+4])
-                # print trailer
-                pkt_str = "%08X %08X %08X %08X %08X" % (pkt_num, pkt_len, frame_number, packet_number)
+                pkt_str = "%08X %08X %08X %08X" % (pkt_num, pkt_len, frame_number, packet_number)
                 print(pkt_str)
             pld_len = (pkt_len-8)//2
-            #build image
+            # Build image
             pkt_str = "%08X %08X %08X %08X %08X" % (insert_point, pkt_num, pkt_len, self.num_pkt, pld_len)
             print(pkt_str)
-            #print "Printing Header"
+            # print "Printing Header"
             data0 = (ord(pkt[3]) << 24) + (ord(pkt[2]) << 16) + (ord(pkt[1]) << 8) + ord(pkt[0])
             data1 = (ord(pkt[7]) << 24) + (ord(pkt[6]) << 16) + (ord(pkt[5]) << 8) + ord(pkt[4])
             pkt_str = "%08X %08X %08X" % (data1, data0, pkt_num)
@@ -115,7 +110,6 @@ class ImageStreamUDP(object):
                     pixel_count = pixel_count + 1
         print("Pixel Count A")
         print(pixel_count)
-        #self.sensor_image = self.sensor_image_1d.reshape(self.image_size_x,self.image_size_y)
         self.sensor_image = self.sensor_image_ro.reshape(self.image_size_x, self.image_size_y)
         return self.sensor_image
 
@@ -126,9 +120,9 @@ class ImageStreamUDP(object):
             pkt_num = 1
             insert_point = 0
             while pkt_num <= self.num_pkt:
-                #receive packet up to 8K Bytes
+                # Receive packet up to 8K Bytes
                 pkt = self.rxsocket.recv(9000)
-                #extract trailer
+                # Extract trailer
                 pkt_len = len(pkt)
                 print("Image Number:-", img_num)
                 print("Packet Length:-", pkt_len)
