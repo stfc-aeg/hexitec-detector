@@ -4,7 +4,7 @@ Christian Angelsen, STFC Detector Systems Software Group. 22 October 2020.
 """
 
 import sys
-from QemCam import *
+from QemCam import QemCam
 from socket import error as socket_error
 
 
