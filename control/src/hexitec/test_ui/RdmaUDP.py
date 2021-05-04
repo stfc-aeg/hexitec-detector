@@ -90,9 +90,12 @@ class RdmaUDP(object):
 
         if self.ack:
             # Receive acknowledge packet
-            response = self.rxsocket.recv(self.UDPMaxRx)
-            if len(response) == 48:
-                decoded = struct.unpack('=IIIIQQQQ', response)
+            # response = self.rxsocket.recv(self.UDPMaxRx)
+            _ = self.rxsocket.recv(self.UDPMaxRx)
+            # TODO: Remove as redundant?
+            # if len(response) == 48:
+            #     decoded = struct.unpack('=IIIIQQQQ', response)
+            #     print(decoded)
 
     def block_read(self, address, length, comment=''):
         length = length // 4 - 1
