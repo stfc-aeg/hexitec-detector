@@ -101,7 +101,7 @@ class RdmaUDP(object):
         if self.debug:
             logging.debug('W %08X : %08X %s' % (address, data, comment))
 
-        # create single write command + 5 data cycle nop command for padding
+        # Create single write command + 5 data cycle nop command for padding
         command = struct.pack('=BBBBIQBBBBIQQQQQ', 1, 0, 0, 2, address, data,
                               9, 0, 0, 255, 0, 0, 0, 0, 0, 0)
 
@@ -109,7 +109,7 @@ class RdmaUDP(object):
         self.txsocket.sendto(command, (self.TgtRxUDPIPAddr, self.TgtRxUDPIPPrt))
 
         if self.ack:
-            # receive acknowledge packet
+            # Receive acknowledge packet
             # response = self.rxsocket.recv(self.UDPMaxRx)
             _ = self.rxsocket.recv(self.UDPMaxRx)
             # TODO: Remove as redundant?
@@ -117,8 +117,6 @@ class RdmaUDP(object):
             # if len(response) == 48:
             #     decoded = struct.unpack('=IIIIQQQQ', response)
             #     #logging.debug(decoded)
-
-        return
 
     def close(self):
         """Close sockets."""

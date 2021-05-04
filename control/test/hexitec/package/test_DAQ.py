@@ -67,7 +67,6 @@ class DAQTestFixture(object):
                         "names": [
                             "correction",
                             "hdf",
-                            "REORDER?",
                             "view"
                         ]
 
@@ -823,6 +822,19 @@ class TestDAQ(unittest.TestCase):
         sensors_layout = "2x2"
         self.test_daq.daq._set_sensors_layout(sensors_layout)
         assert self.test_daq.daq._get_sensors_layout() == sensors_layout
+
+    def test_get_compression_type(self):
+        compression_type = "blosc"
+        self.test_daq.daq._set_compression_type(compression_type)
+        assert self.test_daq.daq._get_compression_type() == compression_type
+
+    def test_set_compression_type(self):
+        COMPRESSIONOPTIONS = self.test_daq.daq.COMPRESSIONOPTIONS
+        error = "Invalid compression type; Valid options: {}".format(COMPRESSIONOPTIONS)
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_daq.daq._set_compression_type("bad_compressor")
+        assert exc_info.type is ParameterTreeError
+        assert exc_info.value.args[0] == error
 
     def test_commit_configuration(self):
         """Test function handles committing configuration ok."""

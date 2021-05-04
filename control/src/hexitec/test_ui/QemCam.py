@@ -8,7 +8,6 @@ Created on Mon Jan  8 16:58:52 2018
 
 from RdmaUDP import RdmaUDP
 from ImageStreamUDP import ImageStreamUDP
-import time
 import cv2
 import h5py
 

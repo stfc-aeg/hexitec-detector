@@ -1040,6 +1040,7 @@ class HexitecFem():
                 else:
                     self.waited += delay
                     IOLoop.instance().call_later(delay, self.check_acquire_finished)
+                    return
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to collect data: %s" % str(e))
             logging.error("%s" % str(e))
