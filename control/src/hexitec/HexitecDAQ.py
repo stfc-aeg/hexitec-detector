@@ -72,7 +72,7 @@ class HexitecDAQ():
 
         # Construct path to hexitec source code
         cwd = os.getcwd()
-        index = cwd.find("control")
+        index = cwd.rfind("control")
         self.base_path = cwd[:index]
 
         # ParameterTree variables

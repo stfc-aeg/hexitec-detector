@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as img
 import sys
 
+
 def plot_png_image(png_file):
 
     # Read png image

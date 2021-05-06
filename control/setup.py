@@ -2,7 +2,6 @@
 
 from setuptools import setup, find_packages
 import versioneer
-import sys
 
 install_requires = [
     'odin @ git+https://github.com/odin-detector/odin-control@1.0.0#egg=odin_control',
@@ -23,5 +22,5 @@ setup(name='hexitec',
       author_email='christian.angelsen@stfc.ac.uk',
       packages=find_packages('src'),
       package_dir={'': 'src'},
-      install_requires=install_requires,
-)
+      install_requires=install_requires
+      )
