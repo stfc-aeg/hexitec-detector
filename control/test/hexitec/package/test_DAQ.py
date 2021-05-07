@@ -112,7 +112,7 @@ class DAQTestFixture(object):
 
         # Construct paths relative to current working directory
         cwd = os.getcwd()
-        base_path_index = cwd.find("hexitec-detector")
+        base_path_index = cwd.rfind("hexitec-detector")
         base_path = cwd[:base_path_index]
         self.odin_control_path = base_path + "hexitec-detector/control/"
         self.odin_data_path = base_path + "hexitec-detector/data/"

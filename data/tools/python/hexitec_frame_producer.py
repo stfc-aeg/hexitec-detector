@@ -14,7 +14,7 @@ import random
 import dpkt
 import threading
 
-#import pdb; pdb.set_trace() # DEBUGGING
+# import pdb; pdb.set_trace() # DEBUGGING
 
 
 class HexitecFrame(object):
@@ -277,7 +277,7 @@ class HexitecFrameProducer(object):
                 # Header, then pixel data
                 (frame_ctr, pkt_ctr) = struct.unpack('<II', udp_layer.data[:8])
 
-            # If there is a SOF marker in the packet header, 
+            # If there is a SOF marker in the packet header,
             # handle content, starting a new frame as necessary
             if pkt_ctr & HexitecFrame.SOF_MARKER:
                 logging.debug(
@@ -409,7 +409,7 @@ class HexitecFrameProducer(object):
                 # If a drop list was specified and this packet is in it, drop the packet
                 if self.args.drop_list is not None:
                     if packet_idx in self.args.drop_list:
-                        frame_packets_dropped +=1
+                        frame_packets_dropped += 1
                         continue
 
                 # Send the packet over the UDP socket
@@ -444,8 +444,9 @@ class HexitecFrameProducer(object):
                 time.sleep(wait_time)
 
         logging.info(
-            "Sent %d frames with a total of %d packets and %d bytes, dropping %d packets (%.1f%%)",
-            total_frames_sent, total_packets_sent, total_bytes_sent, total_packets_dropped,
+            "Sent %d frames %d packets %d bytes dropped %d packets (%.1f%%)",
+            total_frames_sent, total_packets_sent, total_bytes_sent,
+            total_packets_dropped,
             (float(total_packets_dropped) / (total_packets_dropped + total_packets_sent))*100.0
         )
 

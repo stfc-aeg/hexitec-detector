@@ -1,21 +1,18 @@
 from __future__ import print_function
 
-import os, time
+import time
 import npyscreen
 import argparse
 import zmq
-import json
-import curses
 from ipc_channel import IpcChannel
 from ipc_message import IpcMessage
 
-from frame_receiver.shared_buffer_manager import SharedBufferManager, SharedBufferManagerException
-from struct import Struct
+from frame_receiver.shared_buffer_manager import SharedBufferManager
 
 shared_mem_name = "HexitecSharedBuffer"
-#buffer_size     = 1048576
-num_buffers     = 10
+num_buffers = 10
 boost_mmap_mode = False
+
 
 def options():
     parser = argparse.ArgumentParser()
@@ -25,6 +22,7 @@ def options():
     parser.add_argument("-b", "--buffer", default=shared_mem_name, help="Unique name of shared buffer")
     args = parser.parse_args()
     return args
+
 
 class HexitecTestApp(npyscreen.NPSAppManaged):
     def __init__(self, ready_endpoint, release_endpoint, buffer, filepath):
@@ -50,25 +48,24 @@ class HexitecTestApp(npyscreen.NPSAppManaged):
         self.registerForm("MAIN", IntroForm())
         self.registerForm("MAIN_MENU", MainMenu())
         self.registerForm("SETUP", SetupAcquisition())
-        
+
     def send_message(self, ipc_message):
         self._ctrl_channel.send(ipc_message.encode())
-        
+
     def setup_buffer(self, filename, buffer_size, frames):
         self._filename = filename
         self._frames = frames
         # Create the shared buffer
         self._shared_buffer_manager = SharedBufferManager(self._buffer,
                                                           buffer_size*num_buffers,
-                                                          buffer_size, 
-                                                          remove_when_deleted=True, 
+                                                          buffer_size,
+                                                          remove_when_deleted=True,
                                                           boost_mmap_mode=boost_mmap_mode)
         # Now load in the file
         with open(self._filepath + "/" + self._filename, mode='rb') as file:
             fileContent = file.read()
             print("Writing file content to ", shared_mem_name)
             self._shared_buffer_manager.write_buffer(0, fileContent)
-        
 
     def read_message(self, timeout):
         pollevts = self._ctrl_channel.poll(timeout)
@@ -77,28 +74,32 @@ class HexitecTestApp(npyscreen.NPSAppManaged):
             return reply
         return None
 
-# This form class defines the display that will be presented to the user.
 
+# This form class defines the display that will be presented to the user.
 class IntroForm(npyscreen.Form):
     def create(self):
         self.name = "Hexitec test application"
 
-        self.add(npyscreen.TitleText, labelColor="LABELBOLD", name="Set the frame ready endpoint for this test", value="", editable=False)
+        self.add(npyscreen.TitleText, labelColor="LABELBOLD",
+                 name="Set the frame ready endpoint for this test", value="", editable=False)
         self.ready = self.add(npyscreen.TitleText, name="Frame Notify Endpoint: ", value="")
 
         self.add(npyscreen.TitleText, labelColor="LABELBOLD", name=" ", value="", editable=False)
 
-        self.add(npyscreen.TitleText, labelColor="LABELBOLD", name="Set the frame release endpoint for this test", value="", editable=False)
+        self.add(npyscreen.TitleText, labelColor="LABELBOLD",
+                 name="Set the frame release endpoint for this test", value="", editable=False)
         self.release = self.add(npyscreen.TitleText, name="Frame Release Endpoint: ", value="")
 
         self.add(npyscreen.TitleText, labelColor="LABELBOLD", name=" ", value="", editable=False)
 
-        self.add(npyscreen.TitleText, labelColor="LABELBOLD", name="Set the unique name for the shared memory buffer", value="", editable=False)
+        self.add(npyscreen.TitleText, labelColor="LABELBOLD",
+                 name="Set the unique name for the shared memory buffer", value="", editable=False)
         self.buffer = self.add(npyscreen.TitleText, name="Shared memory buffer name: ", value="")
 
         self.add(npyscreen.TitleText, labelColor="LABELBOLD", name=" ", value="", editable=False)
 
-        self.add(npyscreen.TitleText, labelColor="LABELBOLD", name="Which type of dataset (1bit, 6bit, 12bit, 24bit)", value="", editable=False)
+        self.add(npyscreen.TitleText, labelColor="LABELBOLD",
+                 name="Which type of dataset (1bit, 6bit, 12bit, 24bit)", value="", editable=False)
         self.datatype = self.add(npyscreen.TitleText, name="Datatype: ", value="12bit")
 
     def beforeEditing(self):
@@ -112,27 +113,26 @@ class IntroForm(npyscreen.Form):
         self.parentApp._release_channel = IpcChannel(IpcChannel.CHANNEL_TYPE_SUB)
         self.parentApp._release_channel.bind(self.release.value)
         if self.datatype.value == "1bit":
-          self.parentApp.setup_buffer("hexitec-test-1bit.raw", 65536, 1)
+            self.parentApp.setup_buffer("hexitec-test-1bit.raw", 65536, 1)
         elif self.datatype.value == "6bit":
-          self.parentApp.setup_buffer("hexitec-test-6bit.raw", 524288, 1)
+            self.parentApp.setup_buffer("hexitec-test-6bit.raw", 524288, 1)
         elif self.datatype.value == "12bit":
-          self.parentApp.setup_buffer("hexitec-test-12bit.raw", 1048576, 1)
+            self.parentApp.setup_buffer("hexitec-test-12bit.raw", 1048576, 1)
         elif self.datatype.value == "24bit":
-          self.parentApp.setup_buffer("hexitec-test-24bit.raw", 1048576, 2)
+            self.parentApp.setup_buffer("hexitec-test-24bit.raw", 1048576, 2)
         else:
-          self.parentApp.setNextForm(None)
+            self.parentApp.setNextForm(None)
 
         self.parentApp.setNextForm("MAIN_MENU")
-        
 
 
 class MainMenu(npyscreen.FormBaseNew):
     def create(self):
         self.keypress_timeout = 1
         self.name = "Hexitec test application"
-        self.t2 = self.add(npyscreen.BoxTitle, name="Main Menu:", relx=2, max_width=24) #, max_height=20)
-        self.t3 = self.add(npyscreen.BoxTitle, name="Response:", rely=2, relx=26) #, max_width=45, max_height=20)
-        
+        self.t2 = self.add(npyscreen.BoxTitle, name="Main Menu:", relx=2, max_width=24)
+        self.t3 = self.add(npyscreen.BoxTitle, name="Response:", rely=2, relx=26)
+
         self.t2.values = ["Setup Acquisition",
                           "Run Acquisition",
                           "Exit"]
@@ -141,17 +141,17 @@ class MainMenu(npyscreen.FormBaseNew):
     def button(self):
         selected = self.t2.entry_widget.value
         if selected == 0:
-          self.parentApp.setNextForm("SETUP")
-          self.parentApp.switchFormNow()
+            self.parentApp.setNextForm("SETUP")
+            self.parentApp.switchFormNow()
         if selected == 1:
-          self.parentApp._frames_sent = 0
-          self.parentApp._running = True              
+            self.parentApp._frames_sent = 0
+            self.parentApp._running = True
         if selected == 2:
-          self.parentApp.setNextForm(None)
-          self.parentApp.switchFormNow()
-          
+            self.parentApp.setNextForm(None)
+            self.parentApp.switchFormNow()
+
     def while_waiting(self):
-        if self.parentApp._running == True:
+        if self.parentApp._running:
             millis = int(round(time.time() * 1000))
             if millis > (self.parentApp._last_millis + int(1000 / self.parentApp._frame_rate)):
                 msg = IpcMessage("notify", "frame_ready")
@@ -170,6 +170,7 @@ class MainMenu(npyscreen.FormBaseNew):
         self.t2.entry_widget._old_value = None
         self.t2.display()
 
+
 class SetupAcquisition(npyscreen.ActionForm):
     def create(self):
         self.name = "Hexitec test application"
@@ -187,7 +188,6 @@ class SetupAcquisition(npyscreen.ActionForm):
         self.parentApp.switchFormNow()
 
 
-
 def main():
     args = options()
 
@@ -197,4 +197,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
