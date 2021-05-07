@@ -31,8 +31,6 @@ class HexitecFem():
     Controls and configures each FEM-II module ready for a DAQ via UDP.
     """
 
-    thread_executor = futures.ThreadPoolExecutor(max_workers=2)
-
     OPTIONS = [
         "Sensor_1_1",
         "Sensor_1_2",
@@ -149,7 +147,6 @@ class HexitecFem():
         self.acquisition_completed = False
 
         self.debug = False
-        self.debug_register24 = False
         # Diagnostics:
         self.exception_triggered = False
         self.successful_reads = 0
@@ -455,11 +452,6 @@ class HexitecFem():
                 raise HexitecFemError("Hardware sensors busy initialising")
             else:
                 self._set_status_error("")
-
-            if self.debug_register24:  # pragma: no cover
-                (vsr2, vsr1) = self.debug_reg24()
-                print("\n")
-                logging.debug("  * 00 *** init_HW, nowt chngd; Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
             self.hardware_busy = True
             self.operation_percentage_complete = 0
@@ -800,48 +792,16 @@ class HexitecFem():
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLR_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
         self.read_response()
 
-        if self.debug_register24:  # pragma: no cover
-            (vsr2, vsr1) = self.debug_reg24()
-            print("\n")
-            logging.debug("  * 02 *** cal_sen, CLR bit5;   Reg 0x24: %s, %s ***" % (vsr2, vsr1))
-
-        # # Set bit; Reg24, bit4: send average picture
-        # self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
-        # self.read_response()
-        # if self.debug_register24:  # pragma: no cover
-        #     (vsr2, vsr1) = self.debug_reg24()
-        #     print("\n")
-        #     logging.debug("  * 03 *** cal_sen, SET bit4;   Reg 0x24: %s, %s ***" % (vsr2, vsr1))
-
         logging.debug("Set bit 6")
         # Clear bit; Register 0x24, bit6: test mode
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.CLR_REG_BIT, 0x32, 0x34, 0x34, 0x30, 0x0D])
         self.read_response()
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x30, 0x31, 0x0D])
         self.read_response()
-        if self.debug_register24:  # pragma: no cover
-            (vsr2, vsr1) = self.debug_reg24()
-            print("\n")
-            logging.debug("  * 04 *** cal_sen, CLR bit6;   Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
-        # # FL 26/01: Comment this out
-        # Slows data coll'ns down (by adding 8k extra frames..)       # JE original
         # Set bit; Register 0x24, bit5 (disable VCAL), bit1 (capture average picture)
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x32, 0x32, 0x0D])
         self.read_response()
-        if self.debug_register24:  # pragma: no cover
-            (vsr2, vsr1) = self.debug_reg24()
-            print("\n")
-            logging.debug("  * 05 *** cal_sen, SET b5,b1;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
-
-        # #Makes data acquisition as fast as it should be (no extra 8k for offsets..)    # My mod
-        # # Set bit; Register 0x24, bit5 (disable VCAL)
-        # self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x32, 0x30, 0x0D])
-        # self.read_response()
-        # if self.debug_register24:  # pragma: no cover
-        #     (vsr2, vsr1) = self.debug_reg24()
-        #     print("\n")
-        #     logging.debug("  * X6 *** cal_sen, SET b5;     Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
         if self.selected_sensor == HexitecFem.OPTIONS[0]:
             self.x10g_rdma.write(0x60000002, 1, 'Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
@@ -889,20 +849,11 @@ class HexitecFem():
                        0x32, 0x30, 0x0D])
         self.read_response()
 
-        if self.debug_register24:  # pragma: no cover
-            (vsr2, vsr1) = self.debug_reg24()
-            print("\n")
-            logging.debug("  * 06 *** cal_sen, CLR b5;     Reg 0x24: %s, %s ***" % (vsr2, vsr1))
-
         logging.debug("DARK CORRECTION ON")
         # Set bit; Register 0x24, bit3: enable DC spectroscopic mode
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34,
                        0x30, 0x38, 0x0D])
         self.read_response()
-        if self.debug_register24:  # pragma: no cover
-            (vsr2, vsr1) = self.debug_reg24()
-            print("\n")
-            logging.debug("  * 08 *** cal_sen, SET b3;     Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
         # Read Reg24
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x32, 0x34, 0x0D])
@@ -1007,11 +958,6 @@ class HexitecFem():
 
         if self.debug:
             logging.debug("number of Frames := %s" % self.number_frames)
-
-        if self.debug_register24:  # pragma: no cover
-            (vsr2, vsr1) = self.debug_reg24()
-            print("\n")
-            logging.debug("    ****** ACQUISITION;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
         logging.debug("Initiate Data Capture")
         self.data_stream(self.number_frames)
@@ -1388,19 +1334,6 @@ class HexitecFem():
             logging.debug("Reading back register 24; VSR1: '%s' VSR2: '%s'" %
                           (vsr1.replace('\r', ''), vsr2.replace('\r', '')))
 
-            # # # FL 26/01: Comment this out
-            # # Set bit; Register 0x24, bit4: send average picture
-            # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0],
-            #               HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
-            # self.read_response()
-            # self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1],
-            #               HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x31, 0x30, 0x0D])
-            # self.read_response()
-            # if self.debug_register24:  # pragma: no cover
-            #     (vsr2, vsr1) = self.debug_reg24()
-            #     print("\n")
-            #     logging.debug("  * 09 *** coll_off, SET b4;    Reg 0x24: %s, %s ***" % (vsr2, vsr1))
-
             # Send reg value; Register 0x24, bits5,1: disable VCAL, capture average picture:
             enable_dc_vsr1 = [0x23, HexitecFem.VSR_ADDRESS[0], HexitecFem.SEND_REG_VALUE,
                               0x32, 0x34, 0x32, 0x32, 0x0D]
@@ -1436,10 +1369,6 @@ class HexitecFem():
             self.read_response()
             self.send_cmd(enable_dc_vsr2)
             self.read_response()
-            if self.debug_register24:  # pragma: no cover
-                (vsr2, vsr1) = self.debug_reg24()
-                print("\n")
-                logging.debug("  * 10 *** coll_off, SET b1,5;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
             # 4. Start the state machine
 
@@ -1460,7 +1389,7 @@ class HexitecFem():
             #     print("     Reg0x89: {}".format(int_value))
             #     count += 1
             #     time.sleep(1)
-            # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
             # 6. Stop state machine
 
             self.send_cmd(disable_sm_vsr1)
@@ -1475,10 +1404,6 @@ class HexitecFem():
             self.read_response()
             self.send_cmd(disable_dc_vsr2)
             self.read_response()
-            if self.debug_register24:  # pragma: no cover
-                (vsr2, vsr1) = self.debug_reg24()
-                print("\n")
-                logging.debug("  * 11 *** coll_off, SET b3,5;  Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
             # 8. Start state machine
 
@@ -1494,11 +1419,6 @@ class HexitecFem():
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], HexitecFem.CLR_REG_BIT,
                            0x32, 0x34, 0x32, 0x30, 0x0D])
             self.read_response()
-
-            if self.debug_register24:  # pragma: no cover
-                (vsr2, vsr1) = self.debug_reg24()
-                print("\n")
-                logging.debug("  * 12 *** coll_off, SET b5;    Reg 0x24: %s, %s ***" % (vsr2, vsr1))
 
             self.operation_percentage_complete = 100
             self._set_status_message("Offsets collections operation completed.")
