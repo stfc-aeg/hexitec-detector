@@ -78,6 +78,7 @@ namespace FrameProcessor
       std::string sensors_layout_str_;
       HexitecSensorLayoutMap sensors_layout_;
 
+      void process_end_of_acquisition();
       void process_frame(boost::shared_ptr<Frame> frame);
 
       void add_frame_data_to_histogram_with_sum(float *frame);

@@ -291,7 +291,9 @@ class HexitecDAQ():
                 if self.shutdown_processing:
                     self.shutdown_processing = False
                     self.in_progress = False
-                    IOLoop.instance().add_callback(self.stop_acquisition)
+                    # Don't turn off FileWriterPlugin; Wait for EndOfAcquisition to flush out histograms
+                    self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
+                    self.file_writing = False
                     return
             else:
                 # Data still bein' processed
@@ -525,7 +527,7 @@ class HexitecDAQ():
         request.body = "{}".format(self.number_frames)
         self.adapters["fp"].put(command, request)
 
-        # Finally, update self_writing so FEM(s) can safely begin sending data
+        # Finally, update own file_writing so FEM(s) know the status
         self.file_writing = writing
 
     def _config_odin_data(self, adapter):

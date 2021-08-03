@@ -63,6 +63,7 @@ namespace FrameProcessor
 
       void process_lost_packets(boost::shared_ptr<Frame>& frame);
       void process_frame(boost::shared_ptr<Frame> frame);
+
       // Float type array version currently used:
       void reorder_pixels(unsigned short *in, float *out);
       // Convert pixels from unsigned short to float type without reordering
