@@ -466,8 +466,10 @@ class TestDAQ(unittest.TestCase):
             self.test_daq.daq.parent.fems[0].hardware_busy = True
             self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.shutdown_processing = True
+            self.test_daq.daq.frames_processed = 0
             self.test_daq.daq.processing_check_loop()
-            mock_loop.instance().add_callback.assert_called_with(self.test_daq.daq.stop_acquisition)
+            assert self.test_daq.daq.file_writing is False
+            assert self.test_daq.daq.shutdown_processing is False
 
     def test_processing_check_loop_polling_while_data_being_processed(self):
         """Test processing check loop polls itself while data coming in."""

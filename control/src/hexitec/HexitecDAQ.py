@@ -268,15 +268,6 @@ class HexitecDAQ():
         # Not fudge initialisation; Check HDF/histogram processing progress
         processing_status = self.get_od_status('fp').get(self.plugin, {'frames_processed': 0})
 
-        # # Debugging information:
-        # hdf_status = self.get_od_status('fp').get('hdf', {"frames_processed": 0})
-        # his_status = self.get_od_status('fp').get('histogram', {'frames_processed': 0})
-        # print("")
-        # logging.debug("      proc'g_chek_loop, hdf (%s) v his (%s) v frm_end_acq (%s) PLUG = %s" %
-        #              (hdf_status['frames_processed'], his_status['frames_processed'],
-        #               self.frame_end_acquisition, self.plugin))
-        # print("")
-
         if processing_status['frames_processed'] == self.frame_end_acquisition:
             delay = 1.0
             IOLoop.instance().call_later(delay, self.stop_acquisition)
