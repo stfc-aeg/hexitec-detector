@@ -292,6 +292,17 @@ namespace FrameProcessor
     return true;
   }
 
+  /** Process an EndOfAcquisitionFrame.
+  *
+  * Write histograms to disk on end of acquisition
+  */
+  void HexitecHistogramPlugin::process_end_of_acquisition()
+  {
+    LOG4CXX_INFO(logger_, "End of acquisition frame received, writing histograms to disk");
+    writeHistogramsToDisk();
+    frames_processed_ = 0;
+  }
+
   /**
    * Perform processing on the frame.  Calculate histograms based upon
    * each frame, writing resulting datasets to file when configured
