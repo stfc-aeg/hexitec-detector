@@ -268,15 +268,6 @@ class HexitecDAQ():
         # Not fudge initialisation; Check HDF/histogram processing progress
         processing_status = self.get_od_status('fp').get(self.plugin, {'frames_processed': 0})
 
-        # # Debugging information:
-        # hdf_status = self.get_od_status('fp').get('hdf', {"frames_processed": 0})
-        # his_status = self.get_od_status('fp').get('histogram', {'frames_processed': 0})
-        # print("")
-        # logging.debug("      proc'g_chek_loop, hdf (%s) v his (%s) v frm_end_acq (%s) PLUG = %s" %
-        #              (hdf_status['frames_processed'], his_status['frames_processed'],
-        #               self.frame_end_acquisition, self.plugin))
-        # print("")
-
         if processing_status['frames_processed'] == self.frame_end_acquisition:
             delay = 1.0
             IOLoop.instance().call_later(delay, self.stop_acquisition)
@@ -291,7 +282,9 @@ class HexitecDAQ():
                 if self.shutdown_processing:
                     self.shutdown_processing = False
                     self.in_progress = False
-                    IOLoop.instance().add_callback(self.stop_acquisition)
+                    # Don't turn off FileWriterPlugin; Wait for EndOfAcquisition to flush out histograms
+                    self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
+                    self.file_writing = False
                     return
             else:
                 # Data still bein' processed
@@ -525,7 +518,7 @@ class HexitecDAQ():
         request.body = "{}".format(self.number_frames)
         self.adapters["fp"].put(command, request)
 
-        # Finally, update self_writing so FEM(s) can safely begin sending data
+        # Finally, update own file_writing so FEM(s) know the status
         self.file_writing = writing
 
     def _config_odin_data(self, adapter):

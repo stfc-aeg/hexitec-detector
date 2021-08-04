@@ -617,6 +617,14 @@ class TestDetector(unittest.TestCase):
 
     def test_cancel_acquisition(self):
         """Test function can cancel (in software) ongoing acquisition."""
+        self.test_adapter.detector.daq.configure_mock(
+            in_progress=False
+        )
+
+        self.test_adapter.detector.fems[0].bias_voltage_refresh = False
+        self.test_adapter.detector.first_initialisation = True
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        print(self.test_adapter.adapters)
         self.test_adapter.detector.fems[0].stop_acquisition = False
         self.test_adapter.detector.cancel_acquisition()
 

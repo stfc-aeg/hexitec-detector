@@ -714,6 +714,12 @@ class Hexitec():
         """
         for fem in self.fems:
             fem.stop_acquisition = True
+
+        # Inject End of Acquisition Frame
+        command = "config/inject_eoa"
+        request = ApiAdapterRequest("", content_type="application/json")
+        self.adapters["fp"].put(command, request)
+
         self.shutdown_processing()
 
     def _collect_offsets(self, msg):
@@ -724,10 +730,6 @@ class Hexitec():
     def commit_configuration(self, msg):
         """Push HexitecDAQ's 'config/' ParameterTree settings into FP's plugins."""
         self.daq.commit_configuration()
-        # # DEBUGGING ONLY: Ensure fudge for everyone(!)
-        # self.first_initialisation  = True
-        # self.fems[0].first_initialisation  = True
-        # self.daq.first_initialisation = True
 
     def get_server_uptime(self):
         """
