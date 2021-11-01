@@ -7,6 +7,8 @@ from hexitec.FileInterface import FileInterfaceAdapter
 from odin.adapters.parameter_tree import ParameterTreeError
 
 import unittest
+import pytest
+import time
 import sys
 import os
 
@@ -113,6 +115,27 @@ class DetectorAdapterTestFixture(object):
 class TestDetectorAdapter(unittest.TestCase):
     """Unit tests for the FileInterface class."""
 
+    def test_init_bad_path(self):
+        """Initialise object."""
+
+        # Construct paths relative to current working directory
+        cwd = os.getcwd()
+        base_path_index = cwd.rfind("hexitec-detector")
+        base_path = cwd[:base_path_index]
+        odin_control_path = base_path + "hexitec-detector/control/"
+        odin_data_path = base_path + "hexitec-detector/data/"
+
+        # Provoke KeyError
+        options = {
+            "directories":
+                "odin_data  {}config/".format(odin_data_path)
+        }
+
+        # with patch('logging.debug') as mock_log:
+        with self.assertRaises(KeyError):
+            new_adapter = FileInterfaceAdapter(**options)
+            # mock_log.assert_called_with('Illegal directory target specified')
+
     def setUp(self):
         """Set up test fixture for each unit test."""
         self.test_detector_adapter = DetectorAdapterTestFixture()
@@ -197,30 +220,19 @@ class TestDetectorAdapter(unittest.TestCase):
         assert response.data == expected_response
         assert response.status_code == 200
 
+    def test_detector_init(self):
+        """Test function initialises detector OK."""
+        # Construct paths relative to current working directory
+        cwd = os.getcwd()
+        base_path_index = cwd.find("hexitec-detector")
+        base_path = cwd[:base_path_index]
+        odin_data_path = base_path + "hexitec-detector/data/"
 
-# Do not extend coverage any at all
-# class TestDetector(): #unittest.TestCase):
-#     """Unit tests for detector class."""
+        config_dir = "{}config/".format(odin_data_path)
+        assert self.test_detector_adapter.detector.odin_data_config_dir == config_dir
 
-#     def setUp(self):
-#         """Set up test fixture for each unit test."""
-#         self.test_adapter = DetectorAdapterTestFixture()
-
-#     # TODO: Does not extend coverage one iota !!!1!
-#     def test_detector_init(self):
-#         """Test function initialises detector OK."""
-#         # Construct paths relative to current working directory
-#         cwd = os.getcwd()
-#         base_path_index = cwd.find("hexitec-detector")
-#         base_path = cwd[:base_path_index]
-#         odin_data_path = base_path + "hexitec-detector/data/"
-
-#         config_dir = "{}config/".format(odin_data_path)
-#         assert self.test_detector_adapter.detector.odin_data_config_dir == config_dir
-
-#     # TODO: Does not extend coverage one iota neither
-#     def test_get_server_uptime(self):
-#       """Test function get server update okay."""
-#       start_time = self.test_detector_adapter.detector.init_time
-#       up_time = self.test_detector_adapter.detector.get_server_uptime()
-#       assert pytest.approx(up_time, rel=1) == time.time() - start_time
+    def test_get_server_uptime(self):
+      """Test function get server update okay."""
+      start_time = self.test_detector_adapter.detector.init_time
+      up_time = self.test_detector_adapter.detector.get_server_uptime()
+      assert pytest.approx(up_time, rel=1) == time.time() - start_time
