@@ -186,7 +186,7 @@ class GenerateConfigFiles():
 
         # Construct path relative to current working directory
         cwd = os.getcwd()
-        base_path_index = cwd.find("hexitec-detector")
+        base_path_index = cwd.rfind("hexitec-detector")
         odin_path = cwd[:base_path_index - 1]
 
         store_plugin_paths = ""

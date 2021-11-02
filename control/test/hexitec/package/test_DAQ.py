@@ -695,7 +695,7 @@ class TestDAQ(unittest.TestCase):
 
         # Verify relative paths match:
         gradients_file = self.test_daq.daq.gradients_filename
-        index = gradients_file.find("data")
+        index = gradients_file.rfind("data")
         verified_filename = gradients_file[index:]
         assert gradients_filename == verified_filename
 
@@ -710,7 +710,7 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq._set_intercepts_filename(intercepts_filename)
         # Verify relative paths match:
         intercepts_file = self.test_daq.daq.intercepts_filename
-        index = intercepts_file.find("data")
+        index = intercepts_file.rfind("data")
         verified_filename = intercepts_file[index:]
         assert intercepts_filename == verified_filename
 
@@ -725,7 +725,7 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq._set_threshold_filename(threshold_filename)
         # Verify relative paths match:
         threshold_file = self.test_daq.daq.threshold_filename
-        index = threshold_file.find("data")
+        index = threshold_file.rfind("data")
         verified_filename = threshold_file[index:]
         assert threshold_filename == verified_filename
 
