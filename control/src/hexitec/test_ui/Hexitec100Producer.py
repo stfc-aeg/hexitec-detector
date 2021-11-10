@@ -1,6 +1,6 @@
 """Takes a binary file and transmits specified number of frames.
 
-Created on Sept 26, 2018
+Created on Nov 08, 2021
 
 @author: Christian Angelsen
 """
@@ -8,6 +8,7 @@ Created on Sept 26, 2018
 from __future__ import print_function
 
 import argparse
+from scapy.all import PcapReader, UDP
 import numpy as np
 import socket
 import time
@@ -15,7 +16,7 @@ import sys
 import os
 
 
-class HexitecUdpProducerError(Exception):
+class Hexitec100ProducerError(Exception):
     """Customised exception class."""
 
     def __init__(self, msg):
@@ -27,7 +28,7 @@ class HexitecUdpProducerError(Exception):
         return repr(self.msg)
 
 
-class HexitecUdpProducerDefaults(object):
+class Hexitec100ProducerDefaults(object):
     """Holds default values for frame producer parameters."""
 
     def __init__(self):
@@ -42,7 +43,7 @@ class HexitecUdpProducerDefaults(object):
         self.filename = 'sample.bin'
 
 
-class HexitecUdpProducer(object):
+class Hexitec100Producer(object):
     """Produce and transmit specified UDP frames."""
 
     def __init__(self, host, port, frames, sensorrows, sensorcolumns,
@@ -73,14 +74,62 @@ class HexitecUdpProducer(object):
 
         if os.access(self.filename, os.R_OK):
             print("Selected", self.frames, "frames, ", bytesToRead, "bytes.")
-            f = open(self.filename, "rb")
-            f.seek(0, os.SEEK_SET)
-            file_contents = np.fromfile(f, dtype=np.int16, count=pixelsToRead)
-            self.byteStream = file_contents.tostring()
-            f.close()
+            file_contents = self.decode_pcap()
+            self.byteStream = file_contents.tobytes()
         else:
             print("Unable to open: {}. Does it exist?".format(self.filename))
             sys.exit(1)
+
+    # Extracts extended header-sized udp data from file
+    def decode_pcap(self):
+
+        SOF = 1<<63
+        EOF = 1<<62
+        NCOLS = 80
+        NROWS = 80
+        NPIXELS = NCOLS * NROWS
+        HEADER_SIZE = 64
+
+        # Initialise frame list and counters
+        frames = []
+        num_packets = 0
+        num_frames = 0
+
+        # Create a PCAP reader instance
+        packets = PcapReader(self.filename)
+
+        # Iterate through packets in reader
+        for packet in packets:
+            num_packets += 1
+
+            # Extract UDP packet payload
+            payload = bytes(packet[UDP].payload)
+
+            # Read frame header
+            header = np.frombuffer(payload[:HEADER_SIZE], dtype=np.uint64)
+            #print([hex(val) for val in header])
+            assert header[0] == num_frames
+
+            # If this is a start of frame packet, reset frame data
+            if int(header[1]) & SOF:
+                frame_data = bytes()
+
+            # Append frame payload to frame data, discarding header
+            frame_data += payload[HEADER_SIZE:]
+
+            # If this is an end of frame packet, convert frame data to numpy array and append to frame list
+            if int(header[1]) & EOF:
+                frame = np.frombuffer(frame_data, dtype=np.uint16).reshape((80, 80))
+                assert frame.size == NPIXELS
+                frames.append(frame)
+                num_frames += 1
+
+        # Convert frame list to 3D numpy array
+        frames = np.array(frames)
+
+        print("Decoded {} frames from {} packets in PCAP file {}".format(num_frames, num_packets, self.filename))
+
+        return frames
 
     def run(self):
         """Transmit data to address, port."""
@@ -130,7 +179,7 @@ class HexitecUdpProducer(object):
                     header[1] = packetCounter | endOfFrame
 
                 # Prepend header to current packet
-                packet = header.tostring() + self.byteStream[streamPosn:streamPosn + bytesToSend]
+                packet = header.tobytes() + self.byteStream[streamPosn:streamPosn + bytesToSend]
 
                 # print("Header: 0x{0:08x} 0x{1:08x}".format(header[0], header[1]))
                 if not self.quiet:
@@ -169,7 +218,7 @@ class HexitecUdpProducer(object):
 
 if __name__ == '__main__':
 
-    desc = "HexitecUdpProducer - generate UDP data stream from bin file"
+    desc = "Hexitec100Producer - generate UDP data stream from bin file"
     parser = argparse.ArgumentParser(description=desc)
 
     parser.add_argument('--host', type=str, default='127.0.0.1',
@@ -196,5 +245,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    producer = HexitecUdpProducer(**vars(args))
+    producer = Hexitec100Producer(**vars(args))
     producer.run()
