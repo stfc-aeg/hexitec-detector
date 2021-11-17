@@ -128,12 +128,12 @@ namespace FrameSimulator {
         // check header flags
         const Hexitec::PacketHeader* packet_hdr = reinterpret_cast<const Hexitec::PacketHeader*>(data);
 
-        uint32_t frame_number = packet_hdr->frame_counter;
-        uint32_t packet_number_flags = packet_hdr->packet_number_flags;
+        uint64_t frame_number = packet_hdr->frame_counter;
+        uint32_t packet_flags = packet_hdr->packet_flags;
 
-        bool is_SOF = packet_number_flags & Hexitec::start_of_frame_mask;
-        bool is_EOF = packet_number_flags & Hexitec::end_of_frame_mask;
-        uint32_t packet_number = packet_number_flags & Hexitec::packet_number_mask;
+        bool is_SOF = packet_flags & Hexitec::start_of_frame_mask;
+        bool is_EOF = packet_flags & Hexitec::end_of_frame_mask;
+        uint32_t packet_number = packet_hdr->packet_number & Hexitec::packet_number_mask;
 
         if(is_SOF) {
             LOG4CXX_DEBUG(logger_, "SOF Marker for Frame " << frame_number << " at packet "
@@ -193,13 +193,14 @@ namespace FrameSimulator {
                 // Setup Head Packet Header
                 Hexitec::PacketHeader* head_packet_header = 
                     reinterpret_cast<Hexitec::PacketHeader*>(head_packet_data);
-                packet_flags = (packet_number & Hexitec::packet_number_mask);
+                packet_number = (packet_number & Hexitec::packet_number_mask);
                 // Add SoF if this is the first packet of the frame
                 if (packet_number == 0)
                     packet_flags = packet_flags | Hexitec::start_of_frame_mask;
                 
                 head_packet_header->frame_counter = frame;
-                head_packet_header->packet_number_flags = packet_flags;
+                head_packet_header->packet_number = packet_number;
+                head_packet_header->packet_flags = packet_flags;
 
                 // Copy data into packet
                 memcpy((head_packet_data + sizeof(Hexitec::PacketHeader)), data_ptr, Hexitec::primary_packet_size);
@@ -210,15 +211,15 @@ namespace FrameSimulator {
                 // Increment packet number and data_ptr
                 packet_number += 1;
                 data_ptr += Hexitec::primary_packet_size;
-            }            
+            }
             // Repeat for the Tail Packet Header and Data
             Hexitec::PacketHeader* tail_packet_header = 
                 reinterpret_cast<Hexitec::PacketHeader*>(tail_packet_data);
-            packet_flags =
-                (packet_number & Hexitec::packet_number_mask) | Hexitec::end_of_frame_mask;
-            
+            packet_flags = packet_flags | Hexitec::end_of_frame_mask;
+
             tail_packet_header->frame_counter = frame;
-            tail_packet_header->packet_number_flags = packet_flags;
+            tail_packet_header->packet_number = packet_number;
+            tail_packet_header->packet_flags = packet_flags;
 
             // Copy data into Head Packet
             memcpy((tail_packet_data + sizeof(Hexitec::PacketHeader)), data_ptr, Hexitec::tail_packet_size[sensors_config_]);

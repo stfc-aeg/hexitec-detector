@@ -91,7 +91,8 @@ std::string HexitecFrameDecoder::get_version_long()
 //!
 void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_msg)
 {
-
+  enable_packet_logging_ = 1; // DEBUGGING
+  std::cout << "\n\n enable_packet_logging_: " << enable_packet_logging_ << "\n\n";
   // Pass the configuration message to the base class decoder
   FrameDecoder::init(logger, config_msg);
 
@@ -141,11 +142,11 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
     LOG4CXX_INFO(packet_logger_, "PktHdr: SourceAddress");
     LOG4CXX_INFO(packet_logger_, "PktHdr: |               SourcePort");
     LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     DestinationPort");
-    LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     |      FrameCounter  [4 Bytes]");
+    LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     |      FrameCounter  [8 Bytes]");
     LOG4CXX_INFO(packet_logger_,
-        "PktHdr: |               |     |      |           PacketCounter&Flags [4 Bytes]");
-    LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     |      |           |");
-    LOG4CXX_INFO(packet_logger_, "PktHdr: |-------------- |---- |----  |---------- |----------");
+        "PktHdr: |               |     |      |                         PacketCounter&Flags [8 Bytes]");
+    LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     |      |                         |");
+    LOG4CXX_INFO(packet_logger_, "PktHdr: |-------------- |---- |----  |----------------------   |----------------------");
   }
 
   // Reset the scratched and lost packet counters
@@ -275,7 +276,7 @@ void HexitecFrameDecoder::process_packet_header(size_t bytes_received, int port,
   }
 
   // Extract fields from packet header
-  uint32_t frame_counter = get_frame_counter ();
+  uint64_t frame_counter = get_frame_counter ();
   uint32_t packet_number = get_packet_number ();
   bool start_of_frame_marker = get_start_of_frame_marker ();
   bool end_of_frame_marker = get_end_of_frame_marker ();
@@ -632,7 +633,7 @@ uint32_t HexitecFrameDecoder::get_frame_counter(void) const
 uint32_t HexitecFrameDecoder::get_packet_number(void) const
 {
   return reinterpret_cast<Hexitec::PacketHeader*>(
-      current_packet_header_.get())->packet_number_flags & Hexitec::packet_number_mask;
+      current_packet_header_.get())->packet_number & Hexitec::packet_number_mask;
 }
 
 //! Get the current packet start of frame (SOF) marker.
@@ -643,9 +644,9 @@ uint32_t HexitecFrameDecoder::get_packet_number(void) const
 //!
 bool HexitecFrameDecoder::get_start_of_frame_marker(void) const
 {
-  uint32_t packet_number_flags =
-      reinterpret_cast<Hexitec::PacketHeader*>(current_packet_header_.get())->packet_number_flags;
-  return ((packet_number_flags & Hexitec::start_of_frame_mask) != 0);
+  uint32_t packet_flags =
+      reinterpret_cast<Hexitec::PacketHeader*>(current_packet_header_.get())->packet_flags;
+  return ((packet_flags & Hexitec::start_of_frame_mask) != 0);
 }
 
 //! Get the current packet end of frame (EOF) marker.
@@ -656,9 +657,9 @@ bool HexitecFrameDecoder::get_start_of_frame_marker(void) const
 //!
 bool HexitecFrameDecoder::get_end_of_frame_marker(void) const
 {
-  uint32_t packet_number_flags =
-      reinterpret_cast<Hexitec::PacketHeader*>(current_packet_header_.get())->packet_number_flags;
-  return ((packet_number_flags & Hexitec::end_of_frame_mask) != 0);
+  uint32_t packet_flags =
+      reinterpret_cast<Hexitec::PacketHeader*>(current_packet_header_.get())->packet_flags;
+  return ((packet_flags & Hexitec::end_of_frame_mask) != 0);
 }
 
 //! Calculate and return an elapsed time in milliseconds.

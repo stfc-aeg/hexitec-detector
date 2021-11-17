@@ -49,6 +49,8 @@ class Hexitec100Producer(object):
     def __init__(self, host, port, frames, sensorrows, sensorcolumns,
                  interval, display, quiet, filename):
         """Initialise object with command line arguments."""
+        self.SOF = 1<<63
+        self.EOF = 1<<62
         pixelsPerRow = 80
         pixelsPerColumn = 80
         self.host = host
@@ -83,8 +85,6 @@ class Hexitec100Producer(object):
     # Extracts extended header-sized udp data from file
     def decode_pcap(self):
 
-        SOF = 1<<63
-        EOF = 1<<62
         NCOLS = 80
         NROWS = 80
         NPIXELS = NCOLS * NROWS
@@ -107,18 +107,18 @@ class Hexitec100Producer(object):
 
             # Read frame header
             header = np.frombuffer(payload[:HEADER_SIZE], dtype=np.uint64)
-            #print([hex(val) for val in header])
+            # print([hex(val) for val in header])
             assert header[0] == num_frames
 
             # If this is a start of frame packet, reset frame data
-            if int(header[1]) & SOF:
+            if int(header[1]) & self.SOF:
                 frame_data = bytes()
 
             # Append frame payload to frame data, discarding header
             frame_data += payload[HEADER_SIZE:]
 
             # If this is an end of frame packet, convert frame data to numpy array and append to frame list
-            if int(header[1]) & EOF:
+            if int(header[1]) & self.EOF:
                 frame = np.frombuffer(frame_data, dtype=np.uint16).reshape((80, 80))
                 assert frame.size == NPIXELS
                 frames.append(frame)
@@ -134,8 +134,6 @@ class Hexitec100Producer(object):
     def run(self):
         """Transmit data to address, port."""
         self.payloadLen = 8000
-        startOfFrame = 0x80000000
-        endOfFrame = 0x40000000
 
         print("Transmitting Hexitec data to address {} port {} ...".format(self.host, self.port))
 
@@ -143,7 +141,7 @@ class Hexitec100Producer(object):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         # Create packet header
-        header = np.zeros(2, dtype=np.uint32)
+        header = np.zeros(2, dtype=np.uint64)
 
         self.framesSent = 0
         self.packetsSent = 0
@@ -171,12 +169,12 @@ class Hexitec100Producer(object):
                 if (packetCounter < self.primaryPackets):
                     bytesToSend = 8000
                     if (packetCounter == 0):
-                        header[1] = packetCounter | startOfFrame
+                        header[1] = packetCounter | self.SOF
                     else:
                         header[1] = packetCounter
                 else:
                     bytesToSend = self.trailingPacketSize
-                    header[1] = packetCounter | endOfFrame
+                    header[1] = packetCounter | self.EOF
 
                 # Prepend header to current packet
                 packet = header.tobytes() + self.byteStream[streamPosn:streamPosn + bytesToSend]
