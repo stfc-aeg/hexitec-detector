@@ -32,16 +32,16 @@ const std::string HexitecFrameDecoder::CONFIG_PACKET_HEADER_EXTENDED = "packet_h
 //!
 HexitecFrameDecoder::HexitecFrameDecoder() :
     FrameDecoderUDP(),
-		sensors_config_(Hexitec::sensorConfigTwo),
+    sensors_config_(Hexitec::sensorConfigTwo),
     packet_header_extended_(false),
-		current_frame_seen_(Hexitec::default_frame_number),
+    current_frame_seen_(Hexitec::default_frame_number),
     current_frame_buffer_id_(Hexitec::default_frame_number),
     current_frame_buffer_(0),
     current_frame_header_(0),
     dropping_frame_data_(false),
     packets_ignored_(0),
     packets_lost_(0),
-	  fem_packets_lost_(0)
+    fem_packets_lost_(0)
 {
   if (packet_header_extended_)
     packet_header_size_ = sizeof(Hexitec::PacketExtendedHeader);
@@ -139,7 +139,7 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
 
   parse_sensors_layout_map(sensors_layout_str_);
 
-  // Determine whether 8 or 16 byte packet size
+  // Determine whether 8 or 16 byte packet header size
   if (config_msg.has_param(CONFIG_PACKET_HEADER_EXTENDED))
   {
     int extended = config_msg.get_param<int>(CONFIG_PACKET_HEADER_EXTENDED);
