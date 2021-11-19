@@ -51,10 +51,16 @@ namespace Hexitec {
 
     typedef struct
     {
+    	uint32_t frame_counter;
+    	uint32_t packet_number_flags;
+    } PacketHeader;
+
+    typedef struct
+    {
       uint64_t frame_counter;
       uint32_t packet_number;
       uint32_t packet_flags;
-    } PacketHeader;
+    } PacketExtendedHeader;
 
     typedef struct
     {

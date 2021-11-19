@@ -21,6 +21,7 @@ using namespace FrameReceiver;
 
 const std::string HexitecFrameDecoder::CONFIG_FEM_PORT_MAP = "fem_port_map";
 const std::string HexitecFrameDecoder::CONFIG_SENSORS_LAYOUT = "sensors_layout";
+const std::string HexitecFrameDecoder::CONFIG_PACKET_HEADER_EXTENDED = "packet_header_extended";
 
 #define MAX_IGNORED_PACKET_REPORTS 10
 
@@ -32,6 +33,7 @@ const std::string HexitecFrameDecoder::CONFIG_SENSORS_LAYOUT = "sensors_layout";
 HexitecFrameDecoder::HexitecFrameDecoder() :
     FrameDecoderUDP(),
 		sensors_config_(Hexitec::sensorConfigTwo),
+    packet_header_extended_(false),
 		current_frame_seen_(Hexitec::default_frame_number),
     current_frame_buffer_id_(Hexitec::default_frame_number),
     current_frame_buffer_(0),
@@ -39,14 +41,16 @@ HexitecFrameDecoder::HexitecFrameDecoder() :
     dropping_frame_data_(false),
     packets_ignored_(0),
     packets_lost_(0),
-	fem_packets_lost_(0)
+	  fem_packets_lost_(0)
 {
-
+  if (packet_header_extended_)
+    packet_header_size_ = sizeof(Hexitec::PacketExtendedHeader);
+  else
+    packet_header_size_ = sizeof(Hexitec::PacketHeader);
   // Allocate buffers for packet header, dropped frames and scratched packets
-  current_packet_header_.reset(new uint8_t[sizeof(Hexitec::PacketHeader)]);
+  current_packet_header_.reset(new uint8_t[packet_header_size_]);
   dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size(sensors_config_)]);
   ignored_packet_buffer_.reset(new uint8_t[Hexitec::primary_packet_size]);
-
 }
 
 //! Destructor for HexitecFrameDecoder
@@ -91,8 +95,7 @@ std::string HexitecFrameDecoder::get_version_long()
 //!
 void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_msg)
 {
-  enable_packet_logging_ = 1; // DEBUGGING
-  std::cout << "\n\n enable_packet_logging_: " << enable_packet_logging_ << "\n\n";
+
   // Pass the configuration message to the base class decoder
   FrameDecoder::init(logger, config_msg);
 
@@ -104,15 +107,15 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
   // of the map parsing.
   if (config_msg.has_param(CONFIG_FEM_PORT_MAP))
   {
-      fem_port_map_str_ = config_msg.get_param<std::string>(CONFIG_FEM_PORT_MAP);
-      LOG4CXX_DEBUG_LEVEL(1, logger_, "Parsing FEM to port map found in config: "
-                          << fem_port_map_str_);
+    fem_port_map_str_ = config_msg.get_param<std::string>(CONFIG_FEM_PORT_MAP);
+    LOG4CXX_DEBUG_LEVEL(1, logger_, "Parsing FEM to port map found in config: "
+                        << fem_port_map_str_);
   }
   else
   {
-      LOG4CXX_DEBUG_LEVEL(1,logger_, "No FEM to port map found in config, using default: "
-                          << default_fem_port_map);
-      fem_port_map_str_ = default_fem_port_map;
+    LOG4CXX_DEBUG_LEVEL(1,logger_, "No FEM to port map found in config, using default: "
+                        << default_fem_port_map);
+    fem_port_map_str_ = default_fem_port_map;
   }
 
   parse_fem_port_map(fem_port_map_str_);
@@ -120,33 +123,67 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
   // Determine how many sensors to configure for
   if (config_msg.has_param(CONFIG_SENSORS_LAYOUT))
   {
-      sensors_layout_str_ = config_msg.get_param<std::string>(CONFIG_SENSORS_LAYOUT);
-      LOG4CXX_DEBUG_LEVEL(1, logger_, "Parsing number of sensors entry found in config: "
-                          << sensors_layout_str_);
-      // Because the image dimensions have been updated, the frame size, ergo buffer size too,
-      //  has changed and must be updated:
-      dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size(sensors_config_)]);
+    sensors_layout_str_ = config_msg.get_param<std::string>(CONFIG_SENSORS_LAYOUT);
+    LOG4CXX_DEBUG_LEVEL(1, logger_, "Parsing number of sensors entry found in config: "
+                        << sensors_layout_str_);
+    // Because the image dimensions have been updated, the frame size, ergo buffer size too,
+    //  has changed and must be updated:
+    dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size(sensors_config_)]);
   }
   else
   {
-      LOG4CXX_DEBUG_LEVEL(1,logger_, "No number of sensors entry found in config, using default: "
-                          << default_sensors_layout_map);
-      sensors_layout_str_ = default_sensors_layout_map;
+    LOG4CXX_DEBUG_LEVEL(1,logger_, "No number of sensors entry found in config, using default: "
+                        << default_sensors_layout_map);
+    sensors_layout_str_ = default_sensors_layout_map;
   }
 
   parse_sensors_layout_map(sensors_layout_str_);
 
+  // Determine whether 8 or 16 byte packet size
+  if (config_msg.has_param(CONFIG_PACKET_HEADER_EXTENDED))
+  {
+    int extended = config_msg.get_param<int>(CONFIG_PACKET_HEADER_EXTENDED);
+    if (extended)
+    {
+      packet_header_extended_ = true;
+      packet_header_size_ = sizeof(Hexitec::PacketExtendedHeader);
+    }
+    else
+    {
+      packet_header_extended_ = false;
+      packet_header_size_ = sizeof(Hexitec::PacketHeader);
+    }
+    current_packet_header_.reset(new uint8_t[packet_header_size_]);
+  }
+  
   // Print a packet logger header to the appropriate logger if enabled
   if (enable_packet_logging_)
   {
-    LOG4CXX_INFO(packet_logger_, "PktHdr: SourceAddress");
-    LOG4CXX_INFO(packet_logger_, "PktHdr: |               SourcePort");
-    LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     DestinationPort");
-    LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     |      FrameCounter  [8 Bytes]");
-    LOG4CXX_INFO(packet_logger_,
-        "PktHdr: |               |     |      |                         PacketCounter&Flags [8 Bytes]");
-    LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     |      |                         |");
-    LOG4CXX_INFO(packet_logger_, "PktHdr: |-------------- |---- |----  |----------------------   |----------------------");
+    if (packet_header_extended_)
+    {
+      // Extended (16 byte) header size
+      LOG4CXX_INFO(packet_logger_, "PktHdr: SourceAddress");
+      LOG4CXX_INFO(packet_logger_, "PktHdr: |               SourcePort");
+      LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     DestinationPort");
+      LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     |      FrameCounter  [8 Bytes]");
+      LOG4CXX_INFO(packet_logger_,
+          "PktHdr: |               |     |      |                         PacketCounter&Flags [8 Bytes]");
+      LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     |      |                         |");
+      LOG4CXX_INFO(packet_logger_,
+          "PktHdr: |-------------- |---- |----  |----------------------   |----------------------");
+    }
+    else
+    {
+      // Original (8 byte) header size
+      LOG4CXX_INFO(packet_logger_, "PktHdr: SourceAddress");
+      LOG4CXX_INFO(packet_logger_, "PktHdr: |               SourcePort");
+      LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     DestinationPort");
+      LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     |      FrameCounter  [4 Bytes]");
+      LOG4CXX_INFO(packet_logger_,
+          "PktHdr: |               |     |      |           PacketCounter&Flags [4 Bytes]");
+      LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     |      |           |");
+      LOG4CXX_INFO(packet_logger_, "PktHdr: |-------------- |---- |----  |---------- |----------");
+    }
   }
 
   // Reset the scratched and lost packet counters
@@ -165,7 +202,7 @@ void HexitecFrameDecoder::request_configuration(const std::string param_prefix,
   // Add current configuration parameters to reply
   config_reply.set_param(param_prefix + CONFIG_FEM_PORT_MAP, fem_port_map_str_);
   config_reply.set_param(param_prefix + CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
-//  config_reply.set_param(param_prefix + CONFIG_BITDEPTH, asic_bit_depth_str_[asic_counter_bit_depth_]);
+  config_reply.set_param(param_prefix + CONFIG_PACKET_HEADER_EXTENDED, packet_header_extended_);
 
 }
 
@@ -203,7 +240,7 @@ const size_t HexitecFrameDecoder::get_frame_header_size(void) const
 //!
 const size_t HexitecFrameDecoder::get_packet_header_size(void) const
 {
-  return sizeof(Hexitec::PacketHeader);
+  return packet_header_size_;
 }
 
 //! Get a pointer to the packet header buffer.
@@ -238,12 +275,12 @@ void HexitecFrameDecoder::process_packet_header(size_t bytes_received, int port,
   if (enable_packet_logging_)
   {
     std::stringstream ss;
-    uint8_t* hdr_ptr = reinterpret_cast<uint8_t*>(current_packet_header_.get ());
+    uint8_t* hdr_ptr = reinterpret_cast<uint8_t*>(current_packet_header_.get());
     ss << "PktHdr: " << std::setw (15) << std::left << inet_ntoa (from_addr->sin_addr)
         << std::right << " " << std::setw (5) << ntohs (from_addr->sin_port) << " " << std::setw(5)
         << port << std::hex;
 
-    for (unsigned int hdr_byte = 0; hdr_byte < sizeof(Hexitec::PacketHeader); hdr_byte++)
+    for (unsigned int hdr_byte = 0; hdr_byte < packet_header_size_; hdr_byte++)
     {
       if (hdr_byte % 8 == 0)
       {
@@ -259,7 +296,6 @@ void HexitecFrameDecoder::process_packet_header(size_t bytes_received, int port,
   // Resolve the FEM index from the port the packet arrived on
   if (fem_port_map_.count(port)) {
     current_packet_fem_map_ =  fem_port_map_[port];
-
   }
   else
   {
@@ -275,13 +311,22 @@ void HexitecFrameDecoder::process_packet_header(size_t bytes_received, int port,
     }
   }
 
+  int frame = 0;
   // Extract fields from packet header
-  uint64_t frame_counter = get_frame_counter ();
-  uint32_t packet_number = get_packet_number ();
-  bool start_of_frame_marker = get_start_of_frame_marker ();
-  bool end_of_frame_marker = get_end_of_frame_marker ();
+  if (packet_header_extended_)
+  {
+    uint64_t frame_counter = get_64b_frame_counter();
+    frame = static_cast<int>(frame_counter);
+  }
+  else
+  {
+    uint32_t frame_counter = get_32b_frame_counter();
+    frame = static_cast<int>(frame_counter);
+  }
+  uint32_t packet_number = get_packet_number();
+  bool start_of_frame_marker = get_start_of_frame_marker();
+  bool end_of_frame_marker = get_end_of_frame_marker();
 
-  int frame = static_cast<int> (frame_counter);
 
   LOG4CXX_DEBUG_LEVEL(3, logger_, "Got packet header:" << " packet: " << packet_number
       << " SOF: " << (int) start_of_frame_marker << " EOF: " << (int) end_of_frame_marker
@@ -395,7 +440,7 @@ void HexitecFrameDecoder::initialise_frame_header(Hexitec::FrameHeader* header_p
 //!
 //! This method returns a pointer to the next packet payload buffer within the appropriate frame.
 //! The location of this is determined by state information set during the processing of the packet
-//! header. If thepacket is not from a recognised FEM, a pointer to the ignored packet buffer will
+//! header. If the packet is not from a recognised FEM, a pointer to the ignored packet buffer will
 //! be returned instead.
 //!
 //! \return pointer to the next payload buffer
@@ -613,15 +658,26 @@ void HexitecFrameDecoder::get_status(const std::string param_prefix,
 
 }
 
-//! Get the current frame counter.
+//! Get the current frame counter from a normal sized packet header.
 //!
-//! This method extracts and returns the frame counter from the current UDP packet header.
+//! This method extracts and returns a 32-bit frame counter from the current UDP packet header.
 //!
 //! \return current frame counter
 //!
-uint32_t HexitecFrameDecoder::get_frame_counter(void) const
+uint32_t HexitecFrameDecoder::get_32b_frame_counter(void) const
 {
   return reinterpret_cast<Hexitec::PacketHeader*>(current_packet_header_.get())->frame_counter;
+}
+
+//! Get the current frame counter from an extended packet header.
+//!
+//! This method extracts and returns a 64-bit frame counter from the current UDP packet header.
+//!
+//! \return current frame counter
+//!
+uint64_t HexitecFrameDecoder::get_64b_frame_counter(void) const
+{
+    return reinterpret_cast<Hexitec::PacketExtendedHeader*>(current_packet_header_.get())->frame_counter;
 }
 
 //! Get the current packet number.
@@ -632,8 +688,16 @@ uint32_t HexitecFrameDecoder::get_frame_counter(void) const
 //!
 uint32_t HexitecFrameDecoder::get_packet_number(void) const
 {
-  return reinterpret_cast<Hexitec::PacketHeader*>(
-      current_packet_header_.get())->packet_number & Hexitec::packet_number_mask;
+  if (packet_header_extended_)
+  {
+    return reinterpret_cast<Hexitec::PacketExtendedHeader*>(
+        current_packet_header_.get())->packet_number & Hexitec::packet_number_mask;
+  }
+  else
+  {
+    return reinterpret_cast<Hexitec::PacketHeader*>(
+        current_packet_header_.get())->packet_number_flags & Hexitec::packet_number_mask;
+  }
 }
 
 //! Get the current packet start of frame (SOF) marker.
@@ -644,8 +708,12 @@ uint32_t HexitecFrameDecoder::get_packet_number(void) const
 //!
 bool HexitecFrameDecoder::get_start_of_frame_marker(void) const
 {
-  uint32_t packet_flags =
-      reinterpret_cast<Hexitec::PacketHeader*>(current_packet_header_.get())->packet_flags;
+  uint32_t packet_flags = 0;
+  if (packet_header_extended_)
+    packet_flags = reinterpret_cast<Hexitec::PacketExtendedHeader*>(current_packet_header_.get())->packet_flags;
+  else
+    packet_flags = reinterpret_cast<Hexitec::PacketHeader*>(current_packet_header_.get())->packet_number_flags;
+
   return ((packet_flags & Hexitec::start_of_frame_mask) != 0);
 }
 
@@ -657,8 +725,12 @@ bool HexitecFrameDecoder::get_start_of_frame_marker(void) const
 //!
 bool HexitecFrameDecoder::get_end_of_frame_marker(void) const
 {
-  uint32_t packet_flags =
-      reinterpret_cast<Hexitec::PacketHeader*>(current_packet_header_.get())->packet_flags;
+  uint32_t packet_flags = 0;
+  if (packet_header_extended_)
+    packet_flags = reinterpret_cast<Hexitec::PacketExtendedHeader*>(current_packet_header_.get())->packet_flags;
+  else
+    packet_flags = reinterpret_cast<Hexitec::PacketHeader*>(current_packet_header_.get())->packet_number_flags;
+
   return ((packet_flags & Hexitec::end_of_frame_mask) != 0);
 }
 
