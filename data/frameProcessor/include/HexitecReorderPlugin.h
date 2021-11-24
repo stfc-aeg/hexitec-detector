@@ -75,6 +75,9 @@ namespace FrameProcessor
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
       std::string sensors_layout_str_;
       HexitecSensorLayoutMap sensors_layout_;
+      // sensors_config_ map number of sensors to frame and packet structures,
+      // see HexitecDefinitions.h for more details
+      bool set_sensors_config(int sensor_rows, int sensor_columns);
 
       /** Pointer to logger **/
       LoggerPtr logger_;

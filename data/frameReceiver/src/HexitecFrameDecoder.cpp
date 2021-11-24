@@ -33,7 +33,7 @@ const std::string HexitecFrameDecoder::CONFIG_PACKET_HEADER_EXTENDED = "packet_h
 HexitecFrameDecoder::HexitecFrameDecoder() :
     FrameDecoderUDP(),
     sensors_config_(Hexitec::sensorConfigTwo),
-    packet_header_extended_(false),
+    packet_header_extended_(true),
     current_frame_seen_(Hexitec::default_frame_number),
     current_frame_buffer_id_(Hexitec::default_frame_number),
     current_frame_buffer_(0),

@@ -332,6 +332,8 @@ namespace FrameProcessor
       int sensor_rows = static_cast<int>(strtol(map_entries[0].c_str(), NULL, 10));
       int sensor_columns = static_cast<int>(strtol(map_entries[1].c_str(), NULL, 10));
       sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+      // Successfully parsed, update sensors_config too
+      set_sensors_config(sensors_layout_[0].sensor_rows_, sensors_layout_[0].sensor_columns_);
     }
 
     image_width_  = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
@@ -341,6 +343,45 @@ namespace FrameProcessor
     // Return the number of valid entries parsed
     return sensors_layout_.size();
   }
+
+  /** Match the number of sensors to a corresponding SensorConfigNumber.
+   * 
+   * This method compares the number of sensors against the known detector configurations.
+   * Assuming it's a valid selection, the matching Hexitec::SensorConfigNumber value is
+   * assigned to the sensors_config_ member variable.
+   * 
+   * \param[in] sensor_rows - number of sensors in the vertical plane
+   * \param[in] sensor_columns - number of sensors in the horizontal plane
+   * \return whether elections matches a known configuration
+   */
+  bool HexitecReorderPlugin::set_sensors_config(int sensor_rows, int sensor_columns) {
+
+      bool parseOK = false;
+      
+      if ((sensor_rows == 1) && (sensor_columns == 1))
+      {
+          // Single sensor, i.e. 1x1
+          sensors_config_ = Hexitec::sensorConfigOne;
+          parseOK = true;
+      }
+      if (sensor_rows == 2)
+      {
+          if (sensor_columns == 2)
+          {
+              // 2x2
+              sensors_config_ = Hexitec::sensorConfigTwo;
+              parseOK = true;
+          }
+          else if (sensor_columns == 6)
+          {
+              // 2x6
+              sensors_config_ = Hexitec::sensorConfigThree;
+              parseOK = true;
+          }
+      }
+
+      return parseOK;
+  };
 
   /// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
   void HexitecReorderPlugin::writeFile(std::string filePrefix, float *frame)

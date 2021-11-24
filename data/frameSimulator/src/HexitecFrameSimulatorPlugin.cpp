@@ -31,6 +31,7 @@ namespace FrameSimulator {
         image_height_ = Hexitec::pixel_rows_per_sensor;
         sensors_layout_str_ = "2x2";
         sensors_config_ = Hexitec::sensorConfigTwo;
+        packet_header_extended_ = true;
         if (packet_header_extended_)
             packet_header_size_ = sizeof(Hexitec::PacketExtendedHeader);
         else
@@ -343,7 +344,7 @@ namespace FrameSimulator {
                 image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
                 image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
                 // Successfully parsed, update sensors_config too
-                set_sensors_config(sensors_layout_[0].sensor_columns_, sensors_layout_[0].sensor_rows_);
+                set_sensors_config(sensors_layout_[0].sensor_rows_, sensors_layout_[0].sensor_columns_);
             }
             else
             {
@@ -392,13 +393,13 @@ namespace FrameSimulator {
         }
 
         return parseOK;
-    };
+    }
 
-   /**
-    * Get the plugin major version number.
-    *
-    * \return major version number as an integer
-    */
+    /**
+     * Get the plugin major version number.
+     *
+     * \return major version number as an integer
+     */
     int HexitecFrameSimulatorPlugin::get_version_major() {
         return ODIN_DATA_VERSION_MAJOR;
     }
