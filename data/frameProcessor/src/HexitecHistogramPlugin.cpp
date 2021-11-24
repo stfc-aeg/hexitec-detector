@@ -27,9 +27,6 @@ namespace FrameProcessor
    * The constructor sets up logging used within the class.
    */
   HexitecHistogramPlugin::HexitecHistogramPlugin() :
-      image_width_(Hexitec::pixel_columns_per_sensor),
-      image_height_(Hexitec::pixel_rows_per_sensor),
-      image_pixels_(image_width_ * image_height_),
       max_frames_received_(0),
       flush_histograms_(0),
       histograms_written_(0),
@@ -48,10 +45,11 @@ namespace FrameProcessor
     bin_width_   = 10;
     number_bins_ = (int)(((bin_end_ - bin_start_) / bin_width_) + 0.5);
 
-    initialiseHistograms();
-
+    // Set image_width_, image_height_, image_pixels_
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
+
+    initialiseHistograms();
     ///
     debugCounter = 0;
   }

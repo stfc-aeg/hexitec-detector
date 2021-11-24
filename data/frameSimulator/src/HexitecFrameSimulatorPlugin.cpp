@@ -26,12 +26,10 @@ namespace FrameSimulator {
         total_packets = 0;
         total_bytes = 0;
         current_frame_num = -1;
-        // Setup default rows, columns values and sensors config
-        image_width_ = Hexitec::pixel_columns_per_sensor;
-        image_height_ = Hexitec::pixel_rows_per_sensor;
-        sensors_layout_str_ = "2x2";
-        sensors_config_ = Hexitec::sensorConfigTwo;
-        packet_header_extended_ = true;
+        // Set sensors_config_, image_width_, image_height_, image_pixels_
+        sensors_layout_str_ = Hexitec::default_sensors_layout_map;
+        parse_sensors_layout_map(sensors_layout_str_);
+        packet_header_extended_ = false;
         if (packet_header_extended_)
             packet_header_size_ = sizeof(Hexitec::PacketExtendedHeader);
         else
@@ -71,8 +69,8 @@ namespace FrameSimulator {
         else
         {
             LOG4CXX_WARN(logger_, "No sensors_layout argument, defaulting to 80 x 80 pixels");
-            image_width_ = Hexitec::pixel_columns_per_sensor;
-            image_height_ = Hexitec::pixel_rows_per_sensor;
+            // Set sensors_config_, image_width_, image_height_, image_pixels_
+            parse_sensors_layout_map("1x1");
         }
 
         //Extract Optional arguments for this plugin
@@ -316,7 +314,7 @@ namespace FrameSimulator {
      * variable.
      * 
      * \param[in] sensors_layout_str - string of number of sensors configured
-     * \return number of valid map entries parsed from string
+     * \return number of valid map entries parsed from stringSaw
      */
     std::size_t HexitecFrameSimulatorPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
     {

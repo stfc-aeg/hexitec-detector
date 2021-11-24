@@ -18,9 +18,6 @@ namespace FrameProcessor
    * The constructor sets up logging used within the class.
    */
   HexitecCalibrationPlugin::HexitecCalibrationPlugin() :
-      image_width_(Hexitec::pixel_columns_per_sensor),
-      image_height_(Hexitec::pixel_rows_per_sensor),
-      image_pixels_(image_width_ * image_height_),
       gradients_status_(false),
       intercepts_status_(false),
       gradient_values_(NULL),
@@ -34,14 +31,15 @@ namespace FrameProcessor
     LOG4CXX_TRACE(logger_, "HexitecCalibrationPlugin version " <<
     												this->get_version_long() << " loaded.");
 
+    // Set image_width_, image_height_, image_pixels_
+    sensors_layout_str_ = Hexitec::default_sensors_layout_map;
+    parse_sensors_layout_map(sensors_layout_str_);
+
     gradient_values_ = (float *) calloc(image_pixels_, sizeof(float));
     intercept_values_ = (float *) calloc(image_pixels_, sizeof(float));
 
     *gradient_values_ = 1;
     *intercept_values_ = 0;
-
-    sensors_layout_str_ = Hexitec::default_sensors_layout_map;
-    parse_sensors_layout_map(sensors_layout_str_);
     ///
     debugFrameCounter = 0;
   }
@@ -100,12 +98,6 @@ namespace FrameProcessor
     {
       sensors_layout_str_= config.get_param<std::string>(HexitecCalibrationPlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
-    }
-
-    // Parsing sensors may update width and height members
-    if (image_width_ * image_height_ != image_pixels_)
-    {
-      image_pixels_ = image_width_ * image_height_;
       reset_calibration_values();
     }
 
@@ -340,6 +332,7 @@ namespace FrameProcessor
 
     image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
     image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+    image_pixels_= image_width_ * image_height_;
 
     // Return the number of valid entries parsed
     return sensors_layout_.size();

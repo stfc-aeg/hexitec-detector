@@ -19,9 +19,6 @@ namespace FrameProcessor
    * The constructor sets up logging used within the class.
    */
   HexitecThresholdPlugin::HexitecThresholdPlugin() :
-      image_width_(Hexitec::pixel_columns_per_sensor),
-      image_height_(Hexitec::pixel_rows_per_sensor),
-      image_pixels_(image_width_ * image_height_),
       threshold_filename_("")
   {
     // Setup logging for the class
@@ -30,15 +27,16 @@ namespace FrameProcessor
     LOG4CXX_TRACE(logger_, "HexitecThresholdPlugin version " <<
                   this->get_version_long() << " loaded.");
 
+    // Set image_width_, image_height_, image_pixels_
+    sensors_layout_str_ = Hexitec::default_sensors_layout_map;
+    parse_sensors_layout_map(sensors_layout_str_);
+
     thresholds_status_    = false;
     threshold_value_      = 0;
     threshold_per_pixel_  = (uint16_t *) calloc(image_pixels_, sizeof(uint16_t));
 
     /// Set threshold mode to none (initially; 0=none, 1=value, 2=file)
     threshold_mode_ = (ThresholdMode)0;
-
-    sensors_layout_str_ = Hexitec::default_sensors_layout_map;
-    parse_sensors_layout_map(sensors_layout_str_);
   }
 
   /**
@@ -97,12 +95,6 @@ namespace FrameProcessor
     {
       sensors_layout_str_= config.get_param<std::string>(HexitecThresholdPlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
-    }
-
-    // Parsing sensors may update width, height
-    if (image_width_ * image_height_ != image_pixels_)
-    {
-      image_pixels_ = image_width_ * image_height_;
       reset_threshold_values();
     }
 
@@ -411,6 +403,7 @@ namespace FrameProcessor
 
     image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
     image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+    image_pixels_ = image_width_ * image_height_;
 
     // Return the number of valid entries parsed
     return sensors_layout_.size();

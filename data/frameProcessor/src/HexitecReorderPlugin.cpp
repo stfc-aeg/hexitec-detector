@@ -18,10 +18,6 @@ namespace FrameProcessor
    * The constructor sets up logging used within the class.
    */
   HexitecReorderPlugin::HexitecReorderPlugin() :
-  		sensors_config_(Hexitec::sensorConfigTwo),
-      image_width_(Hexitec::pixel_columns_per_sensor),
-      image_height_(Hexitec::pixel_rows_per_sensor),
-      image_pixels_(image_width_ * image_height_),
       packets_lost_(0),
       frame_number_(0)
   {
@@ -31,6 +27,7 @@ namespace FrameProcessor
     LOG4CXX_TRACE(logger_, "HexitecReorderPlugin version " <<
                   this->get_version_long() << " loaded.");
 
+    // Set sensors_config_, image_width_, image_height_, image_pixels_
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
     ///
@@ -100,6 +97,7 @@ namespace FrameProcessor
       frame_number_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_FRAME_NUMBER);
       LOG4CXX_DEBUG(logger_, " *** RESET frame_number to be " << frame_number_);
     }
+
   }
 
   void HexitecReorderPlugin::requestConfiguration(OdinData::IpcMessage& reply)

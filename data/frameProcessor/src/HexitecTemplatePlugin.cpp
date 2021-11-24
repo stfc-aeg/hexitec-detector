@@ -15,10 +15,7 @@ namespace FrameProcessor
   /**
    * The constructor sets up logging used within the class.
    */
-  HexitecTemplatePlugin::HexitecTemplatePlugin() :
-      image_width_(Hexitec::pixel_columns_per_sensor),
-      image_height_(Hexitec::pixel_rows_per_sensor),
-      image_pixels_(image_width_ * image_height_)
+  HexitecTemplatePlugin::HexitecTemplatePlugin()
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecTemplatePlugin");
@@ -26,6 +23,7 @@ namespace FrameProcessor
     LOG4CXX_TRACE(logger_, "HexitecTemplatePlugin version " <<
                   this->get_version_long() << " loaded.");
 
+    // Set image_width_, image_height_, image_pixels_
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
   }

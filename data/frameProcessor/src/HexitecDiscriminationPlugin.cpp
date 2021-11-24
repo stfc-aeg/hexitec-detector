@@ -17,9 +17,6 @@ namespace FrameProcessor
    * The constructor sets up logging used within the class.
    */
   HexitecDiscriminationPlugin::HexitecDiscriminationPlugin() :
-      image_width_(Hexitec::pixel_columns_per_sensor),
-      image_height_(Hexitec::pixel_rows_per_sensor),
-      image_pixels_(image_width_ * image_height_),
       pixel_grid_size_(3)
   {
     // Setup logging for the class
@@ -29,9 +26,8 @@ namespace FrameProcessor
                             this->get_version_long() << " loaded.");
 
     directional_distance_ = (int)pixel_grid_size_/2;  // Set to 1 for 3x3: 2 for 5x5 pixel grid
-    number_rows_ = image_height_;
-    number_columns_ = image_width_;
 
+    // Set image_width_, image_height_, image_pixels_, number_rows_, number_columns_
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
   }
@@ -94,10 +90,9 @@ namespace FrameProcessor
     {
       pixel_grid_size_ =
           config.get_param<int>(HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE);
+      directional_distance_ = (int)pixel_grid_size_/2;
     }
 
-    // Set to 1 for 3x3: 2 for 5x5 pixel grid
-    directional_distance_ = (int)pixel_grid_size_/2;
   }
 
   void HexitecDiscriminationPlugin::requestConfiguration(OdinData::IpcMessage& reply)
