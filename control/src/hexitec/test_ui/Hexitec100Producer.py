@@ -1,4 +1,4 @@
-"""Takes a binary file and transmits specified number of frames.
+"""Takes a pcap file and transmits specified number of frames.
 
 Created on Nov 08, 2021
 
@@ -40,39 +40,37 @@ class Hexitec100ProducerDefaults(object):
         self.drop_frac = 0
         self.drop_list = None
 
-        self.filename = 'sample.bin'
+        self.filename = 'hexitec_triangle_100G.pcapng'
 
 
 class Hexitec100Producer(object):
     """Produce and transmit specified UDP frames."""
 
-    def __init__(self, host, port, frames, sensorrows, sensorcolumns,
+    def __init__(self, host, port, frames,
                  interval, display, quiet, filename):
         """Initialise object with command line arguments."""
         self.SOF = 1<<63
         self.EOF = 1<<62
-        pixelsPerRow = 80
-        pixelsPerColumn = 80
         self.host = host
         self.port = port
         self.frames = frames
-        self.pixelrows = sensorrows * pixelsPerRow
-        self.pixelcolumns = sensorcolumns * pixelsPerColumn
+        self.NROWS = 80
+        self.NCOLS = 80
+        self.NPIXELS = self.NROWS * self.NCOLS
         self.interval = interval
         self.display = display
         self.quiet = quiet
         self.filename = filename
 
-        pixelsToRead = self.frames * (self.pixelrows * self.pixelcolumns)
+        self.pixelsToRead = self.frames * self.NPIXELS
         bytesPerPixel = 2
-        bytesToRead = pixelsToRead * bytesPerPixel
+        bytesToRead = self.NPIXELS * bytesPerPixel
 
         # Workout number of primary packets, size of trailing packet
 
-        totalFrameSize = (self.pixelrows * self.pixelcolumns) * bytesPerPixel
+        totalFrameSize = self.NPIXELS * bytesPerPixel
         self.primaryPackets = totalFrameSize // 8000
         self.trailingPacketSize = totalFrameSize % 8000
-        print("Rows: {} Columns: {}. Primary packets: {} Trailing Packet Size: {}".format(self.pixelrows, self.pixelcolumns, self.primaryPackets, self.trailingPacketSize))
 
         if os.access(self.filename, os.R_OK):
             print("Selected", self.frames, "frames, ", bytesToRead, "bytes.")
@@ -85,9 +83,6 @@ class Hexitec100Producer(object):
     # Extracts extended header-sized udp data from file
     def decode_pcap(self):
 
-        NCOLS = 80
-        NROWS = 80
-        NPIXELS = NCOLS * NROWS
         HEADER_SIZE = 64
 
         # Initialise frame list and counters
@@ -120,7 +115,7 @@ class Hexitec100Producer(object):
             # If this is an end of frame packet, convert frame data to numpy array and append to frame list
             if int(header[1]) & self.EOF:
                 frame = np.frombuffer(frame_data, dtype=np.uint16).reshape((80, 80))
-                assert frame.size == NPIXELS
+                assert frame.size == self.NPIXELS
                 frames.append(frame)
                 num_frames += 1
 
@@ -141,7 +136,7 @@ class Hexitec100Producer(object):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         # Create packet header
-        header = np.zeros(2, dtype=np.uint64)
+        header = np.zeros(8, dtype=np.uint64)
 
         self.framesSent = 0
         self.packetsSent = 0
@@ -225,10 +220,6 @@ if __name__ == '__main__':
                         help='select destination host IP port')
     parser.add_argument('--frames', '-n', type=int, default=1,
                         help='select number of frames to transmit')
-    parser.add_argument('--sensorrows', '-r', type=int, default=1,
-                        help='number of sensors per row')
-    parser.add_argument('--sensorcolumns', '-c', type=int, default=1,
-                        help='number of sensors per column')
     parser.add_argument('--interval', '-t', type=float, default=0.1,
                         help="select frame interval in seconds")
     parser.add_argument('--display', "-d", action='store_true',
@@ -237,8 +228,8 @@ if __name__ == '__main__':
                         help="Suppress detailed print during operation")
     parser.add_argument(
         'filename',
-        default="sample.bin",
-        help='Bin file to load'
+        default="hexitec_triangle_100G.pcapng",
+        help='PCAP (Wireshark) file to load'
     )
 
     args = parser.parse_args()
