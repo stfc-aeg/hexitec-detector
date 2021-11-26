@@ -29,7 +29,7 @@ namespace FrameSimulator {
         // Set sensors_config_, image_width_, image_height_, image_pixels_
         sensors_layout_str_ = Hexitec::default_sensors_layout_map;
         parse_sensors_layout_map(sensors_layout_str_);
-        packet_header_extended_ = false;
+        packet_header_extended_ = true;
         if (packet_header_extended_)
             packet_header_size_ = sizeof(Hexitec::PacketExtendedHeader);
         else
@@ -127,12 +127,12 @@ namespace FrameSimulator {
     void HexitecFrameSimulatorPlugin::extract_frames(const u_char *data, const int &size) {
 
         LOG4CXX_DEBUG(logger_, "Extracting Frame(s) from packet");
-        // Get first 8 or 16 (extended header) bytes, turn into header
+        // Get first 8 or 64 (extended header) bytes, turn into header
         // check header flags
         if (packet_header_extended_)
-            extract_64b_header(data);
+            extract_extended_header(data);
         else
-            extract_32b_header(data);
+            extract_normal_header(data);
 
         // Create new packet, copy packet data and push into frame
         boost::shared_ptr<Packet> pkt(new Packet());
@@ -145,7 +145,7 @@ namespace FrameSimulator {
         total_packets++;
     }
 
-    void HexitecFrameSimulatorPlugin::extract_32b_header(const u_char *data) {
+    void HexitecFrameSimulatorPlugin::extract_normal_header(const u_char *data) {
 
         const Hexitec::PacketHeader* packet_hdr = reinterpret_cast<const Hexitec::PacketHeader*>(data);
 
@@ -178,7 +178,7 @@ namespace FrameSimulator {
         }
     }
 
-    void HexitecFrameSimulatorPlugin::extract_64b_header(const u_char *data) {
+    void HexitecFrameSimulatorPlugin::extract_extended_header(const u_char *data) {
 
         const Hexitec::PacketExtendedHeader* packet_hdr = reinterpret_cast<const Hexitec::PacketExtendedHeader*>(data);
 

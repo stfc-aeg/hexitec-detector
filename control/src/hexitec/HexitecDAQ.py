@@ -755,3 +755,8 @@ class HexitecDAQ():
             self.plugin = "hdf"
         else:
             self.plugin = "histogram"
+
+        # Temporary fix: hard code Extended packet headers OFF
+        command = "config/decoder_config/packet_header_extended"
+        request = ApiAdapterRequest("0", content_type="application/json")
+        self.adapters["fr"].put(command, request)

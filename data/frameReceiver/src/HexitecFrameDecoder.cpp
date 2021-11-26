@@ -33,7 +33,7 @@ const std::string HexitecFrameDecoder::CONFIG_PACKET_HEADER_EXTENDED = "packet_h
 HexitecFrameDecoder::HexitecFrameDecoder() :
     FrameDecoderUDP(),
     sensors_config_(Hexitec::sensorConfigTwo),
-    packet_header_extended_(false),
+    packet_header_extended_(true),
     current_frame_seen_(Hexitec::default_frame_number),
     current_frame_buffer_id_(Hexitec::default_frame_number),
     current_frame_buffer_(0),
@@ -126,9 +126,6 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
     sensors_layout_str_ = config_msg.get_param<std::string>(CONFIG_SENSORS_LAYOUT);
     LOG4CXX_DEBUG_LEVEL(1, logger_, "Parsing number of sensors entry found in config: "
                         << sensors_layout_str_);
-    // Because the image dimensions have been updated, the frame size, ergo buffer size too,
-    //  has changed and must be updated:
-    dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size(sensors_config_)]);
   }
   else
   {
@@ -136,10 +133,12 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
                         << default_sensors_layout_map);
     sensors_layout_str_ = default_sensors_layout_map;
   }
-
   parse_sensors_layout_map(sensors_layout_str_);
+  // Because the image dimensions have been updated, the frame size, ergo buffer size too,
+  //  has changed and must be updated:
+  dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size(sensors_config_)]);
 
-  // Determine whether 8 or 16 byte packet header size
+  // Determine whether 8 or 64 byte packet header
   if (config_msg.has_param(CONFIG_PACKET_HEADER_EXTENDED))
   {
     int extended = config_msg.get_param<int>(CONFIG_PACKET_HEADER_EXTENDED);
@@ -161,7 +160,7 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
   {
     if (packet_header_extended_)
     {
-      // Extended (16 byte) header size
+      // Extended (64 byte) header
       LOG4CXX_INFO(packet_logger_, "PktHdr: SourceAddress");
       LOG4CXX_INFO(packet_logger_, "PktHdr: |               SourcePort");
       LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     DestinationPort");
@@ -174,7 +173,7 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
     }
     else
     {
-      // Original (8 byte) header size
+      // Original (8 byte) header
       LOG4CXX_INFO(packet_logger_, "PktHdr: SourceAddress");
       LOG4CXX_INFO(packet_logger_, "PktHdr: |               SourcePort");
       LOG4CXX_INFO(packet_logger_, "PktHdr: |               |     DestinationPort");

@@ -78,8 +78,8 @@ namespace FrameSimulator {
         // see HexitecDefinitions.h for more details
         bool set_sensors_config(int sensor_rows, int sensor_columns);
         Hexitec::SensorConfigNumber sensors_config_;
-        void extract_32b_header(const u_char *data);
-        void extract_64b_header(const u_char *data);
+        void extract_normal_header(const u_char *data);
+        void extract_extended_header(const u_char *data);
         bool packet_header_extended_;
         int packet_header_size_;
     };
