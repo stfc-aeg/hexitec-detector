@@ -420,11 +420,9 @@ class HexitecFem():
             else:
                 self._set_status_error("")
             self.operation_percentage_complete = 0
-            self._set_status_message("Connecting to camera..")
             self.cam_connect()
-            msg = "Camera connected. Waiting for VSRs' FPGAs to initialise.."
-            self._set_status_message(msg)
-            self._wait_while_fpgas_initialise()
+            self.operation_percentage_complete = 100
+            self._set_status_message("Camera connected.")
             self.initialise_progress = 0
         except ParameterTreeError as e:
             self._set_status_error("%s" % str(e))
@@ -537,27 +535,6 @@ class HexitecFem():
     def get_debug(self):
         """Get debug messages status."""
         return self.debug
-
-    def _wait_while_fpgas_initialise(self):
-        """Set up to wait 10 seconds to allow VSRs' FPGAs to initialise."""
-        self.hardware_busy = True
-        self.start = time.time()
-        self.delay = 10
-        IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
-
-    def initialisation_check_loop(self):
-        """Check for error and call itself each second until 10 second delay fulfilled."""
-        if len(self.status_error) > 0:
-            self.operation_percentage_complete = 0
-            self.hardware_busy = False
-            return
-        self.delay = time.time() - self.start
-        self.operation_percentage_complete += 10
-        if (self.delay < 10):
-            IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
-        else:
-            self.hardware_busy = False
-            self._set_status_message("Camera connected. FPGAs initialised.")
 
     def send_cmd(self, cmd, track_progress=True):
         """Send a command string to the microcontroller."""
@@ -1021,7 +998,7 @@ class HexitecFem():
                 self.first_initialisation_done_update_gui()
             raise HexitecFemError("User cancelled Acquire")
         else:
-            waited = str(self.waited)
+            waited = str(round(self.waited, 3))
             logging.debug("Capturing {} frames took {} s".format(str(self.number_frames), waited))
             duration = "Requested {} frame(s), took {} seconds".format(self.number_frames, waited)
             self._set_status_message(duration)
