@@ -314,7 +314,7 @@ namespace FrameSimulator {
      * variable.
      * 
      * \param[in] sensors_layout_str - string of number of sensors configured
-     * \return number of valid map entries parsed from stringSaw
+     * \return number of valid map entries parsed from string
      */
     std::size_t HexitecFrameSimulatorPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
     {

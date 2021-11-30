@@ -33,6 +33,8 @@ $( document ).ready(function()
     document.getElementById("cancelButton").disabled = true;
     document.getElementById("disconnectButton").disabled = true;
     document.getElementById("offsetsButton").disabled = true;
+    // document.getElementById("hvOnButton").disable = true;
+    // document.getElementById("hvOffButton").disable = true;
 
     /// Style checkboxes into ON/OFF sliders
 
@@ -135,49 +137,19 @@ $( document ).ready(function()
         document.getElementById("connectButton").disabled = false;
     });
 
+    // $('#hvOnButton').on('click', function(event) {
+    //     switch_hv_off();
+    //     document.getElementById('hvOnButton').disabled = true;
+    //     document.getElementById('hvOffButton').disabled = false;
+    // });
+    // $('#hvOffButton').on('click', function(event) {
+    //     switch_hv_on();
+    //     document.getElementById('hvOffButton').disabled = true;
+    //     document.getElementById('hvOnButton').disabled = false;
+    // });
+
     $('#offsetsButton').on('click', function(event) {
         collect_offsets();
-    });
-
-    $('#container1').hide();
-    $('#container2').hide();
-    $('#container3').hide();
-    $('#container4').hide();
-    $('#maincontainer1').click(function() {
-        $('#1').hide('slow');
-        $('#container1').show();
-    });
-
-    $('#maincontainer2').click(function() {
-        $('#2').hide('slow');
-        $('#container2').show();
-    });
-
-    $('#maincontainer3').click(function() {
-        $('#3').hide('slow');
-        $('#container3').show();
-    });
-
-    $('#maincontainer4').click(function() {
-        $('#4').hide('slow');
-        $('#container4').show();
-    });
-
-    $('#container1').click(function() {
-        $('#1').show('slow');
-        $(this).hide();
-    });
-    $('#container2').click(function() {
-        $('#2').show('slow');
-        $(this).hide();
-    });
-    $('#container3').click(function() {
-        $('#3').show('slow');
-        $(this).hide();
-    });
-    $('#container4').click(function() {
-        $('#4').show('slow');
-        $(this).hide();
     });
 
 });
@@ -250,6 +222,16 @@ function setCS(e)
     });
 }
 
+function switch_hv_off()
+{
+    console.log("Switching HV off");
+}
+
+function switch_hv_on()
+{
+    console.log("Switching HV on");
+}
+
 function collect_offsets()
 {
     // Collects offsets used for dark corrections in subsequent acquisitions
@@ -278,6 +260,7 @@ function toggle_ui_elements(bBool)
     document.getElementById("initialiseButton").disabled = bBool;
     document.getElementById("acquireButton").disabled = bBool;
     document.getElementById("cancelButton").disabled = bBool;
+    // document.getElementById("hvOnButton").disable = bBool;
     document.getElementById("offsetsButton").disabled = bBool;
     document.getElementById("applyButton").disabled = bBool;
     document.getElementById("hdf-file-path-text").disabled = bBool;
