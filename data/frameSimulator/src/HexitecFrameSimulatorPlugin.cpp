@@ -29,8 +29,8 @@ namespace FrameSimulator {
         // Set sensors_config_, image_width_, image_height_, image_pixels_
         sensors_layout_str_ = Hexitec::default_sensors_layout_map;
         parse_sensors_layout_map(sensors_layout_str_);
-        packet_header_extended_ = true;
-        if (packet_header_extended_)
+        extended_packet_header_ = true;
+        if (extended_packet_header_)
             packet_header_size_ = sizeof(Hexitec::PacketExtendedHeader);
         else
             packet_header_size_ = sizeof(Hexitec::PacketHeader);
@@ -129,7 +129,7 @@ namespace FrameSimulator {
         LOG4CXX_DEBUG(logger_, "Extracting Frame(s) from packet");
         // Get first 8 or 64 (extended header) bytes, turn into header
         // check header flags
-        if (packet_header_extended_)
+        if (extended_packet_header_)
             extract_extended_header(data);
         else
             extract_normal_header(data);
@@ -149,7 +149,7 @@ namespace FrameSimulator {
 
         const Hexitec::PacketHeader* packet_hdr = reinterpret_cast<const Hexitec::PacketHeader*>(data);
 
-        uint32_t frame_number = packet_hdr->frame_counter;
+        uint32_t frame_number = packet_hdr->frame_number;
         uint32_t packet_number_flags = packet_hdr->packet_number_flags;
 
         bool is_SOF = packet_number_flags & Hexitec::start_of_frame_mask;
@@ -182,7 +182,7 @@ namespace FrameSimulator {
 
         const Hexitec::PacketExtendedHeader* packet_hdr = reinterpret_cast<const Hexitec::PacketExtendedHeader*>(data);
 
-        uint64_t frame_number = packet_hdr->frame_counter;
+        uint64_t frame_number = packet_hdr->frame_number;
         uint32_t packet_flags = packet_hdr->packet_flags;
         uint32_t packet_number = packet_hdr->packet_number & Hexitec::packet_number_mask;
 
@@ -235,7 +235,7 @@ namespace FrameSimulator {
             for (int i=0; i < Hexitec::num_primary_packets[sensors_config_]; i++)
             {
                 // Setup Head Packet Header
-                if (packet_header_extended_)
+                if (extended_packet_header_)
                 {
                     Hexitec::PacketExtendedHeader* head_packet_header =
                         reinterpret_cast<Hexitec::PacketExtendedHeader*>(head_packet_data);
@@ -245,7 +245,7 @@ namespace FrameSimulator {
                     if (packet_number == 0)
                         packet_flags = packet_flags | Hexitec::start_of_frame_mask;
 
-                    head_packet_header->frame_counter = frame;
+                    head_packet_header->frame_number = frame;
                     head_packet_header->packet_number = packet_number;
                     head_packet_header->packet_flags = packet_flags;
                 }
@@ -259,7 +259,7 @@ namespace FrameSimulator {
                     if (packet_number == 0)
                         packet_flags = packet_flags | Hexitec::start_of_frame_mask;
 
-                    head_packet_header->frame_counter = frame;
+                    head_packet_header->frame_number = frame;
                     head_packet_header->packet_number_flags = packet_flags;
                 }
                 
@@ -274,12 +274,12 @@ namespace FrameSimulator {
                 data_ptr += Hexitec::primary_packet_size;
             }
             // Repeat for the Tail Packet Header and Data
-            if (packet_header_extended_)
+            if (extended_packet_header_)
             {
                 Hexitec::PacketExtendedHeader* tail_packet_header = 
                     reinterpret_cast<Hexitec::PacketExtendedHeader*>(tail_packet_data);
                 packet_flags = Hexitec::end_of_frame_mask;
-                tail_packet_header->frame_counter = frame;
+                tail_packet_header->frame_number = frame;
                 tail_packet_header->packet_number = packet_number;
                 tail_packet_header->packet_flags = packet_flags;
             }
@@ -289,7 +289,7 @@ namespace FrameSimulator {
                     reinterpret_cast<Hexitec::PacketHeader*>(tail_packet_data);
                 packet_flags =
                     (packet_number & Hexitec::packet_number_mask) | Hexitec::end_of_frame_mask;
-                tail_packet_header->frame_counter = frame;
+                tail_packet_header->frame_number = frame;
                 tail_packet_header->packet_number_flags = packet_flags;
             }
             // packet_flags = packet_flags | Hexitec::end_of_frame_mask;

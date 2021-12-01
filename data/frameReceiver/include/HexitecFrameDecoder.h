@@ -86,8 +86,7 @@ namespace FrameReceiver
 
     void* get_packet_header_buffer(void);
 
-    uint32_t get_32b_frame_counter(void) const;
-    uint64_t get_64b_frame_counter(void) const;
+    uint64_t get_frame_number(void) const;
     uint32_t get_packet_number(void) const;
     bool get_start_of_frame_marker(void) const;
     bool get_end_of_frame_marker(void) const;
@@ -107,7 +106,7 @@ namespace FrameReceiver
     boost::shared_ptr<void> ignored_packet_buffer_;
     std::string sensors_layout_str_;
     HexitecSensorLayoutMap sensors_layout_;
-    bool packet_header_extended_;
+    bool extended_packet_header_;
     int packet_header_size_;
 
     int current_frame_seen_;
@@ -123,7 +122,7 @@ namespace FrameReceiver
 
     static const std::string CONFIG_FEM_PORT_MAP;
     static const std::string CONFIG_SENSORS_LAYOUT;
-    static const std::string CONFIG_PACKET_HEADER_EXTENDED;
+    static const std::string CONFIG_EXTENDED_PACKET_HEADER;
   };
 
 } // namespace FrameReceiver
