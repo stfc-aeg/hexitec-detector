@@ -8,7 +8,7 @@
 
     <!-- Bootstrap -->
     <link href="js/bootstrap-5.1.1-dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="js/fontawesome-free-5.15.1-web/css/all.min.css" rel="stylesheet">
+    <!-- <link href="js/fontawesome-free-5.15.1-web/css/all.min.css" rel="stylesheet"> -->
 
     <!-- 
     <link href="css/bootstrap-switch-4.0.0-alpha.1-dist/bootstrap-switch.min.css" rel="stylesheet">
@@ -434,116 +434,6 @@
             </tr>
             <tr>
               <td>
-                hdf/file/path:&nbsp;
-              </td>
-              <td>
-                <div class="text-columns">
-                  <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' size="42" value="/tmp/">
-                </div>
-              </td>
-              <td>
-                &nbsp;<td><span id="hdf-file-path-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                hdf/file/name:&nbsp;
-              </td>
-              <td>
-                <div class="text-columns">
-                  <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' size="42" value="a">
-                </div>
-              </td>
-              <td>
-                &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Sensors Layout:&nbsp;
-              </td>
-              <td>
-                <select class="double-width" onchange="sensorsLayoutChange(this.value)">
-                  <option value="1x1">1x1 (80x80)</option>
-                  <option selected="selected" value="2x2">2x2 (160x160)</option>
-                  <option value="2x6">2x6 (160x480)</option>
-                </select>
-              </td>
-              <td>
-                &nbsp;<td><span id="sensors-layout-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Compression:&nbsp;
-              </td>
-              <td>
-                <select class="double-width" onchange="compressionChange(this.value)">
-                  <option selected="selected" value="none">none</option>
-                  <option value="blosc">blosc</option>
-                </select>
-              </td>
-              <td>
-                &nbsp;<td><span id="compression-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <th>Camera&nbsp;</th>
-              </td>
-            </tr>
-            <tr>  
-              <td>
-                Mode&nbsp;
-              </td>
-              <td>
-                <div class="row sidebar-row vertical-align">
-                  <div class="col-xs-7">
-                    <input type="checkbox" name="duration_enable" data-size="small" data-off-text="Frames" data-on-text="Seconds">
-                  </div>
-                </div>
-            </tr>
-            <tr>
-              <td>
-                Frames&nbsp;
-              </td>
-              <td>
-                <div class="text-frames">
-                  <input type="text" id="frames-text" onChange='frames_changed()' maxlength="40" size="3" value= "10">
-                </div>
-              </td>
-              <td>
-                &nbsp;<td><span id="frames-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Duration&nbsp;
-              </td>
-              <td>
-                <div class="text-duration">
-                  <input type="text" id="duration-text" onChange='duration_changed()' maxlength="40" size="3" value= "1" disabled="true">
-                </div>
-              </td>
-              <td>
-                &nbsp;<td><span id="duration-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Hexitec Config:&nbsp;
-              </td>
-              <td>
-                <div class="text-columns">
-                  <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' size="42" value="control/config/hexitec_unified_CSD__performance.ini">
-                </div>
-              </td>
-              <td>
-                &nbsp;<td><span id="hexitec-config-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
                 &nbsp;
               </td>
               <td>
@@ -558,9 +448,119 @@
       <div class="tab-pane fade" id="health" role="tabpanel">
           <h2 class="text-center">Health</h2>
           <div class="container-fluid">
-            <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">System Status</p>
             <div class="well sidebar-nav-fixed">
               <table class="overall-table">
+                <tr>
+                  <td>
+                    <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">System Status</p>
+                  </td>
+                </tr>
+                <tr>  
+                  <td>  
+                    <th>File Options&nbsp;</th>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    hdf/file/path:&nbsp;
+                  </td>
+                  <td>
+                    <div class="text-columns">
+                      <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' size="42" value="/tmp/">
+                    </div>
+                  </td>
+                  <td>
+                    &nbsp;<td><span id="hdf-file-path-warning">&nbsp;</span></td>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    hdf/file/name:&nbsp;
+                  </td>
+                  <td>
+                    <div class="text-columns">
+                      <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' size="42" value="a">
+                    </div>
+                  </td>
+                  <td>
+                    &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    Compression:&nbsp;
+                  </td>
+                  <td>
+                    <select class="double-width" onchange="compressionChange(this.value)">
+                      <option selected="selected" value="none">none</option>
+                      <option value="blosc">blosc</option>
+                    </select>
+                  </td>
+                  <td>
+                    &nbsp;<td><span id="compression-warning">&nbsp;</span></td>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <th>Camera&nbsp;</th>
+                  </td>
+                </tr>
+                <tr>  
+                  <td>
+                    Mode&nbsp;
+                  </td>
+                  <td>
+                    <div class="row sidebar-row vertical-align">
+                      <div class="col-xs-7">
+                        <input type="checkbox" name="duration_enable" data-size="small" data-off-text="Frames" data-on-text="Seconds">
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    Frames&nbsp;
+                  </td>
+                  <td>
+                    <div class="text-frames">
+                      <input type="text" id="frames-text" onChange='frames_changed()' maxlength="40" size="3" value= "10">
+                    </div>
+                  </td>
+                  <td>
+                    &nbsp;<td><span id="frames-warning">&nbsp;</span></td>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    Duration&nbsp;
+                  </td>
+                  <td>
+                    <div class="text-duration">
+                      <input type="text" id="duration-text" onChange='duration_changed()' maxlength="40" size="3" value= "1" disabled="true">
+                    </div>
+                  </td>
+                  <td>
+                    &nbsp;<td><span id="duration-warning">&nbsp;</span></td>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <th>Config File&nbsp;</th>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    Hexitec Config:&nbsp;
+                  </td>
+                  <td>
+                    <div class="text-columns">
+                      <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' size="42" value="control/config/hexitec_unified_CSD__performance.ini">
+                    </div>
+                  </td>
+                  <td>
+                    &nbsp;<td><span id="hexitec-config-warning">&nbsp;</span></td>
+                  </td>
+                </tr>
                 <tr>
                   <td>
                     <b>&nbsp;Frame rate:&nbsp;</b><span id="frame_rate" style="float:right">&nbsp;0</span>
@@ -722,6 +722,27 @@
                     <b>&nbsp;daq stop:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b><span id="daq_stop">&nbsp;</span>
                   </td>
                 </tr>
+                <tr>  
+                  <td>  
+                    <th>(Orphaned)&nbsp;</th>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    Sensors Layout:&nbsp;
+                  </td>
+                  <td>
+                    <select class="double-width" onchange="sensorsLayoutChange(this.value)">
+                      <option value="1x1">1x1 (80x80)</option>
+                      <option selected="selected" value="2x2">2x2 (160x160)</option>
+                      <option value="2x6">2x6 (160x480)</option>
+                    </select>
+                  </td>
+                  <td>
+                    &nbsp;<td><span id="sensors-layout-warning">&nbsp;</span></td>
+                  </td>
+                </tr>
+
               </table>
             </div> <!-- well sidebar-nav-fixed -->
     
