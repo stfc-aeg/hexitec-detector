@@ -445,335 +445,352 @@
 
       <!-- <div class="tab-pane fade" id="health" role="tabpanel"> -->
         <div class="tab-pane fade show active" id="health" role="tabpanel">
+
           <div class="container-fluid">
-            <div class="well sidebar-nav-fixed">
-              <table class="overall-table">
-                <tr>
-                  <td>
-                  </td>
-                </tr>
-                <tr>  
-                  <td>  
-                    <th>File Options&nbsp;</th>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    hdf/file/path:&nbsp;
-                  </td>
-                  <td>
-                    <div class="text-columns">
-                      <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' size="42" value="/tmp/">
-                    </div>
-                  </td>
-                  <td>
-                    &nbsp;<td><span id="hdf-file-path-warning">&nbsp;</span></td>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    hdf/file/name:&nbsp;
-                  </td>
-                  <td>
-                    <div class="text-columns">
-                      <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' size="42" value="a">
-                    </div>
-                  </td>
-                  <td>
-                    &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    Compression:&nbsp;
-                  </td>
-                  <td>
-                    <select class="double-width" onchange="compressionChange(this.value)">
-                      <option selected="selected" value="none">none</option>
-                      <option value="blosc">blosc</option>
-                    </select>
-                  </td>
-                  <td>
-                    &nbsp;<td><span id="compression-warning">&nbsp;</span></td>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <th>Camera&nbsp;</th>
-                  </td>
-                </tr>
-                <tr>  
-                  <td>
-                    Mode&nbsp;
-                  </td>
-                  <td>
-                    <div class="row sidebar-row vertical-align">
-                      <div class="col-xs-7">
-                        <input type="checkbox" name="duration_enable" data-size="small" data-off-text="Frames" data-on-text="Seconds">
+              <div class="row contflex row-cols-1 row-cols-md-2 g-4">
+
+                  <div class="col-xxl-2 col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+                      <div class="row">
+                          <p class="lead text-center">Environmental Sensors</p>
                       </div>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    Frames&nbsp;
-                  </td>
-                  <td>
-                    <div class="text-frames">
-                      <input type="text" id="frames-text" onChange='frames_changed()' maxlength="40" size="3" value= "10">
-                    </div>
-                  </td>
-                  <td>
-                    &nbsp;<td><span id="frames-warning">&nbsp;</span></td>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    Duration&nbsp;
-                  </td>
-                  <td>
-                    <div class="text-duration">
-                      <input type="text" id="duration-text" onChange='duration_changed()' maxlength="40" size="3" value= "1" disabled="true">
-                    </div>
-                  </td>
-                  <td>
-                    &nbsp;<td><span id="duration-warning">&nbsp;</span></td>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <th>Config File&nbsp;</th>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    Hexitec Config:&nbsp;
-                  </td>
-                  <td>
-                    <div class="text-columns">
-                      <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' size="42" value="control/config/hexitec_unified_CSD__performance.ini">
-                    </div>
-                  </td>
-                  <td>
-                    &nbsp;<td><span id="hexitec-config-warning">&nbsp;</span></td>
-                  </td>
-                </tr>
-                <tr>
-                  <td>&nbsp;</td>
-                </tr>
-              </table>
-              <table class="overall-table">
-                <!-- <tr>
-                  <td>
-                    <p style="text-align:center; font-weight:bold; ; font-size:0.9em;">Packet Statistics</p>
-                  </td>
-                </tr> -->
-                <thead><h6><b>Packet Statistics</b></h6></thead>
-                <tr>
-                  <td>
-                    <b style="font-size:15px">&nbsp;Frame rate:&nbsp;</b><span id="frame_rate" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;Frames received:&nbsp;</b><span id="frames_received" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    pkts&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;released:&nbsp;</b><span id="frames_released" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    pkts&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;dropped:&nbsp;</b><span id="frames_dropped" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    pkts&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;timedout:&nbsp;</b><span id="frames_timedout" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    pkts&nbsp;
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <b style="font-size:15px">&nbsp;acquire time:&nbsp;</b><span id="acquire_time" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;FEM packets_lost:&nbsp;</b><span id="fem_packets_lost" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    pkts&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;FR packets_lost:&nbsp;</b><span id="packets_lost" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    pkts&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;Buffers empty:&nbsp;</b><span id="buffers_empty" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    buffs&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;mapped:&nbsp;</b><span id="buffers_mapped" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    buffs&nbsp;
-                  </td>
-                </tr>
-                <tr><td>&nbsp;</td></tr>
-              </table>
+                      <div class="row contflex">
+                          <div class="col-md-11">
+                              <table class="table table-striped" style="width=100%">
+                                  <thead>
+                                      <tr>
+                                          <th>VSR1 Sensor</th>
+                                          <th>Measure</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      <tr>
+                                          <td>Ambient</td>
+                                          <td><span id="vsr1_ambient">&nbsp;</span>C</td>
+                                      </tr>
+                                      <tr>
+                                          <td>Humidity</td>
+                                          <td><span id="vsr1_humidity">&nbsp;</span>%</td>
+                                      </tr>
+                                      <tr>
+                                          <td>ASIC1</td>
+                                          <td><span id="vsr1_asic1">&nbsp;</span>C</td>
+                                      </tr>
+                                      <tr>
+                                          <td>ASIC2</td>
+                                          <td><span id="vsr1_asic2">&nbsp;</span>C</td>
+                                      </tr>
+                                      <tr>
+                                          <td>ADC</td>
+                                          <td><span id="vsr1_adc">&nbsp;</span></td>
+                                      </tr>
+                                      <tr>
+                                          <td>HV</td>
+                                          <td><span id="vsr1_hv">&nbsp;</span></td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                  <table class="table table-striped" style="width=100%">
+                                  <thead>
+                                      <tr>
+                                          <th>VSR2 Sensor</th>
+                                          <th>Measure</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      <tr>
+                                        <td>Ambient</td>
+                                        <td><span id="vsr2_ambient">&nbsp;</span>C</td>
+                                      </tr>
+                                      <tr>
+                                        <td>Humidity</td>
+                                        <td><span id="vsr2_humidity">&nbsp;</span>%</td>
+                                      </tr>
+                                      <tr>
+                                        <td>ASIC1</td>
+                                        <td><span id="vsr2_asic1">&nbsp;</span>C</td>
+                                      </tr>
+                                      <tr>
+                                        <td>ASIC2</td>
+                                        <td><span id="vsr2_asic2">&nbsp;</span>C</td>
+                                      </tr>
+                                      <tr>
+                                        <td>ADC</td>
+                                        <td><span id="vsr2_adc">&nbsp;</span></td>
+                                      </tr>
+                                      <tr>
+                                        <td>HV</td>
+                                        <td><span id="vsr2_hv">&nbsp;</span></td>
+                                      </tr>
+                                  </tbody>
+                              </table>
+                          </div>
+                      </div>
+                  </div> <!-- col-md-2 -->
 
-              <table class="overall-table">
-                <thead><h6><b>Environment Data</b></h6></thead>
-                <tr>
-                  <!-- <td>
-                    <b style="font-size:15px">&nbsp;&nbsp;</b><span id="blank_01" style="float:right">&nbsp;</span>
-                  </td> -->
-                  <td>
-                    <b style="font-size:15px">&nbsp;vsr1_ambient:&nbsp;</b><span id="vsr1_ambient" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    C&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;humidity:&nbsp;</b><span id="vsr1_humidity" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    %&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;asic1:&nbsp;</b><span id="vsr1_asic1" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    C&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;asic2:&nbsp;</b><span id="vsr1_asic2" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    C&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;adc:&nbsp;</b><span id="vsr1_adc" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    C&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;HV:&nbsp;</b><span id="vsr1_hv" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    V&nbsp;
-                  </td>
-                </tr>
-                <tr>
-                  <!-- <td>
-                    <b style="font-size:15px">&nbsp;&nbsp;</b><span id="blank_02" style="float:right">&nbsp;</span>
-                  </td> -->
-                  <td>
-                    <b style="font-size:15px">&nbsp;vsr2_ambient:&nbsp;</b><span id="vsr2_ambient" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    C&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;humidity:&nbsp;</b><span id="vsr2_humidity" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    %&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;asic1:&nbsp;</b><span id="vsr2_asic1" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    C&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;asic2:&nbsp;</b><span id="vsr2_asic2" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    C&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;adc:&nbsp;</b><span id="vsr2_adc" style="float:right">&nbsp;0</span>  
-                  </td>
-                  <td>
-                    C&nbsp;
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;HV:&nbsp;</b><span id="vsr2_hv" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    V&nbsp;
-                  </td>
-                </tr>
-                <tr><td>&nbsp;</td></tr>
-              </table>
+                  <div class="col-xxl-2 col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+                    <div class="container-fluid">
+                      <div><!--<div class="well sidebar-nav-fixed"> -->
+                        <table class="overall-table">
+                          <tr>
+                            <td></td> <!--Intentionally left blank-->
+                          </tr>
+                          <tr>
+                            <td>
+                              <th>File Options&nbsp;</th>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              hdf/file/path:&nbsp;
+                            </td>
+                            <td>
+                              <div class="text-columns">
+                                <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' value="/tmp/">
+                              </div>
+                            </td>
+                            <td>
+                              &nbsp;<td><span id="hdf-file-path-warning">&nbsp;</span></td>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              hdf/file/name:&nbsp;
+                            </td>
+                            <td>
+                              <div class="text-columns">
+                                <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' value="a">
+                              </div>
+                            </td>
+                            <td>
+                              &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              Compression:&nbsp;
+                            </td>
+                            <td>
+                              <select class="double-width" onchange="compressionChange(this.value)">
+                                <option selected="selected" value="none">none</option>
+                                <option value="blosc">blosc</option>
+                              </select>
+                            </td>
+                            <td>
+                              &nbsp;<td><span id="compression-warning">&nbsp;</span></td>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <th>Camera&nbsp;</th>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              Mode&nbsp;
+                            </td>
+                            <td>
+                              <div class="row sidebar-row vertical-align">
+                                <div class="col-xs-7">
+                                  <input type="checkbox" name="duration_enable" data-size="small" data-off-text="Frames" data-on-text="Seconds">
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              Frames&nbsp;
+                            </td>
+                            <td>
+                              <div class="text-frames">
+                                <input type="text" id="frames-text" onChange='frames_changed()' maxlength="40" size="3" value= "10">
+                              </div>
+                            </td>
+                            <td>
+                              &nbsp;<td><span id="frames-warning">&nbsp;</span></td>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              Duration&nbsp;
+                            </td>
+                            <td>
+                              <div class="text-duration">
+                                <input type="text" id="duration-text" onChange='duration_changed()' maxlength="40" size="3" value= "1" disabled="true">
+                              </div>
+                            </td>
+                            <td>
+                              &nbsp;<td><span id="duration-warning">&nbsp;</span></td>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <th>Config File&nbsp;</th>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              Hexitec Config:&nbsp;
+                            </td>
+                            <td>
+                              <div class="text-columns">
+                                <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' value="control/config/hexitec_unified_CSD__performance.ini">
+                              </div>
+                            </td>
+                            <td>
+                              &nbsp;<td><span id="hexitec-config-warning">&nbsp;</span></td>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>&nbsp;</td>
+                          </tr>
+                        </table>
 
-              <table class="overall-table">
-                <thead><h6><b>DAQ Debug</b></h6></thead>
-                <tr>
-                  <td>
-                    <b style="font-size:15px">&nbsp;acquire start:&nbsp;</b><span id="acquire_start" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;daq start:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b><span id="daq_start">&nbsp;0</span>
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;vsr1_sync:&nbsp;</b><span id="vsr1_sync" style="float:right">&nbsp;X</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <b style="font-size:15px">&nbsp;acquire stop:&nbsp;</b><span id="acquire_stop" style="float:right">&nbsp;0</span>
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;fem not busy:&nbsp;</b><span id="fem_not_busy">&nbsp;</span>
-                  </td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;vsr2_sync:&nbsp;</b><span id="vsr2_sync" style="float:right">&nbsp;X</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td></td>
-                  <td>
-                    <b style="font-size:15px">&nbsp;daq stop:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b><span id="daq_stop">&nbsp;0</span>
-                  </td>
-                </tr>
-              </table>
-              <table class="overall-table">
-                <tr>  
-                  <td>  
-                    <th>(Orphaned)&nbsp;</th>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    Sensors Layout:&nbsp;
-                  </td>
-                  <td>
-                    <select class="double-width" onchange="sensorsLayoutChange(this.value)">
-                      <option value="1x1">1x1 (80x80)</option>
-                      <option selected="selected" value="2x2">2x2 (160x160)</option>
-                      <option value="2x6">2x6 (160x480)</option>
-                    </select>
-                  </td>
-                  <td>
-                    &nbsp;<td><span id="sensors-layout-warning">&nbsp;</span></td>
-                  </td>
-                </tr>
+                        <table class="table table-striped" style="width=100%">
+                          <thead>
+                              <tr>
+                                  <th>Frame Receiver</th>
+                                  <th>Packets</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              <tr>
+                                <td>Received</td>
+                                <td><span id="frames_received" style="float:right">&nbsp;</span></td>
+                              </tr>
+                              <tr>
+                                <td>Released</td>
+                                <td><span id="frames_released" style="float:right">&nbsp;</span></td>
+                              </tr>
+                              <tr>
+                                <td>Dropped</td>
+                                <td><span id="frames_dropped" style="float:right">&nbsp;</span></td>
+                              </tr>
+                              <tr>
+                                <td>Timed out</td>
+                                <td><span id="frames_timedout" style="float:right">&nbsp;</span></td>
+                              </tr>
+                          </tbody>
+                        </table>
 
-              </table>
-            </div> <!-- well sidebar-nav-fixed -->
-    
-          </div>  <!-- container-fluid-->
+                      </div> <!-- well sidebar-nav-fixed -->
+                    </div>  <!-- container-fluid-->
+
+                  </div> <!-- vol-md-2 -->
+
+                  <div class="col-xxl-2 col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+                    <div class="row">
+                        <p class="lead text-center">Statistics</p>
+                    </div>
+                    <div class="row contflex">
+                        <div class="col-md-11">
+                            <table class="table table-striped" style="width=100%">
+                                <thead>
+                                  <tr>
+                                    <th>Measure</th>
+                                    <th>Value</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td>Frame rate</td>
+                                    <td><span id="frame_rate" style="float:right">&nbsp;</span></td>
+                                  </tr>
+                                  <tr>
+                                    <td>Acquire time</td>
+                                    <td><span id="acquire_time" style="float:right">&nbsp;</span></td>
+                                  </tr>
+                                  <tr>
+                                    <td>FEM packets_lost</td>
+                                    <td><span id="fem_packets_lost" style="float:right">&nbsp;</span></td>
+                                  </tr>
+                                  <tr>
+                                    <td>FR packets_lost</td>
+                                    <td><span id="packets_lost" style="float:right">&nbsp;</span></td>
+                                  </tr>
+                                  <tr>
+                                    <td>Buffers empty</td>
+                                    <td><span id="buffers_empty" style="float:right">&nbsp;</span></td>
+                                  </tr>
+                                  <tr>
+                                    <td>Buffers mapped</td>
+                                    <td><span id="buffers_mapped" style="float:right">&nbsp;</span></td>
+                                  </tr>
+                                </tbody>
+                            </table>
+                          </div>
+                        </div>
+                    </div> <!-- col-md-2 -->
+                    <div class="col-xxl-2 col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+                      <div class="row">
+                          <p class="lead text-center">DAQ Debug</p>
+                      </div>
+                      <div class="row contflex">
+                        <div class="col-md-11">
+                          <table class="table table-striped" style="width=100%">
+                            <thead>
+                              <tr>
+                                <th>Measure</th>
+                                <th>Value</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td>acquire start</td>
+                                <td><span id="acquire_start" style="float:right">&nbsp;</span></td>
+                              </tr>
+                              <tr>
+                                <td>daq start</td>
+                                <td><span id="daq_start" style="float:right">&nbsp;</span></td>
+                              </tr>
+                              <tr>
+                                <td>acquire stop</td>
+                                <td><span id="acquire_stop" style="float:right">&nbsp;</span></td>
+                              </tr>
+                              <tr>
+                                <td>fem not busy</td>
+                                <td><span id="fem_not_busy" style="float:right">&nbsp;</span></td>
+                              </tr>
+                              <tr>
+                                <td>vsr1_sync</td>
+                                <td><span id="vsr1_sync" style="float:right">&nbsp;</span></td>
+                              </tr>
+                              <tr>
+                                <td>vsr2_sync</td>
+                                <td><span id="vsr2_sync" style="float:right">&nbsp;</span></td>
+                              </tr>
+                            </tbody>
+                          </table>
+
+                          <table class="overall-table">
+                            <tr>
+                              <td>
+                                <th>(Orphaned)&nbsp;</th>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                Sensors Layout:&nbsp;
+                              </td>
+                              <td>
+                                <select class="double-width" onchange="sensorsLayoutChange(this.value)">
+                                  <option value="1x1">1x1 (80x80)</option>
+                                  <option selected="selected" value="2x2">2x2 (160x160)</option>
+                                  <option value="2x6">2x6 (160x480)</option>
+                                </select>
+                              </td>
+                              <td>
+                                &nbsp;<td><span id="sensors-layout-warning">&nbsp;</span></td>
+                              </td>
+                            </tr>
+                          </table>
+
+                        </div> <!-- col-md-11 -->
+                      </div> <!-- row -->
+                  </div> <!-- col-md-4 -->
+
+              </div> <!-- row -->
+
+          </div><!-- container fluid-container -->
 
       </div> <!-- id="health"-->
 
