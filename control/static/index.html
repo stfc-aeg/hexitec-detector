@@ -226,14 +226,13 @@
         <div class="container-fluid">
           <table>
             <tr>
-              <td>
-              </td>
+              <th>Datasets&nbsp;</th>
             </tr>
-            <tr>  
+            <tr>
+              <td></td>
               <td>  
-                <th>Raw Data&nbsp;</th>
+                Raw Data&nbsp;
               </td>
-              <td>&nbsp;</td>
               <td>
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
@@ -243,10 +242,10 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>
-                <th>Processed Data&nbsp;</th>
+                Processed Data&nbsp;
               </td>
-              <td>&nbsp;</td>
               <td>
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
@@ -256,11 +255,10 @@
               </td>
             </tr>
             <tr>  
-              <td>
-                <th>Threshold&nbsp;</th>
-              </td>
+              <th>Threshold&nbsp;</th>
             </tr>
             <tr>
+              <td></td>
               <td>
                 Mode:&nbsp;
               </td>
@@ -277,6 +275,7 @@
               </td>
             </tr>
             <tr>  
+              <td></td>
               <td>  
                 Filename:&nbsp;
               </td>
@@ -294,6 +293,7 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>  
                 Value:&nbsp;
               </td>
@@ -306,11 +306,9 @@
                 &nbsp;<span id="threshold-value-warning">&nbsp;</span>
               </td>
             </tr>
-            <tr>  
-              <td>  
-                <th>Next Frame&nbsp;</th>
-              </td>
-              <td>&nbsp;</td>
+            <tr>
+              <th>Next Frame&nbsp;</th>
+              <td></td>
               <td>
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
@@ -320,9 +318,7 @@
               </td>
             </tr>
             <tr>
-              <td>  
-                <th>Calibration&nbsp;</th>
-              </td>
+              <th>Calibration&nbsp;</th>
               <td>&nbsp;</td>
               <td>
                 <div class="row sidebar-row vertical-align">
@@ -333,6 +329,7 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>  
                 Gradients:&nbsp;
               </td>
@@ -346,6 +343,7 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>  
                 Intercepts:&nbsp;
               </td>
@@ -359,12 +357,14 @@
               </td>
             </tr>
             <tr>
-              <td>
-                <th>Charged Sharing<br>None / Addition / Discrimination:&nbsp;</th>
-              </td>
+              <th>Charged Sharing&nbsp;</th>
             </tr>
             <tr>
               <td></td>
+              <td>
+                Mode:&nbsp;
+              </td>
+              <!-- <td></td> -->
               <td>
                 <!-- Set Charged Sharing algorithm -->
                 <input type="button" class="btn btn-primary fixed-width" id='noneButton' name="b1" data-size="small" value="None" onclick="setCS(event)" style="background-color:#0000FF">
@@ -373,6 +373,7 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>
                 Pixel Grid Size:&nbsp;&nbsp;&nbsp;
               </td>
@@ -386,11 +387,12 @@
               </td>
             </tr>
             <tr>  
+              <th>Histogram&nbsp;</th>
               <td>  
-                <th>Histogram&nbsp;</th>
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>
                 <div id="bin_start">Bin Start: [ADU]&nbsp;</div>
               </td>
@@ -404,6 +406,7 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>
                 <div id="bin_end">Bin End: [ADU]&nbsp;</div>
               </td>
@@ -418,6 +421,7 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td> 
                 <div id="bin_width">Bin Width: [ADU]&nbsp;</div>
               </td>
@@ -434,6 +438,7 @@
               <td>
                 &nbsp;
               </td>
+              <td></td>
               <td>
                 <input type="button" accesskey="y" class="btn btn-primary double-width" id='applyButton' data-size="small" value="Apply All">
               </td>
@@ -481,11 +486,11 @@
                                       </tr>
                                       <tr>
                                           <td>ADC</td>
-                                          <td><span id="vsr1_adc">&nbsp;</span></td>
+                                          <td><span id="vsr1_adc">&nbsp;</span>C</td>
                                       </tr>
                                       <tr>
                                           <td>HV</td>
-                                          <td><span id="vsr1_hv">&nbsp;</span></td>
+                                          <td><span id="vsr1_hv">&nbsp;</span>V</td>
                                       </tr>
                                     </tbody>
                                   </table>
@@ -515,11 +520,11 @@
                                       </tr>
                                       <tr>
                                         <td>ADC</td>
-                                        <td><span id="vsr2_adc">&nbsp;</span></td>
+                                        <td><span id="vsr2_adc">&nbsp;</span>C</td>
                                       </tr>
                                       <tr>
                                         <td>HV</td>
-                                        <td><span id="vsr2_hv">&nbsp;</span></td>
+                                        <td><span id="vsr2_hv">&nbsp;</span>V</td>
                                       </tr>
                                   </tbody>
                               </table>
@@ -641,7 +646,10 @@
                             </td>
                           </tr>
                           <tr>
-                            <td>&nbsp;</td>
+                            <td></td>
+                            <td>
+                              <input type="button" class="btn btn-primary double-width" id='applyButton2' data-size="small" value="Apply">
+                            </td>
                           </tr>
                         </table>
 

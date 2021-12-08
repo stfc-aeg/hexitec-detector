@@ -91,6 +91,10 @@ $( document ).ready(function()
         apply_ui_values();
     });
 
+    $('#applyButton2').on('click', function(event) {
+        apply_ui_values();
+    });
+
     $('#connectButton').on('click', function(event) {
         // On cold initialisation: configure FP, wait 800 ms before connecting
         //  Any subsequent time: Do not configure FP, connect straightaway
@@ -263,6 +267,7 @@ function toggle_ui_elements(bBool)
     // document.getElementById("hvOnButton").disable = bBool;
     document.getElementById("offsetsButton").disabled = bBool;
     document.getElementById("applyButton").disabled = bBool;
+    document.getElementById("applyButton2").disabled = bBool;
     document.getElementById("hdf-file-path-text").disabled = bBool;
     document.getElementById("hdf-file-name-text").disabled = bBool;
     document.getElementById("hexitec-config-text").disabled = bBool;
@@ -353,6 +358,7 @@ function poll_fem()
             toggle_ui_elements(true);
             // Unlock configuration related UI elements
             document.getElementById("applyButton").disabled = false;
+            document.getElementById("applyButton2").disabled = false;
             document.getElementById("hdf-file-path-text").disabled = false;
             document.getElementById("hdf-file-name-text").disabled = false;
             document.getElementById("hexitec-config-text").disabled = false;        
