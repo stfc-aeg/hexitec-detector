@@ -379,11 +379,13 @@ class HexitecFem():
 
     def set_number_frames(self, frames):
         """Set number of frames, initialise frame_rate if not set."""
-        self.frame_rate = 1 if (self.frame_rate == 0) else self.frame_rate
+        if self.frame_rate == 0:
+            self.calculate_frame_rate()
 
         if self.number_frames != frames:
             self.number_frames = frames
             self.duration = self.number_frames / self.frame_rate
+            self.parent.set_duration(self.duration)
 
     def get_duration(self):
         """Set acquisition duration."""
@@ -2117,7 +2119,7 @@ class HexitecFem():
             with open(filename, 'r') as f:  # noqa: F841
                 pass
             self.hexitec_config = filename
-            logging.debug("hexitec_config: '%s' Filename: '%s'" % (self.hexitec_config, filename))
+            logging.debug("hexitec_config: '%s'" % (self.hexitec_config))
         except IOError as e:
             logging.error("Cannot open provided hexitec file: %s" % e)
             raise ParameterTreeError("Error: %s" % e)

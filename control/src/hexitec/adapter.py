@@ -197,7 +197,7 @@ class Hexitec():
 
         self.fems = []
         for key, value in options.items():
-            logging.debug("%s: %s", key, value)
+            # logging.debug("%s: %s", key, value)
             if "fem" in key:
                 fem_info = value.split(',')
                 fem_info = [(i.split('=')[0], i.split('=')[1])

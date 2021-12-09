@@ -846,6 +846,7 @@ var changeDurationEnable = function()
     {
         $('#duration-text').prop('disabled', false);
         $('#frames-text').prop('disabled', true);
+        duration_changed();
     }
     else
     {
