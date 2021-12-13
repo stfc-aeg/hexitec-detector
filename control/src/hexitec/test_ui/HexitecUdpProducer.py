@@ -103,7 +103,7 @@ class HexitecUdpProducer(object):
             # Read frame header
             header = np.frombuffer(payload[:HEADER_SIZE], dtype=np.uint64)
             # print([hex(val) for val in header])
-            assert header[0] == num_frames
+            # assert header[0] == num_frames    # Assumes PCAPNG file begins from frame 0
 
             # If this is a start of frame packet, reset frame data
             if int(header[1]) & self.SOF:

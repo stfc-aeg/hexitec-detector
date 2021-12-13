@@ -46,7 +46,8 @@
             <tr>
               <td>
                 <input type="button" accesskey="c" class="btn btn-primary" id='connectButton' data-size="small" value="Connect">
-                <!-- <input type="button" accesskey="q" class="btn btn-primary" id='acquire_Button' data-size="small" value="Start">
+                <!--  -->
+                <!-- <input type="button" accesskey="q" class="btn btn-primary" id='acquireButton' data-size="small" value="Start">
                 <input type="button" accesskey="x" class="btn btn-primary" id='cancelButton' data-size="small" value="Stop">
                 <input type="button" accesskey="n" class="btn btn-primary" id='hvOnButton' data-size="small" value="HV On">
                 <input type="button" accesskey="l" class="btn btn-primary" id='hvOffButton' data-size="small" value="HV Off"> -->
@@ -74,150 +75,177 @@
       <!-- <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"          accesskey="o" data-bs-toggle="tab" type="button" role="tab" aria-controls="contact" data-bs-target="#contact">Contact</a></li> -->
     </ul>
 
+<!-- .
+<div class="tab-pane fade show active" id="health" role="tabpanel">
+
+  <div class="container-fluid">
+      <div class="row contflex row-cols-1 row-cols-md-2 g-4">
+          <div class="col-xxl-2 col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+              <div class="row">
+                  <p class="lead text-center">Environmental Sensors</p>
+              </div>
+              <div class="row contflex">
+                  <div class="col-md-11">
+
+. -->
 
     <div class="tab-content"> <!-- tab-content -->
       <div class="tab-pane fade" id="visualisation" role="tabpanel">
         <div class="container-fluid">
 
-          <div class="col-sm-6">
-            <div id="4" class="main-container">
-              <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Live View</p>
-              <!-- Section nicked from LiveView UI.. -->
-              <div class="container-fluid">
-                <div class="row fluid-row">
-                  <div class="col-sm-8">
-                    <div class="sidebar-nav-fixed">
-                      <div class="container-fluid">
-                        <div class="row sidebar-title">
-                          <!-- <h3>Live View Demo</h3> -->
-                        </div>
-                        <div class="row sidebar-row vertical-align">
-                          <div class="col-xs-5">
-                            <b>Auto&#8209;update:</b> 
-                          </div>
-                          <div class="col-xs-7">
-                            <input type="checkbox" accesskey="v" name="liveview_enable" data-size="small">
-                          </div>
-                        </div>
-                        <div class="row sidebar-row vertical-align">
-                          <div class="col-xs-5">
-                            <b>Colour&nbsp;map:</b> 
-                          </div>
-                          <div class="col-xs-7">
-                            <select class="form-control" id="colormap_select">
-                            </select>
-                          </div>
-                        </div>
-                        <div class="row sidebar-row vertical-align">
-                          <div class="col-xs-5">
-                            <b>Clipping:</b> 
-                          </div>
-                          <div class="col-xs-7">
-                            <input type="checkbox" name="clip_enable" data-size="small":">
-                          </div>
-                        </div>
-                        <div class="row sidebar-row vertical-align row-bold">
-                          <div class="col-xs-4 text-left" id="clip_min">&nbsp;</div>
-                          <div class="col-xs-4 text-center">Range</div>
-                          <div class="col-xs-4 text-right" id="clip_max">&nbsp;</div>
-                        </div>
-                        <div class="row sidebar-row sidebar-row-full">
-                          <div class="col-xs12 range-col">
-                            <input id="clip_range"
-                              type="text" value="" data-slider-id="clip-range" 
-                              data-slider-min="0" data-slider-max="100" 
-                              data-slider-step="1" data-slider-value="[0,100]"
-                            />
-                          </div>
-                        </div>
-                        <div class="row sidebar-row vertical-align">
-                          <div class="col-xs-5">
-                            <b>Auto&#8209;sizing:</b> 
-                          </div>
-                          <div class="col-xs-7">
-                            <input type="checkbox" name="autosize_enable" data-size="small":">
-                          </div>
-                        </div>
-                        <div class="row sidebar-row vertical-align row-bold">
-                          <div class="col-xs-4 text-left" id="clip_min">0%</div>
-                          <div class="col-xs-4 text-center">Size</div>
-                          <div class="col-xs-4 text-right" id="clip_max">100%</div>
-                        </div>
-                        <div class="row sidebar-row sidebar-row-full">
-                          <div class="col-xs12 range-col">
-                            <input id="size_range"
-                              type="text" value="" data-slider-id="size-range" 
-                              data-slider-min="0" data-slider-max="200" 
-                              data-slider-step="1" data-slider-value="100"
-                            />
-                          </div>
-                        </div>
-                      </div> <!-- container-fluid --> 
-                    </div> <!-- sidebar-nav-fixed -->
-                  </div> <!-- col-sm-8 -->
+          <div class="row contflex row-cols-1 row-cols-md-2 g-4">
+            <div class="col-xxl-2 col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+              <div class="row contflex">
 
-                  <div class="col-sm-4">
-                    <div id="liveview_container" class="odin-server live-image">
-                      <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image'>
-                    </div> <!-- odin-server -->
-                  </div> <!-- col-sm-4 -->
-                </div> <!-- row fluid-row -->
-              </div> <!-- container-fluid-->
+                <div class="col-sm-6">
+                  <div id="4" class="main-container">
+                    <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Live View</p>
+                    <!-- Section nicked from LiveView UI.. -->
+                    <div class="container-fluid">
+                      <div class="row fluid-row">
+                        <div class="col-sm-8">
+                          <div class="sidebar-nav-fixed">
+                            <!-- <div class="container-fluid"> -->
+                              <div class="row sidebar-title">
+                                <!-- <h3>Live View Demo</h3> -->
+                              </div>
+                              <div class="row sidebar-row vertical-align">
+                                <div class="col-xs-5">
+                                  <b>Auto&#8209;update:</b> 
+                                </div>
+                                <div class="col-xs-7">
+                                  <input type="checkbox" accesskey="v" name="liveview_enable" data-size="small">
+                                </div>
+                              </div>
+                              <div class="row sidebar-row vertical-align">
+                                <div class="col-xs-5">
+                                  <b>Colour&nbsp;map:</b> 
+                                </div>
+                                <div class="col-xs-7">
+                                  <select class="form-control" id="colormap_select">
+                                  </select>
+                                </div>
+                              </div>
+                              <div class="row sidebar-row vertical-align">
+                                <div class="col-xs-5">
+                                  <b>Clipping:</b> 
+                                </div>
+                                <div class="col-xs-7">
+                                  <input type="checkbox" name="clip_enable" data-size="small":">
+                                </div>
+                              </div>
+                              <div class="row sidebar-row vertical-align row-bold">
+                                <div class="col-xs-4 text-left" id="clip_min">&nbsp;</div>
+                                <div class="col-xs-4 text-center">Range</div>
+                                <div class="col-xs-4 text-right" id="clip_max">&nbsp;</div>
+                              </div>
+                              <div class="row sidebar-row sidebar-row-full">
+                                <div class="col-xs12 range-col">
+                                  <input id="clip_range"
+                                    type="text" value="" data-slider-id="clip-range" 
+                                    data-slider-min="0" data-slider-max="100" 
+                                    data-slider-step="1" data-slider-value="[0,100]"
+                                  />
+                                </div>
+                              </div>
+                              <div class="row sidebar-row vertical-align">
+                                <div class="col-xs-5">
+                                  <b>Auto&#8209;sizing:</b> 
+                                </div>
+                                <div class="col-xs-7">
+                                  <input type="checkbox" name="autosize_enable" data-size="small":">
+                                </div>
+                              </div>
+                              <div class="row sidebar-row vertical-align row-bold">
+                                <div class="col-xs-4 text-left" id="clip_min">0%</div>
+                                <div class="col-xs-4 text-center">Size</div>
+                                <div class="col-xs-4 text-right" id="clip_max">100%</div>
+                              </div>
+                              <div class="row sidebar-row sidebar-row-full">
+                                <div class="col-xs12 range-col">
+                                  <input id="size_range"
+                                    type="text" value="" data-slider-id="size-range" 
+                                    data-slider-min="0" data-slider-max="200" 
+                                    data-slider-step="1" data-slider-value="100"
+                                  />
+                                </div>
+                              </div>
+                            <!-- </div> <!-- container-fluid --> 
+                          </div> <!-- sidebar-nav-fixed -->
+                        </div> <!-- col-sm-8 -->
 
-            </div> <!-- "main-container" -->
-          </div> <!-- col-sm-4 -->
+                        <div class="col-sm-4">
+                          <div id="liveview_container" class="odin-server live-image">
+                            <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image'>
+                          </div> <!-- odin-server -->
+                        </div> <!-- col-sm-4 -->
+                      </div> <!-- row fluid-row -->
+                    </div> <!-- container-fluid-->
+
+                  </div> <!-- "main-container" -->
+                </div> <!-- col-sm-6 -->
+
+              </div>  <!-- class="row contflex">  -->
+            </div>  <!-- class="col-xxl-2 col-xl-5 col-lg-5 col-md-5 col-sm-11 card">  -->
+
+            <div class="col-xxl-2 col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+              <div class="row contflex">
+                <table>
+                  <tr>
+                    <td>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      System<br>Health:
+                    </td>
+                    <!-- <td>
+                      <input type="button" class="btn btn-primary" id='applyButton2' data-size="small" value="Apply">
+                    </td> -->
+                  <!-- </tr>
+                  <tr> -->
+                    <td>
+                      <!-- Single traffic light to indicate system health -->
+                      <div id="trafficLight">
+                        <div class="lamp" id="Green"></div>
+                        <!-- Temporary fix; Ensure Progress/Messages/Errors don't grow/shrink dramatically -->
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Progress:&nbsp;
+                    </td>
+                    <td>
+                      <progress id="progress-odin" style="width: 100%" value="0" max="100"> </progress>
+                    </td>
+                  <tr>
+                  <tr>
+                    <td>
+                      Messages:&nbsp;
+                    </td>
+                    &nbsp;<td><span id="odin-control-message">&nbsp;</span></td>
+                  <tr>
+                  </tr>
+                    <td>
+                      Errors:&nbsp;
+                    </td>
+                    &nbsp;<td><span id="odin-control-error">&nbsp;</span></td>
+                    <td>
+                    </td>
+                  </tr>
+                </table>
+              </div>  <!-- class="row contflex">  -->
+            </div>  <!-- class="col-xxl-2 col-xl-5 col-lg-5 col-md-5 col-sm-11 card">  -->
+
+
+          </div>  <!-- class="row contflex row-cols-1 row-cols-md-2 g-4">  -->
+
         </div>  <!-- class="container-fluid"-->
-
-        <table>
-          <tr>
-            <td>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              System<br>Health:
-            </td>
-            <!-- <td>
-              <input type="button" class="btn btn-primary" id='applyButton2' data-size="small" value="Apply">
-            </td> -->
-          <!-- </tr>
-          <tr> -->
-            <td>
-              <!-- Single traffic light to indicate system health -->
-              <div id="trafficLight">
-                <div class="lamp" id="Green"></div>
-                <!-- Temporary fix; Ensure Progress/Messages/Errors don't grow/shrink dramatically -->
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              Progress:&nbsp;
-            </td>
-            <td>
-              <progress id="progress-odin" style="width: 100%" value="0" max="100"> </progress>
-            </td>
-          <tr>
-          <tr>
-            <td>
-              Messages:&nbsp;
-            </td>
-            &nbsp;<td><span id="odin-control-message">&nbsp;</span></td>
-          <tr>
-          </tr>
-            <td>
-              Errors:&nbsp;
-            </td>
-            &nbsp;<td><span id="odin-control-error">&nbsp;</span></td>
-            <td>
-            </td>
-          </tr>
-        </table>
-
       </div> <!-- id="visualisation" -->
 
       <!-- <div class="tab-pane fade show active" id="processing" role="tabpanel"> <!-- id="processing" -->
@@ -530,7 +558,7 @@
                               </table>
                           </div>
                       </div>
-                  </div> <!-- col-md-2 -->
+                  </div> <!-- col-xxl-2 -->
 
                   <div class="col-xxl-2 col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
                     <div class="container-fluid">
