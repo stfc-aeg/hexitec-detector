@@ -823,13 +823,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.x10g_rdma.read = Mock()
         self.test_fem.fem.x10g_rdma.read.side_effect = side
 
-        with patch('time.sleep') as fake_sleep:
-            fake_sleep.side_effect = None
-
-            with pytest.raises(HexitecFemError) as exc_info:
-                self.test_fem.fem.acquire_data_completed()
-            assert exc_info.type is HexitecFemError
-            assert exc_info.value.args[0] == "User cancelled Acquire"
+        self.test_fem.fem.acquire_data_completed()
 
         assert self.test_fem.fem.operation_percentage_complete == 100
         assert self.test_fem.fem.hardware_busy is False

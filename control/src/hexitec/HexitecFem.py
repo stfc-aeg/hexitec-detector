@@ -1010,7 +1010,10 @@ class HexitecFem():
         self.x10g_rdma.write(0xD0000000, 0, 'Clear enable signal')
 
         if self.stop_acquisition:
-            logging.error("Acquisition stopped prematurely")
+            logging.error("Cancelling Acquisition..")
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0xE2, 0x0D])
+            self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0xE2, 0x0D])
+            logging.error("Acquisition cancelled")
             # Reset variables
             self.stop_acquisition = False
             self.operation_percentage_complete = 100
@@ -1019,7 +1022,8 @@ class HexitecFem():
             self.acquisition_completed = True
             if self.first_initialisation:
                 self.first_initialisation_done_update_gui()
-            raise HexitecFemError("User cancelled Acquire")
+            self._set_status_message("User cancelled collection")
+            return
         else:
             waited = str(self.waited)
             logging.debug("Capturing {} frames took {} s".format(str(self.number_frames), waited))
