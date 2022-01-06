@@ -18,6 +18,7 @@ var system_health = true;
 var fem_error_id = -1;
 var ui_frames = 10;
 var cold_initialisation = true;
+var hv_enabled = false;
 
 // Called once, when page 1st loaded
 $( document ).ready(function()
@@ -33,8 +34,8 @@ $( document ).ready(function()
     document.getElementById("cancelButton").disabled = true;
     document.getElementById("disconnectButton").disabled = true;
     document.getElementById("offsetsButton").disabled = true;
-    // document.getElementById("hvOnButton").disable = true;
-    // document.getElementById("hvOffButton").disable = true;
+    document.getElementById("hvOnButton").disabled = true;
+    document.getElementById("hvOffButton").disabled = true;
 
     /// Style checkboxes into ON/OFF sliders
 
@@ -141,16 +142,12 @@ $( document ).ready(function()
         document.getElementById("connectButton").disabled = false;
     });
 
-    // $('#hvOnButton').on('click', function(event) {
-    //     switch_hv_off();
-    //     document.getElementById('hvOnButton').disabled = true;
-    //     document.getElementById('hvOffButton').disabled = false;
-    // });
-    // $('#hvOffButton').on('click', function(event) {
-    //     switch_hv_on();
-    //     document.getElementById('hvOffButton').disabled = true;
-    //     document.getElementById('hvOnButton').disabled = false;
-    // });
+    $('#hvOnButton').on('click', function(event) {
+        switch_hv_on();
+    });
+    $('#hvOffButton').on('click', function(event) {
+        switch_hv_off();
+    });
 
     $('#offsetsButton').on('click', function(event) {
         collect_offsets();
@@ -228,11 +225,19 @@ function setCS(e)
 
 function switch_hv_off()
 {
+    // TODO: Switch HV off
+    hv_enabled = false;
+    document.getElementById('hvOnButton').disabled = false;
+    document.getElementById('hvOffButton').disabled = true;
     console.log("Switching HV off");
 }
 
 function switch_hv_on()
 {
+    // TODO: Switch HV on
+    hv_enabled = true;
+    document.getElementById('hvOnButton').disabled = true;
+    document.getElementById('hvOffButton').disabled = false;
     console.log("Switching HV on");
 }
 
@@ -255,16 +260,20 @@ function collect_offsets()
 
 function start_polling_thread()
 {
-    // Starts the polling thread ferrying informationfrom Odin to the UI
+    // Starts the polling thread ferrying information from Odin to the UI
     poll_fem();
 }
 
 function toggle_ui_elements(bBool)
 {
+    console.log("toggling_ui_elements(" + bBool + ")!");
     document.getElementById("initialiseButton").disabled = bBool;
     document.getElementById("acquireButton").disabled = bBool;
     document.getElementById("cancelButton").disabled = bBool;
-    // document.getElementById("hvOnButton").disable = bBool;
+    if (hv_enabled)
+        document.getElementById("hvOffButton").disabled = bBool;
+    else
+        document.getElementById("hvOnButton").disabled = bBool;
     document.getElementById("offsetsButton").disabled = bBool;
     document.getElementById("applyButton").disabled = bBool;
     document.getElementById("applyButton2").disabled = bBool;
