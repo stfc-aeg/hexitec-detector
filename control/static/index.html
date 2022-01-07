@@ -63,8 +63,6 @@
         </div> <!-- "main-container" -->
       </div> <!-- col-sm-12 -->
 
-
-
     <ul class="nav nav-tabs" role="tablist">  <!-- accesskey="c" -->
       <li class="nav-item" role="presentation"><a class="nav-link active" aria-selected="True"          accesskey="s" data-bs-toggle="tab" type="button" role="tab" aria-controls="visualisation" data-bs-target="#visualisation">&nbsp;&nbsp;Visualisation</a></li>
       <!-- <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"          accesskey="s" data-bs-toggle="tab" type="button" role="tab" aria-controls="visualisation" data-bs-target="#visualisation">&nbsp;&nbsp;Visualisation</a></li> -->
@@ -77,8 +75,6 @@
 
       <!-- <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"          accesskey="o" data-bs-toggle="tab" type="button" role="tab" aria-controls="contact" data-bs-target="#contact">Contact</a></li> -->
     </ul>
-
-
 
     <div class="tab-content"> <!-- tab-content -->
       <!-- <div class="tab-pane fade" id="visualisation" role="tabpanel"> -->
@@ -101,7 +97,7 @@
                     </tr>
                     <tr>
                       <td>
-                        hdf/file/path:&nbsp;
+                        Path:&nbsp;
                       </td>
                       <td>
                         <div class="text-columns">
@@ -114,7 +110,7 @@
                     </tr>
                     <tr>
                       <td>
-                        hdf/file/name:&nbsp;
+                        Name:&nbsp;
                       </td>
                       <td>
                         <div class="text-columns">
@@ -208,7 +204,7 @@
                     </tr>
                     <tr>
                       <td>
-                        <th> Trigger Status&nbsp;</th>
+                        <th>Trigger Status&nbsp;</th>
                       </td>
                     </tr>
                     <tr>
@@ -300,31 +296,56 @@
                               <div class="row sidebar-title">
                                 <!-- <h3>Live View Demo</h3> -->
                               </div>
-                              <div class="row sidebar-row vertical-align">
-                                <div class="col-xs-5">
-                                  <b>Auto&#8209;update:</b>
-                                </div>
-                                <div class="col-xs-7">
-                                  <input type="checkbox" accesskey="v" name="liveview_enable" data-size="small">
-                                </div>
-                              </div>
-                              <div class="row sidebar-row vertical-align">
-                                <div class="col-xs-5">
-                                  <b>Colour&nbsp;map:</b>
-                                </div>
-                                <div class="col-xs-7">
-                                  <select class="form-control" id="colormap_select">
-                                  </select>
-                                </div>
-                              </div>
-                              <div class="row sidebar-row vertical-align">
-                                <div class="col-xs-5">
-                                  <b>Threshold:</b>
-                                </div>
-                                <div class="col-xs-7">
-                                  <input type="checkbox" name="clip_enable" data-size="small":">
-                                </div>
-                              </div>
+
+                              <table>
+                                <tr>
+                                  <td>
+                                    <div class="row sidebar-row vertical-align">
+                                      <div class="col-xs-5">
+                                        <b>Enable:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <div class="row sidebar-row vertical-align">
+                                      <div class="col-xs-5">
+                                        <b>Colour&nbsp;map:</b>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <div class="row sidebar-row vertical-align">
+                                      <div class="col-xs-5">
+                                        <b>Threshold:&nbsp;&nbsp;&nbsp;</b>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td>
+                                    <div class="row sidebar-row vertical-align">
+                                      <div class="col-xs-7">
+                                        <input type="checkbox" accesskey="v" name="liveview_enable" data-size="small">
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <div class="row sidebar-row vertical-align">
+                                      <div class="col-xs-7">
+                                        <select class="form-control" id="colormap_select">
+                                        </select>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <div class="row sidebar-row vertical-align">
+                                      <div class="col-xs-7">
+                                        <input type="checkbox" name="clip_enable" data-size="small":">
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              </table>
                               <div class="row sidebar-row vertical-align row-bold">
                                 <div class="col-xs-4 text-left" id="clip_min">&nbsp;</div>
                                 <div class="col-xs-4 text-center">Range</div>
@@ -375,6 +396,7 @@
             </div>  <!-- class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">  -->
 
             <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+              <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Raw Data Preview</p>
               <div id="liveview_container" class="odin-server live-image">
                 <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image'>
               </div>
@@ -619,120 +641,7 @@
         <div class="container-fluid">
           <div class="row contflex row-cols-1 row-cols-md-2 g-4">
 
-            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
-              <div class="row">
-                <p class="lead text-center">Environmental Sensors</p>
-              </div>
-              <div class="row contflex">
-                <div class="col-md-11">
-                  <table class="table table-striped" style="width=100%">
-                      <thead>
-                          <tr>
-                              <th>VSR1 Sensor</th>
-                              <th>Measure</th>
-                          </tr>
-                      </thead>
-                      <tbody>
-                          <tr>
-                              <td>Ambient</td>
-                              <td><span id="vsr1_ambient">&nbsp;</span>C</td>
-                          </tr>
-                          <tr>
-                              <td>Humidity</td>
-                              <td><span id="vsr1_humidity">&nbsp;</span>%</td>
-                          </tr>
-                          <tr>
-                              <td>ASIC1</td>
-                              <td><span id="vsr1_asic1">&nbsp;</span>C</td>
-                          </tr>
-                          <tr>
-                              <td>ASIC2</td>
-                              <td><span id="vsr1_asic2">&nbsp;</span>C</td>
-                          </tr>
-                          <tr>
-                              <td>ADC</td>
-                              <td><span id="vsr1_adc">&nbsp;</span>C</td>
-                          </tr>
-                          <tr>
-                              <td>HV</td>
-                              <td><span id="vsr1_hv">&nbsp;</span>V</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                      <table class="table table-striped" style="width=100%">
-                      <thead>
-                          <tr>
-                              <th>VSR2 Sensor</th>
-                              <th>Measure</th>
-                          </tr>
-                      </thead>
-                      <tbody>
-                          <tr>
-                            <td>Ambient</td>
-                            <td><span id="vsr2_ambient">&nbsp;</span>C</td>
-                          </tr>
-                          <tr>
-                            <td>Humidity</td>
-                            <td><span id="vsr2_humidity">&nbsp;</span>%</td>
-                          </tr>
-                          <tr>
-                            <td>ASIC1</td>
-                            <td><span id="vsr2_asic1">&nbsp;</span>C</td>
-                          </tr>
-                          <tr>
-                            <td>ASIC2</td>
-                            <td><span id="vsr2_asic2">&nbsp;</span>C</td>
-                          </tr>
-                          <tr>
-                            <td>ADC</td>
-                            <td><span id="vsr2_adc">&nbsp;</span>C</td>
-                          </tr>
-                          <tr>
-                            <td>HV</td>
-                            <td><span id="vsr2_hv">&nbsp;</span>V</td>
-                          </tr>
-                      </tbody>
-                  </table>
-                </div>
-              </div>
-            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "Environmental Sensors" -->
-
-            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
-              <div class="container-fluid">
-                <div><!--<div class="well sidebar-nav-fixed"> -->
-                  <table class="table table-striped" style="width=100%">
-                    <thead>
-                      <tr>
-                        <th>Frame Receiver</th>
-                        <th>Packets</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>Received</td>
-                        <td><span id="frames_received" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Released</td>
-                        <td><span id="frames_released" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Dropped</td>
-                        <td><span id="frames_dropped" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Timed out</td>
-                        <td><span id="frames_timedout" style="float:right">&nbsp;</span></td>
-                      </tr>
-                    </tbody>
-                  </table>
-
-                </div> <!-- well sidebar-nav-fixed -->
-              </div>  <!-- container-fluid-->
-
-            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "File Options" -->
-
-            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card"> <!-- Begin: First row, first column -->
               <div class="row">
                 <p class="lead text-center">Statistics</p>
               </div>
@@ -772,10 +681,37 @@
                         </tr>
                       </tbody>
                   </table>
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>Frame Receiver</th>
+                        <th>Packets</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Received</td>
+                        <td><span id="frames_received" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Released</td>
+                        <td><span id="frames_released" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Dropped</td>
+                        <td><span id="frames_dropped" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Timed out</td>
+                        <td><span id="frames_timedout" style="float:right">&nbsp;</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "Statistics" -->
-            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "" -->  <!-- End: First row, first column -->
+
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card"> <!-- Begin: First row, second column -->
               <div class="row">
                 <p class="lead text-center">DAQ Debug</p>
               </div>
@@ -841,7 +777,231 @@
 
                 </div> <!-- col-md-11 -->
               </div> <!-- row contflex -->
-            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "DAQ DEBUG" -->
+            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "DAQ DEBUG" -->  <!-- End: First row, second column -->
+
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">  <!-- End: Second row, first column -->
+              <div class="row">
+                <p class="lead text-center">Environmental Sensors</p>
+              </div>
+              <div class="row contflex">
+                <div class="col-md-11">
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>VSR1 Sensor</th>
+                        <th>Measure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Ambient</td>
+                        <td><span id="vsr1_ambient">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>Humidity</td>
+                        <td><span id="vsr1_humidity">&nbsp;</span>%</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC1</td>
+                        <td><span id="vsr1_asic1">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC2</td>
+                        <td><span id="vsr1_asic2">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ADC</td>
+                        <td><span id="vsr1_adc">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>HV</td>
+                        <td><span id="vsr1_hv">&nbsp;</span>V</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>VSR3 Sensor</th>
+                        <th>Measure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Ambient</td>
+                        <td><span id="vsr3_ambient">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>Humidity</td>
+                        <td><span id="vsr3_humidity">&nbsp;</span>%</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC1</td>
+                        <td><span id="vsr3_asic1">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC2</td>
+                        <td><span id="vsr3_asic2">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ADC</td>
+                        <td><span id="vsr3_adc">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>HV</td>
+                        <td><span id="vsr3_hv">&nbsp;</span>V</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>VSR5 Sensor</th>
+                        <th>Measure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Ambient</td>
+                        <td><span id="vsr5_ambient">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>Humidity</td>
+                        <td><span id="vsr5_humidity">&nbsp;</span>%</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC1</td>
+                        <td><span id="vsr5_asic1">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC2</td>
+                        <td><span id="vsr5_asic2">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ADC</td>
+                        <td><span id="vsr5_adc">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>HV</td>
+                        <td><span id="vsr5_hv">&nbsp;</span>V</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "Environmental Sensors" --> <!-- End: Second row, first column -->
+
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card"> <!-- Begin: Second row, second column -->
+              <div class="row">
+                <p class="lead text-center">Environmental Sensors</p>
+              </div>
+              <div class="row contflex">
+                <div class="col-md-11">
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>VSR2 Sensor</th>
+                        <th>Measure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Ambient</td>
+                        <td><span id="vsr2_ambient">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>Humidity</td>
+                        <td><span id="vsr2_humidity">&nbsp;</span>%</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC1</td>
+                        <td><span id="vsr2_asic1">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC2</td>
+                        <td><span id="vsr2_asic2">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ADC</td>
+                        <td><span id="vsr2_adc">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>HV</td>
+                        <td><span id="vsr2_hv">&nbsp;</span>V</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>VSR4 Sensor</th>
+                        <th>Measure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Ambient</td>
+                        <td><span id="vsr4_ambient">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>Humidity</td>
+                        <td><span id="vsr4_humidity">&nbsp;</span>%</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC1</td>
+                        <td><span id="vsr4_asic1">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC2</td>
+                        <td><span id="vsr4_asic2">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ADC</td>
+                        <td><span id="vsr4_adc">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>HV</td>
+                        <td><span id="vsr4_hv">&nbsp;</span>V</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>VSR6 Sensor</th>
+                        <th>Measure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Ambient</td>
+                        <td><span id="vsr6_ambient">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>Humidity</td>
+                        <td><span id="vsr6_humidity">&nbsp;</span>%</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC1</td>
+                        <td><span id="vsr6_asic1">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC2</td>
+                        <td><span id="vsr6_asic2">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ADC</td>
+                        <td><span id="vsr6_adc">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>HV</td>
+                        <td><span id="vsr6_hv">&nbsp;</span>V</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "Environmental Sensors" --> <!-- End: Second row, second column -->
 
           </div> <!-- row conflex-->
 
