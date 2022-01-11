@@ -266,7 +266,6 @@ function start_polling_thread()
 
 function toggle_ui_elements(bBool)
 {
-    console.log("toggling_ui_elements(" + bBool + ")!");
     document.getElementById("initialiseButton").disabled = bBool;
     document.getElementById("acquireButton").disabled = bBool;
     document.getElementById("cancelButton").disabled = bBool;
