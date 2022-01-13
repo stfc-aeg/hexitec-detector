@@ -700,6 +700,13 @@ class Hexitec():
         if self.first_initialisation:
             self.first_initialisation = False
             self.number_frames = self.backed_up_number_frames
+        # Reset summed_image otherwise subsequent acquisition will be contaminated
+        # Issue reset to summed_image
+        command = "config/summed_image/reset_image"
+        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+        request.body = "{}".format(1)
+        self.adapters["fp"].put(command, request)
+
         # Reset initial acquisition, extended acquisition bools
         self.initial_acquisition = True
         self.extended_acquisition = False

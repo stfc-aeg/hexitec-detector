@@ -19,6 +19,8 @@ using namespace log4cxx::helpers;
 #include "FrameProcessorPlugin.h"
 #include "HexitecDefinitions.h"
 #include "ClassLoader.h"
+#include "DataBlockFrame.h"
+//
 #include <boost/algorithm/string.hpp>
 #include <map>
 
