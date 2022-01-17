@@ -292,96 +292,186 @@
                       <div class="row fluid-row">
                         <div class="col-sm-8">
                           <div class="sidebar-nav-fixed">
+                            <table>
+                              <tr>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-5">
+                                      <b>Enable:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-5">
+                                      <b>Colour&nbsp;map:</b>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-5">
+                                      <b>Threshold:&nbsp;&nbsp;&nbsp;</b>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-7">
+                                      <input type="checkbox" accesskey="v" name="liveview_enable" data-size="small">
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-7">
+                                      <select class="form-control" id="colormap_select">
+                                      </select>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-7">
+                                      <input type="checkbox" name="clip_enable" data-size="small":">
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            </table>
+                            <div class="row sidebar-row vertical-align row-bold">
+                              <div class="col-xs-4 text-left" id="clip_min">&nbsp;</div>
+                              <div class="col-xs-4 text-center">Range</div>
+                              <div class="col-xs-4 text-right" id="clip_max">&nbsp;</div>
+                            </div>
+                            <div class="row sidebar-row sidebar-row-full">
+                              <div class="col-xs12 range-col">
+                                <input id="clip_range"
+                                  type="text" value="" data-slider-id="clip-range" 
+                                  data-slider-min="0" data-slider-max="100"
+                                  data-slider-step="1" data-slider-value="[0,100]"
+                                />
+                              </div>
+                            </div>
+                            <div class="row sidebar-row vertical-align">
+                              <div class="col-xs-5">
+                                <b>Auto&#8209;sizing:</b> 
+                              </div>
+                              <div class="col-xs-7">
+                                <input type="checkbox" name="autosize_enable" data-size="small":">
+                              </div>
+                            </div>
+                            <div class="row sidebar-row vertical-align row-bold">
+                              <div class="col-xs-4 text-left" id="clip_min">0%</div>
+                              <div class="col-xs-4 text-center">Size</div>
+                              <div class="col-xs-4 text-right" id="clip_max">100%</div>
+                            </div>
+                            <div class="row sidebar-row sidebar-row-full">
+                              <div class="col-xs12 range-col">
+                                <input id="size_range"
+                                  type="text" value="" data-slider-id="size-range"
+                                  data-slider-min="0" data-slider-max="200"
+                                  data-slider-step="1" data-slider-value="100"
+                                />
+                              </div>
+                            </div>
+                            <table>
+                              <tr>
+                                <td>
+                                  Dataset:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-7">
+                                      <select class="form-control" id="lv_dataset_select" onchange="lv_dataset_changed(this.value)">
+                                        <option value="filename">raw_frames</option>
+                                        <option selected="selected" value="processed_frames">processed_frames</option>
+                                        <option value="summed_images">summed_images</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  &nbsp;<td><span id="lv-dataset-changed-warning">&nbsp;</span></td>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>
+                                  Frame Frequency:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="text-columns">
+                                    <input type="text" id="frame-frequency-text" onChange='frame_frequency_changed()' value="50">
+                                  </div>
+                                </td>
+                                <td>
+                                  &nbsp;<td><span id="frame-frequency-warning">&nbsp;</span></td>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>
+                                  Per Second:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="text-columns">
+                                    <input type="text" id="per-second-text" onChange='per_second_changed()' value="0">
+                                  </div>
+                                </td>
+                                <td>
+                                  &nbsp;<td><span id="per-second-warning">&nbsp;</span></td>
+                                </td>
+                              </tr>
 
-                              <div class="row sidebar-title">
-                                <!-- <h3>Live View Demo</h3> -->
-                              </div>
+                            </table>
+                            <table>
+                              <tr>
+                                <td>
+                                  <th>Summed Image&nbsp;</th>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>
+                                  Threshold Lower:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="text-columns">
+                                    <input type="text" id="threshold-lower-text" onChange='threshold_lower_changed()' value="0">
+                                  </div>
+                                </td>
+                                <td>
+                                  &nbsp;<td><span id="threshold-lower-warning">&nbsp;</span></td>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>
+                                  Threshold Upper:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="text-columns">
+                                    <input type="text" id="threshold-upper-text" onChange='threshold_upper_changed()' value="4400">
+                                  </div>
+                                </td>
+                                <td>
+                                  &nbsp;<td><span id="threshold-upper-warning">&nbsp;</span></td>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>
+                                  Processing Frequency:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="text-columns">
+                                    <input type="text" id="processing-frequency" onChange='processing_frequency_changed()' value="4">
+                                  </div>
+                                </td>
+                                <td>
+                                  &nbsp;<td><span id="threshold-upper-warning">&nbsp;</span></td>
+                                </td>
+                              </tr>
 
-                              <table>
-                                <tr>
-                                  <td>
-                                    <div class="row sidebar-row vertical-align">
-                                      <div class="col-xs-5">
-                                        <b>Enable:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td>
-                                    <div class="row sidebar-row vertical-align">
-                                      <div class="col-xs-5">
-                                        <b>Colour&nbsp;map:</b>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td>
-                                    <div class="row sidebar-row vertical-align">
-                                      <div class="col-xs-5">
-                                        <b>Threshold:&nbsp;&nbsp;&nbsp;</b>
-                                      </div>
-                                    </div>
-                                  </td>
-                                </tr>
-                                <tr>
-                                  <td>
-                                    <div class="row sidebar-row vertical-align">
-                                      <div class="col-xs-7">
-                                        <input type="checkbox" accesskey="v" name="liveview_enable" data-size="small">
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td>
-                                    <div class="row sidebar-row vertical-align">
-                                      <div class="col-xs-7">
-                                        <select class="form-control" id="colormap_select">
-                                        </select>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td>
-                                    <div class="row sidebar-row vertical-align">
-                                      <div class="col-xs-7">
-                                        <input type="checkbox" name="clip_enable" data-size="small":">
-                                      </div>
-                                    </div>
-                                  </td>
-                                </tr>
-                              </table>
-                              <div class="row sidebar-row vertical-align row-bold">
-                                <div class="col-xs-4 text-left" id="clip_min">&nbsp;</div>
-                                <div class="col-xs-4 text-center">Range</div>
-                                <div class="col-xs-4 text-right" id="clip_max">&nbsp;</div>
-                              </div>
-                              <div class="row sidebar-row sidebar-row-full">
-                                <div class="col-xs12 range-col">
-                                  <input id="clip_range"
-                                    type="text" value="" data-slider-id="clip-range" 
-                                    data-slider-min="0" data-slider-max="100"
-                                    data-slider-step="1" data-slider-value="[0,100]"
-                                  />
-                                </div>
-                              </div>
-                              <div class="row sidebar-row vertical-align">
-                                <div class="col-xs-5">
-                                  <b>Auto&#8209;sizing:</b> 
-                                </div>
-                                <div class="col-xs-7">
-                                  <input type="checkbox" name="autosize_enable" data-size="small":">
-                                </div>
-                              </div>
-                              <div class="row sidebar-row vertical-align row-bold">
-                                <div class="col-xs-4 text-left" id="clip_min">0%</div>
-                                <div class="col-xs-4 text-center">Size</div>
-                                <div class="col-xs-4 text-right" id="clip_max">100%</div>
-                              </div>
-                              <div class="row sidebar-row sidebar-row-full">
-                                <div class="col-xs12 range-col">
-                                  <input id="size_range"
-                                    type="text" value="" data-slider-id="size-range"
-                                    data-slider-min="0" data-slider-max="200"
-                                    data-slider-step="1" data-slider-value="100"
-                                  />
-                                </div>
-                              </div>
+                            </table>
 
                           </div> <!-- sidebar-nav-fixed -->
                         </div> <!-- col-sm-8 -->

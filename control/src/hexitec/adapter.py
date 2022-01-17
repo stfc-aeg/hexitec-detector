@@ -717,7 +717,7 @@ class Hexitec():
     def cancel_acquisition(self, put_data=None):
         """Cancel ongoing acquisition in Software.
 
-        Not yet possible to stop Hardware.
+        Not yet possible to stop Hardware. - Actually is?
         """
         for fem in self.fems:
             fem.stop_acquisition = True

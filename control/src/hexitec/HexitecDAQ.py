@@ -109,6 +109,13 @@ class HexitecDAQ():
         self.frames_processed = 0
         self.shutdown_processing = False
 
+        self.dataset_name = "raw_frames"
+        self.frame_frequency = 50
+        self.per_second = 0
+
+        self.threshold_lower = 0
+        self.threshold_upper = 4400
+
         self.threshold_filename = ""
         self.threshold_mode = "value"
         self.threshold_value = 120
@@ -168,8 +175,19 @@ class HexitecDAQ():
                     "pass_processed": (lambda: self.pass_processed, self._set_pass_processed),
                     "pass_raw": (lambda: self.pass_raw, self._set_pass_raw)
                 },
+                "live_view": {
+                    "dataset_name": (lambda: self.dataset_name, self._set_dataset_name),
+                    "frame_frequency": (lambda: self.frame_frequency, self._set_frame_frequency),
+                    "per_second": (lambda: self.per_second, self._set_per_second)
+                },
                 "next_frame": {
                     "enable": (lambda: self.next_frame_enable, self._set_next_frame_enable)
+                },
+                "summed_image": {
+                    "threshold_lower": (lambda: self.threshold_lower,
+                                        self._set_threshold_lower),
+                    "threshold_upper": (lambda: self.threshold_upper,
+                                        self._set_threshold_upper)
                 },
                 "threshold": {
                     "threshold_filename": (lambda: self.threshold_filename,
@@ -550,6 +568,15 @@ class HexitecDAQ():
     def _set_discrimination_enable(self, discrimination_enable):
         self.discrimination_enable = discrimination_enable
 
+    def _set_dataset_name(self, dataset_name):
+        self.dataset_name = dataset_name
+
+    def _set_frame_frequency(self, frame_frequency):
+        self.frame_frequency = frame_frequency
+
+    def _set_per_second(self, per_second):
+        self.per_second = per_second
+
     def _set_next_frame_enable(self, next_frame_enable):
         self.next_frame_enable = next_frame_enable
 
@@ -642,6 +669,12 @@ class HexitecDAQ():
 
     def _set_threshold_value(self, threshold_value):
         self.threshold_value = threshold_value
+
+    def _set_threshold_lower(self, threshold_lower):
+        self.threshold_lower = threshold_lower
+
+    def _set_threshold_upper(self, threshold_upper):
+        self.threshold_upper = threshold_upper
 
     def _get_sensors_layout(self):
         return self.sensors_layout
@@ -738,8 +771,8 @@ class HexitecDAQ():
 
             for param_key in self.param_tree.tree['config'].get(plugin):
 
-                # print("config/%s/%s" % (plugin, param_key), " -> ", \
-                #         self.param_tree.tree['config'][plugin][param_key].get(""))
+                # print("                   config/%s/%s" % (plugin, param_key), " -> ",
+                #       self.param_tree.tree['config'][plugin][param_key].get(""))
 
                 # Don't send histogram's pass_raw, pass_processed, since Odin Control do not support bool
                 if param_key not in ["pass_processed", "pass_raw"]:

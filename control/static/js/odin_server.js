@@ -1132,6 +1132,42 @@ function hdf_file_name_changed()
     });
 };
 
+function threshold_lower_changed()
+{
+    var threshold_lower = $('#threshold-lower-text').prop('value');
+    threshold_lower = JSON.stringify(parseInt(threshold_lower));
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/summed_image/threshold_lower',
+        contentType: "application/json",
+        data: threshold_lower,
+        success: function(result) {
+            $('#threshold-lower-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#threshold-lower-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+};
+
+function threshold_upper_changed()
+{
+    var threshold_upper = $('#threshold-upper-text').prop('value');
+    threshold_upper = JSON.stringify(parseInt(threshold_upper));
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/summed_image/threshold_upper',
+        contentType: "application/json",
+        data: threshold_upper,
+        success: function(result) {
+            $('#threshold-upper-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#threshold-upper-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+};
+
 function hexitec_config_changed()
 {
     var hexitec_config = $('#hexitec-config-text').prop('value');
@@ -1180,6 +1216,63 @@ function duration_changed()
         },
         error: function(request, msg, error) {
             $('#duration-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+};
+
+function lv_dataset_changed()
+{
+    var dataset_name = $('#lv_dataset_select').prop('value');
+    var payload = {"dataset_name": dataset_name};
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/live_view',
+        contentType: "application/json",
+        data: JSON.stringify(payload),
+        // data: payload,
+        success: function(result) {
+            $('#lv-dataset-changed-warning').html("");
+            document.getElementById("lv-dataset-changed-warning").classList.remove('alert-danger');
+        },
+        error: function(request, msg, error) {
+            $('#lv-dataset-changed-warning').html(error + ": " + format_error(request.responseText));
+            document.getElementById("threshold-mode-warning").classList.add('alert-danger');
+        }
+    });
+}
+
+function frame_frequency_changed()
+{
+    var frame_frequency = $('#frame-frequency-text').prop('value');
+    frame_frequency = JSON.stringify(parseInt(frame_frequency));
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/live_view/frame_frequency',
+        contentType: "application/json",
+        data: frame_frequency,
+        success: function(result) {
+            $('#frame-frequency-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#frame-frequency-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+};
+
+function per_second_changed()
+{
+    var per_second = $('#per-second-text').prop('value');
+    per_second = JSON.stringify(parseInt(per_second));
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/live_view/per_second',
+        contentType: "application/json",
+        data: per_second,
+        success: function(result) {
+            $('#per-second-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#per-second-warning').html(error + ": " + format_error(request.responseText));
         }
     });
 };

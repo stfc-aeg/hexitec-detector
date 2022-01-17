@@ -85,6 +85,19 @@ class GenerateConfigFiles():
             raise KeyError("Couldn't locate histogram setting(s)!")
         return histogram_config
 
+    def summed_image_settings(self, summed_image):
+        """Add summed_image plugin section to configuration file."""
+        try:
+            summed_image_config = '''
+                        "threshold_lower": %s,
+                        "threshold_upper": %s,''' % \
+                (summed_image['threshold_lower'], summed_image['threshold_upper'])
+        except KeyError:
+            logging.error("Error extracting summed_image_settings!")
+            print("Error extracting summed_image_settings!")
+            raise KeyError("Couldn't locate summed_image setting(s)!")
+        return summed_image_config
+
     def generate_config_files(self):  # noqa: C901
         """Generate the two configuration files.
 
@@ -129,6 +142,7 @@ class GenerateConfigFiles():
         hexitec_plugins["addition"] = ["addition", "Addition", "Addition"]
         hexitec_plugins["discrimination"] = ["discrimination", "Discrimination", "Discrimination"]
         hexitec_plugins["histogram"] = ["histogram", "Histogram", "Histogram"]
+        hexitec_plugins["summed_image"] = ["summed_image", "SummedImage", "SummedImage"]
 
         # Plugin path that doesn't follow the same format (as the others)
         # "live_view", "LiveViewPlugin      "install/lib/libLiveViewPlugin.so"
@@ -151,9 +165,9 @@ class GenerateConfigFiles():
         # Extract configuration from HexitecDAQ config
         d = self.param_tree['config']
 
-        # Sort parameter tree dict into R, T, N, C, A, D, H plugin order
+        # Sort parameter tree dict into R, T, N, C, A, D, H, SI, LV plugin order
         keyorder = ['reorder', 'threshold', 'next_frame', 'calibration', 'addition',
-                    'discrimination', 'histogram']
+                    'discrimination', 'histogram', 'summed_image', 'live_view']
         config = OrderedDict(sorted(d.items(), key=lambda i: keyorder.index(i[0])))
 
         # Determine plugin chain (to configure frameProcessor)
@@ -177,7 +191,7 @@ class GenerateConfigFiles():
                 logging.debug("Plugin %s missing 'enable' setting!" % key)
                 raise Exception("Plugin %s missing 'enable' setting!" % key)
 
-        plugin_chain += ["histogram", "live_view"]
+        plugin_chain += ["histogram", "summed_image", "live_view"]
 
         # Add blosc if compression selected
         if self.compression_type == "blosc":
@@ -221,13 +235,13 @@ class GenerateConfigFiles():
                 }''' % (odin_plugins[plugin][0], odin_plugins[plugin][1],
                         odin_path, odin_plugins[plugin][2])
 
-        # Chain plugins together, with live view branchded off reorder on separate (dead end) branch
+        # Chain plugins together, with live view now branched off summed_image
         store_plugin_connect = ''',
                 {
                     "plugin": {
                         "connect": {
                             "index": "live_view",
-                            "connection": "reorder"
+                            "connection": "summed_image"
                         }
                     }
                 }'''
@@ -269,6 +283,8 @@ class GenerateConfigFiles():
                         config[plugin]['pixel_grid_size']
                 if plugin == "histogram":
                     unique_setting = self.histogram_settings(config[plugin])
+                if plugin == "summed_image":
+                    unique_setting = self.summed_image_settings(config[plugin])
 
                 store_plugin_config += ''',
                 {
@@ -290,7 +306,7 @@ class GenerateConfigFiles():
                     }
                 }'''
 
-        # Configure blosc if selected
+        # Configure blosc (common settings) if selected
         if self.compression_type == "blosc":
             store_plugin_config += ''',
                 {
@@ -310,13 +326,15 @@ class GenerateConfigFiles():
                         "dataset":
                         {'''
 
-        # Blosc settings are common across all datasets, define them once only:
+        # Datasets' individual Blosc settings will be defined once only,
+        #  applied to all datasets:
         blosc_settings = '''
                                 "compression": "%s",
                                 "blosc_compressor": 1,
                                 "blosc_shuffle": 0,
                                 "blosc_level": 4''' % self.compression_type
 
+        # extra_datasets contained 0 or more of: [processed_frames, raw_frames]
         for dataset in self.extra_datasets:
             # datatype is float for processed_frames, uint16 for raw_frames
             datatype = "float"
@@ -331,6 +349,12 @@ class GenerateConfigFiles():
                             },'''
 
         store_plugin_config += '''
+                            "summed_images":
+                            {
+                                "datatype": "uint16",
+                                "dims": [%s, %s],''' % (rows, columns) + '''
+                                "chunks": [1, %s, %s],%s''' % (rows, columns, blosc_settings) + '''
+                            },
                             "spectra_bins":
                             {
                                 "datatype": "float",
@@ -423,7 +447,11 @@ if __name__ == '__main__':
                     'pass_processed': False, 'pass_raw': True},
                    'next_frame': {'enable': True},
                    'threshold':
-                   {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'}},
+                   {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'},
+                   'summed_image': {
+                       'threshold_lower': 120,
+                       'threshold_upper': 4800}
+                  },
                   'processor': {'config_file': '', 'configured': False, 'connected': False}}
 
     bin_end = param_tree['config']['histogram']['bin_end']
