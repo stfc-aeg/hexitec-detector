@@ -115,6 +115,7 @@ class HexitecDAQ():
 
         self.threshold_lower = 0
         self.threshold_upper = 4400
+        self.image_frequency = 1
 
         self.threshold_filename = ""
         self.threshold_mode = "value"
@@ -187,7 +188,9 @@ class HexitecDAQ():
                     "threshold_lower": (lambda: self.threshold_lower,
                                         self._set_threshold_lower),
                     "threshold_upper": (lambda: self.threshold_upper,
-                                        self._set_threshold_upper)
+                                        self._set_threshold_upper),
+                    "image_frequency": (lambda: self.image_frequency,
+                                        self._set_image_frequency)
                 },
                 "threshold": {
                     "threshold_filename": (lambda: self.threshold_filename,
@@ -675,6 +678,9 @@ class HexitecDAQ():
 
     def _set_threshold_upper(self, threshold_upper):
         self.threshold_upper = threshold_upper
+
+    def _set_image_frequency(self, image_frequency):
+        self.image_frequency = image_frequency
 
     def _get_sensors_layout(self):
         return self.sensors_layout

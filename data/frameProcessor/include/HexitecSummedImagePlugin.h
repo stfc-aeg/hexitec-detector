@@ -55,6 +55,7 @@ namespace FrameProcessor
       static const std::string CONFIG_SENSORS_LAYOUT;
       static const std::string CONFIG_THRESHOLD_LOWER;
       static const std::string CONFIG_THRESHOLD_UPPER;
+      static const std::string CONFIG_IMAGE_FREQUENCY;
       static const std::string CONFIG_RESET_IMAGE;
 
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
@@ -76,6 +77,7 @@ namespace FrameProcessor
       unsigned short *summed_image_;
       int threshold_lower_;
       int threshold_upper_;
+      int image_frequency_;
       int reset_image_;
 
       void reset_summed_image_values();

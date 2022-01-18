@@ -13,7 +13,9 @@ namespace FrameProcessor
   const std::string HexitecSummedImagePlugin::CONFIG_SENSORS_LAYOUT   = "sensors_layout";
   const std::string HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER  = "threshold_lower";
   const std::string HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER  = "threshold_upper";
+  const std::string HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY  = "image_frequency";
   const std::string HexitecSummedImagePlugin::CONFIG_RESET_IMAGE      = "reset_image";
+
   /**
    * The constructor sets up logging used within the class.
    */
@@ -33,6 +35,7 @@ namespace FrameProcessor
     memset(summed_image_, 0, image_pixels_ * sizeof(unsigned short));
     threshold_lower_ = 0;
     threshold_upper_ = 16382;
+    image_frequency_ = 1;
   }
 
   /**
@@ -78,6 +81,7 @@ namespace FrameProcessor
    * - sensors_layout_str_  <=> sensors_layout
    * - threshold_lower_     <=> threshold_lower
    * - threshold_upper_     <=> threshold_upper
+   * - image_frequency_     <=> image_frequency
    * - reset_image_         <=> reset_image
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
@@ -102,6 +106,11 @@ namespace FrameProcessor
       threshold_upper_ = config.get_param<int>(HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER);
     }
 
+    if (config.has_param(HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY))
+    {
+      image_frequency_ = config.get_param<int>(HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY);
+    }
+
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_RESET_IMAGE))
     {
       reset_image_ = config.get_param<int>(HexitecSummedImagePlugin::CONFIG_RESET_IMAGE);
@@ -109,7 +118,6 @@ namespace FrameProcessor
       if (reset_image_ == 1)
       {
         // Clear all pixels to be 0
-        std::cout << "\n+++++++++++++++++++++++++++++++++++++++++++++++++++++ RESETTING summed_image_ ++++++++++++++++++++++++++++++++++++++++++++++\n";
         memset(summed_image_, 0, image_pixels_ * sizeof(unsigned short));
         reset_image_ = 0;
       }
@@ -123,6 +131,7 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER, threshold_lower_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER, threshold_upper_);
+    reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY, image_frequency_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_RESET_IMAGE, reset_image_);
   }
 
@@ -138,6 +147,7 @@ namespace FrameProcessor
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/threshold_lower", threshold_lower_);
     status.set_param(get_name() + "/threshold_upper", threshold_upper_);
+    status.set_param(get_name() + "/image_frequency", image_frequency_);
     status.set_param(get_name() + "/reset_image", reset_image_);
   }
 
@@ -182,43 +192,47 @@ namespace FrameProcessor
                                           << frame->get_frame_number());
         this->push(frame);
 
-        // Create summed_image dataset
+        if ((frame->get_frame_number() % image_frequency_) == 0)
+        {
+          // Create summed_image dataset
 
-        FrameMetaData summed_image_meta;
-        dimensions_t dims(2);
-        dims[0] = image_height_;
-        dims[1] = image_width_;
-        summed_image_meta.set_dimensions(dims);
-        summed_image_meta.set_compression_type(no_compression);
-        summed_image_meta.set_data_type(raw_16bit);
-        summed_image_meta.set_frame_number(frame_number);
-        summed_image_meta.set_dataset_name("summed_images");
+          FrameMetaData summed_image_meta;
+          dimensions_t dims(2);
+          dims[0] = image_height_;
+          dims[1] = image_width_;
+          summed_image_meta.set_dimensions(dims);
+          summed_image_meta.set_compression_type(no_compression);
+          summed_image_meta.set_data_type(raw_16bit);
+          summed_image_meta.set_frame_number(frame_number);
+          summed_image_meta.set_dataset_name("summed_images");
 
-        const std::size_t summed_image_size = image_width_ * image_height_ * sizeof(unsigned short);
+          const std::size_t summed_image_size = image_width_ * image_height_ * sizeof(unsigned short);
 
-        boost::shared_ptr<Frame> summed_frame;
-        summed_frame = boost::shared_ptr<Frame>(new DataBlockFrame(summed_image_meta,
-          summed_image_size));
+          boost::shared_ptr<Frame> summed_frame;
+          summed_frame = boost::shared_ptr<Frame>(new DataBlockFrame(summed_image_meta,
+            summed_image_size));
 
-        // Ensure frame is empty
-        float *summed = static_cast<float *>(summed_frame->get_data_ptr());
-        memset(summed, 0, image_pixels_ * sizeof(unsigned short));
+          // Ensure frame is empty
+          float *summed = static_cast<float *>(summed_frame->get_data_ptr());
+          memset(summed, 0, image_pixels_ * sizeof(unsigned short));
 
-        // Define pointer to the input image data
-        void* input_ptr = static_cast<void *>(
-          static_cast<char *>(const_cast<void *>(data_ptr)));
+          // Define pointer to the input image data
+          void* input_ptr = static_cast<void *>(
+            static_cast<char *>(const_cast<void *>(data_ptr)));
 
-        void* output_ptr = summed_frame->get_data_ptr();
+          void* output_ptr = summed_frame->get_data_ptr();
 
-        // LOG4CXX_TRACE(logger_, "FRM NUM: " << frame->get_frame_number());
-        // Apply algorithm
-        apply_summed_image_algorithm(static_cast<float *>(input_ptr),
-                                     static_cast<unsigned short *>(output_ptr));
+          // Apply algorithm
+          apply_summed_image_algorithm(static_cast<float *>(input_ptr),
+                                      static_cast<unsigned short *>(output_ptr));
 
-        const std::string& dataset_name = summed_image_meta.get_dataset_name();
-        LOG4CXX_TRACE(logger_, "Pushing " << dataset_name << " dataset, frame number: " <<
-                      summed_frame->get_frame_number());
-        this->push(summed_frame);
+          const std::string& dataset_name = summed_image_meta.get_dataset_name();
+          LOG4CXX_TRACE(logger_, "Pushing " << dataset_name << " dataset, frame number: " <<
+                        summed_frame->get_frame_number());
+          this->push(summed_frame);
+        }
+        else
+          LOG4CXX_TRACE(logger_, "Skipping frame: " << frame->get_frame_number());
       }
       catch (const std::exception& e)
       {

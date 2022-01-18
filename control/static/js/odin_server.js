@@ -1168,6 +1168,25 @@ function threshold_upper_changed()
     });
 };
 
+function image_frequency_changed()
+{
+    var image_frequency = $('#image-frequency-text').prop('value');
+    console.log("image_frequency: " + image_frequency);
+    image_frequency = JSON.stringify(parseInt(image_frequency));
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/summed_image/image_frequency',
+        contentType: "application/json",
+        data: image_frequency,
+        success: function(result) {
+            $('#image-frequency-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#image-frequency-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+};
+
 function hexitec_config_changed()
 {
     var hexitec_config = $('#hexitec-config-text').prop('value');
