@@ -132,6 +132,8 @@ namespace FrameProcessor
 
     // Reset packets lost counter
     packets_lost_ = 0;
+
+    return true;
   }
 
   /**
