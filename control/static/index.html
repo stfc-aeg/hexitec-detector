@@ -5,6 +5,19 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+
+    <!-- Bootstrap -->
+    <link href="js/bootstrap-5.1.1-dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- <link href="js/fontawesome-free-5.15.1-web/css/all.min.css" rel="stylesheet"> -->
+
+    <!-- 
+    <link href="css/bootstrap-switch-4.0.0-alpha.1-dist/bootstrap-switch.min.css" rel="stylesheet">
+    <link href="css/carrier.css" rel="stylesheet">
+    <link href="css/command-sequencer.css" rel="stylesheet">
+    <div id="global-nav"></div>
+    -->
+
+    <!-- Things ported from previous design: -->
     <title>Hexitec Server</title>
 
     <script src="js/jquery-2.2.3.min.js"></script>
@@ -15,265 +28,488 @@
     <link href="css/odin-server.css" rel="stylesheet">
 
     <!-- Bootstrap -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <!-- <link href="css/bootstrap.min.css" rel="stylesheet"> -->
     <link href="css/bootstrap-switch.min.css" rel="stylesheet">
     <link href="js/bootstrap-slider-10.2.1/css/bootstrap-slider.css" rel="stylesheet">
 
     <script src="js/bootstrap-switch/highlight.js"></script>
     <script src="js/bootstrap-switch/bootstrap-switch.js"></script>
-
+<!-- End of things ported from previous design -->
   </head>
+
   <body>
-    <!-- ODIN header - Not yet in use --> 
-    <nav class="navbar navbar-inverse navbar-fixed-top">
-      <div class="container">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="https://github.com/stfc-aeg/hexitec-detector/">Hexitec Project</a>
-          <a class="navbar-brand" href="https://github.com/stfc-aeg/odin-workshop">ODIN</a>
-          <a class="navbar-brand" href="https://github.com/stfc-aeg/hexitec-detector/issues/">Known Issues</a>
-        </div>
-        <!-- <div id="navbar" class="collapse navbar-collapse">
-          <ul class="nav navbar-nav">
-            <li class="active"><a href="#">Home</a></li>
-            <li><a href="#about">About</a></li>
-            <li><a href="#contact">Contact</a></li>
-          </ul>
-        </div> -->
-        <!--/.nav-collapse -->
-      </div>
-    </nav>
-
-    <!-- Anywhere:
-    <label>
-        <input name="radio_anywhere" type="radio" value="None" checked/>
-        <span>None</span>
-    </label>
-    
-    <label>
-        <input name="radio_anywhere" type="radio" value="Add"/>
-        <span>Add</span>
-    </label>
-    
-    <label>
-        <input name="radio_anywhere" type="radio" value="Dis"/>
-        <span>Dis</span>
-    </label>
-
-    <br><br>
-    Bullseye:
-    <div class="btn-group btn-group-toggle" data-toggle="buttons">
-      <form name="formA">
-        <label class="btn btn-primary active">
-          <input type="radio" name="myradio" value="None"/>
-          None
-        </label>
-        <label class="btn btn-primary">
-          <input type="radio" name="myradio" value="Add"/>
-          Add
-        </label>
-        <label class="btn btn-primary">
-          <input type="radio" name="myradio" value="Dis"/>
-          Dis
-        </label>
-      </form>
-    </div>
-
-    <br><br>
-    Keyboard:
-    <div class="btn-group btn-group-toggle" data-toggle="buttons">
-      <label class="btn btn-primary active">
-        <input type="radio" name="options" id="None" class="counted" value="none">
-        None
-      </label>
-      <label class="btn btn-primary">
-        <input type="radio" name="options" id="Add" class="counted" value="add">
-        Add
-      </label>
-      <label class="btn btn-primary">
-        <input type="radio" name="options" id="Dis" class="counted" value="dis">
-        Dis
-      </label>
-    </div> -->
-
-    <div class="navigation">
-      <a href="#" id="container1" class="nav-widget-add">Show Acquisition</a>&nbsp;&nbsp;
-      <a href="#" id="container2" class="nav-widget-add">Show Processing</a>&nbsp;&nbsp;
-      <a href="#" id="container3" class="nav-widget-add">Show Status</a>&nbsp;&nbsp;
-      <a href="#" id="container4" class="nav-widget-add">Show Live View</a>&nbsp;&nbsp;
-    </div>
 
     <div class="row">
-      <div class="col-sm-6">
+      <div class="col-sm-12">
         <div id="1" class="main-container">
-          <a href="#" id="maincontainer1" class="rem-widget">Hide Acquisition</a>
           <table>
             <tr>
               <td>
-              </td>
-              <th style="text-align:center; font-size:1.2em;">Acquisition</th>
-              <!-- <h4 style="text-align:center">Acquisition</h4> -->
-            </tr>
-            <tr>
-              <td>
-                System<br>Health:
-              </td>
-              <!-- <td>
-                <input type="button" class="btn btn-primary" id='applyButton2' data-size="small" value="Apply">
-              </td> -->
-            </tr>
-            <tr>
-              <td>
-                <!-- Single traffic light to indicate system health -->
-                <div id="trafficLight">
-                  <div class="lamp" id="Green"></div>
-                </div>
-              </td>
-              <td>
                 <input type="button" accesskey="c" class="btn btn-primary" id='connectButton' data-size="small" value="Connect">
+                <!--  -->
+                <input type="button" class="btn btn-primary" id='hvOnButton' data-size="small" value="HV On">
+                <input type="button" class="btn btn-primary" id='hvOffButton' data-size="small" value="HV Off">
+                <!--  -->
                 <input type="button" accesskey="n" class="btn btn-primary" id='initialiseButton' data-size="small" value="Initialise">
                 <input type="button" accesskey="l" class="btn btn-primary" id='offsetsButton' data-size="small" value="Collect Offsets">
                 <input type="button" accesskey="q" class="btn btn-primary" id='acquireButton' data-size="small" value="Acquire">
                 <input type="button" accesskey="x" class="btn btn-primary" id='cancelButton' data-size="small" value="Cancel">
+                <!-- -->
+
                 <input type="button" accesskey="i" class="btn btn-primary" id='disconnectButton' data-size="small" value="Disconnect">
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Progress:&nbsp;
-              </td>
-              <td>
-                <progress id="progress-odin" style="width: 100%" value="0" max="100"> </progress>
-              </td>
-            <tr>
-            <tr>
-              <td>
-                Messages:&nbsp;
-              </td>
-              &nbsp;<td><span id="odin-control-message">&nbsp;</span></td>
-            <tr>
-            </tr>
-              <td>
-                Errors:&nbsp;
-              </td>
-              &nbsp;<td><span id="odin-control-error">&nbsp;</span></td>
-              <td>
               </td>
             </tr>
           </table>
         </div> <!-- "main-container" -->
-      </div> <!-- col-sm-4 -->
+      </div> <!-- col-sm-12 -->
 
-      <div class="col-sm-6">
-        <div id="4" class="main-container">
-          <a href="#" id="maincontainer4" class="rem-widget">Hide Live View</a>
-          <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Live View</p>
-            <!-- Section nicked from LiveView UI.. -->
-            <div class="container-fluid">
-              <div class="row fluid-row">
-                <div class="col-sm-8">
-                  <div class="sidebar-nav-fixed">
+    <ul class="nav nav-tabs" role="tablist">  <!-- accesskey="c" -->
+      <li class="nav-item" role="presentation"><a class="nav-link active" aria-selected="True"          accesskey="s" data-bs-toggle="tab" type="button" role="tab" aria-controls="visualisation" data-bs-target="#visualisation">&nbsp;&nbsp;Visualisation</a></li>
+      <!-- <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"          accesskey="s" data-bs-toggle="tab" type="button" role="tab" aria-controls="visualisation" data-bs-target="#visualisation">&nbsp;&nbsp;Visualisation</a></li> -->
+
+      <!-- <li class="nav-item" role="presentation"><a class="nav-link active" aria-selected="True"    accesskey="t" data-bs-toggle="tab" type="button" role="tab" aria-controls="processing" data-bs-target="#processing">Processing</a></li> -->
+      <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"    accesskey="t" data-bs-toggle="tab" type="button" role="tab" aria-controls="processing" data-bs-target="#processing">Processing</a></li>
+
+      <!-- <li class="nav-item" role="presentation"><a class="nav-link active" aria-selected="True"          accesskey="u" data-bs-toggle="tab" type="button" role="tab" aria-controls="health" data-bs-target="#health">Health</a></li> -->
+      <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"          accesskey="u" data-bs-toggle="tab" type="button" role="tab" aria-controls="health" data-bs-target="#health">Health</a></li>
+
+      <!-- <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"          accesskey="o" data-bs-toggle="tab" type="button" role="tab" aria-controls="contact" data-bs-target="#contact">Contact</a></li> -->
+    </ul>
+
+    <div class="tab-content"> <!-- tab-content -->
+      <!-- <div class="tab-pane fade" id="visualisation" role="tabpanel"> -->
+      <div class="tab-pane fade show active" id="visualisation" role="tabpanel">
+        <div class="container-fluid">
+
+          <div class="row contflex row-cols-1 row-cols-md-2 g-4">
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+
+              <div class="container-fluid">
+                <div class="row contflex">
+                  <table class="overall-table">
+                    <tr>
+                      <td></td> <!--Intentionally left blank-->
+                    </tr>
+                    <tr>
+                      <td>
+                        <th>File Options&nbsp;</th>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Path:&nbsp;
+                      </td>
+                      <td>
+                        <div class="text-columns">
+                          <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' value="/tmp/">
+                        </div>
+                      </td>
+                      <td>
+                        &nbsp;<td><span id="hdf-file-path-warning">&nbsp;</span></td>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Name:&nbsp;
+                      </td>
+                      <td>
+                        <div class="text-columns">
+                          <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' value="a">
+                        </div>
+                      </td>
+                      <td>
+                        &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Compression:&nbsp;
+                      </td>
+                      <td>
+                        <select class="double-width" onchange="compressionChange(this.value)">
+                          <option selected="selected" value="none">none</option>
+                          <option value="blosc">blosc</option>
+                        </select>
+                      </td>
+                      <td>
+                        &nbsp;<td><span id="compression-warning">&nbsp;</span></td>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <th>Camera&nbsp;</th>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Mode&nbsp;
+                      </td>
+                      <td>
+                        <div class="row sidebar-row vertical-align">
+                          <div class="col-xs-7">
+                            <input type="checkbox" name="duration_enable" data-size="small" data-off-text="Frames" data-on-text="Seconds">
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Frames&nbsp;
+                      </td>
+                      <td>
+                        <div class="text-frames">
+                          <input type="text" id="frames-text" onChange='frames_changed()' maxlength="40" size="3" value= "10">
+                        </div>
+                      </td>
+                      <td>
+                        &nbsp;<td><span id="frames-warning">&nbsp;</span></td>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Duration&nbsp;
+                      </td>
+                      <td>
+                        <div class="text-duration">
+                          <input type="text" id="duration-text" onChange='duration_changed()' maxlength="40" size="3" value= "1" disabled="true">
+                        </div>
+                      </td>
+                      <td>
+                        &nbsp;<td><span id="duration-warning">&nbsp;</span></td>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <th>Config File&nbsp;</th>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Hexitec Config:&nbsp;
+                      </td>
+                      <td>
+                        <div class="text-columns">
+                          <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' value="control/config/hexitec_unified_CSD__performance.ini">
+                        </div>
+                      </td>
+                      <td>
+                        &nbsp;<td><span id="hexitec-config-warning">&nbsp;</span></td>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td></td>
+                      <td>
+                        <input type="button" class="btn btn-primary double-width" id='applyButton2' data-size="small" value="Apply">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <th>Trigger Status&nbsp;</th>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                      </td>
+                      <td>
+                        (placeholder)&nbsp;
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <th>FPGA Trigger Mode&nbsp;</th>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                      </td>
+                      <td>
+                        (placeholder)&nbsp;
+                      </td>
+                    </tr>
+                  </table>
+
+                  <table>
+                    <tr>
+                      <td>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        System<br>Health:
+                      </td>
+                      <!-- <td>
+                        <input type="button" class="btn btn-primary" id='applyButton2' data-size="small" value="Apply">
+                      </td> -->
+                    <!-- </tr>
+                    <tr> -->
+                      <td>
+                        <!-- Single traffic light to indicate system health -->
+                        <div id="trafficLight">
+                          <div class="lamp" id="Green"></div>
+                          <!-- Temporary fix; Ensure Progress/Messages/Errors don't grow/shrink dramatically -->
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Progress:&nbsp;
+                      </td>
+                      <td>
+                        <progress id="progress-odin" style="width: 100%" value="0" max="100"> </progress>
+                      </td>
+                    <tr>
+                    <tr>
+                      <td>
+                        Messages:&nbsp;
+                      </td>
+                      &nbsp;<td><span id="odin-control-message">&nbsp;</span></td>
+                    <tr>
+                    </tr>
+                      <td>
+                        Errors:&nbsp;
+                      </td>
+                      &nbsp;<td><span id="odin-control-error">&nbsp;</span></td>
+                      <td>
+                      </td>
+                    </tr>
+                  </table>
+                </div>  <!-- class="row contflex">  -->
+              </div>
+            </div>  <!-- class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">  -->
+
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+              <div class="row contflex">
+
+                <div class="col-sm-6">
+                  <div id="4" class="main-container">
+                    <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Live View</p>
+                    <!-- Section nicked from LiveView UI.. -->
                     <div class="container-fluid">
-                      <div class="row sidebar-title">
-                        <!-- <h3>Live View Demo</h3> -->
-                      </div>
-                      <div class="row sidebar-row vertical-align">
-                        <div class="col-xs-5">
-                          <b>Auto&#8209;update:</b> 
-                        </div>
-                        <div class="col-xs-7">
-                          <input type="checkbox" accesskey="v" name="liveview_enable" data-size="small">
-                        </div>
-                      </div>
-                      <div class="row sidebar-row vertical-align">
-                        <div class="col-xs-5">
-                          <b>Colour&nbsp;map:</b> 
-                        </div>
-                        <div class="col-xs-7">
-                          <select class="form-control" id="colormap_select">
-                          </select>
-                        </div>
-                      </div>
-                      <div class="row sidebar-row vertical-align">
-                        <div class="col-xs-5">
-                          <b>Clipping:</b> 
-                        </div>
-                        <div class="col-xs-7">
-                          <input type="checkbox" name="clip_enable" data-size="small":">
-                        </div>
-                      </div>
-                      <div class="row sidebar-row vertical-align row-bold">
-                        <div class="col-xs-4 text-left" id="clip_min">&nbsp;</div>
-                        <div class="col-xs-4 text-center">Range</div>
-                        <div class="col-xs-4 text-right" id="clip_max">&nbsp;</div>
-                      </div>
-                      <div class="row sidebar-row sidebar-row-full">
-                        <div class="col-xs12 range-col">
-                          <input id="clip_range"
-                            type="text" value="" data-slider-id="clip-range" 
-                            data-slider-min="0" data-slider-max="100" 
-                            data-slider-step="1" data-slider-value="[0,100]"
-                          />
-                        </div>
-                      </div>
-                      <div class="row sidebar-row vertical-align">
-                        <div class="col-xs-5">
-                          <b>Auto&#8209;sizing:</b> 
-                        </div>
-                        <div class="col-xs-7">
-                          <input type="checkbox" name="autosize_enable" data-size="small":">
-                        </div>
-                      </div>
-                      <div class="row sidebar-row vertical-align row-bold">
-                        <div class="col-xs-4 text-left" id="clip_min">0%</div>
-                        <div class="col-xs-4 text-center">Size</div>
-                        <div class="col-xs-4 text-right" id="clip_max">100%</div>
-                      </div>
-                      <div class="row sidebar-row sidebar-row-full">
-                        <div class="col-xs12 range-col">
-                          <input id="size_range"
-                            type="text" value="" data-slider-id="size-range" 
-                            data-slider-min="0" data-slider-max="200" 
-                            data-slider-step="1" data-slider-value="100"
-                          />
-                        </div>
-                      </div>
-                    </div> <!-- container-fluid --> 
-                  </div> <!-- sidebar-nav-fixed -->
-                </div> <!-- col-sm-8 -->
-          
-                <div class="col-sm-4">
-                  <div id="liveview_container" class="odin-server live-image">
-                    <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image'>
-                  </div> <!-- odin-server -->
-                </div> <!-- col-sm-4 -->
-              </div> <!-- row fluid-row -->
-            </div> <!-- container-fluid-->
+                      <div class="row fluid-row">
+                        <div class="col-sm-8">
+                          <div class="sidebar-nav-fixed">
+                            <table>
+                              <tr>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-5">
+                                      <b>Enable:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-5">
+                                      <b>Colour&nbsp;map:</b>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-5">
+                                      <b>Threshold:&nbsp;&nbsp;&nbsp;</b>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-7">
+                                      <input type="checkbox" accesskey="v" name="liveview_enable" data-size="small">
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-7">
+                                      <select class="form-control" id="colormap_select">
+                                      </select>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-7">
+                                      <input type="checkbox" name="clip_enable" data-size="small":">
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            </table>
+                            <div class="row sidebar-row vertical-align row-bold">
+                              <div class="col-xs-4 text-left" id="clip_min">&nbsp;</div>
+                              <div class="col-xs-4 text-center">Range</div>
+                              <div class="col-xs-4 text-right" id="clip_max">&nbsp;</div>
+                            </div>
+                            <div class="row sidebar-row sidebar-row-full">
+                              <div class="col-xs12 range-col">
+                                <input id="clip_range"
+                                  type="text" value="" data-slider-id="clip-range" 
+                                  data-slider-min="0" data-slider-max="100"
+                                  data-slider-step="1" data-slider-value="[0,100]"
+                                />
+                              </div>
+                            </div>
+                            <div class="row sidebar-row vertical-align">
+                              <div class="col-xs-5">
+                                <b>Auto&#8209;sizing:</b> 
+                              </div>
+                              <div class="col-xs-7">
+                                <input type="checkbox" name="autosize_enable" data-size="small":">
+                              </div>
+                            </div>
+                            <div class="row sidebar-row vertical-align row-bold">
+                              <div class="col-xs-4 text-left" id="clip_min">0%</div>
+                              <div class="col-xs-4 text-center">Size</div>
+                              <div class="col-xs-4 text-right" id="clip_max">100%</div>
+                            </div>
+                            <div class="row sidebar-row sidebar-row-full">
+                              <div class="col-xs12 range-col">
+                                <input id="size_range"
+                                  type="text" value="" data-slider-id="size-range"
+                                  data-slider-min="0" data-slider-max="200"
+                                  data-slider-step="1" data-slider-value="100"
+                                />
+                              </div>
+                            </div>
+                            <table>
+                              <tr>
+                                <td>
+                                  Dataset:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="row sidebar-row vertical-align">
+                                    <div class="col-xs-7">
+                                      <select class="form-control" id="lv_dataset_select" onchange="lv_dataset_changed(this.value)">
+                                        <option value="filename">raw_frames</option>
+                                        <option selected="selected" value="processed_frames">processed_frames</option>
+                                        <option value="summed_images">summed_images</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  &nbsp;<td><span id="lv-dataset-changed-warning">&nbsp;</span></td>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>
+                                  Frame Frequency:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="text-columns">
+                                    <input type="text" id="frame-frequency-text" onChange='frame_frequency_changed()' value="50">
+                                  </div>
+                                </td>
+                                <td>
+                                  &nbsp;<td><span id="frame-frequency-warning">&nbsp;</span></td>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>
+                                  Per Second:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="text-columns">
+                                    <input type="text" id="per-second-text" onChange='per_second_changed()' value="0">
+                                  </div>
+                                </td>
+                                <td>
+                                  &nbsp;<td><span id="per-second-warning">&nbsp;</span></td>
+                                </td>
+                              </tr>
 
-        </div> <!-- "main-container" -->
-      </div> <!-- col-sm-4 -->
-    </div> <!-- row -->
+                            </table>
+                            <table>
+                              <tr>
+                                <td>
+                                  <th>Summed Image&nbsp;</th>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>
+                                  Threshold Lower:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="text-columns">
+                                    <input type="text" id="threshold-lower-text" onChange='threshold_lower_changed()' value="0">
+                                  </div>
+                                </td>
+                                <td>
+                                  &nbsp;<td><span id="threshold-lower-warning">&nbsp;</span></td>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>
+                                  Threshold Upper:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="text-columns">
+                                    <input type="text" id="threshold-upper-text" onChange='threshold_upper_changed()' value="4400">
+                                  </div>
+                                </td>
+                                <td>
+                                  &nbsp;<td><span id="threshold-upper-warning">&nbsp;</span></td>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>
+                                  Image Frequency:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="text-columns">
+                                    <input type="text" id="image-frequency-text" onChange='image_frequency_changed()' value="1">
+                                  </div>
+                                </td>
+                                <td>
+                                  &nbsp;<td><span id="image-frequency-warning">&nbsp;</span></td>
+                                </td>
+                              </tr>
 
-    <div class="row">
-      <div class="col-sm-8">
-        <div id="2" class="main-container">
-          <a href="#" id="maincontainer2" class="rem-widget">Hide Processing</a>
+                            </table>
+
+                          </div> <!-- sidebar-nav-fixed -->
+                        </div> <!-- col-sm-8 -->
+
+                      </div> <!-- row fluid-row -->
+                    </div> <!-- container-fluid-->
+
+                  </div> <!-- "main-container" -->
+                </div> <!-- col-sm-6 -->
+
+              </div>  <!-- class="row contflex">  -->
+            </div>  <!-- class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">  -->
+
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+              <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Raw Data Preview</p>
+              <div id="liveview_container" class="odin-server live-image">
+                <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image'>
+              </div>
+            </div>
+
+          </div>  <!-- class="row contflex row-cols-1 row-cols-md-2 g-4">  -->
+
+        </div>  <!-- class="container-fluid"-->
+      </div> <!-- id="visualisation" -->
+
+      <!-- <div class="tab-pane fade show active" id="processing" role="tabpanel"> <!-- id="processing" -->
+      <div class="tab-pane fade" id="processing" role="tabpanel"> <!-- id="processing" -->
+
+        <div class="container-fluid">
           <table>
             <tr>
-              <td>
-              </td>
-              <th style="text-align:center; font-size:1.2em;">Processing</th>
+              <th>Datasets&nbsp;</th>
             </tr>
-            <tr>  
+            <tr>
+              <td></td>
               <td>  
-                <th>Raw Data&nbsp;</th>
+                Raw Data&nbsp;
               </td>
-              <td>&nbsp;</td>
               <td>
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
@@ -283,10 +519,10 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>
-                <th>Processed Data&nbsp;</th>
+                Processed Data&nbsp;
               </td>
-              <td>&nbsp;</td>
               <td>
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
@@ -296,11 +532,10 @@
               </td>
             </tr>
             <tr>  
-              <td>
-                <th>Threshold&nbsp;</th>
-              </td>
+              <th>Threshold&nbsp;</th>
             </tr>
             <tr>
+              <td></td>
               <td>
                 Mode:&nbsp;
               </td>
@@ -317,6 +552,7 @@
               </td>
             </tr>
             <tr>  
+              <td></td>
               <td>  
                 Filename:&nbsp;
               </td>
@@ -334,6 +570,7 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>  
                 Value:&nbsp;
               </td>
@@ -346,11 +583,9 @@
                 &nbsp;<span id="threshold-value-warning">&nbsp;</span>
               </td>
             </tr>
-            <tr>  
-              <td>  
-                <th>Next Frame&nbsp;</th>
-              </td>
-              <td>&nbsp;</td>
+            <tr>
+              <th>Next Frame&nbsp;</th>
+              <td></td>
               <td>
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
@@ -360,9 +595,7 @@
               </td>
             </tr>
             <tr>
-              <td>  
-                <th>Calibration&nbsp;</th>
-              </td>
+              <th>Calibration&nbsp;</th>
               <td>&nbsp;</td>
               <td>
                 <div class="row sidebar-row vertical-align">
@@ -373,6 +606,7 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>  
                 Gradients:&nbsp;
               </td>
@@ -386,6 +620,7 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>  
                 Intercepts:&nbsp;
               </td>
@@ -399,12 +634,14 @@
               </td>
             </tr>
             <tr>
-              <td>
-                <th>Charged Sharing<br>None / Addition / Discrimination:&nbsp;</th>
-              </td>
+              <th>Charged Sharing&nbsp;</th>
             </tr>
             <tr>
               <td></td>
+              <td>
+                Mode:&nbsp;
+              </td>
+              <!-- <td></td> -->
               <td>
                 <!-- Set Charged Sharing algorithm -->
                 <input type="button" class="btn btn-primary fixed-width" id='noneButton' name="b1" data-size="small" value="None" onclick="setCS(event)" style="background-color:#0000FF">
@@ -413,6 +650,7 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>
                 Pixel Grid Size:&nbsp;&nbsp;&nbsp;
               </td>
@@ -426,11 +664,12 @@
               </td>
             </tr>
             <tr>  
+              <th>Histogram&nbsp;</th>
               <td>  
-                <th>Histogram&nbsp;</th>
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>
                 <div id="bin_start">Bin Start: [ADU]&nbsp;</div>
               </td>
@@ -444,6 +683,7 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td>
                 <div id="bin_end">Bin End: [ADU]&nbsp;</div>
               </td>
@@ -458,6 +698,7 @@
               </td>
             </tr>
             <tr>
+              <td></td>
               <td> 
                 <div id="bin_width">Bin Width: [ADU]&nbsp;</div>
               </td>
@@ -472,312 +713,423 @@
             </tr>
             <tr>
               <td>
-                hdf/file/path:&nbsp;
-              </td>
-              <td>
-                <div class="text-columns">
-                  <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' size="42" value="/tmp/">
-                </div>
-              </td>
-              <td>
-                &nbsp;<td><span id="hdf-file-path-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                hdf/file/name:&nbsp;
-              </td>
-              <td>
-                <div class="text-columns">
-                  <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' size="42" value="a">
-                </div>
-              </td>
-              <td>
-                &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Sensors Layout:&nbsp;
-              </td>
-              <td>
-                <select class="double-width" onchange="sensorsLayoutChange(this.value)">
-                  <option value="1x1">1x1 (80x80)</option>
-                  <option selected="selected" value="2x2">2x2 (160x160)</option>
-                  <option value="2x6">2x6 (160x480)</option>
-                </select>
-              </td>
-              <td>
-                &nbsp;<td><span id="sensors-layout-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Compression:&nbsp;
-              </td>
-              <td>
-                <select class="double-width" onchange="compressionChange(this.value)">
-                  <option selected="selected" value="none">none</option>
-                  <option value="blosc">blosc</option>
-                </select>
-              </td>
-              <td>
-                &nbsp;<td><span id="compression-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <th>Camera&nbsp;</th>
-              </td>
-            </tr>
-            <tr>  
-              <td>
-                Mode&nbsp;
-              </td>
-              <td>
-                <div class="row sidebar-row vertical-align">
-                  <div class="col-xs-7">
-                    <input type="checkbox" name="duration_enable" data-size="small" data-off-text="Frames" data-on-text="Seconds">
-                  </div>
-                </div>
-            </tr>
-            <tr>
-              <td>
-                Frames&nbsp;
-              </td>
-              <td>
-                <div class="text-frames">
-                  <input type="text" id="frames-text" onChange='frames_changed()' maxlength="40" size="3" value= "10">
-                </div>
-              </td>
-              <td>
-                &nbsp;<td><span id="frames-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Duration&nbsp;
-              </td>
-              <td>
-                <div class="text-duration">
-                  <input type="text" id="duration-text" onChange='duration_changed()' maxlength="40" size="3" value= "1" disabled="true">
-                </div>
-              </td>
-              <td>
-                &nbsp;<td><span id="duration-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Hexitec Config:&nbsp;
-              </td>
-              <td>
-                <div class="text-columns">
-                  <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' size="42" value="control/config/hexitec_unified_CSD__performance.ini">
-                </div>
-              </td>
-              <td>
-                &nbsp;<td><span id="hexitec-config-warning">&nbsp;</span></td>
-              </td>
-            </tr>
-            <tr>
-              <td>
                 &nbsp;
               </td>
+              <td></td>
               <td>
                 <input type="button" accesskey="y" class="btn btn-primary double-width" id='applyButton' data-size="small" value="Apply All">
               </td>
             </tr>
           </table>
-        </div> <!-- "main-container" -->
-      </div> <!-- col-sm-4 -->
-    </div> <!-- row -->
+        </div><!-- container fluid-container -->
 
-    <div class="row">
-      <div class="col-sm-12">
-        <div id="3" class="main-container">
-          <a href="#" id="maincontainer3" class="rem-widget">Hide Status</a>
-          <!-- Hardware settings section -->
-          <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">System Status</p>
-          <div class="well sidebar-nav-fixed">
-            <table class="overall-table">
-              <tr>
-                <td>
-                  <b>&nbsp;Frame rate:&nbsp;</b><span id="frame_rate" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  <b>&nbsp;Frames received:&nbsp;</b><span id="frames_received" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  pkts&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;released:&nbsp;</b><span id="frames_released" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  pkts&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;dropped:&nbsp;</b><span id="frames_dropped" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  pkts&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;timedout:&nbsp;</b><span id="frames_timedout" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  pkts&nbsp;
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <b>&nbsp;acquire start:&nbsp;</b><span id="acquire_start" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  <b>&nbsp;FEM packets_lost:&nbsp;</b><span id="fem_packets_lost" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  pkts&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;FR packets_lost:&nbsp;</b><span id="packets_lost" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  pkts&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;Buffers empty:&nbsp;</b><span id="buffers_empty" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  buffs&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;mapped:&nbsp;</b><span id="buffers_mapped" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  buffs&nbsp;
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <b>&nbsp;acquire stop:&nbsp;</b><span id="acquire_stop" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  <b>&nbsp;vsr1_ambient:&nbsp;</b><span id="vsr1_ambient" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  C&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;humidity:&nbsp;</b><span id="vsr1_humidity" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  %&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;asic1:&nbsp;</b><span id="vsr1_asic1" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  C&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;asic2:&nbsp;</b><span id="vsr1_asic2" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  C&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;adc:&nbsp;</b><span id="vsr1_adc" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  C&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;HV:&nbsp;</b><span id="vsr1_hv" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  V&nbsp;
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <b>&nbsp;acquire time:&nbsp;</b><span id="acquire_time" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  <b>&nbsp;vsr2_ambient:&nbsp;</b><span id="vsr2_ambient" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  C&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;humidity:&nbsp;</b><span id="vsr2_humidity" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  %&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;asic1:&nbsp;</b><span id="vsr2_asic1" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  C&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;asic2:&nbsp;</b><span id="vsr2_asic2" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  C&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;adc:&nbsp;</b><span id="vsr2_adc" style="float:right">&nbsp;0</span>  
-                </td>
-                <td>
-                  C&nbsp;
-                </td>
-                <td>
-                  <b>&nbsp;HV:&nbsp;</b><span id="vsr2_hv" style="float:right">&nbsp;0</span>
-                </td>
-                <td>
-                  V&nbsp;
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <b>&nbsp;daq start:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b><span id="daq_start">&nbsp;</span>
-                </td>
-                <td>
-                  <b>&nbsp;vsr1_sync:&nbsp;</b><span id="vsr1_sync" style="float:right">&nbsp;X</span>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <b>&nbsp;fem not busy:&nbsp;</b><span id="fem_not_busy">&nbsp;</span>
-                </td>
-                <td>
-                  <b>&nbsp;vsr2_sync:&nbsp;</b><span id="vsr2_sync" style="float:right">&nbsp;X</span>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <b>&nbsp;daq stop:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b><span id="daq_stop">&nbsp;</span>
-                </td>
-              </tr>
-            </table>
-          </div> <!-- well sidebar-nav-fixed -->
+      </div>  <!-- id="processing" -->
 
-        </div> <!-- "main-container" -->
-      </div> <!-- col-sm-4 -->
-    </div> <!-- row -->
+      <div class="tab-pane fade" id="health" role="tabpanel">
+      <!-- <div class="tab-pane fade show active" id="health" role="tabpanel"> -->
 
-    <div class="row">
-    </div> <!-- row -->
+        <div class="container-fluid">
+          <div class="row contflex row-cols-1 row-cols-md-2 g-4">
 
-  
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card"> <!-- Begin: First row, first column -->
+              <div class="row">
+                <p class="lead text-center">Statistics</p>
+              </div>
+              <div class="row contflex">
+                <div class="col-md-11">
+                  <table class="table table-striped" style="width=100%">
+                      <thead>
+                        <tr>
+                          <th>Measure</th>
+                          <th>Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Frame rate</td>
+                          <td><span id="frame_rate" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Acquire time</td>
+                          <td><span id="acquire_time" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>FEM packets_lost</td>
+                          <td><span id="fem_packets_lost" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>FR packets_lost</td>
+                          <td><span id="packets_lost" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Buffers empty</td>
+                          <td><span id="buffers_empty" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Buffers mapped</td>
+                          <td><span id="buffers_mapped" style="float:right">&nbsp;</span></td>
+                        </tr>
+                      </tbody>
+                  </table>
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>Frame Receiver</th>
+                        <th>Packets</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Received</td>
+                        <td><span id="frames_received" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Released</td>
+                        <td><span id="frames_released" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Dropped</td>
+                        <td><span id="frames_dropped" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Timed out</td>
+                        <td><span id="frames_timedout" style="float:right">&nbsp;</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "" -->  <!-- End: First row, first column -->
+
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card"> <!-- Begin: First row, second column -->
+              <div class="row">
+                <p class="lead text-center">DAQ Debug</p>
+              </div>
+              <div class="row contflex">
+                <div class="col-md-11">
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>Measure</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>acquire start</td>
+                        <td><span id="acquire_start" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>daq start</td>
+                        <td><span id="daq_start" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>acquire stop</td>
+                        <td><span id="acquire_stop" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>fem not busy</td>
+                        <td><span id="fem_not_busy" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>vsr1_sync</td>
+                        <td><span id="vsr1_sync" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>vsr2_sync</td>
+                        <td><span id="vsr2_sync" style="float:right">&nbsp;</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <table class="overall-table">
+                    <tr>
+                      <td>
+                        <th>(Orphaned)&nbsp;</th>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Sensors Layout:&nbsp;
+                      </td>
+                      <td>
+                        <select class="double-width" onchange="sensorsLayoutChange(this.value)">
+                          <option value="1x1">1x1 (80x80)</option>
+                          <option selected="selected" value="2x2">2x2 (160x160)</option>
+                          <option value="2x6">2x6 (160x480)</option>
+                        </select>
+                      </td>
+                      <td>
+                        &nbsp;<td><span id="sensors-layout-warning">&nbsp;</span></td>
+                      </td>
+                    </tr>
+                  </table>
+
+                </div> <!-- col-md-11 -->
+              </div> <!-- row contflex -->
+            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "DAQ DEBUG" -->  <!-- End: First row, second column -->
+
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">  <!-- End: Second row, first column -->
+              <div class="row">
+                <p class="lead text-center">Environmental Sensors</p>
+              </div>
+              <div class="row contflex">
+                <div class="col-md-11">
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>VSR1 Sensor</th>
+                        <th>Measure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Ambient</td>
+                        <td><span id="vsr1_ambient">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>Humidity</td>
+                        <td><span id="vsr1_humidity">&nbsp;</span>%</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC1</td>
+                        <td><span id="vsr1_asic1">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC2</td>
+                        <td><span id="vsr1_asic2">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ADC</td>
+                        <td><span id="vsr1_adc">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>HV</td>
+                        <td><span id="vsr1_hv">&nbsp;</span>V</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>VSR3 Sensor</th>
+                        <th>Measure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Ambient</td>
+                        <td><span id="vsr3_ambient">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>Humidity</td>
+                        <td><span id="vsr3_humidity">&nbsp;</span>%</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC1</td>
+                        <td><span id="vsr3_asic1">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC2</td>
+                        <td><span id="vsr3_asic2">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ADC</td>
+                        <td><span id="vsr3_adc">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>HV</td>
+                        <td><span id="vsr3_hv">&nbsp;</span>V</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>VSR5 Sensor</th>
+                        <th>Measure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Ambient</td>
+                        <td><span id="vsr5_ambient">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>Humidity</td>
+                        <td><span id="vsr5_humidity">&nbsp;</span>%</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC1</td>
+                        <td><span id="vsr5_asic1">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC2</td>
+                        <td><span id="vsr5_asic2">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ADC</td>
+                        <td><span id="vsr5_adc">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>HV</td>
+                        <td><span id="vsr5_hv">&nbsp;</span>V</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "Environmental Sensors" --> <!-- End: Second row, first column -->
+
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card"> <!-- Begin: Second row, second column -->
+              <div class="row">
+                <p class="lead text-center">Environmental Sensors</p>
+              </div>
+              <div class="row contflex">
+                <div class="col-md-11">
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>VSR2 Sensor</th>
+                        <th>Measure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Ambient</td>
+                        <td><span id="vsr2_ambient">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>Humidity</td>
+                        <td><span id="vsr2_humidity">&nbsp;</span>%</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC1</td>
+                        <td><span id="vsr2_asic1">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC2</td>
+                        <td><span id="vsr2_asic2">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ADC</td>
+                        <td><span id="vsr2_adc">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>HV</td>
+                        <td><span id="vsr2_hv">&nbsp;</span>V</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>VSR4 Sensor</th>
+                        <th>Measure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Ambient</td>
+                        <td><span id="vsr4_ambient">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>Humidity</td>
+                        <td><span id="vsr4_humidity">&nbsp;</span>%</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC1</td>
+                        <td><span id="vsr4_asic1">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC2</td>
+                        <td><span id="vsr4_asic2">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ADC</td>
+                        <td><span id="vsr4_adc">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>HV</td>
+                        <td><span id="vsr4_hv">&nbsp;</span>V</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>VSR6 Sensor</th>
+                        <th>Measure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Ambient</td>
+                        <td><span id="vsr6_ambient">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>Humidity</td>
+                        <td><span id="vsr6_humidity">&nbsp;</span>%</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC1</td>
+                        <td><span id="vsr6_asic1">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ASIC2</td>
+                        <td><span id="vsr6_asic2">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>ADC</td>
+                        <td><span id="vsr6_adc">&nbsp;</span>C</td>
+                      </tr>
+                      <tr>
+                        <td>HV</td>
+                        <td><span id="vsr6_hv">&nbsp;</span>V</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "Environmental Sensors" --> <!-- End: Second row, second column -->
+
+          </div> <!-- row conflex-->
+
+        </div><!-- container fluid-container -->
+
+      </div> <!-- id="health"-->
+
+      <!-- <div class="tab-pane fade" id="contact" role="tabpanel">
+          Contact
+      </div> -->
+    </div>  <!-- tab-content -->
+
+    <!-- <script src="js/global-nav.js"></script>
+    <script>
+        var nav = get_navbar('index.html');
+        var demo = document.getElementById('global-nav'); // target element.
+        demo.insertAdjacentHTML('beforeend', nav);
+    </script> -->
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <!-- <script src="js/jquery-2.2.3.min.js"></script> -->
+    <script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
+
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+
+    <script src="js/bootstrap-5.1.1-dist/js/bootstrap.min.js"></script>
+    <script src="js/bootstrap-switch-4.0.0-alpha.1-dist/bootstrap-switch.min.js"></script>
+    <!-- <script src="js/moment.js"></script> -->
+    <!-- <script src="js/chart.js-3.5.1/chart.min.js"></script> -->
+    <script src="js/chart.js-2.9.3/Chart.min.js"></script>
+    <!-- <script src="js/carrier.js"></script> -->
+    <!-- <script src="js/odin_control.js"></script> -->
+    <!-- <script src="js/command_sequencer.js"></script> -->
+
     <!-- Pinched from live_view example.. -->
-    <script src="js/bootstrap-3.3.6-dist/dist/js/bootstrap-switch.min.js"></script>
+    <!-- <script src="js/bootstrap-3.3.6-dist/dist/js/bootstrap-switch.min.js"></script> -->
     <script src="js/bootstrap-slider-10.2.1/js/bootstrap-slider.min.js"></script>
     <script src='js/live_view.js'></script>
-      
-    </body>
-  </html>
-  
+
+  </body>
+</html>

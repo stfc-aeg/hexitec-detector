@@ -669,6 +669,28 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq._set_discrimination_enable(discrimination_enable)
         assert discrimination_enable is self.test_daq.daq.discrimination_enable
 
+    def test_set_dataset_name(self):
+        """Test function sets dataset name."""
+        dataset_name = "raw_frames"
+        self.test_daq.daq._set_dataset_name(dataset_name)
+        assert dataset_name is self.test_daq.daq.dataset_name
+
+        dataset_name = "processed_frames"
+        self.test_daq.daq._set_dataset_name(dataset_name)
+        assert dataset_name is self.test_daq.daq.dataset_name
+
+    def test_set_frame_frequency(self):
+        """Test function sets frame frequency."""
+        frame_frequency = 67
+        self.test_daq.daq._set_frame_frequency(frame_frequency)
+        assert frame_frequency is self.test_daq.daq.frame_frequency
+
+    def test_set_per_second(self):
+        """Test function sets per second."""
+        per_second = 5
+        self.test_daq.daq._set_per_second(per_second)
+        assert per_second is self.test_daq.daq.per_second
+
     def test_set_next_frame_enable(self):
         """Test function sets next frame bool."""
         next_frame_enable = True
@@ -819,6 +841,24 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq._set_threshold_value(threshold_value)
         assert self.test_daq.daq.threshold_value == threshold_value
 
+    def test_set_threshold_upper(self):
+        """Test function sets Summed Image's threshold upper."""
+        threshold_upper = 80
+        self.test_daq.daq._set_threshold_upper(threshold_upper)
+        assert self.test_daq.daq.threshold_upper == threshold_upper
+
+    def test_set_threshold_lower(self):
+        """Test function sets Summed Image's threshold lower."""
+        threshold_lower = 4800
+        self.test_daq.daq._set_threshold_lower(threshold_lower)
+        assert self.test_daq.daq.threshold_lower == threshold_lower
+
+    def test_set_image_frequency(self):
+        """Test function sets Summed Image's image frequency."""
+        image_frequency = 5
+        self.test_daq.daq._set_image_frequency(image_frequency)
+        assert self.test_daq.daq.image_frequency == image_frequency
+
     def test_access_sensors_layout(self):
         """Test function sets sensors_layout."""
         sensors_layout = "2x2"
@@ -861,7 +901,9 @@ class TestDAQ(unittest.TestCase):
                      'pass_processed': False, 'pass_raw': True},
                  'next_frame': {'enable': False},
                  'threshold':
-                    {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 10}},
+                    {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 10},
+                 'summed_image':
+                    {'threshold_lower': 120, 'threshold_upper': 4800}},
                  'sensors_layout': '2x2'}
 
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:

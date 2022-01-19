@@ -606,6 +606,7 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.fems[0].hardware_busy = False
         self.test_adapter.detector.extended_acquisition = False
         self.test_adapter.detector.first_initialisation = True
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
 
         with patch("hexitec.adapter.IOLoop"):
 

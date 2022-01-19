@@ -18,6 +18,7 @@ var system_health = true;
 var fem_error_id = -1;
 var ui_frames = 10;
 var cold_initialisation = true;
+var hv_enabled = false;
 
 // Called once, when page 1st loaded
 $( document ).ready(function()
@@ -33,6 +34,8 @@ $( document ).ready(function()
     document.getElementById("cancelButton").disabled = true;
     document.getElementById("disconnectButton").disabled = true;
     document.getElementById("offsetsButton").disabled = true;
+    document.getElementById("hvOnButton").disabled = true;
+    document.getElementById("hvOffButton").disabled = true;
 
     /// Style checkboxes into ON/OFF sliders
 
@@ -89,6 +92,10 @@ $( document ).ready(function()
         apply_ui_values();
     });
 
+    $('#applyButton2').on('click', function(event) {
+        apply_ui_values();
+    });
+
     $('#connectButton').on('click', function(event) {
         // On cold initialisation: configure FP, wait 800 ms before connecting
         //  Any subsequent time: Do not configure FP, connect straightaway
@@ -135,49 +142,15 @@ $( document ).ready(function()
         document.getElementById("connectButton").disabled = false;
     });
 
+    $('#hvOnButton').on('click', function(event) {
+        switch_hv_on();
+    });
+    $('#hvOffButton').on('click', function(event) {
+        switch_hv_off();
+    });
+
     $('#offsetsButton').on('click', function(event) {
         collect_offsets();
-    });
-
-    $('#container1').hide();
-    $('#container2').hide();
-    $('#container3').hide();
-    $('#container4').hide();
-    $('#maincontainer1').click(function() {
-        $('#1').hide('slow');
-        $('#container1').show();
-    });
-
-    $('#maincontainer2').click(function() {
-        $('#2').hide('slow');
-        $('#container2').show();
-    });
-
-    $('#maincontainer3').click(function() {
-        $('#3').hide('slow');
-        $('#container3').show();
-    });
-
-    $('#maincontainer4').click(function() {
-        $('#4').hide('slow');
-        $('#container4').show();
-    });
-
-    $('#container1').click(function() {
-        $('#1').show('slow');
-        $(this).hide();
-    });
-    $('#container2').click(function() {
-        $('#2').show('slow');
-        $(this).hide();
-    });
-    $('#container3').click(function() {
-        $('#3').show('slow');
-        $(this).hide();
-    });
-    $('#container4').click(function() {
-        $('#4').show('slow');
-        $(this).hide();
     });
 
 });
@@ -250,6 +223,24 @@ function setCS(e)
     });
 }
 
+function switch_hv_off()
+{
+    // TODO: Switch HV off
+    hv_enabled = false;
+    document.getElementById('hvOnButton').disabled = false;
+    document.getElementById('hvOffButton').disabled = true;
+    console.log("Switching HV off");
+}
+
+function switch_hv_on()
+{
+    // TODO: Switch HV on
+    hv_enabled = true;
+    document.getElementById('hvOnButton').disabled = true;
+    document.getElementById('hvOffButton').disabled = false;
+    console.log("Switching HV on");
+}
+
 function collect_offsets()
 {
     // Collects offsets used for dark corrections in subsequent acquisitions
@@ -269,7 +260,7 @@ function collect_offsets()
 
 function start_polling_thread()
 {
-    // Starts the polling thread ferrying informationfrom Odin to the UI
+    // Starts the polling thread ferrying information from Odin to the UI
     poll_fem();
 }
 
@@ -278,8 +269,13 @@ function toggle_ui_elements(bBool)
     document.getElementById("initialiseButton").disabled = bBool;
     document.getElementById("acquireButton").disabled = bBool;
     document.getElementById("cancelButton").disabled = bBool;
+    if (hv_enabled)
+        document.getElementById("hvOffButton").disabled = bBool;
+    else
+        document.getElementById("hvOnButton").disabled = bBool;
     document.getElementById("offsetsButton").disabled = bBool;
     document.getElementById("applyButton").disabled = bBool;
+    document.getElementById("applyButton2").disabled = bBool;
     document.getElementById("hdf-file-path-text").disabled = bBool;
     document.getElementById("hdf-file-name-text").disabled = bBool;
     document.getElementById("hexitec-config-text").disabled = bBool;
@@ -370,6 +366,7 @@ function poll_fem()
             toggle_ui_elements(true);
             // Unlock configuration related UI elements
             document.getElementById("applyButton").disabled = false;
+            document.getElementById("applyButton2").disabled = false;
             document.getElementById("hdf-file-path-text").disabled = false;
             document.getElementById("hdf-file-name-text").disabled = false;
             document.getElementById("hexitec-config-text").disabled = false;        
@@ -857,6 +854,7 @@ var changeDurationEnable = function()
     {
         $('#duration-text').prop('disabled', false);
         $('#frames-text').prop('disabled', true);
+        duration_changed();
     }
     else
     {
@@ -1134,6 +1132,61 @@ function hdf_file_name_changed()
     });
 };
 
+function threshold_lower_changed()
+{
+    var threshold_lower = $('#threshold-lower-text').prop('value');
+    threshold_lower = JSON.stringify(parseInt(threshold_lower));
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/summed_image/threshold_lower',
+        contentType: "application/json",
+        data: threshold_lower,
+        success: function(result) {
+            $('#threshold-lower-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#threshold-lower-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+};
+
+function threshold_upper_changed()
+{
+    var threshold_upper = $('#threshold-upper-text').prop('value');
+    threshold_upper = JSON.stringify(parseInt(threshold_upper));
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/summed_image/threshold_upper',
+        contentType: "application/json",
+        data: threshold_upper,
+        success: function(result) {
+            $('#threshold-upper-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#threshold-upper-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+};
+
+function image_frequency_changed()
+{
+    var image_frequency = $('#image-frequency-text').prop('value');
+    console.log("image_frequency: " + image_frequency);
+    image_frequency = JSON.stringify(parseInt(image_frequency));
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/summed_image/image_frequency',
+        contentType: "application/json",
+        data: image_frequency,
+        success: function(result) {
+            $('#image-frequency-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#image-frequency-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+};
+
 function hexitec_config_changed()
 {
     var hexitec_config = $('#hexitec-config-text').prop('value');
@@ -1182,6 +1235,63 @@ function duration_changed()
         },
         error: function(request, msg, error) {
             $('#duration-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+};
+
+function lv_dataset_changed()
+{
+    var dataset_name = $('#lv_dataset_select').prop('value');
+    var payload = {"dataset_name": dataset_name};
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/live_view',
+        contentType: "application/json",
+        data: JSON.stringify(payload),
+        // data: payload,
+        success: function(result) {
+            $('#lv-dataset-changed-warning').html("");
+            document.getElementById("lv-dataset-changed-warning").classList.remove('alert-danger');
+        },
+        error: function(request, msg, error) {
+            $('#lv-dataset-changed-warning').html(error + ": " + format_error(request.responseText));
+            document.getElementById("threshold-mode-warning").classList.add('alert-danger');
+        }
+    });
+}
+
+function frame_frequency_changed()
+{
+    var frame_frequency = $('#frame-frequency-text').prop('value');
+    frame_frequency = JSON.stringify(parseInt(frame_frequency));
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/live_view/frame_frequency',
+        contentType: "application/json",
+        data: frame_frequency,
+        success: function(result) {
+            $('#frame-frequency-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#frame-frequency-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+};
+
+function per_second_changed()
+{
+    var per_second = $('#per-second-text').prop('value');
+    per_second = JSON.stringify(parseInt(per_second));
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/daq/config/live_view/per_second',
+        contentType: "application/json",
+        data: per_second,
+        success: function(result) {
+            $('#per-second-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#per-second-warning').html(error + ": " + format_error(request.responseText));
         }
     });
 };

@@ -13,7 +13,7 @@ class GenerateConfigFiles():
     """Accepts Parameter tree from hexitecDAQ's "/config" branch to generate json file."""
 
     def __init__(self, param_tree, number_histograms, compression_type="none",
-                 master_dataset="processed_frames", extra_datasets=[]):
+                 master_dataset="processed_frames", extra_datasets=[], selected_os="CentOS"):
         """
         Initialize the GenerateConfigFiles object.
 
@@ -22,6 +22,7 @@ class GenerateConfigFiles():
         :param number_histograms: number of histogram bins
         :param master_dataset: set master dataset
         :param extra_datasets: include optional dataset(s)
+        :param selected_os: which OS (ie path) to generate config for
         """
         self.param_tree = param_tree
         self.number_histograms = number_histograms
@@ -29,6 +30,8 @@ class GenerateConfigFiles():
         self.compression_type = compression_type
         self.master_dataset = master_dataset
         self.extra_datasets = extra_datasets
+        # Each OS needs its own install, build paths
+        self.selected_os = selected_os
 
     def boolean_to_string(self, bBool):
         """Convert bool to string."""
@@ -85,6 +88,19 @@ class GenerateConfigFiles():
             raise KeyError("Couldn't locate histogram setting(s)!")
         return histogram_config
 
+    def summed_image_settings(self, summed_image):
+        """Add summed_image plugin section to configuration file."""
+        try:
+            summed_image_config = '''
+                        "threshold_lower": %s,
+                        "threshold_upper": %s,''' % \
+                (summed_image['threshold_lower'], summed_image['threshold_upper'])
+        except KeyError:
+            logging.error("Error extracting summed_image_settings!")
+            print("Error extracting summed_image_settings!")
+            raise KeyError("Couldn't locate summed_image setting(s)!")
+        return summed_image_config
+
     def generate_config_files(self):  # noqa: C901
         """Generate the two configuration files.
 
@@ -129,6 +145,7 @@ class GenerateConfigFiles():
         hexitec_plugins["addition"] = ["addition", "Addition", "Addition"]
         hexitec_plugins["discrimination"] = ["discrimination", "Discrimination", "Discrimination"]
         hexitec_plugins["histogram"] = ["histogram", "Histogram", "Histogram"]
+        hexitec_plugins["summed_image"] = ["summed_image", "SummedImage", "SummedImage"]
 
         # Plugin path that doesn't follow the same format (as the others)
         # "live_view", "LiveViewPlugin      "install/lib/libLiveViewPlugin.so"
@@ -151,9 +168,9 @@ class GenerateConfigFiles():
         # Extract configuration from HexitecDAQ config
         d = self.param_tree['config']
 
-        # Sort parameter tree dict into R, T, N, C, A, D, H plugin order
+        # Sort parameter tree dict into R, T, N, C, A, D, H, SI, LV plugin order
         keyorder = ['reorder', 'threshold', 'next_frame', 'calibration', 'addition',
-                    'discrimination', 'histogram']
+                    'discrimination', 'histogram', 'summed_image', 'live_view']
         config = OrderedDict(sorted(d.items(), key=lambda i: keyorder.index(i[0])))
 
         # Determine plugin chain (to configure frameProcessor)
@@ -177,7 +194,7 @@ class GenerateConfigFiles():
                 logging.debug("Plugin %s missing 'enable' setting!" % key)
                 raise Exception("Plugin %s missing 'enable' setting!" % key)
 
-        plugin_chain += ["histogram", "live_view"]
+        plugin_chain += ["histogram", "summed_image", "live_view"]
 
         # Add blosc if compression selected
         if self.compression_type == "blosc":
@@ -190,6 +207,15 @@ class GenerateConfigFiles():
         odin_path = cwd[:base_path_index - 1]
 
         store_plugin_paths = ""
+        # Ubuntu and CentOS require different paths, builds, json files
+        os_path = ""
+        if self.selected_os == "CentOS":
+            os_path = ""
+        elif self.selected_os == "Ubuntu":
+            os_path = "_ubuntu"
+        else:
+            # print("DEBUGGING: Selected nothing, defaulting to CentOS")
+            pass
 
         # Build config for Hexitec plugins (uniform naming)
         for plugin in plugin_chain:
@@ -200,11 +226,14 @@ class GenerateConfigFiles():
                         "load": {
                             "index": "%s",
                             "name": "Hexitec%sPlugin",
-                            "library": "%s/install/lib/libHexitec%sPlugin.so"
+                            "library": "%s/install%s/lib/libHexitec%sPlugin.so"
                         }
                     }
-                }''' % (hexitec_plugins[plugin][0], hexitec_plugins[plugin][1],
-                        odin_path, hexitec_plugins[plugin][2])
+                }''' % (hexitec_plugins[plugin][0],
+                        hexitec_plugins[plugin][1],
+                        odin_path,
+                        os_path,
+                        hexitec_plugins[plugin][2])
 
         # Build config for Odin plugins (differing names)
         for plugin in plugin_chain:
@@ -215,19 +244,22 @@ class GenerateConfigFiles():
                         "load": {
                             "index": "%s",
                             "name": "%sPlugin",
-                            "library": "%s/install/lib/lib%sPlugin.so"
+                            "library": "%s/install%s/lib/lib%sPlugin.so"
                         }
                     }
-                }''' % (odin_plugins[plugin][0], odin_plugins[plugin][1],
-                        odin_path, odin_plugins[plugin][2])
+                }''' % (odin_plugins[plugin][0],
+                        odin_plugins[plugin][1],
+                        odin_path,
+                        os_path,
+                        odin_plugins[plugin][2])
 
-        # Chain plugins together, with live view branchded off reorder on separate (dead end) branch
+        # Chain plugins together, with live view now branched off summed_image
         store_plugin_connect = ''',
                 {
                     "plugin": {
                         "connect": {
                             "index": "live_view",
-                            "connection": "reorder"
+                            "connection": "summed_image"
                         }
                     }
                 }'''
@@ -269,6 +301,8 @@ class GenerateConfigFiles():
                         config[plugin]['pixel_grid_size']
                 if plugin == "histogram":
                     unique_setting = self.histogram_settings(config[plugin])
+                if plugin == "summed_image":
+                    unique_setting = self.summed_image_settings(config[plugin])
 
                 store_plugin_config += ''',
                 {
@@ -290,7 +324,7 @@ class GenerateConfigFiles():
                     }
                 }'''
 
-        # Configure blosc if selected
+        # Configure blosc (common settings) if selected
         if self.compression_type == "blosc":
             store_plugin_config += ''',
                 {
@@ -310,13 +344,15 @@ class GenerateConfigFiles():
                         "dataset":
                         {'''
 
-        # Blosc settings are common across all datasets, define them once only:
+        # Datasets' individual Blosc settings will be defined once only,
+        #  applied to all datasets:
         blosc_settings = '''
                                 "compression": "%s",
                                 "blosc_compressor": 1,
                                 "blosc_shuffle": 0,
                                 "blosc_level": 4''' % self.compression_type
 
+        # extra_datasets contained 0 or more of: [processed_frames, raw_frames]
         for dataset in self.extra_datasets:
             # datatype is float for processed_frames, uint16 for raw_frames
             datatype = "float"
@@ -331,6 +367,12 @@ class GenerateConfigFiles():
                             },'''
 
         store_plugin_config += '''
+                            "summed_images":
+                            {
+                                "datatype": "uint16",
+                                "dims": [%s, %s],''' % (rows, columns) + '''
+                                "chunks": [1, %s, %s],%s''' % (rows, columns, blosc_settings) + '''
+                            },
                             "spectra_bins":
                             {
                                 "datatype": "float",
@@ -408,22 +450,26 @@ class GenerateConfigFiles():
 
 if __name__ == '__main__':
     param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
-                  'sensors_layout': '2x2', 'receiver':
+                  'sensors_layout': '1x1', 'receiver':
                   {'config_file': '', 'configured': False, 'connected': False},
                   'in_progress': False,
                   # The 'config' nested dictionary control which plugin(s) are loaded:
                   'config':
                   {'calibration':
-                   {'enable': True, 'intercepts_filename': '', 'gradients_filename': ''},
+                   {'enable': False, 'intercepts_filename': '', 'gradients_filename': ''},
                    'addition':
-                   {'enable': True, 'pixel_grid_size': 3},
+                   {'enable': False, 'pixel_grid_size': 3},
                    'discrimination': {'enable': False, 'pixel_grid_size': 5},
                    'histogram':
                    {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
-                    'pass_processed': False, 'pass_raw': True},
-                   'next_frame': {'enable': True},
+                    'pass_processed': True, 'pass_raw': True},
+                   'next_frame': {'enable': False},
                    'threshold':
-                   {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'}},
+                   {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'},
+                   'summed_image': {
+                       'threshold_lower': 120,
+                       'threshold_upper': 4800}
+                  },
                   'processor': {'config_file': '', 'configured': False, 'connected': False}}
 
     bin_end = param_tree['config']['histogram']['bin_end']
@@ -435,7 +481,8 @@ if __name__ == '__main__':
     # extra_datasets = [master_dataset]
 
     gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="none",
-                              master_dataset=master_dataset, extra_datasets=extra_datasets)
+                              master_dataset=master_dataset, extra_datasets=extra_datasets,
+                              selected_os="Ubuntu")
     s, e = gcf.generate_config_files()
 
     print("GFC returned config files\n Store:   %s\n Execute: %s\n" % (s, e))

@@ -197,7 +197,7 @@ class Hexitec():
 
         self.fems = []
         for key, value in options.items():
-            logging.debug("%s: %s", key, value)
+            # logging.debug("%s: %s", key, value)
             if "fem" in key:
                 fem_info = value.split(',')
                 fem_info = [(i.split('=')[0], i.split('=')[1])
@@ -700,6 +700,13 @@ class Hexitec():
         if self.first_initialisation:
             self.first_initialisation = False
             self.number_frames = self.backed_up_number_frames
+        # Reset summed_image otherwise subsequent acquisition will be contaminated
+        # Issue reset to summed_image
+        command = "config/summed_image/reset_image"
+        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+        request.body = "{}".format(1)
+        self.adapters["fp"].put(command, request)
+
         # Reset initial acquisition, extended acquisition bools
         self.initial_acquisition = True
         self.extended_acquisition = False
@@ -710,7 +717,7 @@ class Hexitec():
     def cancel_acquisition(self, put_data=None):
         """Cancel ongoing acquisition in Software.
 
-        Not yet possible to stop Hardware.
+        Not yet possible to stop Hardware. - Actually is?
         """
         for fem in self.fems:
             fem.stop_acquisition = True

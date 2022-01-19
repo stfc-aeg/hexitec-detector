@@ -1,12 +1,12 @@
 /*
- * HexitecTemplatePlugin.h
+ * HexitecSummedImagePlugin.h
  *
- *  Created on: 11 Jul 2018
+ *  Created on: 11 Jan 2021
  *      Author: Christian Angelsen
  */
 
-#ifndef INCLUDE_HEXITECTEMPLATEPLUGIN_H_
-#define INCLUDE_HEXITECTEMPLATEPLUGIN_H_
+#ifndef INCLUDE_HEXITECSUMMEDIMAGEPLUGIN_H_
+#define INCLUDE_HEXITECSUMMEDIMAGEPLUGIN_H_
 
 #include <log4cxx/logger.h>
 #include <log4cxx/basicconfigurator.h>
@@ -28,15 +28,16 @@ namespace FrameProcessor
 {
   typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
-  /** Template for future Hexitec Frame objects.
+  /** Calculate hit pixels across collected frames.
    *
-   * This template may be the basis for any future hexitec plug-in(s).
+   * The class sums pixels falling between lower, upper thresholds
+   * across the collected images.
    */
-  class HexitecTemplatePlugin : public FrameProcessorPlugin
+  class HexitecSummedImagePlugin : public FrameProcessorPlugin
   {
     public:
-      HexitecTemplatePlugin();
-      virtual ~HexitecTemplatePlugin();
+      HexitecSummedImagePlugin();
+      virtual ~HexitecSummedImagePlugin();
 
       int get_version_major();
       int get_version_minor();
@@ -52,12 +53,17 @@ namespace FrameProcessor
     private:
       /** Configuration constant for Hardware sensors **/
       static const std::string CONFIG_SENSORS_LAYOUT;
+      static const std::string CONFIG_THRESHOLD_LOWER;
+      static const std::string CONFIG_THRESHOLD_UPPER;
+      static const std::string CONFIG_IMAGE_FREQUENCY;
+      static const std::string CONFIG_RESET_IMAGE;
 
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
       std::string sensors_layout_str_;
       HexitecSensorLayoutMap sensors_layout_;
 
       void process_frame(boost::shared_ptr<Frame> frame);
+      void apply_summed_image_algorithm(float *in, unsigned short *out);
 
       /** Pointer to logger **/
       LoggerPtr logger_;
@@ -67,14 +73,22 @@ namespace FrameProcessor
       int image_height_;
       /** Image pixel count **/
       int image_pixels_;
+
+      unsigned short *summed_image_;
+      int threshold_lower_;
+      int threshold_upper_;
+      int image_frequency_;
+      int reset_image_;
+
+      void reset_summed_image_values();
   };
 
   /**
    * Registration of this plugin through the ClassLoader.  This macro
    * registers the class without needing to worry about name mangling
    */
-  REGISTER(FrameProcessorPlugin, HexitecTemplatePlugin, "HexitecTemplatePlugin");
+  REGISTER(FrameProcessorPlugin, HexitecSummedImagePlugin, "HexitecSummedImagePlugin");
 
 } /* namespace FrameProcessor */
 
-#endif /* INCLUDE_HEXITECTEMPLATEPLUGIN_H_ */
+#endif /* INCLUDE_HEXITECSUMMEDIMAGEPLUGIN_H_ */

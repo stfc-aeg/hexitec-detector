@@ -379,11 +379,13 @@ class HexitecFem():
 
     def set_number_frames(self, frames):
         """Set number of frames, initialise frame_rate if not set."""
-        self.frame_rate = 1 if (self.frame_rate == 0) else self.frame_rate
+        if self.frame_rate == 0:
+            self.calculate_frame_rate()
 
         if self.number_frames != frames:
             self.number_frames = frames
             self.duration = self.number_frames / self.frame_rate
+            self.parent.set_duration(self.duration)
 
     def get_duration(self):
         """Set acquisition duration."""
@@ -420,11 +422,9 @@ class HexitecFem():
             else:
                 self._set_status_error("")
             self.operation_percentage_complete = 0
-            self._set_status_message("Connecting to camera..")
             self.cam_connect()
-            msg = "Camera connected. Waiting for VSRs' FPGAs to initialise.."
-            self._set_status_message(msg)
-            self._wait_while_fpgas_initialise()
+            self.operation_percentage_complete = 100
+            self._set_status_message("Camera connected.")
             self.initialise_progress = 0
         except ParameterTreeError as e:
             self._set_status_error("%s" % str(e))
@@ -537,27 +537,6 @@ class HexitecFem():
     def get_debug(self):
         """Get debug messages status."""
         return self.debug
-
-    def _wait_while_fpgas_initialise(self):
-        """Set up to wait 10 seconds to allow VSRs' FPGAs to initialise."""
-        self.hardware_busy = True
-        self.start = time.time()
-        self.delay = 10
-        IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
-
-    def initialisation_check_loop(self):
-        """Check for error and call itself each second until 10 second delay fulfilled."""
-        if len(self.status_error) > 0:
-            self.operation_percentage_complete = 0
-            self.hardware_busy = False
-            return
-        self.delay = time.time() - self.start
-        self.operation_percentage_complete += 10
-        if (self.delay < 10):
-            IOLoop.instance().call_later(1.0, self.initialisation_check_loop)
-        else:
-            self.hardware_busy = False
-            self._set_status_message("Camera connected. FPGAs initialised.")
 
     def send_cmd(self, cmd, track_progress=True):
         """Send a command string to the microcontroller."""
@@ -1025,7 +1004,7 @@ class HexitecFem():
             self._set_status_message("User cancelled collection")
             return
         else:
-            waited = str(self.waited)
+            waited = str(round(self.waited, 3))
             logging.debug("Capturing {} frames took {} s".format(str(self.number_frames), waited))
             duration = "Requested {} frame(s), took {} seconds".format(self.number_frames, waited)
             self._set_status_message(duration)
@@ -2144,7 +2123,7 @@ class HexitecFem():
             with open(filename, 'r') as f:  # noqa: F841
                 pass
             self.hexitec_config = filename
-            logging.debug("hexitec_config: '%s' Filename: '%s'" % (self.hexitec_config, filename))
+            logging.debug("hexitec_config: '%s'" % (self.hexitec_config))
         except IOError as e:
             logging.error("Cannot open provided hexitec file: %s" % e)
             raise ParameterTreeError("Error: %s" % e)

@@ -409,30 +409,6 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.set_debug(bEnabled)
             assert self.test_fem.fem.get_debug() == bEnabled
 
-    def test_initialisation_check_loop_error_exits(self):
-        """Test the function will exit immediately if an error has been detected."""
-        self.test_fem.fem.status_error = "Error: Oh No"
-        self.test_fem.fem.hardware_busy = True
-        self.test_fem.fem.initialisation_check_loop()
-        assert self.test_fem.fem.hardware_busy is False
-
-    def test_initialisation_check_loop_respects_time_delay(self):
-        """Test function will call itself until delay of 10 seconds achieved."""
-        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
-            self.test_fem.fem.start = time.time() - 9
-            self.test_fem.fem.operation_percentage_complete = 90
-            self.test_fem.fem.initialisation_check_loop()
-
-            mock_loop.instance().call_later.assert_called_with(1.0, self.test_fem.fem.initialisation_check_loop)
-
-    def test_initialisation_check_loop_stops_after_delay(self):
-        """Test the function will exit after 10 second delay."""
-        self.test_fem.fem.start = time.time() - 10
-        self.test_fem.fem.operation_percentage_complete = 90
-        self.test_fem.fem.initialisation_check_loop()
-        status = "Camera connected. FPGAs initialised."
-        assert self.test_fem.fem.status_message == status
-
     def test_send_cmd(self):
         """Test send_cmd working ok."""
         self.test_fem.fem.debug = True
