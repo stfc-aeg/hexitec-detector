@@ -13,7 +13,7 @@ class GenerateConfigFiles():
     """Accepts Parameter tree from hexitecDAQ's "/config" branch to generate json file."""
 
     def __init__(self, param_tree, number_histograms, compression_type="none",
-                 master_dataset="processed_frames", extra_datasets=[]):
+                 master_dataset="processed_frames", extra_datasets=[], selected_os="CentOS"):
         """
         Initialize the GenerateConfigFiles object.
 
@@ -22,6 +22,7 @@ class GenerateConfigFiles():
         :param number_histograms: number of histogram bins
         :param master_dataset: set master dataset
         :param extra_datasets: include optional dataset(s)
+        :param selected_os: which OS (ie path) to generate config for
         """
         self.param_tree = param_tree
         self.number_histograms = number_histograms
@@ -29,6 +30,8 @@ class GenerateConfigFiles():
         self.compression_type = compression_type
         self.master_dataset = master_dataset
         self.extra_datasets = extra_datasets
+        # Each OS needs its own install, build paths
+        self.selected_os = selected_os
 
     def boolean_to_string(self, bBool):
         """Convert bool to string."""
@@ -204,6 +207,15 @@ class GenerateConfigFiles():
         odin_path = cwd[:base_path_index - 1]
 
         store_plugin_paths = ""
+        # Ubuntu and CentOS require different paths, builds, json files
+        os_path = ""
+        if self.selected_os == "CentOS":
+            os_path = ""
+        elif self.selected_os == "Ubuntu":
+            os_path = "_ubuntu"
+        else:
+            # print("DEBUGGING: Selected nothing, defaulting to CentOS")
+            pass
 
         # Build config for Hexitec plugins (uniform naming)
         for plugin in plugin_chain:
@@ -214,11 +226,14 @@ class GenerateConfigFiles():
                         "load": {
                             "index": "%s",
                             "name": "Hexitec%sPlugin",
-                            "library": "%s/install/lib/libHexitec%sPlugin.so"
+                            "library": "%s/install%s/lib/libHexitec%sPlugin.so"
                         }
                     }
-                }''' % (hexitec_plugins[plugin][0], hexitec_plugins[plugin][1],
-                        odin_path, hexitec_plugins[plugin][2])
+                }''' % (hexitec_plugins[plugin][0],
+                        hexitec_plugins[plugin][1],
+                        odin_path,
+                        os_path,
+                        hexitec_plugins[plugin][2])
 
         # Build config for Odin plugins (differing names)
         for plugin in plugin_chain:
@@ -229,11 +244,14 @@ class GenerateConfigFiles():
                         "load": {
                             "index": "%s",
                             "name": "%sPlugin",
-                            "library": "%s/install/lib/lib%sPlugin.so"
+                            "library": "%s/install%s/lib/lib%sPlugin.so"
                         }
                     }
-                }''' % (odin_plugins[plugin][0], odin_plugins[plugin][1],
-                        odin_path, odin_plugins[plugin][2])
+                }''' % (odin_plugins[plugin][0],
+                        odin_plugins[plugin][1],
+                        odin_path,
+                        os_path,
+                        odin_plugins[plugin][2])
 
         # Chain plugins together, with live view now branched off summed_image
         store_plugin_connect = ''',
@@ -432,20 +450,20 @@ class GenerateConfigFiles():
 
 if __name__ == '__main__':
     param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
-                  'sensors_layout': '2x2', 'receiver':
+                  'sensors_layout': '1x1', 'receiver':
                   {'config_file': '', 'configured': False, 'connected': False},
                   'in_progress': False,
                   # The 'config' nested dictionary control which plugin(s) are loaded:
                   'config':
                   {'calibration':
-                   {'enable': True, 'intercepts_filename': '', 'gradients_filename': ''},
+                   {'enable': False, 'intercepts_filename': '', 'gradients_filename': ''},
                    'addition':
-                   {'enable': True, 'pixel_grid_size': 3},
+                   {'enable': False, 'pixel_grid_size': 3},
                    'discrimination': {'enable': False, 'pixel_grid_size': 5},
                    'histogram':
                    {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
-                    'pass_processed': False, 'pass_raw': True},
-                   'next_frame': {'enable': True},
+                    'pass_processed': True, 'pass_raw': True},
+                   'next_frame': {'enable': False},
                    'threshold':
                    {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'},
                    'summed_image': {
@@ -463,7 +481,8 @@ if __name__ == '__main__':
     # extra_datasets = [master_dataset]
 
     gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="none",
-                              master_dataset=master_dataset, extra_datasets=extra_datasets)
+                              master_dataset=master_dataset, extra_datasets=extra_datasets,
+                              selected_os="Ubuntu")
     s, e = gcf.generate_config_files()
 
     print("GFC returned config files\n Store:   %s\n Execute: %s\n" % (s, e))

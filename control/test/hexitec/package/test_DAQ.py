@@ -853,6 +853,12 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq._set_threshold_lower(threshold_lower)
         assert self.test_daq.daq.threshold_lower == threshold_lower
 
+    def test_set_image_frequency(self):
+        """Test function sets Summed Image's image frequency."""
+        image_frequency = 5
+        self.test_daq.daq._set_image_frequency(image_frequency)
+        assert self.test_daq.daq.image_frequency == image_frequency
+
     def test_access_sensors_layout(self):
         """Test function sets sensors_layout."""
         sensors_layout = "2x2"
