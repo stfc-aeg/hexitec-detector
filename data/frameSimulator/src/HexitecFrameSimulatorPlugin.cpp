@@ -222,7 +222,7 @@ namespace FrameSimulator {
         std::size_t image_bytes = num_pixels_ * sizeof(uint16_t);
 
         // Allocate buffer for packet data including header
-        u_char* head_packet_data = new u_char[Hexitec::primary_packet_size + packet_header_size_];
+        u_char* head_packet_data = new u_char[Hexitec::primary_packet_size[0] + packet_header_size_];   // RESTORE ME
         u_char* tail_packet_data = new u_char[Hexitec::tail_packet_size[sensors_config_] + packet_header_size_];
         
         // Loop over specified number of frames to generate packet and frame data
@@ -264,14 +264,14 @@ namespace FrameSimulator {
                 }
                 
                 // Copy data into packet
-                memcpy((head_packet_data + packet_header_size_), data_ptr, Hexitec::primary_packet_size);
+                memcpy((head_packet_data + packet_header_size_), data_ptr, Hexitec::primary_packet_size[0]);    // RESTORE ME
 
                 // Pass packet to Frame Extraction
-                this->extract_frames(head_packet_data, Hexitec::primary_packet_size + packet_header_size_);
+                this->extract_frames(head_packet_data, Hexitec::primary_packet_size[0] + packet_header_size_);  // RESTORE ME
 
                 // Increment packet number and data_ptr
                 packet_number += 1;
-                data_ptr += Hexitec::primary_packet_size;
+                data_ptr += Hexitec::primary_packet_size[0];    // RESTORE ME
             }
             // Repeat for the Tail Packet Header and Data
             if (extended_packet_header_)

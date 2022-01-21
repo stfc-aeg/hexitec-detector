@@ -49,8 +49,8 @@ HexitecFrameDecoder::HexitecFrameDecoder() :
     packet_header_size_ = sizeof(Hexitec::PacketHeader);
   // Allocate buffers for packet header, dropped frames and scratched packets
   current_packet_header_.reset(new uint8_t[packet_header_size_]);
-  dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size(sensors_config_)]);
-  ignored_packet_buffer_.reset(new uint8_t[Hexitec::primary_packet_size]);
+  dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size(sensors_config_, extended_packet_header_)]);
+  ignored_packet_buffer_.reset(new uint8_t[Hexitec::primary_packet_size[extended_packet_header_]]);
 }
 
 //! Destructor for HexitecFrameDecoder
@@ -136,7 +136,7 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
   parse_sensors_layout_map(sensors_layout_str_);
   // Because the image dimensions have been updated, the frame size, ergo buffer size too,
   //  has changed and must be updated:
-  dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size(sensors_config_)]);
+  dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size(sensors_config_, extended_packet_header_)]);
 
   // Determine whether 8 or 64 byte packet header
   if (config_msg.has_param(CONFIG_EXTENDED_PACKET_HEADER))
@@ -153,6 +153,7 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
       packet_header_size_ = sizeof(Hexitec::PacketHeader);
     }
     current_packet_header_.reset(new uint8_t[packet_header_size_]);
+    ignored_packet_buffer_.reset(new uint8_t[Hexitec::primary_packet_size[extended_packet_header_]]);
   }
   
   // Print a packet logger header to the appropriate logger if enabled
@@ -215,7 +216,7 @@ void HexitecFrameDecoder::request_configuration(const std::string param_prefix,
 const size_t HexitecFrameDecoder::get_frame_buffer_size(void) const
 {
   size_t frame_buffer_size = get_frame_header_size() +
-      Hexitec::frame_size(sensors_config_);
+      (8000*1) +(4800*1);//Hexitec::frame_size(sensors_config_, extended_packet_header_*2);
   return frame_buffer_size;
 }
 
@@ -270,6 +271,16 @@ void* HexitecFrameDecoder::get_packet_header_buffer(void)
 void HexitecFrameDecoder::process_packet_header(size_t bytes_received, int port,
     struct sockaddr_in* from_addr)
 {
+  // int header_size = 0;
+  // if (extended_packet_header_)
+  //   header_size = sizeof(Hexitec::PacketExtendedHeader);
+  // else
+  //   header_size = sizeof(Hexitec::PacketHeader);
+  // std::stringstream stst;
+  // stst << " *** sensors_config_: " << sensors_config_ << " EPH:" << extended_packet_header_ << " Size packet header: " << header_size
+  //       << " sizes, prim: " << Hexitec::primary_packet_size[extended_packet_header_] << " tail[" << sensors_config_<< "]: " 
+  //       << Hexitec::tail_packet_size[sensors_config_ + extended_packet_header_*3] << " ***";
+  // LOG4CXX_INFO(logger_, stst.str());
   // Dump raw header if packet logging enabled
   if (enable_packet_logging_)
   {
@@ -440,13 +451,12 @@ void* HexitecFrameDecoder::get_next_payload_buffer(void) const
 
   if (current_packet_fem_map_.fem_idx_ != ILLEGAL_FEM_IDX)
   {
-    std::size_t frame_size = Hexitec::frame_size(sensors_config_);
+    std::size_t frame_size = (8000*1) +(4800*1) /*Hexitec::frame_size(sensors_config_, extended_packet_header_*2)*/;
 
     next_receive_location = reinterpret_cast<uint8_t*>(current_frame_buffer_)
           + get_frame_header_size ()
           + (frame_size * current_packet_fem_map_.buf_idx_)
-          + (0)
-          + (Hexitec::primary_packet_size * get_packet_number());
+          + (Hexitec::primary_packet_size[extended_packet_header_] * get_packet_number());
   }
   else
   {
@@ -471,11 +481,11 @@ size_t HexitecFrameDecoder::get_next_payload_size(void) const
 
   if (get_packet_number() < Hexitec::num_primary_packets[sensors_config_])
   {
-    next_receive_size = Hexitec::primary_packet_size;
+    next_receive_size = Hexitec::primary_packet_size[extended_packet_header_];
   }
   else
   {
-    next_receive_size = Hexitec::tail_packet_size[sensors_config_];
+    next_receive_size = 4800;//Hexitec::tail_packet_size[sensors_config_ + extended_packet_header_*3];
   }
 
   return next_receive_size;

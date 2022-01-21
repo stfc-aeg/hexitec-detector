@@ -32,15 +32,20 @@ namespace Hexitec {
   } HexitecSensorLayoutMapEntry;
 
   const std::string default_sensors_layout_map = "2x2";
-
+  // Currently, supporting ordinary/extended packet headers require doubling of packet sizes.
+  //  See primary and tail packet sizes
+  const int32_t header_types = 2;
   // A Hexitec sensor is 80x80 pixels large
   static const uint16_t pixel_columns_per_sensor = 80;
   static const uint16_t pixel_rows_per_sensor =  80;
-
-  static const size_t primary_packet_size = 8000;
-  static const size_t num_primary_packets[num_sensors] = {1, 6, 19};
+//
+  // static const size_t primary_packet_size = 8000;
+  static const size_t tail_packet_size[num_sensors*header_types]	= {4800, 3200, 1600, 5120, 5120, 0};  // HUNKY-DORY DECODER
+//
+  static const size_t primary_packet_size[header_types] = {8000, 7680};
+  static const size_t num_primary_packets[num_sensors] = {1, 6, 19};  // FG: sensorConfigThree = 20 primary packets
   static const size_t max_primary_packets = 6;
-  static const size_t tail_packet_size[num_sensors]	= {4800, 3200, 1600};
+  // static const size_t tail_packet_size[num_sensors*header_types]	= {4800, 3200, 1600, 5120, 5120, 0};  // UNRECOGNISED DECODER
   static const size_t num_tail_packets 		= 1;
 
   static const uint32_t start_of_frame_mask = 1 << 31;
@@ -83,25 +88,40 @@ namespace Hexitec {
     FemReceiveState fem_rx_state;
   } FrameHeader;
 
-
-  inline const std::size_t frame_size(const SensorConfigNumber sensor_config)
+  // These function to be utilised:
+  inline const std::size_t frame_size(const SensorConfigNumber sensor_config, const int32_t header_type)
   {
-    std::size_t frame_size = (primary_packet_size * num_primary_packets[sensor_config]) +
-        (tail_packet_size[sensor_config] * num_tail_packets);
+    std::size_t frame_size = (primary_packet_size[header_type] * num_primary_packets[sensor_config]) +
+        (tail_packet_size[sensor_config + header_types*3] * num_tail_packets);
     return frame_size;
   }
 
-  inline const std::size_t max_frame_size(const SensorConfigNumber sensor_config)
-  {
-    std::size_t max_frame_size = sizeof(FrameHeader) + frame_size(sensor_config);
-    return max_frame_size;
-  }
+  // inline const std::size_t max_frame_size(const SensorConfigNumber sensor_config)
+  // {
+  //   std::size_t max_frame_size = sizeof(FrameHeader) + frame_size(sensor_config, header_types);
+  //   return max_frame_size;
+  // }
 
   inline const std::size_t num_fem_frame_packets(const SensorConfigNumber sensor_config)
   {
     std::size_t num_fem_frame_packets = (num_primary_packets[sensor_config] + num_tail_packets);
     return num_fem_frame_packets;
   }
+//
+
+  // inline const std::size_t frame_size(const SensorConfigNumber sensor_config)
+  // {
+  //   std::size_t frame_size = (primary_packet_size[0] * num_primary_packets[sensor_config]) +
+  //       (tail_packet_size[sensor_config] * num_tail_packets);
+  //   return frame_size;
+  // }
+
+  inline const std::size_t max_frame_size(const SensorConfigNumber sensor_config, const int32_t header_type)
+  {
+    std::size_t max_frame_size = sizeof(FrameHeader) + frame_size(sensor_config, header_type);
+    return max_frame_size;
+  }
+//
 }
 
 #endif /* INCLUDE_HEXITECDEFINITIONS_H_ */
