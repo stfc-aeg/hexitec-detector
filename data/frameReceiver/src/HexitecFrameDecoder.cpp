@@ -25,6 +25,8 @@ const std::string HexitecFrameDecoder::CONFIG_EXTENDED_PACKET_HEADER = "extended
 
 #define MAX_IGNORED_PACKET_REPORTS 10
 
+// const size_t Hexitec::tail_packet_size[]	= {5120, 5120, 0};  // error: redefinition of ‘size_t Hexitec::tail_packet_size []’
+
 //! Constructor for HexitecFrameDecoder
 //!
 //! This constructor sets up the decoder, setting default values of frame tracking information
@@ -270,6 +272,16 @@ void* HexitecFrameDecoder::get_packet_header_buffer(void)
 void HexitecFrameDecoder::process_packet_header(size_t bytes_received, int port,
     struct sockaddr_in* from_addr)
 {
+  // int header_size = 0;
+  // if (extended_packet_header_)
+  //   header_size = sizeof(Hexitec::PacketExtendedHeader);
+  // else
+  //   header_size = sizeof(Hexitec::PacketHeader);
+  // std::stringstream stst;
+  // stst << " *** sensors_config_: " << sensors_config_ << " EPH:" << extended_packet_header_ << " Size packet header: " << header_size
+  //       << " sizes, prim: " << Hexitec::primary_packet_size << " tail[" << sensors_config_<< "]: " 
+  //       << Hexitec::tail_packet_size[sensors_config_] << " ***";
+  // LOG4CXX_INFO(logger_, stst.str());
   // Dump raw header if packet logging enabled
   if (enable_packet_logging_)
   {
@@ -445,7 +457,6 @@ void* HexitecFrameDecoder::get_next_payload_buffer(void) const
     next_receive_location = reinterpret_cast<uint8_t*>(current_frame_buffer_)
           + get_frame_header_size ()
           + (frame_size * current_packet_fem_map_.buf_idx_)
-          + (0)
           + (Hexitec::primary_packet_size * get_packet_number());
   }
   else

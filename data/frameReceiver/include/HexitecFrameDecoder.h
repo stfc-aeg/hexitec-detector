@@ -1,5 +1,5 @@
 /*
- * HexitecEmulatorFrameDecoder.h
+ * HexitecFrameDecoder.h
  *
  *  Created on: Jul 11, 2018
  *      Author: Christian Angelsen, STFC Application Engineering Group

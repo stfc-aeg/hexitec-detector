@@ -46,8 +46,8 @@ class HexitecUdpProducerDefaults(object):
 class HexitecUdpProducer(object):
     """Produce and transmit specified UDP frames."""
 
-    def __init__(self, host, port, frames,
-                 interval, quiet, filename):
+    def __init__(self, host, port, frames, interval,
+                 quiet, packet_sizes, filename):
         """Initialise object with command line arguments."""
         self.SOF = 1<<63
         self.EOF = 1<<62
@@ -60,7 +60,12 @@ class HexitecUdpProducer(object):
         self.interval = interval
         # self.display = display
         self.quiet = quiet
+        if (packet_sizes == 0):
+            self.primary_packet_size = 8000
+        else:
+            self.primary_packet_size = 7680
         self.filename = filename
+        print("Selected packet_sizes({}), self.primary_packet_size({})".format(packet_sizes, self.primary_packet_size))
 
         # self.pixelsToRead = self.frames * self.NPIXELS
         bytesPerPixel = 2
@@ -69,8 +74,8 @@ class HexitecUdpProducer(object):
         # Workout number of primary packets, size of trailing packet
 
         totalFrameSize = self.NPIXELS * bytesPerPixel
-        self.primaryPackets = totalFrameSize // 8000
-        self.trailingPacketSize = totalFrameSize % 8000
+        self.primaryPackets = totalFrameSize // self.primary_packet_size
+        self.trailingPacketSize = totalFrameSize % self.primary_packet_size
 
         if os.access(self.filename, os.R_OK):
             print("Selected", self.frames, "frames, ", bytesToRead, "bytes.")
@@ -128,7 +133,7 @@ class HexitecUdpProducer(object):
 
     def run(self):
         """Transmit data to address, port."""
-        self.payloadLen = 8000
+        self.payloadLen = self.primary_packet_size
 
         print("Transmitting Hexitec data to address {} port {} ...".format(self.host, self.port))
 
@@ -162,7 +167,7 @@ class HexitecUdpProducer(object):
                 header[1] = 0
 
                 if (packetCounter < self.primaryPackets):
-                    bytesToSend = 8000
+                    bytesToSend = self.primary_packet_size
                     if (packetCounter == 0):
                         header[1] = packetCounter | self.SOF
                     else:
@@ -224,6 +229,8 @@ if __name__ == '__main__':
                         help="select frame interval in seconds")
     parser.add_argument('--quiet', "-q", action="store_true",
                         help="Suppress detailed print during operation")
+    parser.add_argument('--packet_sizes', '-p', type=int, default=1,
+                        help='packet_sizes: 0 (8000, 4800), 1 (7680, 5120)')
     parser.add_argument(
         'filename',
         default="hexitec_triangle_100G.pcapng",

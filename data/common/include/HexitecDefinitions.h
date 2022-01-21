@@ -37,10 +37,12 @@ namespace Hexitec {
   static const uint16_t pixel_columns_per_sensor = 80;
   static const uint16_t pixel_rows_per_sensor =  80;
 
-  static const size_t primary_packet_size = 8000;
-  static const size_t num_primary_packets[num_sensors] = {1, 6, 19};
+  static const size_t primary_packet_size = 7680;
+  static const size_t num_primary_packets[num_sensors] = {1, 6, 20};
   static const size_t max_primary_packets = 6;
-  static const size_t tail_packet_size[num_sensors]	= {4800, 3200, 1600};
+  static const size_t tail_packet_size[num_sensors]	= {5120, 5120, 0};
+  // static const size_t tail_packet_size[num_sensors]; // Workaround no good, See HFD.cpp:28
+  // Needs to become an array as well to support 2x6 configuration:
   static const size_t num_tail_packets 		= 1;
 
   static const uint32_t start_of_frame_mask = 1 << 31;
@@ -82,7 +84,6 @@ namespace Hexitec {
     uint8_t active_fem_idx;
     FemReceiveState fem_rx_state;
   } FrameHeader;
-
 
   inline const std::size_t frame_size(const SensorConfigNumber sensor_config)
   {
