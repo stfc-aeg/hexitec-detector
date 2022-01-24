@@ -223,7 +223,7 @@ namespace FrameSimulator {
 
         // Allocate buffer for packet data including header
         u_char* head_packet_data = new u_char[Hexitec::primary_packet_size[0] + packet_header_size_];   // RESTORE ME
-        u_char* tail_packet_data = new u_char[Hexitec::tail_packet_size[sensors_config_] + packet_header_size_];
+        u_char* tail_packet_data = new u_char[Hexitec::tail_packet_size(sensors_config_) + packet_header_size_];
         
         // Loop over specified number of frames to generate packet and frame data
         for (int frame = 0; frame < num_frames; frame++) {
@@ -295,10 +295,10 @@ namespace FrameSimulator {
             // packet_flags = packet_flags | Hexitec::end_of_frame_mask;
 
             // Copy data into Head Packet
-            memcpy((tail_packet_data + packet_header_size_), data_ptr, Hexitec::tail_packet_size[sensors_config_]);
+            memcpy((tail_packet_data + packet_header_size_), data_ptr, Hexitec::tail_packet_size(sensors_config_));
 
             // Pass head packet to Frame Extraction
-            this->extract_frames(tail_packet_data, Hexitec::tail_packet_size[sensors_config_] + packet_header_size_);
+            this->extract_frames(tail_packet_data, Hexitec::tail_packet_size(sensors_config_) + packet_header_size_);
         }
 
         delete [] head_packet_data;

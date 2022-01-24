@@ -51,6 +51,9 @@ HexitecFrameDecoder::HexitecFrameDecoder() :
   current_packet_header_.reset(new uint8_t[packet_header_size_]);
   dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size(sensors_config_, extended_packet_header_)]);
   ignored_packet_buffer_.reset(new uint8_t[Hexitec::primary_packet_size[extended_packet_header_]]);
+  // std:: cout << " OLD, primary_packet_size: " << Hexitec::primary_packet_size[extended_packet_header_] << "\n";
+  // Hexitec::StaticArray sarray = Hexitec::StaticArray();
+  // std:: cout << " NEW, primary_packet_size: " << Hexitec::primary_packet_size[extended_packet_header_] << "\n"
 }
 
 //! Destructor for HexitecFrameDecoder

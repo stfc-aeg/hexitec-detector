@@ -10,6 +10,7 @@
 
 #include "FrameDecoderUDP.h"
 #include "HexitecDefinitions.h"
+#include "StaticArray.h"  // TESTING
 #include <iostream>
 #include <map>
 #include <stdint.h>
