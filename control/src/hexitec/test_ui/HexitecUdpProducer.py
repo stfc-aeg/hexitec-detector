@@ -49,8 +49,8 @@ class HexitecUdpProducer(object):
     def __init__(self, host, port, frames,
                  interval, quiet, filename):
         """Initialise object with command line arguments."""
-        self.SOF = 1<<63
-        self.EOF = 1<<62
+        self.SOF = 1 << 63
+        self.EOF = 1 << 62
         self.host = host
         self.port = port
         self.frames = frames
@@ -80,9 +80,8 @@ class HexitecUdpProducer(object):
             print("Unable to open: {}. Does it exist?".format(self.filename))
             sys.exit(1)
 
-    # Extracts extended header-sized udp data from file
     def decode_pcap(self):
-
+        """Extract extended header-sized UDP data from file."""
         HEADER_SIZE = 64
 
         # Initialise frame list and counters

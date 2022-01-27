@@ -469,7 +469,7 @@ if __name__ == '__main__':
                    'summed_image': {
                        'threshold_lower': 120,
                        'threshold_upper': 4800}
-                  },
+                   },
                   'processor': {'config_file': '', 'configured': False, 'connected': False}}
 
     bin_end = param_tree['config']['histogram']['bin_end']

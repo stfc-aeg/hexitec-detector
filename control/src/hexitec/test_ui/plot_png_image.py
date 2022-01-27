@@ -1,4 +1,4 @@
-
+"""Read PNG file and plot."""
 try:
     import PyQt5
     # Avoid depreciation warning with: from matplotlib.backends.backend_qt5agg import ...
@@ -13,7 +13,7 @@ import sys
 
 
 def plot_png_image(png_file):
-
+    """Plot PNG image."""
     # Read png image
     im = img.imread(png_file)
     lum = im[:, :, ]

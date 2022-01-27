@@ -17,7 +17,6 @@ import os
 
 from hexitec.RdmaUDP import RdmaUDP
 
-from concurrent import futures
 from socket import error as socket_error
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 

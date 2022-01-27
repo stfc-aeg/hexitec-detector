@@ -8,13 +8,10 @@ import numpy as np
 import argparse
 
 class DatasetChecker:
-  
-
-    def __init__(self, args):
-        pass
+    """Summarises all datasets info, except processed_frames."""
 
     def check_if_empty(self):
-
+        """Check whether 'pixel_spectra' empty - superseded."""
         print("Pixel_spectra has dimensions: {}".format(self.pixel_spectra.shape))
         (dim_a, dim_b, dim_c) = self.pixel_spectra.shape
         completely_empty = True
@@ -27,6 +24,7 @@ class DatasetChecker:
             print("Pixel_spectra completely empty!")
 
     def check_empty_frames(self, dataset_name):
+        """Check whether dataset_name is empty."""
         with h5py.File(args.filename, "r") as data_file:
             # print("Keys: {}".format(data_file.keys()))
             try:
@@ -75,13 +73,14 @@ class DatasetChecker:
             else:
                 print("Unexpected dataset: '{}' dimensions: {} shape: {}".format(dataset_name, dims, self.data.shape))
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--filename", type=str, default='test_2_000001.h5', dest="filename",
                         help="Filename of the datatype to read in")
     args = parser.parse_args()
 
-    checker = DatasetChecker(args)
+    checker = DatasetChecker()
 
     datasets = ['pixel_spectra', 'raw_frames', 'spectra_bins', 'summed_spectra']
     for dataset_name in datasets:
@@ -91,4 +90,3 @@ if __name__ == "__main__":
 # with h5py.File(filename, "r") as data_file:
 #     print("Keys: {} ({})".format(data_file.keys(), type(data_file.keys())))
 # Keys: <KeysViewHDF5 ['pixel_spectra', 'processed_frames', 'raw_frames', 'spectra_bins', 'summed_spectra']> (<class 'h5py._hl.base.KeysViewHDF5'>)
-
