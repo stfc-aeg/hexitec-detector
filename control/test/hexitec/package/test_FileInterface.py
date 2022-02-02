@@ -122,7 +122,6 @@ class TestDetectorAdapter(unittest.TestCase):
         cwd = os.getcwd()
         base_path_index = cwd.rfind("hexitec-detector")
         base_path = cwd[:base_path_index]
-        odin_control_path = base_path + "hexitec-detector/control/"
         odin_data_path = base_path + "hexitec-detector/data/"
 
         # Provoke KeyError
@@ -133,7 +132,7 @@ class TestDetectorAdapter(unittest.TestCase):
 
         # with patch('logging.debug') as mock_log:
         with self.assertRaises(KeyError):
-            new_adapter = FileInterfaceAdapter(**options)
+            FileInterfaceAdapter(**options)
             # mock_log.assert_called_with('Illegal directory target specified')
 
     def setUp(self):
@@ -232,7 +231,7 @@ class TestDetectorAdapter(unittest.TestCase):
         assert self.test_detector_adapter.detector.odin_data_config_dir == config_dir
 
     def test_get_server_uptime(self):
-      """Test function get server update okay."""
-      start_time = self.test_detector_adapter.detector.init_time
-      up_time = self.test_detector_adapter.detector.get_server_uptime()
-      assert pytest.approx(up_time, rel=1) == time.time() - start_time
+        """Test function get server update okay."""
+        start_time = self.test_detector_adapter.detector.init_time
+        up_time = self.test_detector_adapter.detector.get_server_uptime()
+        assert pytest.approx(up_time, rel=1) == time.time() - start_time

@@ -5,7 +5,6 @@ Christian Angelsen, STFC Detector Systems Software Group
 
 import unittest
 import pytest
-import time
 import sys
 import os
 

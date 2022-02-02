@@ -461,7 +461,7 @@ class TestDAQ(unittest.TestCase):
 
     def test_processing_check_loop_handles_missing_frames(self):
         """Test processing check loop will stop acquisition if data ceases mid-flow."""
-        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
+        with patch("hexitec.HexitecDAQ.IOLoop"):
             self.test_daq.daq.first_initialisation = False
             self.test_daq.daq.parent.fems[0].hardware_busy = True
             self.test_daq.daq.frame_end_acquisition = 10

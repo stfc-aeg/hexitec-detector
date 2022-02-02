@@ -6,13 +6,10 @@ Christian Angelsen, STFC Detector Systems Software Group
 from hexitec.GenerateConfigFiles import GenerateConfigFiles
 
 import unittest
-# import pytest
-# import time
-import sys
-import os
+import pytest
 
-if sys.version_info[0] == 3:  # pragma: no cover
-    from unittest.mock import Mock, MagicMock, patch
+# if sys.version_info[0] == 3:  # pragma: no cover
+#     from unittest.mock import Mock, MagicMock, patch
 # else:                         # pragma: no cover
 #     from mock import Mock, MagicMock, patch
 
@@ -30,7 +27,7 @@ class ObjectTestFixture(object):
                       # The 'config' nested dictionary control which plugin(s) are loaded:
                       'config':
                       {'calibration':
-                       {'enable': False, 'intercepts_filename': '', 'gradients_filename': ''},
+                       {'enable': True, 'intercepts_filename': '', 'gradients_filename': ''},
                        'addition':
                        {'enable': True, 'pixel_grid_size': 3},
                        'discrimination': {'enable': False, 'pixel_grid_size': 5},
@@ -51,56 +48,13 @@ class ObjectTestFixture(object):
         master_dataset = "raw_frames"
         extra_datasets = [master_dataset, "processed_frames"]
 
-        self.adapter = GenerateConfigFiles(param_tree, number_histograms, compression_type="none",
+        self.adapter = GenerateConfigFiles(param_tree, number_histograms, compression_type="blosc",
                                            master_dataset=master_dataset, extra_datasets=extra_datasets,
                                            selected_os="CentOS")
 
 
 class TestObject(unittest.TestCase):
     """Unit tests for the GenerateConfigFiles class."""
-
-    # def test_init_bad_path(self):
-    #     """Initialise object."""
-
-    #     param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
-    #                   'sensors_layout': '1x1', 'receiver':
-    #                   {'config_file': '', 'configured': False, 'connected': False},
-    #                   'in_progress': False,
-    #                   # The 'config' nested dictionary control which plugin(s) are loaded:
-    #                   'config':
-    #                   {'calibration':
-    #                   {'enable': False, 'intercepts_filename': '', 'gradients_filename': ''},
-    #                   'addition':
-    #                   {'enable': False, 'pixel_grid_size': 3},
-    #                   'discrimination': {'enable': False, 'pixel_grid_size': 5},
-    #                   'histogram':
-    #                   {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
-    #                     'pass_processed': True, 'pass_raw': True},
-    #                   'next_frame': {'enable': False},
-    #                   'threshold':
-    #                   {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'},
-    #                   'summed_image': {
-    #                       'threshold_lower': 120,
-    #                       'threshold_upper': 4800}
-    #                   },
-    #                   'processor': {'config_file': '', 'configured': False, 'connected': False}}
-
-    #     bin_end = param_tree['config']['histogram']['bin_end']
-    #     bin_start = param_tree['config']['histogram']['bin_start']
-    #     bin_width = param_tree['config']['histogram']['bin_width']
-    #     number_histograms = int((bin_end - bin_start) / bin_width)
-
-    #     # Provoke KeyError
-    #     options = {
-    #         "param_tree":
-    #             "{}".format(param_tree),
-    #         "number_histograms": "{}".format(number_histograms)
-    #     }
-
-    #     # with patch('logging.debug') as mock_log:
-    #     with self.assertRaises(KeyError):
-    #         new_adapter = GenerateConfigFiles(**options)
-    #         # mock_log.assert_called_with('Illegal directory target specified')
 
     def setUp(self):
         """Set up test fixture for each unit test."""
@@ -193,3 +147,26 @@ class TestObject(unittest.TestCase):
         """Test function works ok."""
 
         self.test_detector_adapter.adapter.generate_config_files()
+
+    # Doesn't work (somehow)
+    # def test_generate_config_files_supports_ubuntu(self):
+    #     """Test function works ok."""
+    #     self.test_detector_adapter.adapter.elected_os = "ubuntu"
+    #     self.test_detector_adapter.adapter.generate_config_files()
+
+class TestObject2(unittest.TestCase):
+    """Unit test for single, bad config test."""
+
+    def setUp(self):
+        """Set up test fixture for each unit test."""
+        self.test_detector_badadapter = ObjectTestFixture()
+
+    def test_generate_config_files_fails_missing_enable_key(self):
+        """Test function fail on missing enable key."""
+        # Function should fail if any optional plugin doesn't define the key 'enable'
+        with pytest.raises(Exception) as exc_info:
+            # 'Pretend' next_frame doesn't have 'enable' key
+            self.test_detector_badadapter.adapter.param_tree['config']['next_frame'] = {}
+            self.test_detector_badadapter.adapter.generate_config_files()
+        assert exc_info.type is Exception
+        assert exc_info.value.args[0] == "Plugin %s missing 'enable' setting!" % 'next_frame'
