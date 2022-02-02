@@ -1,0 +1,94 @@
+[
+    {
+        "store":
+        {
+            "index": "_tmp_store.json",
+            "value":
+            [
+                {
+                    "fr_setup": {
+                        "fr_ready_cnxn": "tcp://127.0.0.1:5001",
+                        "fr_release_cnxn": "tcp://127.0.0.1:5002"
+                    }
+                },
+                {
+                    "plugin": {
+                        "load": {
+                            "index": "reorder",
+                            "name": "HexitecReorderPlugin",
+                            "library": "/aeg_sw/work/users/ckd27546/develop/projects/hexitec/install_ubuntu/lib/libHexitecReorderPlugin.so"
+                        }
+                    }
+                },
+                {
+                    "plugin": {
+                        "load": {
+                            "index": "hdf",
+                            "name": "FileWriterPlugin",
+                            "library": "/aeg_sw/work/users/ckd27546/develop/projects/hexitec/install_ubuntu/lib/libHdf5Plugin.so"
+                        }
+                    }
+                },
+                {
+                    "plugin": {
+                        "connect": {
+                            "index": "reorder",
+                            "connection": "frame_receiver"
+                        }
+                    }
+                },
+                {
+                    "plugin": {
+                        "connect": {
+                          "index": "hdf",
+                            "connection": "reorder"
+                        }
+                    }
+                },
+                {
+                    "reorder": {
+                        "sensors_layout": "1x1"
+                    }
+                },
+                {
+                    "hdf":
+                    {
+                        "master": "raw_frames",
+                        "dataset":
+                        {
+                            "raw_frames":
+                            {
+                                "datatype": "uint16",
+                                "dims": [80, 80],
+                                "chunks": [1, 80, 80],
+                                "compression": "none",
+                                "blosc_compressor": 1,
+                                "blosc_shuffle": 0,
+                                "blosc_level": 4
+                            },
+                            "processed_frames":
+                            {
+                                "datatype": "float",
+                                "dims": [80, 80],
+                                "chunks": [1, 80, 80],
+                                "compression": "none",
+                                "blosc_compressor": 1,
+                                "blosc_shuffle": 0,
+                                "blosc_level": 4
+                            }
+                        }
+                    }
+                },
+                {
+                    "hdf":
+                    {
+                        "file":
+                        {
+                            "path": "/tmp/"
+                        }
+                    }
+                }
+            ]
+        }
+    }
+]
