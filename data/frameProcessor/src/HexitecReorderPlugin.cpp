@@ -160,8 +160,8 @@ namespace FrameProcessor
    */
   void HexitecReorderPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_TRACE(logger_, "Reordering frame.");
-    LOG4CXX_TRACE(logger_, "Frame size: " << frame->get_data_size());
+    //LOG4CXX_DEBUG_LEVEL(1, logger_, "Reordering frame.");
+    //LOG4CXX_DEBUG_LEVEL(1, logger_, "Frame size: " << frame->get_data_size());
 
     Hexitec::FrameHeader* hdr_ptr = static_cast<Hexitec::FrameHeader*>(frame->get_data_ptr());
 
@@ -174,11 +174,11 @@ namespace FrameProcessor
     //	display actual Hardware frame number
     frame->set_frame_number(frame_number_);
 
-    LOG4CXX_TRACE(logger_, "Raw frame number: " << hdr_ptr->frame_number);
+    //LOG4CXX_DEBUG_LEVEL(1, logger_, "Raw frame number: " << hdr_ptr->frame_number);
 
     // Determine the size of the output reordered image
     const std::size_t output_image_size = reordered_image_size();
-    LOG4CXX_TRACE(logger_, "Output image size: " << output_image_size);
+    //LOG4CXX_DEBUG_LEVEL(1, logger_, "Output image size: " << output_image_size);
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
@@ -219,8 +219,8 @@ namespace FrameProcessor
                                         static_cast<float *>(output_ptr));
 
       const std::string& dataset = processed_meta.get_dataset_name();
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: " <<
-                    data_frame->get_frame_number());
+      //LOG4CXX_DEBUG_LEVEL(1, logger_, "Pushing " << dataset << " dataset, frame number: " <<
+                    // data_frame->get_frame_number());
       this->push(data_frame);
 
       // Construct raw data frame
@@ -247,8 +247,8 @@ namespace FrameProcessor
       copy_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
         static_cast<unsigned short *>(output_ptr));
 
-      LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: " <<
-                    raw_frame->get_frame_number());
+      //LOG4CXX_DEBUG_LEVEL(1, logger_, "Pushing raw_frames dataset, frame number: " <<
+                    // raw_frame->get_frame_number());
       this->push(raw_frame);
 
       // Manually update frame_number (until fixed in firmware)

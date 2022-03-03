@@ -97,7 +97,7 @@
                         "bin_start": 0,
                         "bin_end": 8000,
                         "bin_width": 10.0,
-                        "max_frames_received": 10,
+                        "max_frames_received": 100000,
                         "pass_processed": true,
                         "pass_raw": true,
                         "sensors_layout": "1x1"

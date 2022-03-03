@@ -322,8 +322,8 @@ namespace FrameProcessor
     {
       if (pass_raw_)
       {
-        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                          << frame->get_frame_number());
+        // LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+        //                                   << frame->get_frame_number());
         this->push(frame);
       }
     }
@@ -352,8 +352,8 @@ namespace FrameProcessor
         if (pass_processed_)
         {
           // Pass on processed_frames dataset unmodified:
-          LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                            << frame->get_frame_number());
+          // LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+          //                                   << frame->get_frame_number());
           this->push(frame);
         }
 
@@ -375,13 +375,13 @@ namespace FrameProcessor
    */
   void HexitecHistogramPlugin::writeHistogramsToDisk()
   {
-    LOG4CXX_TRACE(logger_, "Pushing " << spectra_bins_->get_meta_data().get_dataset_name() << " dataset");
+    // LOG4CXX_TRACE(logger_, "Pushing " << spectra_bins_->get_meta_data().get_dataset_name() << " dataset");
     this->push(spectra_bins_);
 
-    LOG4CXX_TRACE(logger_, "Pushing " << summed_spectra_->get_meta_data().get_dataset_name() << " dataset");
+    // LOG4CXX_TRACE(logger_, "Pushing " << summed_spectra_->get_meta_data().get_dataset_name() << " dataset");
     this->push(summed_spectra_);
 
-    LOG4CXX_TRACE(logger_, "Pushing " << pixel_spectra_->get_meta_data().get_dataset_name() << " dataset");
+    // LOG4CXX_TRACE(logger_, "Pushing " << pixel_spectra_->get_meta_data().get_dataset_name() << " dataset");
     this->push(pixel_spectra_);
   }
 

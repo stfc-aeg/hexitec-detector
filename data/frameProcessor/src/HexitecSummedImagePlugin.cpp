@@ -179,8 +179,8 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                        << frame->get_frame_number());
+      // LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+      //                                   << frame->get_frame_number());
       this->push(frame);
     }
     else if (dataset.compare(std::string("processed_frames")) == 0)
@@ -188,8 +188,8 @@ namespace FrameProcessor
       try
       {
         // Pass on dataset processed_frames as is
-        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                          << frame->get_frame_number());
+        // LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+        //                                   << frame->get_frame_number());
         this->push(frame);
 
         if ((frame->get_frame_number() % image_frequency_) == 0)
@@ -227,12 +227,12 @@ namespace FrameProcessor
                                       static_cast<unsigned short *>(output_ptr));
 
           const std::string& dataset_name = summed_image_meta.get_dataset_name();
-          LOG4CXX_TRACE(logger_, "Pushing " << dataset_name << " dataset, frame number: " <<
-                        summed_frame->get_frame_number());
+          // LOG4CXX_TRACE(logger_, "Pushing " << dataset_name << " dataset, frame number: " <<
+          //               summed_frame->get_frame_number());
           this->push(summed_frame);
         }
         else
-          LOG4CXX_TRACE(logger_, "Skipping frame: " << frame->get_frame_number());
+          ;//LOG4CXX_TRACE(logger_, "Skipping frame: " << frame->get_frame_number());
       }
       catch (const std::exception& e)
       {
@@ -242,8 +242,8 @@ namespace FrameProcessor
     else
     {
       // Push any other (histogram?) dataset
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                        << frame->get_frame_number());
+      // LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+      //                                   << frame->get_frame_number());
       this->push(frame);
     }
   }

@@ -226,8 +226,8 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                        << frame->get_frame_number());
+      // LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+      //                                   << frame->get_frame_number());
       this->push(frame);
     }
     else if (dataset.compare(std::string("processed_frames")) == 0)
@@ -246,15 +246,15 @@ namespace FrameProcessor
             break;
           case 1:
             process_threshold_value(static_cast<float *>(input_ptr));
-            LOG4CXX_TRACE(logger_, "Applying threshold value to frame.");
+            // LOG4CXX_TRACE(logger_, "Applying threshold value to frame.");
             break;
           case 2:
             process_threshold_file(static_cast<float *>(input_ptr));
-            LOG4CXX_TRACE(logger_, "Applying thresholds from file to frame.");
+            // LOG4CXX_TRACE(logger_, "Applying thresholds from file to frame.");
             break;
         }
-        LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-                      " dataset, frame number: " << frame->get_frame_number());
+        // LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
+        //               " dataset, frame number: " << frame->get_frame_number());
         this->push(frame);
       }
       catch (const std::exception& e)
