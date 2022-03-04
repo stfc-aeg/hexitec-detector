@@ -266,6 +266,7 @@ class Hexitec():
         self.health = True
         self.status_message = ""
         self.status_error = ""
+        self.elog = ""
 
         # self.slowest_time = 0.0
         # self.fastest_time = 10.0
@@ -292,6 +293,7 @@ class Hexitec():
                 "system_health": (lambda: self.health, None),
                 "status_message": (lambda: self.status_message, None),
                 "status_error": (lambda: self.status_error, None),
+                "elog": (lambda: self.elog, self.set_elog),
                 "fem_health": (lambda: self.fem_health, None)
             }
         })
@@ -566,6 +568,10 @@ class Hexitec():
         self.number_frames = number_frames
 
         self.daq.set_number_frames(self.number_frames)
+
+    def set_elog(self, entry):
+        """Set the elog entry provided by the user through the UI."""
+        self.elog = entry
 
     def initialize(self, adapters):
         """Get references to adapters, and pass these to the classes that need to use them."""

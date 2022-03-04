@@ -81,12 +81,6 @@ $( document ).ready(function()
         changeCalibrationEnable();
     });
 
-    // $("[name='hdf_write_enable']").bootstrapSwitch({disabled:true});
-    // $("[name='hdf_write_enable']").bootstrapSwitch('state', hdf_write_enable, true);
-    // $('input[name="hdf_write_enable"]').on('switchChange.bootstrapSwitch', function(event,state) {
-    //     changeHdfWriteEnable();
-    // });
-
     // Apply UI configuration choices
     $('#applyButton').on('click', function(event) {
         apply_ui_values();
@@ -866,7 +860,7 @@ var changeDurationEnable = function()
 
 var changeProcessedDataEnable = function()
 {
-    // TODO: Temporarily hacked until Odin Control supports bool
+    // Odin Control do not support bool, must target FP and DAQ adapter
     processed_data_enable = $("[name='processed_data_enable']").bootstrapSwitch('state');
     $.ajax({
         type: "PUT",
@@ -891,7 +885,7 @@ var changeProcessedDataEnable = function()
 
 var changeRawDataEnable = function()
 {
-    // TODO: Temporarily hacked until Odin control supports bool
+    // Odin Control do not support bool, must target FP and DAQ adapter
     raw_data_enable = $("[name='raw_data_enable']").bootstrapSwitch('state');
     $.ajax({
         type: "PUT",
@@ -961,18 +955,12 @@ var changeCalibrationEnable = function()
         }
     });
 
-    // If calibration now enabled, check coefficient files are valid
+    // If calibration now enabled, check coefficients files are valid
     if (calibration_enable)
     {
         gradients_filename_changed();
         intercepts_filename_changed()
     }
-};
-
-var changeHdfWriteEnable = function()
-{
-    hdf_write_enable = $("[name='hdf_write_enable']").bootstrapSwitch('state');
-    setHdfWrite(hdf_write_enable);
 };
 
 var sensorsLayoutChange = function(sensors_layout)
@@ -1005,37 +993,6 @@ var compressionChange = function(compression)
         },
         error: function(request, msg, error) {
             $('#compression-warning').html(error + ": " + format_error(request.responseText));
-        }
-    });
-}
-
-function setHdfWrite(enable)
-{
-    // Helper function to toggle hdf writing on/off
-
-    hdf_write_enable = enable;
-    $.ajax({
-        type: "PUT",
-        url: hexitec_url + 'detector/daq/file_info/enabled',
-        contentType: "application/json",
-        data: JSON.stringify(hdf_write_enable),
-        success: function(result) {
-            $('#hdf-write-enable-warning').html("");
-            // If write enabled, must disable access to config files, 
-            //  file path & name and frames (vice versa if disabled)
-            if (hdf_write_enable === true)
-            {
-                $('#hdf-file-path-text').prop('disabled', true);
-                $('#hdf-file-name-text').prop('disabled', true);
-            }
-            else
-            {
-                $('#hdf-file-path-text').prop('disabled', false);
-                $('#hdf-file-name-text').prop('disabled', false);
-            }
-        },
-        error: function(request, msg, error) {
-            $('#hdf-write-enable-warning').html(error + ": " + format_error(request.responseText));
         }
     });
 }
@@ -1078,7 +1035,7 @@ function fr_config_changed()
         type: "PUT",
         url: hexitec_url + 'fr/config/config_file',
         contentType: "application/json",
-        data: (fr_config_file),
+        data: fr_config_file,
         success: function(result) {
             $('#fr-config-warning').html("");
             $("[name='hdf_write_enable']").bootstrapSwitch('disabled', false);
@@ -1113,7 +1070,6 @@ function hdf_file_path_changed()
 function hdf_file_name_changed()
 {
     // Appends timestamp to filename, updates hdf file name
-
     var hdf_file_name = $('#hdf-file-name-text').prop('value');
     var payload = {"file_name": hdf_file_name + "_" + showTime()};
     $.ajax({
@@ -1208,11 +1164,14 @@ function hexitec_config_changed()
 function frames_changed()
 {
     var ui_frames = $('#frames-text').prop('value');
+    var entry = $('#elog-text').prop('value');
+    // var entry = $('#frames-text').prop('value');
+    console.log("elog_changed(): " + entry);
     $.ajax({
         type: "PUT",
         url: hexitec_url + 'detector/acquisition/number_frames',
         contentType: "application/json",
-        data: (ui_frames),
+        data: ui_frames,
         success: function(result) {
             $('#frames-warning').html("");
         },
@@ -1229,13 +1188,25 @@ function duration_changed()
         type: "PUT",
         url: hexitec_url + 'detector/acquisition/duration',
         contentType: "application/json",
-        data: (duration),
+        data: duration,
         success: function(result) {
             $('#duration-warning').html("");
         },
         error: function(request, msg, error) {
             $('#duration-warning').html(error + ": " + format_error(request.responseText));
         }
+    });
+};
+
+function elog_changed()
+{
+    var entry = $('#elog-text').prop('value');
+    var payload = {"elog": entry};
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/status',
+        contentType: "application/json",
+        data: JSON.stringify(payload)
     });
 };
 
@@ -1248,7 +1219,6 @@ function lv_dataset_changed()
         url: hexitec_url + 'detector/daq/config/live_view',
         contentType: "application/json",
         data: JSON.stringify(payload),
-        // data: payload,
         success: function(result) {
             $('#lv-dataset-changed-warning').html("");
             document.getElementById("lv-dataset-changed-warning").classList.remove('alert-danger');

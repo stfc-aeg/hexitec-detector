@@ -450,6 +450,12 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.set_duration(duration)
         assert self.test_adapter.detector.duration == duration
 
+    def test_set_elog(self):
+        """Test function sets elog correctly."""
+        entry = "Captain's log"
+        self.test_adapter.detector.set_elog(entry)
+        assert self.test_adapter.detector.elog == entry
+
     def test_detector_initialize(self):
         """Test function can initialise adapters."""
         adapters = {
