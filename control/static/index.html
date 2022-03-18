@@ -6,57 +6,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
 
-    <!-- Bootstrap -->
-    <link href="js/bootstrap-5.1.1-dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- <link href="js/fontawesome-free-5.15.1-web/css/all.min.css" rel="stylesheet"> -->
-
-    <!-- 
-    <link href="css/bootstrap-switch-4.0.0-alpha.1-dist/bootstrap-switch.min.css" rel="stylesheet">
-    <link href="css/carrier.css" rel="stylesheet">
-    <link href="css/command-sequencer.css" rel="stylesheet">
-    <div id="global-nav"></div>
-    -->
-
-    <!-- Things ported from previous design: -->
     <title>Hexitec Server</title>
 
-    <script src="js/jquery-2.2.3.min.js"></script>
-
-    <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="js/bootstrap.min.js"></script>
-    <script src="js/odin_server.js"></script>
     <link href="css/odin-server.css" rel="stylesheet">
-
-    <!-- Bootstrap -->
-    <!-- <link href="css/bootstrap.min.css" rel="stylesheet"> -->
-    <link href="css/bootstrap-switch.min.css" rel="stylesheet">
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="js/bootstrap-5.1.1-dist/js/bootstrap.min.js"></script>
+    <link href="js/bootstrap-5.1.1-dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="js/bootstrap-slider-10.2.1/css/bootstrap-slider.css" rel="stylesheet">
-
-    <script src="js/bootstrap-switch/highlight.js"></script>
-    <script src="js/bootstrap-switch/bootstrap-switch.js"></script>
-<!-- End of things ported from previous design -->
   </head>
 
   <body>
-
     <div class="row">
       <div class="col-sm-12">
         <div id="1" class="main-container">
           <table>
             <tr>
               <td>
-                <input type="button" accesskey="c" class="btn btn-primary" id='connectButton' data-size="small" value="Connect">
+                <input type="button" onclick="connectButtonClicked()" accesskey="c" class="btn btn-primary" id='connectButton' data-size="small" value="Connect">
                 <!--  -->
-                <input type="button" class="btn btn-primary" id='hvOnButton' data-size="small" value="HV On">
-                <input type="button" class="btn btn-primary" id='hvOffButton' data-size="small" value="HV Off">
+                <input type="button" onclick="hvOnButtonClicked()" class="btn btn-primary" id='hvOnButton' data-size="small" value="HV On">
+                <input type="button" onclick="hvOffButtonClicked()" class="btn btn-primary" id='hvOffButton' data-size="small" value="HV Off">
                 <!--  -->
-                <input type="button" accesskey="n" class="btn btn-primary" id='initialiseButton' data-size="small" value="Initialise">
-                <input type="button" accesskey="l" class="btn btn-primary" id='offsetsButton' data-size="small" value="Collect Offsets">
-                <input type="button" accesskey="q" class="btn btn-primary" id='acquireButton' data-size="small" value="Acquire">
-                <input type="button" accesskey="x" class="btn btn-primary" id='cancelButton' data-size="small" value="Cancel">
+                <input type="button" onclick="initialiseButtonClicked()" accesskey="n" class="btn btn-primary" id='initialiseButton' data-size="small" value="Initialise">
+                <input type="button" onclick="offsetsButtonClicked()" accesskey="l" class="btn btn-primary" id='offsetsButton' data-size="small" value="Collect Offsets">
+                <input type="button" onclick="acquireButtonClicked()" accesskey="q" class="btn btn-primary" id='acquireButton' data-size="small" value="Acquire">
+                <input type="button" onclick="cancelButtonClicked()" accesskey="x" class="btn btn-primary" id='cancelButton' data-size="small" value="Cancel">
                 <!-- -->
 
-                <input type="button" accesskey="i" class="btn btn-primary" id='disconnectButton' data-size="small" value="Disconnect">
+                <input type="button" onclick="disconnectButtonClicked()" accesskey="i" class="btn btn-primary" id='disconnectButton' data-size="small" value="Disconnect">
               </td>
             </tr>
           </table>
@@ -147,7 +124,12 @@
                       <td>
                         <div class="row sidebar-row vertical-align">
                           <div class="col-xs-7">
-                            <input type="checkbox" name="duration_enable" data-size="small" data-off-text="Frames" data-on-text="Seconds">
+                            <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                              <input type="radio" class="btn-check" name="mode_radio" id="mode_radio1" autocomplete="off" onclick="changeModeEnable()">
+                              <label class="btn btn-outline-primary" for="mode_radio1">Seconds</label>
+                              <input type="radio" class="btn-check" name="mode_radio" id="mode_radio2" autocomplete="off" onclick="changeModeEnable()" checked>
+                              <label class="btn btn-outline-primary" for="mode_radio2">Frames</label>
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -199,7 +181,7 @@
                     <tr>
                       <td></td>
                       <td>
-                        <input type="button" class="btn btn-primary double-width" id='applyButton2' data-size="small" value="Apply">
+                        <input type="button" onclick="applyButton2()" class="btn btn-primary double-width" id='applyButton2' data-size="small" value="Apply">
                       </td>
                     </tr>
                     <tr>
@@ -285,7 +267,7 @@
                           <input type="text" id="elog-text" onChange='elog_changed()' maxlength="40" size="40" value="Today's eLog entry..">
                         </div>
                       </td>
-                      &nbsp;<td><span id="odin-control-error">&nbsp;</span></td>
+                      &nbsp;<td><span id="elog-error">&nbsp;</span></td>
                       <td>
                       </td>
                     </tr>
@@ -333,7 +315,13 @@
                                 <td>
                                   <div class="row sidebar-row vertical-align">
                                     <div class="col-xs-7">
-                                      <input type="checkbox" accesskey="v" name="liveview_enable" data-size="small">
+                                      <!-- <input type="checkbox" accesskey="v" name="liveview_enable" data-size="small"> -->
+                                      <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                                        <input type="radio" class="btn-check" name="live_view_radio" id="live_view_radio1" autocomplete="off" onclick="changeLiveViewEnable()">
+                                        <label class="btn btn-outline-primary" for="live_view_radio1">On</label>
+                                        <input type="radio" class="btn-check" name="live_view_radio" id="live_view_radio2" autocomplete="off" onclick="changeLiveViewEnable()" checked>
+                                        <label class="btn btn-outline-primary" for="live_view_radio2">Off</label>
+                                      </div>
                                     </div>
                                   </div>
                                 </td>
@@ -348,7 +336,13 @@
                                 <td>
                                   <div class="row sidebar-row vertical-align">
                                     <div class="col-xs-7">
-                                      <input type="checkbox" name="clip_enable" data-size="small":">
+                                      <!-- <input type="checkbox" name="clip_enable" data-size="small":"> -->
+                                      <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                                        <input type="radio" class="btn-check" name="clip_enable_radio" id="clip_enable_radio1" autocomplete="off" onclick="changeClipEnable()">
+                                        <label class="btn btn-outline-primary" for="clip_enable_radio1">On</label>
+                                        <input type="radio" class="btn-check" name="clip_enable_radio" id="clip_enable_radio2" autocomplete="off" onclick="changeClipEnable()" checked>
+                                        <label class="btn btn-outline-primary" for="clip_enable_radio2">Off</label>
+                                      </div>
                                     </div>
                                   </div>
                                 </td>
@@ -373,7 +367,13 @@
                                 <b>Auto&#8209;sizing:</b> 
                               </div>
                               <div class="col-xs-7">
-                                <input type="checkbox" name="autosize_enable" data-size="small":">
+                                <!-- <input type="checkbox" name="autosize_enable" data-size="small":"> -->
+                                <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                                  <input type="radio" class="btn-check" name="autosize_radio" id="autosize_radio1" autocomplete="off" onclick="changeAutosizeEnable()">
+                                  <label class="btn btn-outline-primary" for="autosize_radio1">On</label>
+                                  <input type="radio" class="btn-check" name="autosize_radio" id="autosize_radio2" autocomplete="off" onclick="changeAutosizeEnable()" checked>
+                                  <label class="btn btn-outline-primary" for="autosize_radio2">Off</label>
+                                </div>
                               </div>
                             </div>
                             <div class="row sidebar-row vertical-align row-bold">
@@ -399,8 +399,8 @@
                                   <div class="row sidebar-row vertical-align">
                                     <div class="col-xs-7">
                                       <select class="form-control" id="lv_dataset_select" onchange="lv_dataset_changed(this.value)">
-                                        <option value="filename">raw_frames</option>
-                                        <option selected="selected" value="processed_frames">processed_frames</option>
+                                        <option selected="selected" value="raw_frames">raw_frames</option>
+                                        <option value="processed_frames">processed_frames</option>
                                         <option value="summed_images">summed_images</option>
                                       </select>
                                     </div>
@@ -501,7 +501,7 @@
             <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
               <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Raw Data Preview</p>
               <div id="liveview_container" class="odin-server live-image">
-                <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image'>
+                <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image' load="resizeImage()">
               </div>
             </div>
 
@@ -510,7 +510,7 @@
         </div>  <!-- class="container-fluid"-->
       </div> <!-- id="visualisation" -->
 
-      <!-- <div class="tab-pane fade show active" id="processing" role="tabpanel"> <!-- id="processing" -->
+      <!-- <div class="tab-pane fade show active" id="processing" role="tabpanel"> --> <!-- id="processing" -->
       <div class="tab-pane fade" id="processing" role="tabpanel"> <!-- id="processing" -->
 
         <div class="container-fluid">
@@ -526,7 +526,13 @@
               <td>
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
-                    <input type="checkbox" accesskey="w" id='rawDataButton' name="raw_data_enable" data-size="small">
+                    <!-- <input type="checkbox" accesskey="w" id='rawDataButton' name="raw_data_enable" data-size="small"> -->
+                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                      <input type="radio" class="btn-check" name="raw_data_radio" accesskey="w" id="raw_data_radio1" autocomplete="off" onclick="changeRawDataEnable()">
+                      <label class="btn btn-outline-primary" for="raw_data_radio1">On</label>
+                      <input type="radio" class="btn-check" name="raw_data_radio" id="raw_data_radio2" autocomplete="off" onclick="changeRawDataEnable()" checked>
+                      <label class="btn btn-outline-primary" for="raw_data_radio2">Off</label>
+                    </div>
                   </div>
                 </div>
               </td>
@@ -539,7 +545,13 @@
               <td>
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
-                    <input type="checkbox" accesskey="p" id='processedDataButton' name="processed_data_enable" data-size="small">
+                    <!-- <input type="checkbox" accesskey="p" id='processedDataButton' name="processed_data_enable" data-size="small"> -->
+                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                      <input type="radio" class="btn-check" name="processed_data_radio" accesskey="p" id="processed_data_radio1" autocomplete="off" onclick="changeProcessedDataEnable()">
+                      <label class="btn btn-outline-primary" for="processed_data_radio1">On</label>
+                      <input type="radio" class="btn-check" name="processed_data_radio" id="processed_data_radio2" autocomplete="off" onclick="changeProcessedDataEnable()" checked>
+                      <label class="btn btn-outline-primary" for="processed_data_radio2">Off</label>
+                    </div>
                   </div>
                 </div>
               </td>
@@ -602,7 +614,14 @@
               <td>
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
-                    <input type="checkbox" name="next_frame_enable" data-size="small">
+                    <!-- <input type="checkbox" name="next_frame_enable" data-size="small"> -->
+                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                      <input type="radio" class="btn-check" name="next_frame_radio" id="next_frame_radio1" autocomplete="off" onclick="changeNextFrameEnable()">
+                      <label class="btn btn-outline-primary" for="next_frame_radio1">On</label>
+                      <input type="radio" class="btn-check" name="next_frame_radio" id="next_frame_radio2" autocomplete="off" onclick="changeNextFrameEnable()" checked>
+                      <label class="btn btn-outline-primary" for="next_frame_radio2">Off</label>
+                    </div>
+
                   </div>
                 </div>
               </td>
@@ -613,7 +632,13 @@
               <td>
                 <div class="row sidebar-row vertical-align">
                   <div class="col-xs-7">
-                    <input type="checkbox" name="calibration_enable" data-size="small">
+                    <!-- <input type="checkbox" name="calibration_enable" data-size="small"> -->
+                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                      <input type="radio" class="btn-check" name="calibration_radio" id="calibration_radio1" autocomplete="off" onclick="changeCalibrationEnable()">
+                      <label class="btn btn-outline-primary" for="calibration_radio1">On</label>
+                      <input type="radio" class="btn-check" name="calibration_radio" id="calibration_radio2" autocomplete="off" onclick="changeCalibrationEnable()" checked>
+                      <label class="btn btn-outline-primary" for="calibration_radio2">Off</label>
+                    </div>
                   </div>
                 </div>
               </td>
@@ -730,12 +755,11 @@
               </td>
               <td></td>
               <td>
-                <input type="button" accesskey="y" class="btn btn-primary double-width" id='applyButton' data-size="small" value="Apply All">
+                <input type="button" onclick="applyButtonClicked()" accesskey="y" class="btn btn-primary double-width" id='applyButton' data-size="small" value="Apply All">
               </td>
             </tr>
           </table>
         </div><!-- container fluid-container -->
-
       </div>  <!-- id="processing" -->
 
       <div class="tab-pane fade" id="health" role="tabpanel">
@@ -833,12 +857,16 @@
                         <td><span id="acquire_start" style="float:right">&nbsp;</span></td>
                       </tr>
                       <tr>
+                        <td>acquire stop</td>
+                        <td><span id="acquire_stop" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
                         <td>daq start</td>
                         <td><span id="daq_start" style="float:right">&nbsp;</span></td>
                       </tr>
                       <tr>
-                        <td>acquire stop</td>
-                        <td><span id="acquire_stop" style="float:right">&nbsp;</span></td>
+                        <td>daq stop</td>
+                        <td><span id="daq_stop" style="float:right">&nbsp;</span></td>
                       </tr>
                       <tr>
                         <td>fem not busy</td>
@@ -1105,44 +1133,15 @@
                 </div>
               </div>
             </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "Environmental Sensors" --> <!-- End: Second row, second column -->
-
           </div> <!-- row conflex-->
-
         </div><!-- container fluid-container -->
 
       </div> <!-- id="health"-->
-
-      <!-- <div class="tab-pane fade" id="contact" role="tabpanel">
-          Contact
-      </div> -->
     </div>  <!-- tab-content -->
 
-    <!-- <script src="js/global-nav.js"></script>
-    <script>
-        var nav = get_navbar('index.html');
-        var demo = document.getElementById('global-nav'); // target element.
-        demo.insertAdjacentHTML('beforeend', nav);
-    </script> -->
-
-    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-    <!-- <script src="js/jquery-2.2.3.min.js"></script> -->
-    <script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
-
-    <!-- Include all compiled plugins (below), or include individual files as needed -->
-
-    <script src="js/bootstrap-5.1.1-dist/js/bootstrap.min.js"></script>
-    <script src="js/bootstrap-switch-4.0.0-alpha.1-dist/bootstrap-switch.min.js"></script>
-    <!-- <script src="js/moment.js"></script> -->
-    <!-- <script src="js/chart.js-3.5.1/chart.min.js"></script> -->
-    <script src="js/chart.js-2.9.3/Chart.min.js"></script>
-    <!-- <script src="js/carrier.js"></script> -->
-    <!-- <script src="js/odin_control.js"></script> -->
-    <!-- <script src="js/command_sequencer.js"></script> -->
-
-    <!-- Pinched from live_view example.. -->
-    <!-- <script src="js/bootstrap-3.3.6-dist/dist/js/bootstrap-switch.min.js"></script> -->
-    <script src="js/bootstrap-slider-10.2.1/js/bootstrap-slider.min.js"></script>
+    <script src="js/bootstrap-slider-10.2.1/js/bootstrap-slider.min.js"></script> <!-- Required by live view -->
     <script src='js/live_view.js'></script>
-
+    <script src="js/odin_server.js"></script>
+    <script src="js/odin_control.js"></script>
   </body>
 </html>
