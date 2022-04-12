@@ -124,6 +124,8 @@ class HexitecDAQ():
         self.rows, self.columns = 160, 160
         self.pixels = self.rows * self.columns
         self.number_frames = 10
+        self.number_nodes = 1
+
         # Diagnostics
         self.daq_start_time = 0
         self.fem_not_busy = 0
@@ -507,6 +509,10 @@ class HexitecDAQ():
         """Set number of frames to be acquired."""
         self.number_frames = number_frames
 
+    def set_number_nodes(self, nodes):
+        """Set number of nodes."""
+        self.number_nodes = nodes
+
     def set_file_name(self, name):
         """Set processed file name."""
         self.file_name = name
@@ -747,25 +753,39 @@ class HexitecDAQ():
                                        master_dataset=self.master_dataset,
                                        extra_datasets=self.extra_datasets)
 
-        store_config, execute_config = self.gcf.generate_config_files()
+        store_config, execute_config, store_string, execute_string = self.gcf.generate_config_files()
 
-        command = "config/config_file/"
-        request = ApiAdapterRequest(store_config, content_type="application/json")
+        # print("\n\n\n")
+        # print("  store: {}".format(store_string))
+        # print("  exec:  {}".format(execute_string))
+        # print("\n\n\n")
 
-        response = self.adapters["fp"].put(command, request)
-        status_code = response.status_code
-        if (status_code != 200):
-            error = "Error {} parsing store json config file in fp adapter".format(status_code)
-            logging.error(error)
-            self.parent.fems[0]._set_status_error(error)
+        # Loop over node(s)
+        for index in range(self.number_nodes):
+            # command = "config/config/" #+ str(index)      # string
+            command = "config/config_file/" + str(index)   # file
 
-        request = ApiAdapterRequest(execute_config, content_type="application/json")
-        response = self.adapters["fp"].put(command, request)
-        status_code = response.status_code
-        if (status_code != 200):
-            error = "Error {} parsing execute json config file in fp adapter".format(status_code)
-            logging.error(error)
-            self.parent.fems[0]._set_status_error(error)
+            # request = ApiAdapterRequest(store_string, content_type="application/json")        # string
+            # request = ApiAdapterRequest(dict(store_string), content_type="application/json")  # dict(string)
+            request = ApiAdapterRequest(store_config, content_type="application/json")          # file
+
+            response = self.adapters["fp"].put(command, request)
+            status_code = response.status_code
+            if (status_code != 200):
+                error = "Error {} parsing store json config file in fp adapter".format(status_code)
+                logging.error(error)
+                self.parent.fems[0]._set_status_error(error)
+
+            # request = ApiAdapterRequest(execute_string, content_type="application/json")        # string
+            # request = ApiAdapterRequest(dict(execute_string), content_type="application/json")  # dict(string)
+            request = ApiAdapterRequest(execute_config, content_type="application/json")          # file
+
+            response = self.adapters["fp"].put(command, request)
+            status_code = response.status_code
+            if (status_code != 200):
+                error = "Error {} parsing execute json config file in fp adapter".format(status_code)
+                logging.error(error)
+                self.parent.fems[0]._set_status_error(error)
 
         # Allow FP time to process above PUT requests before configuring plugin settings
         IOLoop.instance().call_later(0.4, self.submit_configuration)

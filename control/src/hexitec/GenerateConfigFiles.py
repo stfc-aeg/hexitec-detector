@@ -123,13 +123,7 @@ class GenerateConfigFiles():
         {
             "index": "%s",
             "value":
-            [
-                {
-                    "fr_setup": {
-                        "fr_ready_cnxn": "tcp://127.0.0.1:5001",
-                        "fr_release_cnxn": "tcp://127.0.0.1:5002"
-                    }
-                }''' % self.index_name
+            [''' % self.index_name
 
         # plugin path that follows the same format i.e. ("reorder", "Reorder", "Reorder")
         # "index": "reorder",
@@ -217,10 +211,11 @@ class GenerateConfigFiles():
             # print("DEBUGGING: Selected nothing, defaulting to CentOS")
             pass
 
+        comma_or_blank = ""
         # Build config for Hexitec plugins (uniform naming)
         for plugin in plugin_chain:
             if plugin in hexitec_plugins:
-                store_plugin_paths += ''',
+                store_plugin_paths += '''%s
                 {
                     "plugin": {
                         "load": {
@@ -229,11 +224,13 @@ class GenerateConfigFiles():
                             "library": "%s/install%s/lib/libHexitec%sPlugin.so"
                         }
                     }
-                }''' % (hexitec_plugins[plugin][0],
+                }''' % (comma_or_blank,
+                        hexitec_plugins[plugin][0],
                         hexitec_plugins[plugin][1],
                         odin_path,
                         os_path,
                         hexitec_plugins[plugin][2])
+                comma_or_blank = ","
 
         # Build config for Odin plugins (differing names)
         for plugin in plugin_chain:
@@ -420,8 +417,7 @@ class GenerateConfigFiles():
             self.store_temp.close()
 
         # The execute_config file is used to wipe any existing config, then load user config
-        execute_config = '''
-[
+        execute_config = '''[
     {
         "plugin":
         {
@@ -445,7 +441,9 @@ class GenerateConfigFiles():
         finally:
             self.execute_temp.close()
 
-        return store_temp_name, execute_temp_name
+        store_string = store_sequence_preamble + store_plugin_paths + store_plugin_connect + store_plugin_config
+
+        return store_temp_name, execute_temp_name, store_string[1:-1], execute_config[1:-1]
 
 
 if __name__ == '__main__':
@@ -479,10 +477,10 @@ if __name__ == '__main__':
     master_dataset = "raw_frames"
     extra_datasets = [master_dataset, "processed_frames"]
     # extra_datasets = [master_dataset]
-
+    selected_os="CentOS"
     gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="none",
                               master_dataset=master_dataset, extra_datasets=extra_datasets,
-                              selected_os="Ubuntu")
+                              selected_os=selected_os)
     s, e = gcf.generate_config_files()
 
-    print("GFC returned config files\n Store:   %s\n Execute: %s\n" % (s, e))
+    print("GFC (os:%s) returned config files\n Store:   %s\n Execute: %s\n" % (selected_os, s, e))

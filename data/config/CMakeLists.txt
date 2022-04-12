@@ -1,6 +1,7 @@
 file(GLOB CONFIG_FILES 
   *.config
   *.xml
+  *.json
   sample.bin
   )
   

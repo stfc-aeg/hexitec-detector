@@ -437,10 +437,10 @@ class HexitecFem():
             logging.error("Camera connection: %s" % str(e))
             # Cannot raise error beyond current thread
 
-        # print("\n\nReinstate polling before merging with master !\n\n")
-        # Start polling thread (connect successfully set up)
-        if len(self.status_error) == 0:
-            self._start_polling()
+        # # print("\n\nReinstate polling before merging with master !\n\n")
+        # # Start polling thread (connect successfully set up)
+        # if len(self.status_error) == 0:
+        #     self._start_polling()
 
     def initialise_hardware(self, msg=None):
         """Initialise sensors, load enables, etc to initialise both VSR boards."""
@@ -892,7 +892,7 @@ class HexitecFem():
         print("__________________________________________________________")
 
     def acquire_data(self):  # noqa: C901
-        """Acquire data, polls fem for completion and reads out fem monitors."""
+        """Acquire data, poll fem for completion and read out fem monitors."""
         # If called as part of cold initialisation, only need one frame so
         #   temporarily overwrite UI's number of frames for this call only
         self.number_frames_backed_up = self.number_frames

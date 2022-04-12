@@ -264,6 +264,7 @@ class Hexitec():
         self.health = True
         self.status_message = ""
         self.status_error = ""
+        self.number_nodes = 1
 
         detector = ParameterTree({
             "fems": fem_tree,
@@ -286,7 +287,8 @@ class Hexitec():
                 "system_health": (lambda: self.health, None),
                 "status_message": (lambda: self.status_message, None),
                 "status_error": (lambda: self.status_error, None),
-                "fem_health": (lambda: self.fem_health, None)
+                "fem_health": (lambda: self.fem_health, None),
+                "number_nodes": (lambda: self.number_nodes, self.set_number_nodes)
             }
         })
 
@@ -332,7 +334,8 @@ class Hexitec():
                    or (histogram_status['frames_processed'] == self.number_frames)):  # noqa: W503
 
                     if self.first_initialisation:
-                        self.number_frames = fem.get_number_frames()
+                        self.first_initialisation = False
+                        self.number_frames = self.backed_up_number_frames
 
                     # Reset fem's acquisiton status ahead of future acquisition
                     fem.acquisition_completed = False
@@ -511,6 +514,11 @@ class Hexitec():
         self.number_frames = number_frames
         self.daq.set_number_frames(self.number_frames)
 
+    def set_number_nodes(self, number_nodes):
+        """Set number of nodes."""
+        self.number_nodes = number_nodes
+        self.daq.set_number_nodes(self.number_nodes)
+
     def initialize(self, adapters):
         """Get references to adapters, and pass these to the classes that need to use them."""
         self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
@@ -570,7 +578,6 @@ class Hexitec():
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         request.body = "{}".format(self.frames_already_acquired)
         self.adapters["fp"].put(command, request)
-
         # TODO: To be removed once firmware updated? FP may be slow to process frame_number reset
         time.sleep(0.5)
 
@@ -630,11 +637,7 @@ class Hexitec():
                     # Need further bias window(s)
                     IOLoop.instance().add_callback(self.acquisition)
                     return
-        # If first initialisation, reset associated variables
-        if self.first_initialisation:
-            self.first_initialisation = False
-            self.number_frames = self.backed_up_number_frames
-        # Reset summed_image otherwise subsequent acquisition will be contaminated
+
         # Issue reset to summed_image
         command = "config/summed_image/reset_image"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")

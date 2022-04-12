@@ -992,6 +992,23 @@ var sensorsLayoutChange = function(sensors_layout)
     });
 }
 
+var numberNodesChange = function(number_nodes)
+{
+    // Sets number of FR/FP (pair of) nodes
+    $.ajax({
+        type: "PUT",
+        url: hexitec_url + 'detector/status/number_nodes',
+        contentType: "application/json",
+        data: JSON.stringify(parseInt(number_nodes)),
+        success: function(result) {
+            $('#number-nodes-warning').html("");
+        },
+        error: function(request, msg, error) {
+            $('#number-nodes-warning').html(error + ": " + format_error(request.responseText));
+        }
+    });
+}
+
 var compressionChange = function(compression)
 {
     // Sets compression on (blosc) or off (none)
