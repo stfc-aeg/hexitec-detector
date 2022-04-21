@@ -1,6 +1,8 @@
 """
 Takes a pcap file and transmits specified number of frames.
 
+Supports 2x2 sensors, 8008/3208 packet sizes, extracting headers from PCAPNG file.
+
 Created on April 19, 2022
 
 @author: Christian Angelsen
@@ -115,14 +117,12 @@ class HexitecUdpProducer(object):
             masked = 0x3FFFFFFF
             pktNum = (int(header[0]) >> 32) & masked
             frmNum = int(header[0]) & masked
-            # if frmNum < 3:  # Debug info
-            #     print(len(payload), len(payload[HEADER_SIZE:]), frmNum, pktNum)
+            if frmNum < 3:  # Debug info
+                print(len(payload), len(payload[HEADER_SIZE:]), frmNum, pktNum)
 
             # If this is an end of frame packet, convert frame data to numpy array and append to frame list
             if int(header[0]) & self.EOF:
-                frame = np.frombuffer(frame_data, dtype=np.uint16)#.reshape((160, 160))
-                # print(frame.size, self.NPIXELS)
-                # assert frame.size == self.NPIXELS
+                frame = np.frombuffer(frame_data, dtype=np.uint16)
                 frames.append(frame)
                 num_frames += 1
 
@@ -135,15 +135,10 @@ class HexitecUdpProducer(object):
 
     def run(self):
         """Transmit data to address, port."""
-        self.payloadLen = 8000
-
         print("Transmitting Hexitec data to address {} port {} ...".format(self.host, self.port))
 
         # Open UDP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-        # # Create packet header
-        # header = np.zeros(8, dtype=np.uint64)
 
         self.framesSent = 0
         self.packetsSent = 0
@@ -165,23 +160,16 @@ class HexitecUdpProducer(object):
 
             # Loop over packets within current frame
             while (packetCounter < (self.primaryPackets + 1)):
-                # header[0] = frame
-                # header[1] = 0
 
                 if (packetCounter < self.primaryPackets):
                     bytesToSend = 8000 + 8
-                    # if (packetCounter == 0):
-                    #     header[1] = packetCounter | self.SOF
-                    # else:
-                    #     header[1] = packetCounter
                 else:
                     bytesToSend = self.trailingPacketSize + 8
-                    # header[1] = packetCounter | self.EOF
 
                 # Prepend header to current packet
                 packet = self.byteStream[streamPosn:streamPosn + bytesToSend]
+                # print("2x2 sending {} bytes".format(len(packet)))
 
-                # print("Header: 0x{0:08x} 0x{1:08x}".format(header[0], header[1]))
                 if not self.quiet:
                     print("bytesRemaining: {0:8} Sent: {1:8}".format(bytesRemaining, bytesSent),
                           "Sending data {0:8} through {1:8}..".format(streamPosn,
