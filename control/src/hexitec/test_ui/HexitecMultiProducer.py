@@ -1,9 +1,10 @@
 """
 Takes a pcap file and transmits specified number of frames.
 
-Supports 2x2 sensors, 8008/3208 packet sizes, extracting headers from PCAPNG file.
+Supports 2x2 sensors, multiple nodes, 8008/3208 packet sizes, 
+extracting headers from PCAPNG file.
 
-Created on April 19, 2022
+Created on April 22, 2022
 
 @author: Christian Angelsen
 """
@@ -37,12 +38,10 @@ class HexitecUdpProducerDefaults(object):
     def __init__(self):
         """Initialise defaults."""
         self.ip_addr = 'localhost'
-        self.port_list = [61651]
         self.num_frames = 0
         self.tx_interval = 0
         self.drop_frac = 0
         self.drop_list = None
-
         self.filename = 'hexitec_triangle_100G.pcapng'
 
 
@@ -55,17 +54,19 @@ class HexitecUdpProducer(object):
         self.SOF = 1 << 63
         self.EOF = 1 << 62
         self.host = host
-        self.port = port
+        #  Default port/user didn't specify?
+        if port == 61651:
+            self.port = [port]
+        else:
+            self.port = port
         self.frames = frames
         self.NROWS = rows
         self.NCOLS = columns
         self.NPIXELS = self.NROWS * self.NCOLS
         self.interval = interval
-        # self.display = display
         self.quiet = quiet
         self.filename = filename
 
-        # self.pixelsToRead = self.frames * self.NPIXELS
         bytesPerPixel = 2
         bytesToRead = self.NPIXELS * bytesPerPixel
 
@@ -105,6 +106,9 @@ class HexitecUdpProducer(object):
 
             # Read frame header
             header = np.frombuffer(payload[:HEADER_SIZE], dtype=np.uint64)
+            # DEBUG RESET FRAME NUMBER FROM ZERO:
+            header = header & 0xFFFFFFFF00000000
+            header = header + num_frames
             # print([hex(val) for val in header])
             # assert header[0] == num_frames    # Assumes PCAPNG file begins from frame 0
             # print(" header = {}".format(payload[:HEADER_SIZE]))
@@ -135,7 +139,7 @@ class HexitecUdpProducer(object):
 
     def run(self):
         """Transmit data to address, port."""
-        print("Transmitting Hexitec data to address {} port {} ...".format(self.host, self.port))
+        print("Transmitting Hexitec data to address {} port(s) {} ...".format(self.host, self.port))
 
         # Open UDP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -176,7 +180,10 @@ class HexitecUdpProducer(object):
                                                                       streamPosn + bytesToSend))
 
                 # Transmit packet
-                bytesSent += sock.sendto(packet, (self.host, self.port))
+                bytesSent += sock.sendto(packet, (self.host, self.port[frame % 2]))
+                # print("Sending frame {} to port {}".format(frame, self.port[frame % 2]))
+                # for port in self.port:
+                    # bytesSent += sock.sendto(packet, (self.host, port))
 
                 bytesRemaining -= bytesToSend
                 packetCounter += 1
@@ -211,8 +218,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--host', type=str, default='127.0.0.1',
                         help="Hostname or IP address to transmit UDP frame data to")
-    parser.add_argument('--port', type=int, default=61651,
-                        help='select destination host IP port')
+    parser.add_argument('--port', nargs='+', type=int, default=61651,
+                        help='select destination port(s)')
     parser.add_argument('--frames', '-n', type=int, default=1,
                         help='select number of frames to transmit')
     parser.add_argument('--rows', '-r', type=int, default=160,

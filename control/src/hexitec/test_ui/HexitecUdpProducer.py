@@ -37,7 +37,6 @@ class HexitecUdpProducerDefaults(object):
     def __init__(self):
         """Initialise defaults."""
         self.ip_addr = 'localhost'
-        self.port_list = [61651]
         self.num_frames = 0
         self.tx_interval = 0
         self.drop_frac = 0
@@ -61,11 +60,9 @@ class HexitecUdpProducer(object):
         self.NCOLS = 80
         self.NPIXELS = self.NROWS * self.NCOLS
         self.interval = interval
-        # self.display = display
         self.quiet = quiet
         self.filename = filename
 
-        # self.pixelsToRead = self.frames * self.NPIXELS
         bytesPerPixel = 2
         bytesToRead = self.NPIXELS * bytesPerPixel
 
