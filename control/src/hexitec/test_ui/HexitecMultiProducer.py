@@ -96,7 +96,7 @@ class HexitecUdpProducer(object):
 
         # Create a PCAP reader instance
         packets = PcapReader(self.filename)
-        frame_data = bytes()
+
         # Iterate through packets in reader
         for packet in packets:
             num_packets += 1
@@ -106,27 +106,19 @@ class HexitecUdpProducer(object):
 
             # Read frame header
             header = np.frombuffer(payload[:HEADER_SIZE], dtype=np.uint64)
-            # DEBUG RESET FRAME NUMBER FROM ZERO:
-            header = header & 0xFFFFFFFF00000000
-            header = header + num_frames
             # print([hex(val) for val in header])
-            # assert header[0] == num_frames    # Assumes PCAPNG file begins from frame 0
-            # print(" header = {}".format(payload[:HEADER_SIZE]))
+
             # If this is a start of frame packet, reset frame data
             if int(header[0]) & self.SOF:
                 frame_data = bytes()
 
             # Append frame payload to frame data, including header
-            frame_data += payload
-            # masked = 0x3FFFFFFF
-            # pktNum = (int(header[0]) >> 32) & masked
-            # frmNum = int(header[0]) & masked
-            # if frmNum < 3:  # Debug info
-            #     print(len(payload), len(payload[HEADER_SIZE:]), frmNum, pktNum)
+            frame_data += payload[HEADER_SIZE:]
 
             # If this is an end of frame packet, convert frame data to numpy array and append to frame list
             if int(header[0]) & self.EOF:
                 frame = np.frombuffer(frame_data, dtype=np.uint16)
+                assert frame.size == self.NPIXELS
                 frames.append(frame)
                 num_frames += 1
 
@@ -144,6 +136,9 @@ class HexitecUdpProducer(object):
         # Open UDP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+        # Create packet header
+        header = np.zeros(1, dtype=np.uint64)
+
         self.framesSent = 0
         self.packetsSent = 0
         self.totalBytesSent = 0
@@ -152,10 +147,11 @@ class HexitecUdpProducer(object):
 
         runStartTime = time.time()
 
+        bytesRemaining = len(self.byteStream)
+        nodes = len(self.port)
+
         # Loop over selected number of frame(s)
         for frame in range(self.frames):
-
-            bytesRemaining = len(self.byteStream)
 
             packetCounter = 0
             bytesSent = 0
@@ -164,15 +160,20 @@ class HexitecUdpProducer(object):
 
             # Loop over packets within current frame
             while (packetCounter < (self.primaryPackets + 1)):
+                header[0] = frame
 
                 if (packetCounter < self.primaryPackets):
-                    bytesToSend = 8000 + 8
+                    bytesToSend = 8000
+                    if (packetCounter == 0):
+                        header = header | (packetCounter << 32) | self.SOF
+                    else:
+                        header = header | (packetCounter << 32)
                 else:
-                    bytesToSend = self.trailingPacketSize + 8
+                    bytesToSend = self.trailingPacketSize
+                    header = header | (packetCounter << 32) | self.EOF
 
                 # Prepend header to current packet
-                packet = self.byteStream[streamPosn:streamPosn + bytesToSend]
-                # print("2x2 sending {} bytes".format(len(packet)))
+                packet = header.tobytes() + self.byteStream[streamPosn:streamPosn + bytesToSend]
 
                 if not self.quiet:
                     print("bytesRemaining: {0:8} Sent: {1:8}".format(bytesRemaining, bytesSent),
@@ -180,14 +181,16 @@ class HexitecUdpProducer(object):
                                                                       streamPosn + bytesToSend))
 
                 # Transmit packet
-                bytesSent += sock.sendto(packet, (self.host, self.port[frame % 2]))
-                # print("Sending frame {} to port {}".format(frame, self.port[frame % 2]))
-                # for port in self.port:
-                    # bytesSent += sock.sendto(packet, (self.host, port))
+                bytesSent += sock.sendto(packet, (self.host, self.port[frame % nodes]))
+                # print("Sending frame {} to port {}".format(frame, self.port[frame % nodes]))
 
                 bytesRemaining -= bytesToSend
                 packetCounter += 1
                 streamPosn += bytesToSend
+                # Start over if out of data to send
+                if (bytesRemaining == 0):
+                    bytesRemaining = len(self.byteStream)
+                    streamPosn = 0
 
             if not self.quiet:
                 print("  Sent frame {} packets {} bytes {}".format(frame, packetCounter, bytesSent))

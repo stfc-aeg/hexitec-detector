@@ -1,4 +1,5 @@
-"""Characterise all datasets (except processed_frames).
+"""
+Characterise all datasets (except processed_frames).
 
 Christian Angelsen, STFC Detector Systems Software Group
 """
@@ -30,13 +31,13 @@ class DatasetChecker:
             try:
                 self.data = np.array(data_file[dataset_name])
             except KeyError as e:
-                print(" *** Couldn't access '{}': {}".format(dataset_name, e))
+                print(" *** Couldn't access dataset '{}': {}".format(dataset_name, e))
                 return
 
         dims = self.data.ndim
 
         if dims == 3:
-            print("dataset: '{}' has dimensions: {}".format(dataset_name, self.data.shape))
+            print("dataset: '{}' has dimensions: {} overall sum: {}".format(dataset_name, self.data.shape, self.data.sum()))
             (dim_a, dim_b, dim_c) = self.data.shape
             completely_empty = True
             nonzero_count = 0
@@ -51,13 +52,12 @@ class DatasetChecker:
                 print(" It's completely empty!")
             else:
                 if (nonzero_count != dim_a):
-                    print("Expected {} populated frames but only {} contained hit(s)!".format(dim_a, nonzero_count))
+                    print(" {} populated frames, {} contained hit(s)!".format(dim_a, nonzero_count))
                 else:
-                    print("All image(s) populated as expected")
-            print("___________________")
+                    print("All image(s) populated")
         else:
             if dims == 2:
-                print("dataset: '{}' has dimensions: {}".format(dataset_name, self.data.shape))
+                print("dataset: '{}' has dimensions: {} overall sum: {}".format(dataset_name, self.data.shape, self.data.sum()))
                 (dim_a, dim_b) = self.data.shape
                 completely_empty = True
 
@@ -69,7 +69,6 @@ class DatasetChecker:
 
                 if completely_empty:
                     print(" It's completely empty!")
-                print("___________________")
             else:
                 print("Unexpected dataset: '{}' dimensions: {} shape: {}".format(dataset_name, dims, self.data.shape))
 
@@ -81,8 +80,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     checker = DatasetChecker()
-
-    datasets = ['pixel_spectra', 'raw_frames', 'spectra_bins', 'summed_spectra']
+    print("")
+    datasets = ['pixel_spectra', 'processed_frames', 'raw_frames', 'spectra_bins', 'summed_images', 'summed_spectra']
     for dataset_name in datasets:
         checker.check_empty_frames(dataset_name)
     # checker.check_if_empty()

@@ -10,16 +10,18 @@
 
 namespace FrameProcessor
 {
-  const std::string HexitecReorderPlugin::CONFIG_DROPPED_PACKETS  = "packets_lost";
-  const std::string HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT   = "sensors_layout";
-  const std::string HexitecReorderPlugin::CONFIG_FRAME_NUMBER     = "frame_number";
+  const std::string HexitecReorderPlugin::CONFIG_DROPPED_PACKETS    = "packets_lost";
+  const std::string HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT     = "sensors_layout";
+  const std::string HexitecReorderPlugin::CONFIG_RESET_FRAME_NUMBER = "reset_frame_number";
+  const std::string HexitecReorderPlugin::CONFIG_FRAME_NUMBER       = "frame_number";
 
   /**
    * The constructor sets up logging used within the class.
    */
   HexitecReorderPlugin::HexitecReorderPlugin() :
       packets_lost_(0),
-      frame_number_(0)
+      frame_number_(0),
+      reset_frame_number_(true)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecReorderPlugin");
@@ -74,6 +76,7 @@ namespace FrameProcessor
    * 
    * - sensors_layout_str_    <=> sensors_layout
    * - packets_lost_          <=> dropped_packets
+   * - reset_frame_number_    <=> reset_frame_number
    * - frame_number_          <=> frame_number
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
@@ -92,6 +95,11 @@ namespace FrameProcessor
       packets_lost_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS);
     }
 
+    if (config.has_param(HexitecReorderPlugin::CONFIG_RESET_FRAME_NUMBER))
+    {
+      reset_frame_number_ = config.get_param<bool>(HexitecReorderPlugin::CONFIG_RESET_FRAME_NUMBER);
+    }
+
     if (config.has_param(HexitecReorderPlugin::CONFIG_FRAME_NUMBER))
     {
       frame_number_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_FRAME_NUMBER);
@@ -106,6 +114,7 @@ namespace FrameProcessor
   	std::string base_str = get_name() + "/";
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_DROPPED_PACKETS, packets_lost_);
+    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_RESET_FRAME_NUMBER, reset_frame_number_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_FRAME_NUMBER, frame_number_);
   }
 
@@ -120,6 +129,7 @@ namespace FrameProcessor
     LOG4CXX_DEBUG(logger_, "Status requested for HexitecReorderPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/packets_lost", packets_lost_);
+    status.set_param(get_name() + "/reset_frame_number", reset_frame_number_);
     status.set_param(get_name() + "/frame_number", frame_number_);
   }
 
@@ -168,11 +178,18 @@ namespace FrameProcessor
     this->process_lost_packets(frame);
 
     //TODO: Interrim fix: (until F/W amended)
-    //	Changes header's frame number.
-    hdr_ptr->frame_number = frame_number_;
-    // Change frame's frame number otherwise FP's will erroneously
-    //	display actual Hardware frame number
-    frame->set_frame_number(frame_number_);
+    if (reset_frame_number_)
+    {
+      //	Changes header's frame number.
+      hdr_ptr->frame_number = frame_number_;
+      // Change frame's frame number otherwise FP's will erroneously
+      //	display actual Hardware frame number
+      frame->set_frame_number(frame_number_);
+    }
+    else
+    {
+      frame->set_frame_number(hdr_ptr->frame_number);
+    }
 
     LOG4CXX_TRACE(logger_, "Raw frame number: " << hdr_ptr->frame_number);
 

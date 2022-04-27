@@ -60,6 +60,8 @@ namespace FrameProcessor
       static const std::string CONFIG_SENSORS_LAYOUT;
       /** Configuration constant for setting frame number **/
       static const std::string CONFIG_FRAME_NUMBER;
+      /** Configuration constant for resetting frame number **/
+      static const std::string CONFIG_RESET_FRAME_NUMBER;
 
       void process_lost_packets(boost::shared_ptr<Frame>& frame);
       void process_frame(boost::shared_ptr<Frame> frame);
@@ -92,6 +94,8 @@ namespace FrameProcessor
       /** Packet loss counter **/
       int packets_lost_;
   
+      // Should frame number be reset before each new acquisition?
+      bool reset_frame_number_;
       /** Overwrite UDP frame number until firmware resets
        * it before each acquisition **/
       uint32_t frame_number_;

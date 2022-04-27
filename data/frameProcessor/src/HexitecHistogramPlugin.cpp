@@ -19,6 +19,7 @@ namespace FrameProcessor
   const std::string HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT     = "sensors_layout";
   const std::string HexitecHistogramPlugin::CONFIG_FRAMES_PROCESSED   = "frames_processed";
   const std::string HexitecHistogramPlugin::CONFIG_HISTOGRAMS_WRITTEN = "histograms written";
+  const std::string HexitecHistogramPlugin::CONFIG_HISTOGRAM_INDEX    = "histogram_index";
   const std::string HexitecHistogramPlugin::CONFIG_PASS_PROCESSED     = "pass_processed";
   const std::string HexitecHistogramPlugin::CONFIG_PASS_RAW           = "pass_raw";
 
@@ -31,6 +32,7 @@ namespace FrameProcessor
       flush_histograms_(0),
       histograms_written_(0),
       frames_processed_(0),
+      histogram_index_(1000),
       pass_processed_(true),
       pass_raw_(true)
   {
@@ -166,6 +168,7 @@ namespace FrameProcessor
    * - bin_width_           <=> bin_width
    * - flush_histograms_    <=> flush_histograms
    * - reset_histograms_    <=> reset_histograms
+   * - histogram_index_     <=> histogram_index
    * - pass_processed_      <=> pass_processed
    * - pass_raw_            <=> pass_raw
    *
@@ -255,6 +258,7 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_FLUSH_HISTOS, flush_histograms_);
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_FRAMES_PROCESSED, frames_processed_);
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_HISTOGRAMS_WRITTEN, histograms_written_);
+    reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_HISTOGRAM_INDEX, histogram_index_);
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_PASS_PROCESSED, pass_processed_);
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_PASS_RAW, pass_raw_);
   }
@@ -276,6 +280,7 @@ namespace FrameProcessor
     status.set_param(get_name() + "/flush_histograms", flush_histograms_);
     status.set_param(get_name() + "/frames_processed", frames_processed_);
     status.set_param(get_name() + "/histograms_written", histograms_written_);
+    status.set_param(get_name() + "/histogram_index", histogram_index_);
     status.set_param(get_name() + "/pass_processed", pass_processed_);
     status.set_param(get_name() + "/pass_raw", pass_raw_);
   }
@@ -322,6 +327,10 @@ namespace FrameProcessor
     {
       if (pass_raw_)
       {
+        if (frame->get_frame_number() < histogram_index_)
+        {
+          histogram_index_ = frame->get_frame_number();
+        }
         LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
                                           << frame->get_frame_number());
         this->push(frame);
@@ -339,7 +348,7 @@ namespace FrameProcessor
         add_frame_data_to_histogram_with_sum(static_cast<float *>(input_ptr));
 
         // Write histograms to disc when maximum number of frames received
-        if ( ((frames_processed_+1) % max_frames_received_) == 0) 
+        if ( ((frames_processed_+1) % max_frames_received_) == 0)
         {
           /// Time to push current histogram data to file
           writeHistogramsToDisk();
@@ -375,6 +384,13 @@ namespace FrameProcessor
    */
   void HexitecHistogramPlugin::writeHistogramsToDisk()
   {
+    if (spectra_bins_->get_frame_number() != histogram_index_)
+    {
+      spectra_bins_->set_frame_number(histogram_index_);
+      summed_spectra_->set_frame_number(histogram_index_);
+      pixel_spectra_->set_frame_number(histogram_index_);
+    }
+
     LOG4CXX_TRACE(logger_, "Pushing " << spectra_bins_->get_meta_data().get_dataset_name() << " dataset");
     this->push(spectra_bins_);
 

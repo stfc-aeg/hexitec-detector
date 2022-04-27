@@ -69,6 +69,8 @@ namespace FrameProcessor
       static const std::string CONFIG_FRAMES_PROCESSED;
       /** Configuration constant for histograms written **/
       static const std::string CONFIG_HISTOGRAMS_WRITTEN;
+      /** Configuration constant for histogram index **/
+      static const std::string CONFIG_HISTOGRAM_INDEX;
       /** Configuration constant for passing processed_frames to hdf **/
       static const std::string CONFIG_PASS_PROCESSED;
       /** Configuration constant for passing raw_frames to hdf **/
@@ -106,6 +108,7 @@ namespace FrameProcessor
       int flush_histograms_;
       int reset_histograms_;
       int histograms_written_;
+      int histogram_index_;
       bool pass_processed_;
       bool pass_raw_;
 
