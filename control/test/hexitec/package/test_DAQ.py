@@ -199,6 +199,10 @@ class TestDAQ(unittest.TestCase):
         assert self.test_daq.daq.config_dir == self.test_daq.fi_data["config_dir"]
         assert self.test_daq.daq.is_initialised is True
 
+    def test_initialize_missing_adapter(self):
+        """Test initialisation (part 3)."""
+        self.test_daq.daq.initialize({})
+
     def test_get_od_status_fr(self):
         """Test status of fr adapter."""
         status = self.test_daq.daq.get_od_status("fr")

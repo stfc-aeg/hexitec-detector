@@ -17,11 +17,10 @@ from odin.adapters.adapter import (ApiAdapter, ApiAdapterRequest,
                                    response_types)
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from odin.util import convert_unicode_to_string, decode_request_body
-from odin._version import get_versions
+from odin.adapters.system_info import SystemInfo
 
 from .HexitecFem import HexitecFem
 from .HexitecDAQ import HexitecDAQ
-
 
 class HexitecAdapter(ApiAdapter):
     """
@@ -257,9 +256,6 @@ class Hexitec():
         # Store initialisation time
         self.init_time = time.time()
 
-        # Get package version information
-        version_info = get_versions()
-
         self.fem_id = 101
         self.health = True
         self.status_message = ""
@@ -292,11 +288,12 @@ class Hexitec():
             }
         })
 
+        # Trailing system_info adapter..
+        self.system_info = SystemInfo()
+
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
-            "odin_version": version_info['version'],
-            "tornado_version": tornado.version,
-            "server_uptime": (self.get_server_uptime, None),
+            "system_info": self.system_info.param_tree,
             "detector": detector
         })
 
@@ -654,7 +651,7 @@ class Hexitec():
     def cancel_acquisition(self, put_data=None):
         """Cancel ongoing acquisition in Software.
 
-        Not yet possible to stop mid-acquisition
+        Not yet possible to stop FEM, mid-acquisition
         """
         for fem in self.fems:
             fem.stop_acquisition = True
@@ -673,14 +670,6 @@ class Hexitec():
     def commit_configuration(self, msg):
         """Push HexitecDAQ's 'config/' ParameterTree settings into FP's plugins."""
         self.daq.commit_configuration()
-
-    def get_server_uptime(self):
-        """
-        Get the uptime for the ODIN server.
-
-        This method returns the current uptime for the ODIN server.
-        """
-        return time.time() - self.init_time
 
     def get(self, path):
         """

@@ -210,9 +210,12 @@ class HexitecDAQ():
 
     def initialize(self, adapters):
         """Initialise adapters and related parameter tree entries."""
-        self.adapters["fp"] = adapters['fp']
-        self.adapters["fr"] = adapters['fr']
-        self.adapters["file_interface"] = adapters['file_interface']
+        try:
+            self.adapters["fp"] = adapters['fp']
+            self.adapters["fr"] = adapters['fr']
+            self.adapters["file_interface"] = adapters['file_interface']
+        except KeyError as e:
+            logging.error("The odin_server config file missing %s entry" % e)
         self.get_config_file("fp")
         self.get_config_file("fr")
         self.is_initialised = True
