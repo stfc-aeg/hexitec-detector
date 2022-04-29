@@ -363,7 +363,7 @@ class HexitecDAQ():
         parent_tree_dict = self.parent.param_tree.get('')
         error_code = self.write_metadata(parent_metadata_group, parent_tree_dict)
 
-        # TODO: Hacked until frame_process_adapter updated to use parameter tree
+        # TODO: Hacked until frame_process_adapter updated to use ParameterTree
         hdf_metadata_group = hdf_file.create_group("hdf")
         hdf_tree_dict = self.adapters['fp']._param
         # Only "hexitec" group contain filename entries, ignore return value of write_metadata
@@ -741,18 +741,20 @@ class HexitecDAQ():
         self.extra_datasets = []
         self.master_dataset = "spectra_bins"
 
-        if self.pass_raw:
-            self.master_dataset = "raw_frames"
-            self.extra_datasets.append(self.master_dataset)
         if self.pass_processed:
             self.master_dataset = "processed_frames"
+            self.extra_datasets.append(self.master_dataset)
+        if self.pass_raw:
+            self.master_dataset = "raw_frames"
             self.extra_datasets.append(self.master_dataset)
 
         self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
                                        compression_type=self.compression_type,
                                        master_dataset=self.master_dataset,
-                                       extra_datasets=self.extra_datasets)
-
+                                       extra_datasets=self.extra_datasets,
+                                       selected_os="CentOS",
+                                       live_view_selected=True)
+        # live_view_selected=True
         store_config, execute_config, store_string, execute_string = self.gcf.generate_config_files()
 
         # print("\n\n\n")
@@ -762,6 +764,16 @@ class HexitecDAQ():
 
         # Loop over node(s)
         for index in range(self.number_nodes):
+            # Reinstate when /config/config/ strings will replace /config/config_file/
+            # self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
+            #                             compression_type=self.compression_type,
+            #                             master_dataset=self.master_dataset,
+            #                             extra_datasets=self.extra_datasets,
+            #                             selected_os="CentOS",
+            #                             live_view_selected=live_view_selected)
+            # store_config, execute_config, store_string, execute_string = self.gcf.generate_config_files()
+            # # live_view_selected = False
+
             # command = "config/config/" #+ str(index)      # string
             command = "config/config_file/" + str(index)   # file
 

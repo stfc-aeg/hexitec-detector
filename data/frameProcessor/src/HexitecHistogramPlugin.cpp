@@ -323,14 +323,15 @@ namespace FrameProcessor
     FrameMetaData &incoming_frame_meta = frame->meta_data();
     const std::string& dataset = incoming_frame_meta.get_dataset_name();
 
+    if (frame->get_frame_number() < histogram_index_)
+    {
+      histogram_index_ = frame->get_frame_number();
+    }
+
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
       if (pass_raw_)
       {
-        if (frame->get_frame_number() < histogram_index_)
-        {
-          histogram_index_ = frame->get_frame_number();
-        }
         LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
                                           << frame->get_frame_number());
         this->push(frame);
@@ -352,7 +353,7 @@ namespace FrameProcessor
         {
           /// Time to push current histogram data to file
           writeHistogramsToDisk();
-          histograms_written_ = frames_processed_;
+          histograms_written_ = frames_processed_ + 1;
         }
 
         /// Histogram will access processed_frames dataset but not change it
