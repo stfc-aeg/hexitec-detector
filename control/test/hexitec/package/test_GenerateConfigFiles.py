@@ -1,4 +1,5 @@
-"""Test Cases for GenerateConfigFiles class.
+"""
+Test Cases for GenerateConfigFiles class.
 
 Christian Angelsen, STFC Detector Systems Software Group
 """
@@ -8,18 +9,12 @@ from hexitec.GenerateConfigFiles import GenerateConfigFiles
 import unittest
 import pytest
 
-# if sys.version_info[0] == 3:  # pragma: no cover
-#     from unittest.mock import Mock, MagicMock, patch
-# else:                         # pragma: no cover
-#     from mock import Mock, MagicMock, patch
-
 
 class ObjectTestFixture(object):
     """Test fixture class."""
 
     def __init__(self):
         """Initialise object."""
-
         param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
                       'sensors_layout': '1x1', 'receiver':
                       {'config_file': '', 'configured': False, 'connected': False},
@@ -145,7 +140,6 @@ class TestObject(unittest.TestCase):
 
     def test_generate_config_files(self):
         """Test function works ok."""
-
         self.test_detector_adapter.adapter.generate_config_files()
 
     # Doesn't work (somehow)

@@ -75,7 +75,7 @@ class HexitecFem():
     # Define timestamp format
     DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
 
-    def __init__(self, parent, fem_id=1,
+    def __init__(self, parent,
                  server_ctrl_ip_addr='10.0.2.2', camera_ctrl_ip_addr='10.0.2.1',
                  server_data_ip_addr='10.0.4.2', camera_data_ip_addr='10.0.4.1'):
         """
@@ -83,7 +83,6 @@ class HexitecFem():
 
         This constructor initializes the HexitecFem object.
         :param parent: Reference to adapter object
-        :param fem_id: HexitecFem object identifier
         :param server_ctrl_ip_addr: PC interface for control path
         :param camera_ctrl_ip_addr: FEM interface for control path
         :param server_data_ip_addr: PC interface for data path
@@ -91,7 +90,6 @@ class HexitecFem():
         """
         # Give access to parent class (Hexitec) - for potential future use
         self.parent = parent
-        self.id = int(fem_id)
         self.x10g_rdma = None
 
         # 10G RDMA IP addresses
@@ -197,7 +195,6 @@ class HexitecFem():
                 "acquire_stop_time": (lambda: self.acquire_stop_time, None),
                 "acquire_time": (lambda: self.acquire_time, None),
             },
-            "id": (lambda: self.id, None),
             "debug": (self.get_debug, self.set_debug),
             "frame_rate": (lambda: self.frame_rate, None),
             "health": (lambda: self.health, None),
@@ -400,10 +397,6 @@ class HexitecFem():
         """Get FEM health status."""
         return self.health
 
-    def get_id(self):
-        """Get FEM id."""
-        return self.id
-
     def _start_polling(self):  # pragma: no cover
         IOLoop.instance().add_callback(self.poll_sensors)
 
@@ -468,8 +461,7 @@ class HexitecFem():
                     # Start daq, expecting to collect 2 token frames
                     #   Token gesture as file writing disabled
                     self.parent.daq.start_acquisition(2)
-                    for fem in self.parent.fems:
-                        fem.collect_data()
+                    self.collect_data()
             else:
                 # Not cold initialisation, clear hardware_busy here
                 self.hardware_busy = False

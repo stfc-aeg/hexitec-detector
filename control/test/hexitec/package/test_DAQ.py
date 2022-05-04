@@ -1,4 +1,5 @@
-"""Test Cases for the Hexitec DAQ in hexitec.HexitecDAQ.
+"""
+Test Cases for the Hexitec DAQ in hexitec.HexitecDAQ.
 
 Christian Angelsen, STFC Detector Systems Software Group
 """
@@ -26,9 +27,8 @@ class DAQTestFixture(object):
     def __init__(self):
         """Initialise object."""
         self.options = {
-            "fem_0":
+            "fem":
                 """
-                id = 0,
                 server_ctrl_ip = 127.0.0.1,
                 camera_ctrl_ip = 127.0.0.1,
                 server_data_ip = 127.0.0.1,
@@ -124,21 +124,20 @@ class DAQTestFixture(object):
         self.parameter_dict = \
             {'odin_version': '0.3.1+102.g01c51d7', 'tornado_version': '4.5.3',
              'server_uptime': 48.4, 'detector':
-             {'fems':
-              {'fem_0':
-               {'diagnostics':
-                {'successful_reads': 116, 'acquire_start_time': '', 'acquire_stop_time': '',
-                 'acquire_time': 1.303241}, 'id': 0, 'debug': False, 'frame_rate': 7154.0,
-                'health': True, 'status_message': '', 'status_error': '',
-                'initialise_progress': 0,
-                'operation_percentage_complete': 100, 'number_frames': 10, 'duration': 1,
-                'hexitec_config': '~/path/to/config_file',
-                'read_sensors': None, 'hardware_connected': True, 'hardware_busy': False,
-                'firmware_date': 'N/A', 'firmware_time': 'N/A',
-                'vsr1_sensors':
-                {'ambient': 0, 'humidity': 0, 'asic1': 0, 'asic2': 0, 'adc': 0, 'hv': 0},
-                'vsr2_sensors':
-                {'ambient': 0, 'humidity': 0, 'asic1': 0, 'asic2': 0, 'adc': 0, 'hv': 0}}},
+             {'fem':
+              {'diagnostics':
+               {'successful_reads': 116, 'acquire_start_time': '', 'acquire_stop_time': '',
+                'acquire_time': 1.303241}, 'debug': False, 'frame_rate': 7154.0,
+               'health': True, 'status_message': '', 'status_error': '',
+               'initialise_progress': 0,
+               'operation_percentage_complete': 100, 'number_frames': 10, 'duration': 1,
+               'hexitec_config': '~/path/to/config_file',
+               'read_sensors': None, 'hardware_connected': True, 'hardware_busy': False,
+               'firmware_date': 'N/A', 'firmware_time': 'N/A',
+               'vsr1_sensors':
+               {'ambient': 0, 'humidity': 0, 'asic1': 0, 'asic2': 0, 'adc': 0, 'hv': 0},
+               'vsr2_sensors':
+               {'ambient': 0, 'humidity': 0, 'asic1': 0, 'asic2': 0, 'adc': 0, 'hv': 0}},
               'daq':
               {'diagnostics':
                {'daq_start_time': '', 'daq_stop_time': '', 'fem_not_busy': ''},
@@ -166,7 +165,7 @@ class DAQTestFixture(object):
               {'number_frames': 10, 'duration': 1, 'duration_enable': False, 'start_acq': None,
                'stop_acq': None, 'in_progress': False},
               'status':
-              {'fem_id': 0, 'system_health': True, 'status_message': '', 'status_error': ''}}}
+              {'system_health': True, 'status_message': '', 'status_error': ''}}}
 
         self.daq.initialize(self.adapters)
 
@@ -426,7 +425,7 @@ class TestDAQ(unittest.TestCase):
         """Test that function calls itself if hardware busy."""
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
 
-            self.test_daq.adapter.hexitec.fems[0].hardware_busy = True
+            self.test_daq.adapter.hexitec.fem.hardware_busy = True
 
             self.test_daq.daq.acquisition_check_loop()
             mock_loop.instance().call_later.assert_called_with(.5,
@@ -467,7 +466,7 @@ class TestDAQ(unittest.TestCase):
         """Test processing check loop will stop acquisition if data ceases mid-flow."""
         with patch("hexitec.HexitecDAQ.IOLoop"):
             self.test_daq.daq.first_initialisation = False
-            self.test_daq.daq.parent.fems[0].hardware_busy = True
+            self.test_daq.daq.parent.fem.hardware_busy = True
             self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.shutdown_processing = True
             self.test_daq.daq.frames_processed = 0
@@ -508,7 +507,7 @@ class TestDAQ(unittest.TestCase):
                     mock_isfile.return_value = True
                     rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict)
 
-            key = 'detector/fems/fem_0/hexitec_config'
+            key = 'detector/fem/hexitec_config'
             assert key in self.test_daq.daq.config_ds
             assert rc_value == 0
 
@@ -587,12 +586,12 @@ class TestDAQ(unittest.TestCase):
                 mock_h5py.side_effect = IOError(Mock(status=404))
                 mock_exists.return_value = "True"
 
-                self.test_daq.adapter.hexitec.fems[0].status_error
+                self.test_daq.adapter.hexitec.fem.status_error
                 self.test_daq.daq.hdf_retry = 6
                 self.test_daq.daq.hdf_closing_loop()
                 error = "Error reopening HDF file:"
                 assert self.test_daq.daq.in_progress is False
-                assert self.test_daq.adapter.hexitec.fems[0].status_error[:25] == error
+                assert self.test_daq.adapter.hexitec.fem.status_error[:25] == error
 
     def test_prepare_hdf_file(self):
         """Test that function prepares processed file."""
@@ -603,7 +602,7 @@ class TestDAQ(unittest.TestCase):
 
             assert self.test_daq.daq.hdf_retry == 0
             assert self.test_daq.daq.in_progress is False
-            assert self.test_daq.daq.parent.fems[0].status_message == "Meta data added"
+            assert self.test_daq.daq.parent.fem.status_message == "Meta data added"
 
     def test_prepare_hdf_file_fails_inaccessible_config_files(self):
         """Test that function flags if a config file is inaccessible to write_metadata."""
@@ -615,7 +614,7 @@ class TestDAQ(unittest.TestCase):
             assert self.test_daq.daq.hdf_retry == 0
             assert self.test_daq.daq.in_progress is False
             error = "Meta data writer unable to access file(s)!"
-            assert self.test_daq.daq.parent.fems[0].status_error == error
+            assert self.test_daq.daq.parent.fem.status_error == error
 
     def test_prepare_hdf_file_fails_ioerror(self):
         """Test function handles repeated I/O error."""
@@ -876,11 +875,13 @@ class TestDAQ(unittest.TestCase):
         assert self.test_daq.daq._get_sensors_layout() == sensors_layout
 
     def test_get_compression_type(self):
+        """Test function gets compression type."""
         compression_type = "blosc"
         self.test_daq.daq._set_compression_type(compression_type)
         assert self.test_daq.daq._get_compression_type() == compression_type
 
     def test_set_compression_type(self):
+        """Test function sets compression type."""
         COMPRESSIONOPTIONS = self.test_daq.daq.COMPRESSIONOPTIONS
         error = "Invalid compression type; Valid options: {}".format(COMPRESSIONOPTIONS)
         with pytest.raises(ParameterTreeError) as exc_info:

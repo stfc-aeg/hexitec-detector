@@ -271,7 +271,7 @@ class HexitecDAQ():
 
     def acquisition_check_loop(self):
         """Wait for acquisition to complete without blocking current thread."""
-        bBusy = self.parent.fems[0].hardware_busy
+        bBusy = self.parent.fem.hardware_busy
         if bBusy:
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
@@ -335,7 +335,7 @@ class HexitecDAQ():
             if os.path.exists(self.hdf_file_location):
                 self.prepare_hdf_file()
             else:
-                self.parent.fems[0]._set_status_error("No file to add meta: %s" %
+                self.parent.fem._set_status_error("No file to add meta: %s" %
                                                       self.hdf_file_location)
                 self.in_progress = False
 
@@ -343,8 +343,7 @@ class HexitecDAQ():
         """Re-open HDF5 file, prepare meta data."""
         try:
             hdf_file = h5py.File(self.hdf_file_location, 'r+')
-            for fem in self.parent.fems:
-                fem._set_status_message("Reopening file to add meta data..")
+            self.parent.fem._set_status_message("Reopening file to add meta data..")
             self.hdf_retry = 0
         except IOError as e:
             # Let's retry a couple of times in case file temporary busy
@@ -356,8 +355,7 @@ class HexitecDAQ():
                 return
             logging.error("Failed to open '%s' with error: %s" % (self.hdf_file_location, e))
             self.in_progress = False
-            for fem in self.parent.fems:
-                fem._set_status_error("Error reopening HDF file: %s" % e)
+            self.parent.fem._set_status_error("Error reopening HDF file: %s" % e)
             return
 
         error_code = 0
@@ -373,11 +371,9 @@ class HexitecDAQ():
         self.write_metadata(hdf_metadata_group, hdf_tree_dict)
 
         if (error_code == 0):
-            for fem in self.parent.fems:
-                fem._set_status_message("Meta data added")
+            self.parent.fem._set_status_message("Meta data added")
         else:
-            for fem in self.parent.fems:
-                fem._set_status_error("Meta data writer unable to access file(s)!")
+            self.parent.fem._set_status_error("Meta data writer unable to access file(s)!")
 
         hdf_file.close()
         self.in_progress = False
@@ -407,7 +403,7 @@ class HexitecDAQ():
             str_type = h5py.special_dtype(vlen=str)
 
             # Write contents of config file, and selected coefficients file(s)
-            file_name = ['detector/fems/fem_0/hexitec_config']
+            file_name = ['detector/fem/hexitec_config']
             if self.calibration_enable:
                 file_name.append('detector/daq/config/calibration/gradients_filename')
                 file_name.append('detector/daq/config/calibration/intercepts_filename')
@@ -739,7 +735,7 @@ class HexitecDAQ():
         if (status_code != 200):
             error = "Error {} deleting existing datasets in fp adapter".format(status_code)
             logging.error(error)
-            self.parent.fems[0]._set_status_error(error)
+            self.parent.fem._set_status_error(error)
 
         self.extra_datasets = []
         self.master_dataset = "spectra_bins"
@@ -789,7 +785,7 @@ class HexitecDAQ():
             if (status_code != 200):
                 error = "Error {} parsing store json config file in fp adapter".format(status_code)
                 logging.error(error)
-                self.parent.fems[0]._set_status_error(error)
+                self.parent.fem._set_status_error(error)
 
             # request = ApiAdapterRequest(execute_string, content_type="application/json")        # string
             # request = ApiAdapterRequest(dict(execute_string), content_type="application/json")  # dict(string)
@@ -800,7 +796,7 @@ class HexitecDAQ():
             if (status_code != 200):
                 error = "Error {} parsing execute json config file in fp adapter".format(status_code)
                 logging.error(error)
-                self.parent.fems[0]._set_status_error(error)
+                self.parent.fem._set_status_error(error)
 
         # Allow FP time to process above PUT requests before configuring plugin settings
         IOLoop.instance().call_later(0.4, self.submit_configuration)

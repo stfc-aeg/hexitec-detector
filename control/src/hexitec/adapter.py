@@ -193,7 +193,7 @@ class Hexitec():
 
         self.adapters = {}
 
-        self.fems = []
+        self.fem = None
         for key, value in options.items():
             if "fem" in key:
                 fem_info = value.split(',')
@@ -202,32 +202,24 @@ class Hexitec():
                 fem_dict = {fem_key.strip(): fem_value.strip()
                             for (fem_key, fem_value) in fem_info}
                 logging.debug(fem_dict)
-
-                self.fems.append(HexitecFem(
+                self.fem = HexitecFem(
                     self,
-                    fem_dict.get("id", defaults.fem["id"]),
                     fem_dict.get("server_ctrl_ip_addr", defaults.fem["server_ctrl_ip"]),
                     fem_dict.get("camera_ctrl_ip_addr", defaults.fem["camera_ctrl_ip"]),
                     fem_dict.get("server_data_ip_addr", defaults.fem["server_data_ip"]),
                     fem_dict.get("camera_data_ip_addr", defaults.fem["camera_data_ip"])
-                ))
+                )
 
-        if not self.fems:  # if self.fems is empty
-            self.fems.append(HexitecFem(
+        if not self.fem:
+            self.fem = HexitecFem(
                 parent=self,
-                fem_id=defaults.fem["id"],
                 server_ctrl_ip_addr=defaults.fem["server_ctrl_ip"],
                 camera_ctrl_ip_addr=defaults.fem["camera_ctrl_ip"],
                 server_data_ip_addr=defaults.fem["server_data_ip"],
                 camera_data_ip_addr=defaults.fem["camera_data_ip"]
-            ))
+            )
 
-        self.fem_health = {}
-        fem_tree = {}
-        for fem in self.fems:
-            fem_tree["fem_{}".format(fem.id)] = fem.param_tree
-            # Populate fem(s) health dictionary
-            self.fem_health["fem_{}".format(fem.id)] = True
+        self.fem_health = True
 
         # Bias (clock) tracking variables #
         self.bias_clock_running = False
@@ -236,8 +228,8 @@ class Hexitec():
         self.extended_acquisition = False       # Track acquisition spanning bias window(s)
         self.frames_already_acquired = 0        # Track frames acquired across collection windows
 
-        self.collect_and_bias_time = self.fems[0].bias_refresh_interval + \
-            self.fems[0].bias_voltage_settle_time + self.fems[0].time_refresh_voltage_held
+        self.collect_and_bias_time = self.fem.bias_refresh_interval + \
+            self.fem.bias_voltage_settle_time + self.fem.time_refresh_voltage_held
 
         # Tracks whether first acquisition of multi-bias window collection
         self.initial_acquisition = True
@@ -256,14 +248,13 @@ class Hexitec():
         # Store initialisation time
         self.init_time = time.time()
 
-        self.fem_id = 101
-        self.health = True
+        self.system_health = True
         self.status_message = ""
         self.status_error = ""
         self.number_nodes = 1
 
         detector = ParameterTree({
-            "fems": fem_tree,
+            "fem": self.fem.param_tree,
             "daq": self.daq.param_tree,
             "connect_hardware": (None, self.connect_hardware),
             "initialise_hardware": (None, self.initialise_hardware),
@@ -279,8 +270,7 @@ class Hexitec():
                 "in_progress": (lambda: self.acquisition_in_progress, None)
             },
             "status": {
-                "fem_id": (lambda: self.fem_id, None),
-                "system_health": (lambda: self.health, None),
+                "system_health": (lambda: self.system_health, None),
                 "status_message": (lambda: self.status_message, None),
                 "status_error": (lambda: self.status_error, None),
                 "fem_health": (lambda: self.fem_health, None),
@@ -288,7 +278,6 @@ class Hexitec():
             }
         })
 
-        # Trailing system_info adapter..
         self.system_info = SystemInfo()
 
         # Store all information in a parameter tree
@@ -303,12 +292,12 @@ class Hexitec():
         IOLoop.instance().add_callback(self.polling)
 
     def polling(self):  # pragma: no cover
-        """Poll fem(s) for status.
+        """Poll FEM for status.
 
-        Check if acquire completed (if initiated), for error(s) and
-        whether daq/fem watchdogs timed out.
+        Check if acquisition completed (if initiated), for error(s) and
+        whether DAQ/FEM watchdogs timed out.
         """
-        # Poll fem(s) acquisition & health status
+        # Poll FEM acquisition & health status
         self.poll_fems()
 
         # Watchdog: Watch FEM in case no data from hardware triggered by fem.acquire_data()
@@ -320,48 +309,46 @@ class Hexitec():
         IOLoop.instance().call_later(1.0, self.polling)
 
     def poll_fems(self):
-        """Poll fem(s) for their acquisition and health status."""
-        for fem in self.fems:
-            if fem.acquisition_completed:
-                histogram_status = self._get_od_status('fp').get('histogram',
-                                                                 {'frames_processed': 0})
-                # Either cold initialisation (first_initialisation is True, therefore only 2 frames
-                # expected) or, ordinary collection (self.number_frames frames expected)
-                if ((self.first_initialisation and (histogram_status['frames_processed'] == 2))
-                   or (histogram_status['frames_processed'] == self.number_frames)):  # noqa: W503
+        """Poll FEM for acquisition and health status."""
+        if self.fem.acquisition_completed:
+            histogram_status = self._get_od_status('fp').get('histogram',
+                                                                {'frames_processed': 0})
+            # Either cold initialisation (first_initialisation is True, therefore only 2 frames
+            # expected) or, ordinary collection (self.number_frames frames expected)
+            if ((self.first_initialisation and (histogram_status['frames_processed'] == 2))
+                or (histogram_status['frames_processed'] == self.number_frames)):  # noqa: W503
 
-                    if self.first_initialisation:
-                        self.first_initialisation = False
-                        self.number_frames = self.backed_up_number_frames
+                if self.first_initialisation:
+                    self.first_initialisation = False
+                    self.number_frames = self.backed_up_number_frames
 
-                    # Reset fem's acquisiton status ahead of future acquisition
-                    fem.acquisition_completed = False
-            # TODO: Also check sensor values?
-            # ..
-            health = fem.get_health()
-            self.fem_health["fem_{}".format(fem.id)] = health
-            # Only note current id if system is in health
-            if self.health:
-                self.fem_id = fem.get_id()
-                self.status_error = fem._get_status_error()
-                self.status_message = fem._get_status_message()
-                self.health = self.health and health
+                # Reset FEM's acquisiton status ahead of future acquisitions
+                self.fem.acquisition_completed = False
+        # TODO: Also check sensor values?
+        # ..
+        fem_health = self.fem.get_health()
+        self.fem_health = fem_health
+        # Only note current id if system is in health
+        if self.system_health:
+            self.status_error = self.fem._get_status_error()
+            self.status_message = self.fem._get_status_message()
+            self.system_health = self.system_health and self.fem_health
 
     def check_fem_watchdog(self):
         """Check data sent when FEM acquiring data."""
         if self.acquisition_in_progress:
-            # TODO: Monitor Fem in case no data following fem.acquire_data() call
-            if (self.fems[0].hardware_busy):
-                fem_begun = self.fems[0].acquire_timestamp
+            # TODO: Monitor FEM in case no data following fem.acquire_data() call
+            if (self.fem.hardware_busy):
+                fem_begun = self.fem.acquire_timestamp
                 delta_time = time.time() - fem_begun
                 logging.debug("    FEM w-dog: {0:.2f} < {1:.2f}".format(delta_time,
                                                                         self.fem_tx_timeout))
                 if (delta_time > self.fem_tx_timeout):
-                    self.fems[0].stop_acquisition = True
+                    self.fem.stop_acquisition = True
                     self.shutdown_processing()
                     logging.error("FEM data transmission timed out")
                     error = "Timed out waiting ({0:.2f} seconds) for FEM data".format(delta_time)
-                    self.fems[0]._set_status_message(error)
+                    self.fem._set_status_message(error)
 
     def check_daq_watchdog(self):
         """Monitor DAQ's frames_processed while data processed.
@@ -374,18 +361,18 @@ class Hexitec():
             delta_time = time.time() - processed_timestamp
             if (delta_time > self.daq_rx_timeout):
                 logging.error("    DAQ -- PROCESSING TIMED OUT")
-                # daq: Timed out waiting for next frame to process
+                # DAQ: Timed out waiting for next frame to process
                 self.shutdown_processing()
                 logging.error("DAQ processing timed out; Saw %s expected %s frames" %
                               (self.daq.frames_processed, self.daq.frame_end_acquisition))
-                self.fems[0]._set_status_error("Processing timed out: {0:.2f} seconds \
+                self.fem._set_status_error("Processing timed out: {0:.2f} seconds \
                     (exceeded {1:.2f}); Expected {2} got {3} frames\
                         ".format(delta_time, self.daq_rx_timeout,
                                  self.daq.frame_end_acquisition, self.daq.frames_processed))
-                self.fems[0]._set_status_message("Processing abandoned")
+                self.fem._set_status_message("Processing abandoned")
 
     def shutdown_processing(self):
-        """Stop processing in daq."""
+        """Stop processing in DAQ."""
         self.daq.shutdown_processing = True
         self.acquisition_in_progress = False
 
@@ -405,15 +392,14 @@ class Hexitec():
         # TODO: Must recalculate collect and bias time both here and in initialise()
         #   Logically, commit_configuration() is the best place but it updates variables before
         #   reading .ini file
-        self.collect_and_bias_time = self.fems[0].bias_refresh_interval + \
-            self.fems[0].bias_voltage_settle_time + self.fems[0].time_refresh_voltage_held
+        self.collect_and_bias_time = self.fem.bias_refresh_interval + \
+            self.fem.bias_voltage_settle_time + self.fem.time_refresh_voltage_held
 
         self.daq_rx_timeout = self.collect_and_bias_time + self.error_margin
         # Start bias clock if not running
         if not self.bias_clock_running:
             IOLoop.instance().add_callback(self.start_bias_clock)
-        for fem in self.fems:
-            fem.connect_hardware(msg)
+        self.fem.connect_hardware(msg)
 
     def start_bias_clock(self):
         """Set up bias 'clock'."""
@@ -430,7 +416,7 @@ class Hexitec():
         """
         current_time = time.time()
         time_elapsed = current_time - self.bias_init_time
-        if (time_elapsed < self.fems[0].bias_refresh_interval):
+        if (time_elapsed < self.fem.bias_refresh_interval):
             # Still within collection window - acquiring data is allowed
             pass
         else:
@@ -453,31 +439,29 @@ class Hexitec():
         # TODO: Must recalculate collect and bias time both here and in initialise();
         #   Logically, commit_configuration() is the best place but it updates variables before
         #   values read from .ini file
-        self.collect_and_bias_time = self.fems[0].bias_refresh_interval + \
-            self.fems[0].bias_voltage_settle_time + self.fems[0].time_refresh_voltage_held
+        self.collect_and_bias_time = self.fem.bias_refresh_interval + \
+            self.fem.bias_voltage_settle_time + self.fem.time_refresh_voltage_held
 
         self.daq_rx_timeout = self.collect_and_bias_time + self.error_margin
         # If first initialisation, ie fudge, temporarily change number_frames to 2
-        # Adapter also controls this change in fem(s)
+        # Adapter also controls this change in FEM
         if self.first_initialisation:
             self.backed_up_number_frames = self.number_frames
             self.number_frames = 2
             # TODO: Fix this fudge?
-            self.fems[0].acquire_timestamp = time.time()
+            self.fem.acquire_timestamp = time.time()
             self.acquisition_in_progress = True
-        for fem in self.fems:
-            fem.initialise_hardware(msg)
+        self.fem.initialise_hardware(msg)
         # Wait for fudge frames to come through
         IOLoop.instance().call_later(0.5, self.check_fem_finished_sending_data)
 
     def disconnect_hardware(self, msg):
-        """Disconnect fem(s)' hardware connection."""
-        for fem in self.fems:
-            fem.disconnect_hardware(msg)
-        # With all FEM(s) disconnected, reset system status
+        """Disconnect FEM's hardware connection."""
+        self.fem.disconnect_hardware(msg)
+        # With the FEM disconnected, reset system status
         self.status_error = ""
         self.status_message = ""
-        self.health = True
+        self.system_health = True
         # Stop bias clock
         if self.bias_clock_running:
             self.bias_clock_running = False
@@ -485,30 +469,25 @@ class Hexitec():
     def set_duration_enable(self, duration_enable):
         """Set duration enable, calculating number of frames accordingly."""
         self.duration_enable = duration_enable
-        for fem in self.fems:
-            fem.set_duration_enable(duration_enable)
-        # Ensure daq, fem(s) have correct duration/number of frames configured
+        self.fem.set_duration_enable(duration_enable)
+        # Ensure DAQ, FEM have correct duration/number of frames configured
         if duration_enable:
             self.set_duration(self.duration)
         else:
             self.set_number_frames(self.number_frames)
 
     def set_number_frames(self, frames):
-        """Set number of frames in daq, fem(s)."""
+        """Set number of frames in DAQ, FEM."""
         self.number_frames = frames
         # Update number of frames in Hardware, and (via DAQ) in histogram and hdf plugins
-        for fem in self.fems:
-            fem.set_number_frames(self.number_frames)
+        self.fem.set_number_frames(self.number_frames)
         self.daq.set_number_frames(self.number_frames)
 
     def set_duration(self, duration):
-        """Set duration, calculate frames from frame rate and update daq, fem(s)."""
+        """Set duration, calculate frames from frame rate and update DAQ, FEM."""
         self.duration = duration
-        number_frames = 0
-        for fem in self.fems:
-            fem.set_duration(self.duration)
-            number_frames = fem.get_number_frames()
-        self.number_frames = number_frames
+        self.fem.set_duration(self.duration)
+        self.number_frames = self.fem.get_number_frames()
         self.daq.set_number_frames(self.number_frames)
 
     def set_number_nodes(self, number_nodes):
@@ -522,13 +501,10 @@ class Hexitec():
         self.daq.initialize(self.adapters)
 
     def acquisition(self, put_data=None):
-        """Instruct daq and fem(s) to acquire data."""
-        # Synchronise first_initialisation status (i.e. collect 2 fudge frames) with fem
+        """Instruct DAQ and FEM to acquire data."""
+        # Synchronise first_initialisation status (i.e. collect 2 fudge frames) with FEM
         if self.first_initialisation:
-            for fem in self.fems:
-                # Only need to check first fem's value
-                self.first_initialisation = fem.first_initialisation
-                break
+            self.first_initialisation = self.fem.first_initialisation
 
         if self.extended_acquisition is False:
             if self.daq.in_progress:
@@ -538,7 +514,7 @@ class Hexitec():
         self.total_delay = 0
         self.number_frames_to_request = self.number_frames
 
-        if self.fems[0].bias_voltage_refresh:
+        if self.fem.bias_voltage_refresh:
             # Did the acquisition coincide with bias dead time?
             if self.bias_blocking_acquisition:
                 IOLoop.instance().call_later(0.1, self.acquisition)
@@ -546,13 +522,13 @@ class Hexitec():
 
             # Work out how many frames can be acquired before next bias refresh
             time_into_window = time.time() - self.bias_init_time
-            time_available = self.fems[0].bias_refresh_interval - time_into_window
+            time_available = self.fem.bias_refresh_interval - time_into_window
 
             if time_available < 0:
                 IOLoop.instance().call_later(0.09, self.acquisition)
                 return
 
-            frames_before_bias = self.fems[0].frame_rate * time_available
+            frames_before_bias = self.fem.frame_rate * time_available
             number_frames_before_bias = int(round(frames_before_bias))
 
             self.number_frames_to_request = self.number_frames - self.frames_already_acquired
@@ -563,8 +539,8 @@ class Hexitec():
                 self.extended_acquisition = True
                 self.number_frames_to_request = number_frames_before_bias
 
-            self.total_delay = time_available + self.fems[0].bias_voltage_settle_time + \
-                self.fems[0].time_refresh_voltage_held
+            self.total_delay = time_available + self.fem.bias_voltage_settle_time + \
+                self.fem.time_refresh_voltage_held
 
         # # TODO: Remove once Firmware made to reset on each new acquisition
         # # TODO: WILL BE NON 0 VALUE IN THE FUTURE - TO SUPPORT BIAS REFRESH INTV
@@ -578,7 +554,7 @@ class Hexitec():
         # TODO: To be removed once firmware updated? FP may be slow to process frame_number reset
         time.sleep(0.5)
 
-        # Reset histograms, call daq's start_acquisition() once per acquisition
+        # Reset histograms, call DAQ's start_acquisition() once per acquisition
         if self.initial_acquisition:
             # Issue reset to histogram
             command = "config/histogram/reset_histograms"
@@ -592,12 +568,12 @@ class Hexitec():
             # Acquisition (whether single/multi-run) starts here
             self.acquisition_in_progress = True
 
-        # Wait for daq (i.e. file writer) to be enabled before fem(s) told to collect data
+        # Wait for DAQ (i.e. file writer) to be enabled before FEM told to collect data
         # IOLoop.instance().call_later(0.1, self.await_daq_ready)
         IOLoop.instance().add_callback(self.await_daq_ready)
 
     def await_daq_ready(self):
-        """Wait until daq has configured, enabled file writer."""
+        """Wait until DAQ has configured, enabled file writer."""
         if (self.daq.file_writing is False):
             IOLoop.instance().call_later(0.05, self.await_daq_ready)
         else:
@@ -606,24 +582,24 @@ class Hexitec():
 
     def trigger_fem_acquisition(self):
         """Trigger data acquisition in FEM(s)."""
-        for fem in self.fems:
-            # TODO: Temp hack: Prevent frames being 1 (continuous readout) by setting to 2 if it is
-            self.number_frames_to_request = 2 if (self.number_frames_to_request == 1) else \
-                self.number_frames_to_request
-            fem.set_number_frames(self.number_frames_to_request)
-            fem.collect_data()
+        # TODO: Temp hack: Prevent frames being 1 (continuous readout) by setting to 2 if it is
+        self.number_frames_to_request = 2 if (self.number_frames_to_request == 1) else \
+            self.number_frames_to_request
+        self.fem.set_number_frames(self.number_frames_to_request)
+        self.fem.collect_data()
+
         self.frames_already_acquired += self.number_frames_to_request
-        # Note when fem told to begun collecting data
+        # Note when FEM told to begin collecting data
         self.fem_start_timestamp = time.time()
         IOLoop.instance().call_later(self.total_delay, self.check_fem_finished_sending_data)
 
     def check_fem_finished_sending_data(self):
-        """Check whether fem stopped transmitting data.
+        """Check whether FEM stopped transmitting data.
 
-        Wait until fem has finished sending data, then either finish
+        Wait until FEM has finished sending data, then either finish
         acquisition (single run) or request more frames (multi run)
         """
-        if (self.fems[0].hardware_busy):
+        if (self.fem.hardware_busy):
             # Still sending data
             IOLoop.instance().call_later(0.5, self.check_fem_finished_sending_data)
             return
@@ -653,19 +629,16 @@ class Hexitec():
 
         Not yet possible to stop FEM, mid-acquisition
         """
-        for fem in self.fems:
-            fem.stop_acquisition = True
+        self.fem.stop_acquisition = True
         # Inject End of Acquisition Frame
         command = "config/inject_eoa"
         request = ApiAdapterRequest("", content_type="application/json")
         self.adapters["fp"].put(command, request)
-
         self.shutdown_processing()
 
     def _collect_offsets(self, msg):
-        """Instruct fem(s) to collect offsets."""
-        for fem in self.fems:
-            fem.collect_offsets()
+        """Instruct FEM to collect offsets."""
+        self.fem.collect_offsets()
 
     def commit_configuration(self, msg):
         """Push HexitecDAQ's 'config/' ParameterTree settings into FP's plugins."""

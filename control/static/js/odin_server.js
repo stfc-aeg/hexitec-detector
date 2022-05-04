@@ -312,14 +312,14 @@ function poll_fem()
 
     $.getJSON(hexitec_url + 'detector', function(response)
     {
-        var fems = response["detector"]["fems"]
+        var fem = response["detector"]["fem"]
         var adapter_status = response["detector"]["status"] // adapter.py's status
 
-        var percentage_complete = fems["fem_0"]["operation_percentage_complete"];
-        var hardware_connected = fems["fem_0"]["hardware_connected"];
-        var hardware_busy = fems["fem_0"]["hardware_busy"];
+        var percentage_complete = fem["operation_percentage_complete"];
+        var hardware_connected = fem["hardware_connected"];
+        var hardware_busy = fem["hardware_busy"];
         
-        var polled_frames = fems["fem_0"]["number_frames"];
+        var polled_frames = fem["number_frames"];
         
         // if (polled_frames != ui_frames)
         // {
@@ -369,22 +369,21 @@ function poll_fem()
             document.getElementById("applyButton2").disabled = false;
             document.getElementById("hdf-file-path-text").disabled = false;
             document.getElementById("hdf-file-name-text").disabled = false;
-            document.getElementById("hexitec-config-text").disabled = false;        
+            document.getElementById("hexitec-config-text").disabled = false;
         }
 
-        // http://localhost:8888/api/0.1/hexitec/detector/fems/fem_0/diagnostics/successful_reads
+        // http://localhost:8888/api/0.1/hexitec/detector/fem/diagnostics/successful_reads
         // Diagnostics:
         // curl -s http://localhost:8888/api/0.1/hexitec/fr/status/ | python -m json.tool
-        // curl -s http://localhost:8888/api/0.1/hexitec/detector/fems/fem_0/ | python -m json.tool
+        // curl -s http://localhost:8888/api/0.1/hexitec/detector/fem/ | python -m json.tool
 
-        var fem_diagnostics = fems["fem_0"]["diagnostics"];
+        var fem_diagnostics = fem["diagnostics"];
         var num_reads = fem_diagnostics["successful_reads"];
-        var frame_rate = fems["fem_0"]["frame_rate"];
-        console.log(hardware_busy + " " + adapter_in_progress + " " + daq_in_progress + 
+        var frame_rate = fem["frame_rate"];
+        console.log(hardware_busy + " " + adapter_in_progress + " " + daq_in_progress +
                     " <= hw_busy, apd_in_prog, daq_in_prog " + "   %_compl: "
-                    + fems["fem_0"]["operation_percentage_complete"] 
+                    + fem["operation_percentage_complete"]
                     + " reads: " + num_reads + " msg: " + adapter_status["status_message"]);
-                    
 
         $('#frame_rate').html(frame_rate.toFixed(2));
 
@@ -418,30 +417,30 @@ function poll_fem()
         }
         $('#odin-control-error').html(status);
 
-        for (fem in fems)
-        {
-            //TODO: Prevent multiple fems overwriting one another's values
+        // for (fem in fems)
+        // {
+        //TODO: Prevent multiple fems overwriting one another's values
 
-            // Hardcoded reading out all sensor data from one Fem:
-            $('#vsr1_humidity').html(fems[fem]["vsr1_sensors"]["humidity"].toFixed(2));
-            $('#vsr1_ambient').html(fems[fem]["vsr1_sensors"]["ambient"].toFixed(2));
-            $('#vsr1_asic1').html(fems[fem]["vsr1_sensors"]["asic1"].toFixed(2));
-            $('#vsr1_asic2').html(fems[fem]["vsr1_sensors"]["asic2"].toFixed(2));
-            $('#vsr1_adc').html(fems[fem]["vsr1_sensors"]["adc"].toFixed(2));
-            $('#vsr1_hv').html(fems[fem]["vsr1_sensors"]["hv"].toFixed(3));
+        // Hardcoded reading out all sensor data from one Fem:
+        $('#vsr1_humidity').html(fem["vsr1_sensors"]["humidity"].toFixed(2));
+        $('#vsr1_ambient').html(fem["vsr1_sensors"]["ambient"].toFixed(2));
+        $('#vsr1_asic1').html(fem["vsr1_sensors"]["asic1"].toFixed(2));
+        $('#vsr1_asic2').html(fem["vsr1_sensors"]["asic2"].toFixed(2));
+        $('#vsr1_adc').html(fem["vsr1_sensors"]["adc"].toFixed(2));
+        $('#vsr1_hv').html(fem["vsr1_sensors"]["hv"].toFixed(3));
 
-            $('#vsr2_humidity').html(fems[fem]["vsr2_sensors"]["humidity"].toFixed(2));
-            $('#vsr2_ambient').html(fems[fem]["vsr2_sensors"]["ambient"].toFixed(2));
-            $('#vsr2_asic1').html(fems[fem]["vsr2_sensors"]["asic1"].toFixed(2));
-            $('#vsr2_asic2').html(fems[fem]["vsr2_sensors"]["asic2"].toFixed(2));
-            $('#vsr2_adc').html(fems[fem]["vsr2_sensors"]["adc"].toFixed(2));
-            $('#vsr2_hv').html(fems[fem]["vsr2_sensors"]["hv"].toFixed(3));
+        $('#vsr2_humidity').html(fem["vsr2_sensors"]["humidity"].toFixed(2));
+        $('#vsr2_ambient').html(fem["vsr2_sensors"]["ambient"].toFixed(2));
+        $('#vsr2_asic1').html(fem["vsr2_sensors"]["asic1"].toFixed(2));
+        $('#vsr2_asic2').html(fem["vsr2_sensors"]["asic2"].toFixed(2));
+        $('#vsr2_adc').html(fem["vsr2_sensors"]["adc"].toFixed(2));
+        $('#vsr2_hv').html(fem["vsr2_sensors"]["hv"].toFixed(3));
 
-            $('#vsr1_sync').html(fems[fem]["vsr1_sync"]);
-            $('#vsr2_sync').html(fems[fem]["vsr2_sync"]);
+        $('#vsr1_sync').html(fem["vsr1_sync"]);
+        $('#vsr2_sync').html(fem["vsr2_sync"]);
 
-            // console.log("fem id: '" + fems[fem]["id"] + "' health: '" + fems[fem]["health"] + "' stat msg: '" + fems[fem]["status_message"] + "'.");
-        }
+        // console.log("fem id: '" + fem["id"] + "' health: '" + fem["health"] + "' stat msg: '" + fem["status_message"] + "'.");
+        // }
 
         // system_health    // true=all fem(s) OK, false=fem(s) bad, fem_error_id says which one
         // fem_error_id
@@ -1210,7 +1209,7 @@ function hexitec_config_changed()
     var payload = {"hexitec_config": hexitec_config};
     $.ajax({
         type: "PUT",
-        url: hexitec_url + 'detector/fems/fem_0/',
+        url: hexitec_url + 'detector/fem/',
         contentType: "application/json",
         data: JSON.stringify(payload),
         success: function(result) {

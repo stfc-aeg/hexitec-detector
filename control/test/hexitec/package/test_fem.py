@@ -1,4 +1,5 @@
-"""Test Cases for the Hexitec Fem in hexitec.
+"""
+Test Cases for the Hexitec Fem in hexitec.
 
 Christian Angelsen, STFC Detector Systems Software Group
 """
@@ -27,12 +28,10 @@ class FemTestFixture(object):
     def __init__(self):
         """Initialise object."""
         self.ip = "127.0.0.1"
-        self.id = 0
 
         self.options = {
-            "fem_0":
+            "fem":
                 """
-                id = 0,
                 server_ctrl_ip = 127.0.0.1,
                 camera_ctrl_ip = 127.0.0.1,
                 server_data_ip = 127.0.0.1,
@@ -52,7 +51,7 @@ class FemTestFixture(object):
             self.detector = self.adapter.hexitec  # shortcut, makes assert lines shorter
 
             with patch("hexitec.HexitecFem.RdmaUDP"):
-                self.fem = HexitecFem(self.detector, self.id, self.ip,
+                self.fem = HexitecFem(self.detector, self.ip,
                                       self.ip, self.ip, self.ip)
                 self.fem.connect()
 
@@ -70,17 +69,6 @@ class TestFem(unittest.TestCase):
     def setUp(self):
         """Set up test fixture for each unit test."""
         self.test_fem = FemTestFixture()
-
-    def test_init(self):
-        """Assert the initilisation of the Fem class works."""
-        assert self.test_fem.fem.id == self.test_fem.id
-
-    def test_nonzero_id(self):
-        """Test constructor works ok."""
-        id = 1
-        fem = HexitecFem(None, id, self.test_fem.ip, self.test_fem.ip,
-                         self.test_fem.ip, self.test_fem.ip)
-        assert fem.id == 1
 
     def test_connect(self):
         """Assert the connect method creates the rdma as expected."""
@@ -235,12 +223,6 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.health = health
         assert self.test_fem.fem.get_health() is health
 
-    def test_get_id(self):
-        """Test setting id works."""
-        new_id = 2
-        self.test_fem.fem.id = new_id
-        assert self.test_fem.fem.get_id() == new_id
-
     def test_poll_sensors_calls_self(self):
         """Test poll_sensors() calls itself after 1 seconds."""
         with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
@@ -315,7 +297,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.parent.daq.start_acquisition = Mock()
         self.test_fem.fem.initialise_hardware()
         assert self.test_fem.fem.operation_percentage_complete == 0
-        assert self.test_fem.fem.operation_percentage_steps == 108
+        assert self.test_fem.fem.operation_percentage_steps == 100
         assert self.test_fem.fem.initialise_progress == 0
 
     def test_initialise_hardware_handles_daq_busy(self):

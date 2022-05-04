@@ -1,4 +1,5 @@
-"""Test Cases for HexitecAdapter, Hexitec in hexitec.HexitecDAQ, hexitec.Hexitec.
+"""
+Test Cases for HexitecAdapter, Hexitec in hexitec.HexitecDAQ, hexitec.Hexitec.
 
 Christian Angelsen, STFC Detector Systems Software Group
 """
@@ -23,7 +24,6 @@ class DetectorAdapterTestFixture(object):
 
     def __init__(self):
         """Initialise object."""
-
         # Construct paths relative to current working directory
         cwd = os.getcwd()
         base_path_index = cwd.rfind("hexitec-detector")
@@ -117,7 +117,6 @@ class TestDetectorAdapter(unittest.TestCase):
 
     def test_init_bad_path(self):
         """Initialise object."""
-
         # Construct paths relative to current working directory
         cwd = os.getcwd()
         base_path_index = cwd.rfind("hexitec-detector")
@@ -140,7 +139,7 @@ class TestDetectorAdapter(unittest.TestCase):
         self.test_detector_adapter = DetectorAdapterTestFixture()
 
     def test_adapter_get(self):
-        """Test that a call to the adapter GET method returns the correct response"""
+        """Test the adapter GET method returns the correct response."""
         expected_response = {
             'odin_version': '1.0.0'
         }
