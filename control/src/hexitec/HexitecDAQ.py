@@ -124,6 +124,8 @@ class HexitecDAQ():
         self.rows, self.columns = 160, 160
         self.pixels = self.rows * self.columns
         self.number_frames = 10
+        self.number_nodes = 1
+
         # Diagnostics
         self.daq_start_time = 0
         self.fem_not_busy = 0
@@ -361,7 +363,7 @@ class HexitecDAQ():
         parent_tree_dict = self.parent.param_tree.get('')
         error_code = self.write_metadata(parent_metadata_group, parent_tree_dict)
 
-        # TODO: Hacked until frame_process_adapter updated to use parameter tree
+        # TODO: Hacked until frame_process_adapter updated to use ParameterTree
         hdf_metadata_group = hdf_file.create_group("hdf")
         hdf_tree_dict = self.adapters['fp']._param
         # Only "hexitec" group contain filename entries, ignore return value of write_metadata
@@ -506,6 +508,10 @@ class HexitecDAQ():
     def set_number_frames(self, number_frames):
         """Set number of frames to be acquired."""
         self.number_frames = number_frames
+
+    def set_number_nodes(self, nodes):
+        """Set number of nodes."""
+        self.number_nodes = nodes
 
     def set_file_name(self, name):
         """Set processed file name."""
@@ -735,37 +741,63 @@ class HexitecDAQ():
         self.extra_datasets = []
         self.master_dataset = "spectra_bins"
 
-        if self.pass_raw:
-            self.master_dataset = "raw_frames"
-            self.extra_datasets.append(self.master_dataset)
         if self.pass_processed:
             self.master_dataset = "processed_frames"
+            self.extra_datasets.append(self.master_dataset)
+        if self.pass_raw:
+            self.master_dataset = "raw_frames"
             self.extra_datasets.append(self.master_dataset)
 
         self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
                                        compression_type=self.compression_type,
                                        master_dataset=self.master_dataset,
-                                       extra_datasets=self.extra_datasets)
+                                       extra_datasets=self.extra_datasets,
+                                       selected_os="CentOS",
+                                       live_view_selected=True)
+        # live_view_selected=True
+        store_config, execute_config, store_string, execute_string = self.gcf.generate_config_files()
 
-        store_config, execute_config = self.gcf.generate_config_files()
+        # print("\n\n\n")
+        # print("  store: {}".format(store_string))
+        # print("  exec:  {}".format(execute_string))
+        # print("\n\n\n")
 
-        command = "config/config_file/"
-        request = ApiAdapterRequest(store_config, content_type="application/json")
+        # Loop over node(s)
+        for index in range(self.number_nodes):
+            # Reinstate when /config/config/ strings will replace /config/config_file/
+            # self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
+            #                             compression_type=self.compression_type,
+            #                             master_dataset=self.master_dataset,
+            #                             extra_datasets=self.extra_datasets,
+            #                             selected_os="CentOS",
+            #                             live_view_selected=live_view_selected)
+            # store_config, execute_config, store_string, execute_string = self.gcf.generate_config_files()
+            # # live_view_selected = False
 
-        response = self.adapters["fp"].put(command, request)
-        status_code = response.status_code
-        if (status_code != 200):
-            error = "Error {} parsing store json config file in fp adapter".format(status_code)
-            logging.error(error)
-            self.parent.fems[0]._set_status_error(error)
+            # command = "config/config/" #+ str(index)      # string
+            command = "config/config_file/" + str(index)   # file
 
-        request = ApiAdapterRequest(execute_config, content_type="application/json")
-        response = self.adapters["fp"].put(command, request)
-        status_code = response.status_code
-        if (status_code != 200):
-            error = "Error {} parsing execute json config file in fp adapter".format(status_code)
-            logging.error(error)
-            self.parent.fems[0]._set_status_error(error)
+            # request = ApiAdapterRequest(store_string, content_type="application/json")        # string
+            # request = ApiAdapterRequest(dict(store_string), content_type="application/json")  # dict(string)
+            request = ApiAdapterRequest(store_config, content_type="application/json")          # file
+
+            response = self.adapters["fp"].put(command, request)
+            status_code = response.status_code
+            if (status_code != 200):
+                error = "Error {} parsing store json config file in fp adapter".format(status_code)
+                logging.error(error)
+                self.parent.fems[0]._set_status_error(error)
+
+            # request = ApiAdapterRequest(execute_string, content_type="application/json")        # string
+            # request = ApiAdapterRequest(dict(execute_string), content_type="application/json")  # dict(string)
+            request = ApiAdapterRequest(execute_config, content_type="application/json")          # file
+
+            response = self.adapters["fp"].put(command, request)
+            status_code = response.status_code
+            if (status_code != 200):
+                error = "Error {} parsing execute json config file in fp adapter".format(status_code)
+                logging.error(error)
+                self.parent.fems[0]._set_status_error(error)
 
         # Allow FP time to process above PUT requests before configuring plugin settings
         IOLoop.instance().call_later(0.4, self.submit_configuration)

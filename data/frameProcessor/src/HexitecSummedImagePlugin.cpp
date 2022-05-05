@@ -36,6 +36,7 @@ namespace FrameProcessor
     threshold_lower_ = 0;
     threshold_upper_ = 16382;
     image_frequency_ = 1;
+    reset_image_ = 0;
   }
 
   /**

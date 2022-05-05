@@ -13,7 +13,8 @@ class GenerateConfigFiles():
     """Accepts Parameter tree from hexitecDAQ's "/config" branch to generate json file."""
 
     def __init__(self, param_tree, number_histograms, compression_type="none",
-                 master_dataset="processed_frames", extra_datasets=[], selected_os="CentOS"):
+                 master_dataset="processed_frames", extra_datasets=[], selected_os="CentOS",
+                 live_view_selected=True):
         """
         Initialize the GenerateConfigFiles object.
 
@@ -32,6 +33,7 @@ class GenerateConfigFiles():
         self.extra_datasets = extra_datasets
         # Each OS needs its own install, build paths
         self.selected_os = selected_os
+        self.live_view_selected = live_view_selected
 
     def boolean_to_string(self, bBool):
         """Convert bool to string."""
@@ -123,13 +125,7 @@ class GenerateConfigFiles():
         {
             "index": "%s",
             "value":
-            [
-                {
-                    "fr_setup": {
-                        "fr_ready_cnxn": "tcp://127.0.0.1:5001",
-                        "fr_release_cnxn": "tcp://127.0.0.1:5002"
-                    }
-                }''' % self.index_name
+            [''' % self.index_name
 
         # plugin path that follows the same format i.e. ("reorder", "Reorder", "Reorder")
         # "index": "reorder",
@@ -194,7 +190,9 @@ class GenerateConfigFiles():
                 logging.debug("Plugin %s missing 'enable' setting!" % key)
                 raise Exception("Plugin %s missing 'enable' setting!" % key)
 
-        plugin_chain += ["histogram", "summed_image", "live_view"]
+        plugin_chain += ["histogram", "summed_image"]
+        if self.live_view_selected:
+            plugin_chain += ["live_view"]
 
         # Add blosc if compression selected
         if self.compression_type == "blosc":
@@ -213,14 +211,12 @@ class GenerateConfigFiles():
             os_path = ""
         elif self.selected_os == "Ubuntu":
             os_path = "_ubuntu"
-        else:
-            # print("DEBUGGING: Selected nothing, defaulting to CentOS")
-            pass
 
+        comma_or_blank = ""
         # Build config for Hexitec plugins (uniform naming)
         for plugin in plugin_chain:
             if plugin in hexitec_plugins:
-                store_plugin_paths += ''',
+                store_plugin_paths += '''%s
                 {
                     "plugin": {
                         "load": {
@@ -229,11 +225,13 @@ class GenerateConfigFiles():
                             "library": "%s/install%s/lib/libHexitec%sPlugin.so"
                         }
                     }
-                }''' % (hexitec_plugins[plugin][0],
+                }''' % (comma_or_blank,
+                        hexitec_plugins[plugin][0],
                         hexitec_plugins[plugin][1],
                         odin_path,
                         os_path,
                         hexitec_plugins[plugin][2])
+                comma_or_blank = ","
 
         # Build config for Odin plugins (differing names)
         for plugin in plugin_chain:
@@ -253,8 +251,9 @@ class GenerateConfigFiles():
                         os_path,
                         odin_plugins[plugin][2])
 
-        # Chain plugins together, with live view now branched off summed_image
-        store_plugin_connect = ''',
+        if self.live_view_selected:
+            # Chain plugins together, with live view now branched off summed_image
+            store_plugin_connect = ''',
                 {
                     "plugin": {
                         "connect": {
@@ -263,9 +262,10 @@ class GenerateConfigFiles():
                         }
                     }
                 }'''
-
-        # Remove live_view from main plugin chain
-        plugin_chain.remove("live_view")
+            # Remove live_view from main plugin chain
+            plugin_chain.remove("live_view")
+        else:
+            store_plugin_connect = ""
 
         previous_plugin = "frame_receiver"
         # Chain together all other selected plugins, from frame receiver until hdf
@@ -313,7 +313,9 @@ class GenerateConfigFiles():
                 unique_setting = ""
 
         # live_view, hdf have different settings (no sensors_layout..)
-        store_plugin_config += ''',
+
+        if self.live_view_selected:
+            store_plugin_config += ''',
                 {
                     "live_view":
                     {
@@ -420,8 +422,7 @@ class GenerateConfigFiles():
             self.store_temp.close()
 
         # The execute_config file is used to wipe any existing config, then load user config
-        execute_config = '''
-[
+        execute_config = '''[
     {
         "plugin":
         {
@@ -445,12 +446,14 @@ class GenerateConfigFiles():
         finally:
             self.execute_temp.close()
 
-        return store_temp_name, execute_temp_name
+        store_string = store_sequence_preamble + store_plugin_paths + store_plugin_connect + store_plugin_config
+
+        return store_temp_name, execute_temp_name, store_string[1:-1], execute_config[1:-1]
 
 
 if __name__ == '__main__':
     param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
-                  'sensors_layout': '1x1', 'receiver':
+                  'sensors_layout': '2x2', 'receiver':
                   {'config_file': '', 'configured': False, 'connected': False},
                   'in_progress': False,
                   # The 'config' nested dictionary control which plugin(s) are loaded:
@@ -479,10 +482,10 @@ if __name__ == '__main__':
     master_dataset = "raw_frames"
     extra_datasets = [master_dataset, "processed_frames"]
     # extra_datasets = [master_dataset]
-
+    selected_os = "CentOS"
     gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="none",
                               master_dataset=master_dataset, extra_datasets=extra_datasets,
-                              selected_os="Ubuntu")
-    s, e = gcf.generate_config_files()
-
-    print("GFC returned config files\n Store:   %s\n Execute: %s\n" % (s, e))
+                              selected_os=selected_os)
+    s, e, ss, se = gcf.generate_config_files()
+    # print(type(s), type(e), type(ss), type(se))
+    print("GFC (os:%s) returned config files\n Store:   %s\n Execute: %s\n" % (selected_os, s, e))

@@ -1,7 +1,7 @@
 """
-Takes a pcapng file and transmits specified number of frames.
+Takes a pcap file and transmits specified number of frames.
 
-Supports 1x1 sensors, 8064/4864 packet sizes, overwrites headers from PCAPNG file.
+Supports 1x1 sensors, 7744/5184 packet sizes, extracts headers from PCAPNG file.
 
 Created on Nov 08, 2021
 
@@ -69,8 +69,9 @@ class HexitecUdpProducer(object):
         # Workout number of primary packets, size of trailing packet
 
         totalFrameSize = self.NPIXELS * bytesPerPixel
-        self.primaryPackets = totalFrameSize // 8000
-        self.trailingPacketSize = totalFrameSize % 8000
+        self.primaryPackets = totalFrameSize // 7680
+        self.trailingPacketSize = totalFrameSize % 7680
+        # print("primary: {} trailingPacketSize: {}.".format(self.primaryPackets, self.trailingPacketSize))
 
         if os.access(self.filename, os.R_OK):
             print("Selected", self.frames, "frames, ", bytesToRead, "bytes.")
@@ -108,13 +109,18 @@ class HexitecUdpProducer(object):
             if int(header[1]) & self.SOF:
                 frame_data = bytes()
 
-            # Append frame payload to frame data, discarding header
-            frame_data += payload[HEADER_SIZE:]
+            # # Packet flags extracted from data:
+            # SoF = int(header[1]) & self.SOF
+            # EoF = int(header[1]) & self.EOF
+            # print(len(payload), len(payload[HEADER_SIZE:]), SoF, EoF)
+
+            # Append frame payload to frame data, including header
+            frame_data += payload
 
             # If this is an end of frame packet, convert frame data to numpy array and append to frame list
             if int(header[1]) & self.EOF:
-                frame = np.frombuffer(frame_data, dtype=np.uint16).reshape((80, 80))
-                assert frame.size == self.NPIXELS
+                frame = np.frombuffer(frame_data, dtype=np.uint16)
+                # assert frame.size == self.NPIXELS
                 frames.append(frame)
                 num_frames += 1
 
@@ -127,13 +133,14 @@ class HexitecUdpProducer(object):
 
     def run(self):
         """Transmit data to address, port."""
+        HEADER_SIZE = 64
         print("Transmitting Hexitec data to address {} port {} ...".format(self.host, self.port))
 
         # Open UDP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         # Create packet header
-        header = np.zeros(8, dtype=np.uint64)
+        # header = np.zeros(8, dtype=np.uint64)
 
         self.framesSent = 0
         self.packetsSent = 0
@@ -143,10 +150,9 @@ class HexitecUdpProducer(object):
 
         runStartTime = time.time()
 
+        bytesRemaining = len(self.byteStream)
         # Loop over selected number of frame(s)
         for frame in range(self.frames):
-
-            bytesRemaining = len(self.byteStream)
 
             packetCounter = 0
             bytesSent = 0
@@ -155,24 +161,27 @@ class HexitecUdpProducer(object):
 
             # Loop over packets within current frame
             while (packetCounter < (self.primaryPackets + 1)):
-                header[0] = frame
-                header[1] = 0
+                # header[0] = frame
+                # header[1] = 0
 
                 if (packetCounter < self.primaryPackets):
-                    bytesToSend = 8000
-                    if (packetCounter == 0):
-                        header[1] = packetCounter | self.SOF
-                    else:
-                        header[1] = packetCounter
+                    bytesToSend = 7744  # 8000
+                    # if (packetCounter == 0):
+                    #     header[1] = packetCounter | self.SOF
+                    # else:
+                    #     header[1] = packetCounter
                 else:
-                    bytesToSend = self.trailingPacketSize
-                    header[1] = packetCounter | self.EOF
+                    bytesToSend = self.trailingPacketSize + HEADER_SIZE
+                    # header[1] = packetCounter | self.EOF
 
                 # Prepend header to current packet
-                packet = header.tobytes() + self.byteStream[streamPosn:streamPosn + bytesToSend]
-                # print("UDP sending {} bytes".format(len(packet)))
+                packet = self.byteStream[streamPosn:streamPosn + bytesToSend]
+                # print(["{:02x}".format(val) for val in packet[:]])
+                # print("1x1 sending {} bytes".format(len(packet)))
 
-                # print("Header: 0x{0:08x} 0x{1:08x}".format(header[0], header[1]))
+                # print("Constructed Header: 0x{0:08x} 0x{1:08x}".format(header[0], header[1]))
+                # dheader = np.frombuffer(self.byteStream[streamPosn:streamPosn+HEADER_SIZE], dtype=np.uint64)
+                # print("decoded     Header: 0x{0:08x} 0x{1:08x}".format(dheader[0], dheader[1]))
                 # Transmit packet
                 bytesSent += sock.sendto(packet, (self.host, self.port))
 
@@ -184,6 +193,10 @@ class HexitecUdpProducer(object):
                 bytesRemaining -= bytesToSend
                 packetCounter += 1
                 streamPosn += bytesToSend
+                # Start over if out of data to send
+                if (bytesRemaining == 0):
+                    bytesRemaining = len(self.byteStream)
+                    streamPosn = 0
 
             if not self.quiet:
                 print("  Sent frame {} packets {} bytes {}".format(frame, packetCounter, bytesSent))
