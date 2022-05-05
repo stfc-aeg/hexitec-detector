@@ -59,11 +59,8 @@ class RdmaUDP(object):
 
         self.TgtRxUDPIPAddr = TargetRxUDPIPAddress
         self.TgtRxUDPIPPrt = TargetRxUDPIPPort
-
         self.UDPMaxRx = UDPMTU
-
         self.debug = False
-
         self.ack = False
 
     def __del__(self):
@@ -76,21 +73,18 @@ class RdmaUDP(object):
         Read 64 bits from the address.
 
         Sends a read command to the target rx UDP address/port and returns the result.
-        @param address: the address to read from
-        @param comment: comment to print out
+        :param address: the address to read from
+        :param comment: comment to print out
         """
         command = struct.pack('=BBBBIQBBBBIQQQQQ', 1, 0, 0, 3, address,
                               0, 9, 0, 0, 255, 0, 0, 0, 0, 0, 0)
         self.txsocket.sendto(command, (self.TgtRxUDPIPAddr, self.TgtRxUDPIPPrt))
-
         if self.ack:
             response = self.rxsocket.recv(self.UDPMaxRx)
             data = 0x00000000
             if len(response) == 56:
                 decoded = struct.unpack('=IIIIQQQQQ', response)
                 data = decoded[3]
-                # logging.debug([hex(val) for val in decoded])
-
         if self.debug:
             logging.debug('R %08X : %08X %s' % (address, data, comment))
 
@@ -109,14 +103,7 @@ class RdmaUDP(object):
         self.txsocket.sendto(command, (self.TgtRxUDPIPAddr, self.TgtRxUDPIPPrt))
 
         if self.ack:
-            # Receive acknowledge packet
-            # response = self.rxsocket.recv(self.UDPMaxRx)
             _ = self.rxsocket.recv(self.UDPMaxRx)
-            # TODO: Remove as redundant?
-            # #time.sleep(10)
-            # if len(response) == 48:
-            #     decoded = struct.unpack('=IIIIQQQQ', response)
-            #     #logging.debug(decoded)
 
     def close(self):
         """Close sockets."""
