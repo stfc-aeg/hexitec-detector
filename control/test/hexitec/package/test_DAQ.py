@@ -639,6 +639,12 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq.set_number_frames(number_frames)
         assert number_frames == self.test_daq.daq.number_frames
 
+    def test_set_number_nodes(self):
+        """Test function sets number of nodes."""
+        number_nodes = 3
+        self.test_daq.daq.set_number_nodes(number_nodes)
+        assert number_nodes == self.test_daq.daq.number_nodes
+
     def test_set_addition_enable(self):
         """Test function sets addition bool."""
         addition_enable = True

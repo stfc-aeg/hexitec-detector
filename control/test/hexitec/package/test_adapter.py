@@ -187,6 +187,32 @@ class TestAdapter(unittest.TestCase):
         assert response.status_code == 200
         assert self.test_adapter.detector.number_frames == self.test_adapter.put_data
 
+    def test_adapter_put_config_file(self):
+        """Test that PUT config_file/ works ok."""
+        self.test_adapter.adapter.adapters = self.test_adapter.adapters
+        self.test_adapter.adapter.put(
+            "fp/config/config_file",
+            self.test_adapter.request)
+
+    def test_adapter_put_type_error(self):
+        """Test that PUT handles TypeError exception."""
+        self.test_adapter.adapter.adapters = self.test_adapter.adapters
+        self.test_adapter.adapter.adapters["fp"].put = Mock()
+        self.test_adapter.adapter.adapters["fp"].put.side_effect = TypeError("Error")
+        request = Mock()
+        body = Mock()
+        body.side_effect = TypeError("")
+        request.configure_mock(
+            headers={'Accept': 'application/json', 'Content-Type': 'application/json'},
+            body=body
+        )
+        response = self.test_adapter.adapter.put(
+            "fp/config/config_file",
+            request)
+        error = {'error': 'Failed to decode PUT request body: Error'}
+        assert response.data == error
+        assert response.status_code == 400
+
     def test_adapter_put_error(self):
         """Test adapter handles invalid PUT."""
         false_path = "not/a/path"
@@ -449,6 +475,12 @@ class TestDetector(unittest.TestCase):
         duration = 2
         self.test_adapter.detector.set_duration(duration)
         assert self.test_adapter.detector.duration == duration
+
+    def test_set_number_nodes(self):
+        """Test function sets number of nodes."""
+        number_nodes = 3
+        self.test_adapter.detector.set_number_nodes(number_nodes)
+        assert number_nodes == self.test_adapter.detector.number_nodes
 
     def test_detector_initialize(self):
         """Test function can initialise adapters."""
