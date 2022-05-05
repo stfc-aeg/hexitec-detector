@@ -988,10 +988,10 @@ class HexitecFem():
         self.x10g_rdma.write(0xD0000000, 0, 'Clear enable signal')
 
         if self.stop_acquisition:
-            logging.error("Cancelling Acquisition..")
+            logging.info("Cancelling Acquisition..")
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0xE2, 0x0D])
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0xE2, 0x0D])
-            logging.error("Acquisition cancelled")
+            logging.info("Acquisition cancelled")
             # Reset variables
             self.stop_acquisition = False
             self.operation_percentage_complete = 100
