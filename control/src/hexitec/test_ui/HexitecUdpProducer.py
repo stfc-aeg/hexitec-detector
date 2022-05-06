@@ -1,5 +1,5 @@
 """
-Takes a pcap file and transmits specified number of frames.
+Takes a pcapng file and transmits specified number of frames.
 
 Supports 1x1 sensors, 8064/4864 packet sizes, overwrites headers from PCAPNG file.
 
@@ -170,8 +170,7 @@ class HexitecUdpProducer(object):
 
                 # Prepend header to current packet
                 packet = header.tobytes() + self.byteStream[streamPosn:streamPosn + bytesToSend]
-                # print(["{:02x}".format(val) for val in packet[:]])
-                print("UDP sending {} bytes".format(len(packet)))
+                # print("UDP sending {} bytes".format(len(packet)))
 
                 # print("Header: 0x{0:08x} 0x{1:08x}".format(header[0], header[1]))
                 # Transmit packet

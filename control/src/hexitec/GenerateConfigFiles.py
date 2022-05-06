@@ -482,7 +482,7 @@ if __name__ == '__main__':
     master_dataset = "raw_frames"
     extra_datasets = [master_dataset, "processed_frames"]
     # extra_datasets = [master_dataset]
-    selected_os="CentOS"
+    selected_os = "CentOS"
     gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="none",
                               master_dataset=master_dataset, extra_datasets=extra_datasets,
                               selected_os=selected_os)

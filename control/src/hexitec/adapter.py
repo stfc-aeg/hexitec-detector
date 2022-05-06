@@ -251,6 +251,7 @@ class Hexitec():
         self.system_health = True
         self.status_message = ""
         self.status_error = ""
+        self.elog = ""
         self.number_nodes = 1
 
         detector = ParameterTree({
@@ -273,6 +274,7 @@ class Hexitec():
                 "system_health": (lambda: self.system_health, None),
                 "status_message": (lambda: self.status_message, None),
                 "status_error": (lambda: self.status_error, None),
+                "elog": (lambda: self.elog, self.set_elog),
                 "fem_health": (lambda: self.fem_health, None),
                 "number_nodes": (lambda: self.number_nodes, self.set_number_nodes)
             }
@@ -489,6 +491,10 @@ class Hexitec():
         self.fem.set_duration(self.duration)
         self.number_frames = self.fem.get_number_frames()
         self.daq.set_number_frames(self.number_frames)
+
+    def set_elog(self, entry):
+        """Set the elog entry provided by the user through the UI."""
+        self.elog = entry
 
     def set_number_nodes(self, number_nodes):
         """Set number of nodes."""
