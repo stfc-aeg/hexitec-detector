@@ -510,6 +510,9 @@ class Hexitec():
         # Synchronise first_initialisation status (i.e. collect 2 fudge frames) with FEM
         if self.first_initialisation:
             self.first_initialisation = self.fem.first_initialisation
+        else:
+            # Clear (any previous) daq error
+            self.daq.in_error = False
 
         if self.extended_acquisition is False:
             if self.daq.in_progress:
@@ -579,7 +582,13 @@ class Hexitec():
 
     def await_daq_ready(self):
         """Wait until DAQ has configured, enabled file writer."""
-        if (self.daq.file_writing is False):
+        if (self.daq.in_error):
+            # Reset state variables
+            self.initial_acquisition = True
+            self.extended_acquisition = False
+            self.acquisition_in_progress = False
+            self.frames_already_acquired = 0
+        elif (self.daq.file_writing is False):
             IOLoop.instance().call_later(0.05, self.await_daq_ready)
         else:
             # Add additional 8 ms delay to ensure file writer's file open before first frame arrives

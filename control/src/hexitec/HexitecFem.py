@@ -476,11 +476,17 @@ class HexitecFem():
 
     def check_daq_and_odin_processes_ready(self):
         """Wait until DAQ, Odin adapters ready or in error."""
-        if not self.parent.daq.in_progress:
+        if self.parent.daq.in_error:
+            # Reset variables
+            self.operation_percentage_complete = 100
+            self.initialise_progress = 0
+            self.hardware_busy = False
+            if self.first_initialisation:
+                self.ignore_busy = False
+                self.first_initialisation_done_update_gui()
+        elif not self.parent.daq.in_progress:
             IOLoop.instance().call_later(0.5, self.check_daq_and_odin_processes_ready)
-            print("  daq not in progress..")
         else:
-            print("\n  daq, odin: ALL PROCESSES READY!\n")
             self.collect_data()
             self.initialise_progress = 0
 

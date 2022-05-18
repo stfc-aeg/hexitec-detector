@@ -125,6 +125,7 @@ class HexitecDAQ():
         self.pixels = self.rows * self.columns
         self.number_frames = 10
         self.number_nodes = 1
+        self.in_error = False
 
         # Diagnostics
         self.daq_start_time = 0
@@ -229,10 +230,12 @@ class HexitecDAQ():
         if self.are_processes_connected(fr_status) is False:
             self.parent.fem._set_status_error("Frame Receiver(s) not connected!")
             logging.error("Cannot start Acquisition: Frame Receiver(s) not found")
+            self.in_error = True
             return
         elif self.are_processes_configured(fr_status, "fr") is False:
             self.parent.fem._set_status_error("Frame Receiver(s) not configured!")
             logging.error("Frame Receiver(s) not configured!")
+            self.in_error = True
             return
         else:
             logging.debug("Frame Receiver(s) connected and configured")
@@ -240,10 +243,12 @@ class HexitecDAQ():
         if self.are_processes_connected(fp_status) is False:
             self.parent.fem._set_status_error("Frame Processor(s) not connected!")
             logging.error("Cannot Start Acquisition: Frame Processor(s) not found")
+            self.in_error = True
             return
         elif self.are_processes_configured(fp_status, "fp") is False:
             self.parent.fem._set_status_error("Frame Processor(s) not configured!")
             logging.error("Frame Processor(s) not configured!")
+            self.in_error = True
             return
         else:
             logging.debug("Frame Processor(s) connected and configured")
@@ -267,7 +272,7 @@ class HexitecDAQ():
         # Diagnostics:
         self.daq_start_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
 
-        # Wait while fem(s) finish sending data
+        # Wait while fem finish sending data
         IOLoop.instance().call_later(1.3, self.acquisition_check_loop)
 
     def acquisition_check_loop(self):

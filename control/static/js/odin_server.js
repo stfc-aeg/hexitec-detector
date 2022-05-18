@@ -463,7 +463,7 @@ function commit_configuration()
 function apply_ui_values()
 {
     if (cold_initialisation) {
-        console.log("apply_UI_values() - cold_initialisation");
+        // console.log("apply_UI_values() - cold_initialisation");
         cold_initialisation = false;
     }
     // Load all UI settings into HexitecDAQ's ParameterTree
@@ -487,7 +487,7 @@ function apply_ui_values()
         threshold_mode_changed();
         threshold_value_changed();
         var threshold_mode = document.querySelector('#threshold-mode-text').value;
-        console.log("apply_UI_values)), comparison: " + threshold_mode.localeCompare("filename"));
+        // console.log("apply_UI_values)), comparison: " + threshold_mode.localeCompare("filename"));
         // Update threshold filename if threshold filename mode set
         //  (0: strings equal [filename mode], 1: not [none/value mode])
         if (threshold_mode.localeCompare("filename") === 0)
@@ -514,7 +514,7 @@ function threshold_filename_changed()
     // Update threshold filename if threshold filename mode set
     //  (0: strings equal [filename mode], 1: not [none/value mode])
     var threshold_mode = document.querySelector('#threshold-mode-text').value;
-    console.log("threshold_filename_changed, comparison: " + threshold_mode.localeCompare("filename"));
+    // console.log("threshold_filename_changed, comparison: " + threshold_mode.localeCompare("filename"));
     if (threshold_mode.localeCompare("filename") === 0)
     {
         var threshold_filename = document.querySelector('#threshold-filename-text').value;
