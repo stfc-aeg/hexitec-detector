@@ -1,9 +1,10 @@
 """
 Takes a pcap file and transmits specified number of frames.
 
-Supports 2x2 sensors, 8008/3208 packet sizes, extracting headers from PCAPNG file.
+Supports 2x2 sensors, multiple nodes, 8008/3208 packet sizes, 
+extracting headers from PCAPNG file.
 
-Created on April 19, 2022
+Created on April 22, 2022
 
 @author: Christian Angelsen
 """
@@ -19,7 +20,7 @@ import sys
 import os
 
 
-class Hexitec2x2ProducerError(Exception):
+class HexitecNodesProducerError(Exception):
     """Customised exception class."""
 
     def __init__(self, msg):
@@ -31,22 +32,20 @@ class Hexitec2x2ProducerError(Exception):
         return repr(self.msg)
 
 
-class Hexitec2x2ProducerDefaults(object):
+class HexitecNodesProducerDefaults(object):
     """Holds default values for frame producer parameters."""
 
     def __init__(self):
         """Initialise defaults."""
         self.ip_addr = 'localhost'
-        self.port_list = [61651]
         self.num_frames = 0
         self.tx_interval = 0
         self.drop_frac = 0
         self.drop_list = None
-
         self.filename = 'hexitec_triangle_100G.pcapng'
 
 
-class Hexitec2x2Producer(object):
+class HexitecNodesProducer(object):
     """Produce and transmit specified UDP frames."""
 
     def __init__(self, host, port, frames, rows,
@@ -54,18 +53,26 @@ class Hexitec2x2Producer(object):
         """Initialise object with command line arguments."""
         self.SOF = 1 << 63
         self.EOF = 1 << 62
-        self.host = host
-        self.port = port
+        # Default IP address?
+        if host == "127.0.0.1":
+            self.host = [host]
+        else:
+            self.host = host
+        print("  self.host: {} ({})".format(self.host, type(self.host)))
+        #  Default port/user didn't specify?
+        if port == 61651:
+            self.port = [port]
+        else:
+            self.port = port
         self.frames = frames
         self.NROWS = rows
         self.NCOLS = columns
         self.NPIXELS = self.NROWS * self.NCOLS
         self.interval = interval
-        # self.display = display
         self.quiet = quiet
         self.filename = filename
+        # sys.exit(2)
 
-        # self.pixelsToRead = self.frames * self.NPIXELS
         bytesPerPixel = 2
         bytesToRead = self.NPIXELS * bytesPerPixel
 
@@ -95,7 +102,7 @@ class Hexitec2x2Producer(object):
 
         # Create a PCAP reader instance
         packets = PcapReader(self.filename)
-        frame_data = bytes()
+
         # Iterate through packets in reader
         for packet in packets:
             num_packets += 1
@@ -106,23 +113,18 @@ class Hexitec2x2Producer(object):
             # Read frame header
             header = np.frombuffer(payload[:HEADER_SIZE], dtype=np.uint64)
             # print([hex(val) for val in header])
-            # assert header[0] == num_frames    # Assumes PCAPNG file begins from frame 0
-            # print(" header = {}".format(payload[:HEADER_SIZE]))
+
             # If this is a start of frame packet, reset frame data
             if int(header[0]) & self.SOF:
                 frame_data = bytes()
 
             # Append frame payload to frame data, including header
-            frame_data += payload
-            # masked = 0x3FFFFFFF
-            # pktNum = (int(header[0]) >> 32) & masked
-            # frmNum = int(header[0]) & masked
-            # if frmNum < 3:  # Debug info
-            #     print(len(payload), len(payload[HEADER_SIZE:]), frmNum, pktNum)
+            frame_data += payload[HEADER_SIZE:]
 
             # If this is an end of frame packet, convert frame data to numpy array and append to frame list
             if int(header[0]) & self.EOF:
                 frame = np.frombuffer(frame_data, dtype=np.uint16)
+                assert frame.size == self.NPIXELS
                 frames.append(frame)
                 num_frames += 1
 
@@ -135,10 +137,13 @@ class Hexitec2x2Producer(object):
 
     def run(self):
         """Transmit data to address, port."""
-        print("Transmitting Hexitec data to address {} port {} ...".format(self.host, self.port))
+        print("Transmitting Hexitec data to address {} port(s) {} ...".format(self.host, self.port))
 
         # Open UDP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+        # Create packet header
+        header = np.zeros(1, dtype=np.uint64)
 
         self.framesSent = 0
         self.packetsSent = 0
@@ -148,10 +153,12 @@ class Hexitec2x2Producer(object):
 
         runStartTime = time.time()
 
+        bytesRemaining = len(self.byteStream)
+        #TODO: BEWARE Merging with script supporting multiple port(s) transmission!
+        nodes = len(self.host)
+
         # Loop over selected number of frame(s)
         for frame in range(self.frames):
-
-            bytesRemaining = len(self.byteStream)
 
             packetCounter = 0
             bytesSent = 0
@@ -160,15 +167,20 @@ class Hexitec2x2Producer(object):
 
             # Loop over packets within current frame
             while (packetCounter < (self.primaryPackets + 1)):
+                header[0] = frame
 
                 if (packetCounter < self.primaryPackets):
-                    bytesToSend = 8000 + 8
+                    bytesToSend = 8000
+                    if (packetCounter == 0):
+                        header = header | (packetCounter << 32) | self.SOF
+                    else:
+                        header = header | (packetCounter << 32)
                 else:
-                    bytesToSend = self.trailingPacketSize + 8
+                    bytesToSend = self.trailingPacketSize
+                    header = header | (packetCounter << 32) | self.EOF
 
                 # Prepend header to current packet
-                packet = self.byteStream[streamPosn:streamPosn + bytesToSend]
-                # print("2x2 sending {} bytes".format(len(packet)))
+                packet = header.tobytes() + self.byteStream[streamPosn:streamPosn + bytesToSend]
 
                 if not self.quiet:
                     print("bytesRemaining: {0:8} Sent: {1:8}".format(bytesRemaining, bytesSent),
@@ -176,11 +188,18 @@ class Hexitec2x2Producer(object):
                                                                       streamPosn + bytesToSend))
 
                 # Transmit packet
-                bytesSent += sock.sendto(packet, (self.host, self.port))
+                # bytesSent += sock.sendto(packet, (self.host, self.port[frame % nodes]))
+                # # print("Sending frame {} to port {}".format(frame, self.port[frame % nodes]))
+                bytesSent += sock.sendto(packet, (self.host[frame % nodes], self.port[0]))
+                # print("Sending frame {} to host:port {}:{}".format(frame, self.host[frame % nodes], self.port[0]))
 
                 bytesRemaining -= bytesToSend
                 packetCounter += 1
                 streamPosn += bytesToSend
+                # Start over if out of data to send
+                if (bytesRemaining == 0):
+                    bytesRemaining = len(self.byteStream)
+                    streamPosn = 0
 
             if not self.quiet:
                 print("  Sent frame {} packets {} bytes {}".format(frame, packetCounter, bytesSent))
@@ -206,13 +225,14 @@ class Hexitec2x2Producer(object):
 
 if __name__ == '__main__':
 
-    desc = "Hexitec2x2Producer - generate UDP data stream from pcap file"
+    desc = "HexitecNodesProducer - generate UDP data stream from pcap file"
     parser = argparse.ArgumentParser(description=desc)
 
-    parser.add_argument('--host', type=str, default='127.0.0.1',
-                        help="Hostname or IP address to transmit UDP frame data to")
-    parser.add_argument('--port', type=int, default=61651,
-                        help='select destination host IP port')
+    parser.add_argument('--host', nargs='+', type=str, default='127.0.0.1',
+                        help="Hostname(s) or IP(s) address to transmit UDP frame data to")
+
+    parser.add_argument('--port', nargs='+', type=int, default=61651,
+                        help='select destination port(s)')
     parser.add_argument('--frames', '-n', type=int, default=1,
                         help='select number of frames to transmit')
     parser.add_argument('--rows', '-r', type=int, default=160,
@@ -231,5 +251,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    producer = Hexitec2x2Producer(**vars(args))
+    producer = HexitecNodesProducer(**vars(args))
     producer.run()

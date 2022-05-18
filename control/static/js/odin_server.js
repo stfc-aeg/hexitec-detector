@@ -322,7 +322,7 @@ function poll_fem()
         var status = "";
         if (status_error.length > 0)
         {
-            status = "Fem Error: '" + status_error + "'";
+            status = "Error: '" + status_error + "'";
         }
         document.querySelector('#odin-control-error').innerHTML = status;
 

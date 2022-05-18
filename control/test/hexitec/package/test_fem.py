@@ -288,17 +288,22 @@ class TestFem(unittest.TestCase):
 
     def test_initialise_hardware_handles_fudge_initialisation(self):
         """Test function handles initialisation from cold."""
-        self.test_fem.fem.hardware_connected = True
-        self.test_fem.fem.hardware_busy = False
-        self.test_fem.fem.debug_register24 = False
-        self.test_fem.fem.initialise_system = Mock()
-        self.test_fem.fem.first_initialisation = True
-        self.test_fem.fem.parent.daq = Mock(in_progress=False)
-        self.test_fem.fem.parent.daq.start_acquisition = Mock()
-        self.test_fem.fem.initialise_hardware()
-        assert self.test_fem.fem.operation_percentage_complete == 0
-        assert self.test_fem.fem.operation_percentage_steps == 100
-        assert self.test_fem.fem.initialise_progress == 0
+        with patch("hexitec.HexitecFem.IOLoop"):  # as mock_loop:
+
+            self.test_fem.fem.hardware_connected = True
+            self.test_fem.fem.hardware_busy = False
+            self.test_fem.fem.debug_register24 = False
+            self.test_fem.fem.initialise_system = Mock()
+            self.test_fem.fem.first_initialisation = True
+            self.test_fem.fem.parent.daq = Mock(in_progress=False)
+            self.test_fem.fem.parent.daq.start_acquisition = Mock()
+            self.test_fem.fem.initialise_hardware()
+            assert self.test_fem.fem.operation_percentage_complete == 0
+            assert self.test_fem.fem.operation_percentage_steps == 108
+            assert self.test_fem.fem.initialise_progress == 0
+            # TODO: Go beyond checking function call to complete missing 6 lines coverage:
+            # mock_loop.instance().call_later.assert_called_with(0.1,
+            #                                                    self.test_fem.fem.check_daq_and_odin_processes_ready)
 
     def test_initialise_hardware_handles_daq_busy(self):
         """Test function handles cold start with daq already busy."""

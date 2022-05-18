@@ -461,7 +461,8 @@ class HexitecFem():
                     # Start daq, expecting to collect 2 token frames
                     #   Token gesture as file writing disabled
                     self.parent.daq.start_acquisition(2)
-                    self.collect_data()
+                    IOLoop.instance().call_later(0.1, self.check_daq_and_odin_processes_ready)
+                    return
             else:
                 # Not cold initialisation, clear hardware_busy here
                 self.hardware_busy = False
@@ -472,6 +473,16 @@ class HexitecFem():
         except Exception as e:
             self._set_status_error("Uncaught Exception; Camera initialisation failed: %s" % str(e))
             logging.error("%s" % str(e))
+
+    def check_daq_and_odin_processes_ready(self):
+        """Wait until DAQ, Odin adapters ready or in error."""
+        if not self.parent.daq.in_progress:
+            IOLoop.instance().call_later(0.5, self.check_daq_and_odin_processes_ready)
+            print("  daq not in progress..")
+        else:
+            print("\n  daq, odin: ALL PROCESSES READY!\n")
+            self.collect_data()
+            self.initialise_progress = 0
 
     def collect_data(self, msg=None):
         """Acquire data from camera."""
@@ -954,6 +965,7 @@ class HexitecFem():
                     self.acquire_data_completed()
                     return
                 else:
+                    # print(" ! Fem.check_acquire_finished()")
                     self.waited += delay
                     IOLoop.instance().call_later(delay, self.check_acquire_finished)
                     return

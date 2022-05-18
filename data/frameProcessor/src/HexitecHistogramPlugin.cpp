@@ -18,7 +18,7 @@ namespace FrameProcessor
   const std::string HexitecHistogramPlugin::CONFIG_RESET_HISTOS       = "reset_histograms";
   const std::string HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT     = "sensors_layout";
   const std::string HexitecHistogramPlugin::CONFIG_FRAMES_PROCESSED   = "frames_processed";
-  const std::string HexitecHistogramPlugin::CONFIG_HISTOGRAMS_WRITTEN = "histograms written";
+  const std::string HexitecHistogramPlugin::CONFIG_HISTOGRAMS_WRITTEN = "histograms_written";
   const std::string HexitecHistogramPlugin::CONFIG_HISTOGRAM_INDEX    = "histogram_index";
   const std::string HexitecHistogramPlugin::CONFIG_PASS_PROCESSED     = "pass_processed";
   const std::string HexitecHistogramPlugin::CONFIG_PASS_RAW           = "pass_raw";
@@ -295,7 +295,7 @@ namespace FrameProcessor
     return true;
   }
 
-  /** Process an EndOfAcquisitionFrame.
+  /** Process an EndOfAcquisition Frame.
   *
   * Write histograms to disk on end of acquisition
   */
@@ -303,6 +303,7 @@ namespace FrameProcessor
   {
     LOG4CXX_INFO(logger_, "End of acquisition frame received, writing histograms to disk");
     writeHistogramsToDisk();
+    histograms_written_ = frames_processed_ + 1;
     frames_processed_ = 0;
   }
 

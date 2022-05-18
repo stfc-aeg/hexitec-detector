@@ -6,7 +6,6 @@ This class implements an adapter used for Hexitec
 Christian Angelsen, STFC Detector Systems Software Group
 """
 import logging
-import tornado
 import time
 
 from concurrent import futures
@@ -313,12 +312,12 @@ class Hexitec():
     def poll_fems(self):
         """Poll FEM for acquisition and health status."""
         if self.fem.acquisition_completed:
-            histogram_status = self._get_od_status('fp').get('histogram',
-                                                                {'frames_processed': 0})
+            histogram_status = \
+                self._get_od_status('fp').get('histogram', {'frames_processed': 0})
             # Either cold initialisation (first_initialisation is True, therefore only 2 frames
             # expected) or, ordinary collection (self.number_frames frames expected)
             if ((self.first_initialisation and (histogram_status['frames_processed'] == 2))
-                or (histogram_status['frames_processed'] == self.number_frames)):  # noqa: W503
+                    or (histogram_status['frames_processed'] == self.number_frames)):  # noqa: W503
 
                 if self.first_initialisation:
                     self.first_initialisation = False
