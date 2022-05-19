@@ -461,7 +461,7 @@ class HexitecFem():
                     # Start daq, expecting to collect 2 token frames
                     #   Token gesture as file writing disabled
                     self.parent.daq.start_acquisition(2)
-                    IOLoop.instance().call_later(0.1, self.check_daq_and_odin_processes_ready)
+                    IOLoop.instance().call_later(0.1, self.check_all_processes_ready)
                     return
             else:
                 # Not cold initialisation, clear hardware_busy here
@@ -474,7 +474,7 @@ class HexitecFem():
             self._set_status_error("Uncaught Exception; Camera initialisation failed: %s" % str(e))
             logging.error("%s" % str(e))
 
-    def check_daq_and_odin_processes_ready(self):
+    def check_all_processes_ready(self):
         """Wait until DAQ, Odin adapters ready or in error."""
         if self.parent.daq.in_error:
             # Reset variables
@@ -485,7 +485,7 @@ class HexitecFem():
                 self.ignore_busy = False
                 self.first_initialisation_done_update_gui()
         elif not self.parent.daq.in_progress:
-            IOLoop.instance().call_later(0.5, self.check_daq_and_odin_processes_ready)
+            IOLoop.instance().call_later(0.5, self.check_all_processes_ready)
         else:
             self.collect_data()
             self.initialise_progress = 0
@@ -946,7 +946,7 @@ class HexitecFem():
         if self.debug:
             logging.debug("number of Frames := %s" % self.number_frames)
 
-        logging.debug("Initiate Data Capture")
+        logging.info("Initiate Data Capture")
         self.data_stream(self.number_frames)
         self.acquire_start_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
         # How to convert datetime object to float?

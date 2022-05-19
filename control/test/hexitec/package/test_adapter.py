@@ -488,6 +488,20 @@ class TestDetector(unittest.TestCase):
 
         assert self.test_adapter.detector.number_frames == 5
 
+    def test_detector_acquisition_clears_previous_daq_errors(self):
+        """Test function clears any previous daq error."""
+        self.test_adapter.detector.daq.configure_mock(
+            in_progress=False
+        )
+        self.test_adapter.detector.daq.in_error = True
+        self.test_adapter.detector.first_initialisation = False
+        self.test_adapter.detector.fem.bias_refresh_interval = 2
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+
+        with patch("hexitec.adapter.IOLoop"):
+            self.test_adapter.detector.acquisition("data")
+            assert self.test_adapter.detector.daq.in_error is False
+
     def test_detector_acquisition_handles_extended_acquisition(self):
         """Test function handles acquisition spanning >1 collection windows."""
         self.test_adapter.detector.daq.configure_mock(
@@ -549,21 +563,46 @@ class TestDetector(unittest.TestCase):
             mock_loop.instance().call_later.assert_called_with(0.09,
                                                                self.test_adapter.detector.acquisition)
 
+    def test_detector_acquisition_prevents_new_acquisition_whilst_one_in_progress(self):
+        """Test adapter won't start acquisition whilst one already in progress."""
+        self.test_adapter.detector.daq.configure_mock(
+            in_progress=True
+        )
+        self.test_adapter.detector.acquisition("data")
+
+        self.test_adapter.detector.daq.start_acquisition.assert_not_called()
+
     def test_await_daq_ready_waits_for_daq(self):
         """Test adapter's await_daq_ready waits for DAQ to be ready."""
         self.test_adapter.detector.daq.configure_mock(
             file_writing=False
         )
         with patch("hexitec.adapter.IOLoop") as mock_loop:
+            self.test_adapter.detector.daq.in_error = False
             self.test_adapter.detector.await_daq_ready()
             mock_loop.instance().call_later.assert_called_with(0.05,
                                                                self.test_adapter.detector.await_daq_ready)
+
+    def test_await_daq_ready_handles_daq_error_gracefully(self):
+        """Test adapter's await_daq_ready will reset variables, exit function."""
+        self.test_adapter.detector.daq.configure_mock(
+            file_writing=False
+        )
+        self.test_adapter.detector.initial_acquisition = False
+        self.test_adapter.detector.extended_acquisition = True
+        self.test_adapter.detector.acquisition_in_progress = True
+        self.test_adapter.detector.await_daq_ready()
+        assert self.test_adapter.detector.initial_acquisition is True
+        assert self.test_adapter.detector.extended_acquisition is False
+        assert self.test_adapter.detector.acquisition_in_progress is False
 
     def test_await_daq_ready_triggers_fem(self):
         """Test adapter's await_daq_ready triggers FEM(s) when ready."""
         self.test_adapter.detector.daq.configure_mock(
             file_writing=True
         )
+        self.test_adapter.detector.daq.in_error = False
+
         with patch("hexitec.adapter.IOLoop") as mock_loop:
             self.test_adapter.detector.await_daq_ready()
             mock_loop.instance().call_later.assert_called_with(0.08,
@@ -577,15 +616,6 @@ class TestDetector(unittest.TestCase):
                                                                self.test_adapter.detector.check_fem_finished_sending_data)
         init_time = self.test_adapter.detector.fem_start_timestamp
         assert pytest.approx(init_time) == time.time()
-
-    def test_detector_acquisition_prevents_new_acquisition_whilst_one_in_progress(self):
-        """Test adapter won't start acquisition whilst one already in progress."""
-        self.test_adapter.detector.daq.configure_mock(
-            in_progress=True
-        )
-        self.test_adapter.detector.acquisition("data")
-
-        self.test_adapter.detector.daq.start_acquisition.assert_not_called()
 
     def test_check_fem_finished_sending_data_loop_if_hardware_busy(self):
         """Test function calls itself while fem busy sending data."""
@@ -634,6 +664,21 @@ class TestDetector(unittest.TestCase):
             assert self.test_adapter.detector.initial_acquisition is True
             assert self.test_adapter.detector.extended_acquisition is False
             assert self.test_adapter.detector.acquisition_in_progress is False
+
+    def test_reset_state_variables(self):
+        """Test function resets state variables."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+
+        self.test_adapter.detector.initial_acquisition = False
+        self.test_adapter.detector.extended_acquisition = True
+        self.test_adapter.detector.acquisition_in_progress = True
+        self.test_adapter.detector.frames_already_acquired = 10
+        self.test_adapter.detector.reset_state_variables()
+
+        assert self.test_adapter.detector.initial_acquisition is True
+        assert self.test_adapter.detector.extended_acquisition is False
+        assert self.test_adapter.detector.acquisition_in_progress is False
+        assert self.test_adapter.detector.frames_already_acquired == 0
 
     def test_cancel_acquisition(self):
         """Test function can cancel (in software) ongoing acquisition."""

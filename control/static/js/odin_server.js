@@ -43,13 +43,11 @@ document.addEventListener("DOMContentLoaded", function()
 // Apply UI configuration choices
 function applyButtonClicked()
 {
-    console.log("appliedButton");
     apply_ui_values();
 }
 
 function applyButton2Clicked()
 {
-    console.log("applyButton 2");
     apply_ui_values();
 }
 

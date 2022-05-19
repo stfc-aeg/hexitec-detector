@@ -288,7 +288,7 @@ class TestFem(unittest.TestCase):
 
     def test_initialise_hardware_handles_fudge_initialisation(self):
         """Test function handles initialisation from cold."""
-        with patch("hexitec.HexitecFem.IOLoop"):  # as mock_loop:
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
 
             self.test_fem.fem.hardware_connected = True
             self.test_fem.fem.hardware_busy = False
@@ -302,8 +302,35 @@ class TestFem(unittest.TestCase):
             assert self.test_fem.fem.operation_percentage_steps == 108
             assert self.test_fem.fem.initialise_progress == 0
             # TODO: Go beyond checking function call to complete missing 6 lines coverage:
-            # mock_loop.instance().call_later.assert_called_with(0.1,
-            #                                                    self.test_fem.fem.check_daq_and_odin_processes_ready)
+            mock_loop.instance().call_later.assert_called_with(0.1,
+                                                               self.test_fem.fem.check_all_processes_ready)
+
+    def test_check_all_processes_ready_handles_daq_error(self):
+        """Test function handles daq error gracefully."""
+        self.test_fem.fem.first_initialisation = True
+        self.test_fem.fem.parent.daq.in_error = True
+        self.test_fem.fem.check_all_processes_ready()
+
+        assert self.test_fem.fem.operation_percentage_complete == 100
+        assert self.test_fem.fem.initialise_progress == 0
+        assert self.test_fem.fem.hardware_busy is False
+        assert self.test_fem.fem.ignore_busy is False
+
+    def test_check_all_processes_ready_handles_daq_in_progress(self):
+        """Test function handles daq in progress."""
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.parent.daq.in_error = False
+            self.test_fem.fem.parent.daq.in_progress = False
+            self.test_fem.fem.check_all_processes_ready()
+            mock_loop.instance().call_later.assert_called_with(0.5,
+                                                               self.test_fem.fem.check_all_processes_ready)
+
+    def test_check_all_processes_ready_works(self):
+        """Test function collect data in normal operation."""
+        self.test_fem.fem.parent.daq.in_error = False
+        self.test_fem.fem.parent.daq.in_progress = True
+        self.test_fem.fem.check_all_processes_ready()
+        assert self.test_fem.fem.initialise_progress == 0
 
     def test_initialise_hardware_handles_daq_busy(self):
         """Test function handles cold start with daq already busy."""

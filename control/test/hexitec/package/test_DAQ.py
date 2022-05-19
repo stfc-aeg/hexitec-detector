@@ -669,6 +669,15 @@ class TestDAQ(unittest.TestCase):
         configured = self.test_daq.daq.are_processes_configured(status, adapter)
         assert configured is False
 
+    def test_are_processes_configured_works(self):
+        """Test checking node(s) status can be resolved."""
+        status = [{'shared_memory': {'configured': True},
+                   'plugins': {'names': ['hdf', 'live_view', 'reorder', 'summed_image', 'threshold']},
+                   'connected': True}]
+        adapter = "fp"
+        configured = self.test_daq.daq.are_processes_configured(status, adapter)
+        assert configured is True
+
     def test_get_connection_status_fails_uninitialised_adapters(self):
         """Test returns Error if adapter(s) not initialised."""
         self.test_daq.daq.is_initialised = False

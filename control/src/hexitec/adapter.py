@@ -230,7 +230,7 @@ class Hexitec():
         self.collect_and_bias_time = self.fem.bias_refresh_interval + \
             self.fem.bias_voltage_settle_time + self.fem.time_refresh_voltage_held
 
-        # Tracks whether first acquisition of multi-bias window collection
+        # Tracks whether first acquisition of multiple, bias-window(s), collection
         self.initial_acquisition = True
         # Tracks whether 2 frame fudge collection: (during cold initialisation)
         self.first_initialisation = True
@@ -584,10 +584,7 @@ class Hexitec():
         """Wait until DAQ has configured, enabled file writer."""
         if (self.daq.in_error):
             # Reset state variables
-            self.initial_acquisition = True
-            self.extended_acquisition = False
-            self.acquisition_in_progress = False
-            self.frames_already_acquired = 0
+            self.reset_state_variables()
         elif (self.daq.file_writing is False):
             IOLoop.instance().call_later(0.05, self.await_daq_ready)
         else:
@@ -631,11 +628,16 @@ class Hexitec():
         request.body = "{}".format(1)
         self.adapters["fp"].put(command, request)
 
-        # Reset initial acquisition, extended acquisition bools
+        self.reset_state_variables()
+
+    def reset_state_variables(self):
+        """Reset state variables.
+
+        Utilised by await_daq_ready(), check_fem_finished_sending_data()
+        """
         self.initial_acquisition = True
         self.extended_acquisition = False
         self.acquisition_in_progress = False
-        # We've acquired all the frames we need, reset frames_already_acquired
         self.frames_already_acquired = 0
 
     def cancel_acquisition(self, put_data=None):
