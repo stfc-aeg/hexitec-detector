@@ -14,8 +14,9 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: "0"
-    - name: Install boost
+    - name: Install Dependencies
       run: |
+        sudo apt -y update
         sudo apt-get install libboost-program-options-dev libboost-filesystem-dev 
         sudo apt-get install libboost-date-time-dev libboost-dev libboost-system-dev
         sudo apt-get install libboost-test-dev libboost-thread-dev libboost-regex-dev
