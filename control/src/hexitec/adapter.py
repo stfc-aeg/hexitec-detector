@@ -299,7 +299,7 @@ class Hexitec():
         whether DAQ/FEM watchdogs timed out.
         """
         # Poll FEM acquisition & health status
-        self.poll_fems()
+        self.poll_fem()
 
         # Watchdog: Watch FEM in case no data from hardware triggered by fem.acquire_data()
         self.check_fem_watchdog()
@@ -309,15 +309,25 @@ class Hexitec():
 
         IOLoop.instance().call_later(1.0, self.polling)
 
-    def poll_fems(self):
+    def get_frames_processed(self):
+        """."""
+        status = self._get_od_status("fp")
+        frames_processed = 0
+        for index in status:
+            # rank = index.get('hdf', None).get('rank')
+            # frames = index.get('histogram').get('frames_processed')
+            # print("    g_f_p(), rank: {} frames_processed: {}".format(rank, frames))
+            frames_processed = frames_processed + index.get('histogram').get('frames_processed')
+        return frames_processed
+
+    def poll_fem(self):
         """Poll FEM for acquisition and health status."""
         if self.fem.acquisition_completed:
-            histogram_status = \
-                self._get_od_status('fp').get('histogram', {'frames_processed': 0})
+            frames_processed = self.get_frames_processed()
             # Either cold initialisation (first_initialisation is True, therefore only 2 frames
             # expected) or, ordinary collection (self.number_frames frames expected)
-            if ((self.first_initialisation and (histogram_status['frames_processed'] == 2))
-                    or (histogram_status['frames_processed'] == self.number_frames)):  # noqa: W503
+            if ((self.first_initialisation and (frames_processed == 2))
+                    or (frames_processed == self.number_frames)):  # noqa: W503
 
                 if self.first_initialisation:
                     self.first_initialisation = False
@@ -329,7 +339,6 @@ class Hexitec():
         # ..
         fem_health = self.fem.get_health()
         self.fem_health = fem_health
-        # Only note current id if system is in health
         if self.system_health:
             self.status_error = self.fem._get_status_error()
             self.status_message = self.fem._get_status_message()
@@ -378,13 +387,14 @@ class Hexitec():
         self.acquisition_in_progress = False
 
     def _get_od_status(self, adapter):
+        """Get status from adapter."""
         try:
             request = ApiAdapterRequest(None, content_type="application/json")
             response = self.adapters[adapter].get("status", request)
-            response = response.data["value"][0]
+            response = response.data["value"]
         except KeyError:
             logging.warning("%s Adapter Not Found" % adapter)
-            response = {"Error": "Adapter {} not found".format(adapter)}
+            response = [{"Error": "Adapter {} not found".format(adapter)}]
         finally:
             return response
 

@@ -269,12 +269,12 @@ class TestDetector(unittest.TestCase):
                 camera_data_ip_addr=defaults.fem["camera_data_ip"]
             )
 
-    def test_poll_fems(self):
+    def test_poll_fem(self):
         """Test poll fem works."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.fem.acquisition_completed = True
         self.test_adapter.detector.fem.health = True
-        self.test_adapter.detector.poll_fems()
+        self.test_adapter.detector.poll_fem()
         # Ensure shutdown_processing() was called [it changes the following bool]
         assert self.test_adapter.detector.acquisition_in_progress is False
 
@@ -324,7 +324,7 @@ class TestDetector(unittest.TestCase):
             # Doublechecking _get_od_status() fp adapter's get() - redundant?
             mock_request.assert_called_with(config, content_type="application/json")
 
-            assert self.test_adapter.fp_data["value"] == [rc_value]
+            assert self.test_adapter.fp_data["value"] == rc_value
 
     def test_detector_get_od_status_misnamed_adapter(self):
         """Test detector throws exception on misnamed adapter."""
@@ -334,7 +334,7 @@ class TestDetector(unittest.TestCase):
             self.test_adapter.detector.adapters = self.test_adapter.adapters
             adapter = "wRong"
             rc_value = self.test_adapter.detector._get_od_status(adapter)
-            response = {"Error": "Adapter {} not found".format(adapter)}
+            response = [{"Error": "Adapter {} not found".format(adapter)}]
 
             assert response == rc_value
 

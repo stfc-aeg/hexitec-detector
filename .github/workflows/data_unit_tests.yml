@@ -62,6 +62,7 @@ jobs:
       run: |
         echo "INSTALL_PREFIX is ${INSTALL_PREFIX}"
         cd odin-data/build
+        ls -la
         bin/odinDataTest --json=$INSTALL_PREFIX/test_config/hexitec2x2-average.json
         echo "Python version:"
         python --version
@@ -69,6 +70,7 @@ jobs:
         pip install h5py
         pip install nose
         echo "Check processed_frames dataset as expected"
+        ls -la
         python ${INSTALL_PREFIX}/test_config/dataset_check.py --filename 2x2_test_000001.h5 
 
     # - name: Slack Notification

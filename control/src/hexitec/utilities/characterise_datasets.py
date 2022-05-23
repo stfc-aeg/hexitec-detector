@@ -24,7 +24,7 @@ class DatasetChecker:
         dims = self.data.ndim
 
         if dims == 3:
-            print("dataset: '{}' has dimensions: {} overall sum: {}".format(dataset_name, self.data.shape, self.data.sum()))
+            print("dataset: {:20} has dimensions: {} overall sum: {:16}".format(dataset_name, self.data.shape, self.data.sum()))
             (dim_a, dim_b, dim_c) = self.data.shape
             completely_empty = True
             nonzero_count = 0
@@ -41,17 +41,17 @@ class DatasetChecker:
                 if (nonzero_count != dim_a):
                     print(" {} populated frames, {} contained hit(s)!".format(dim_a, nonzero_count))
                 else:
-                    print("All image(s) populated")
+                    print("  all image(s) populated")
         else:
             if dims == 2:
-                print("dataset: '{}' has dimensions: {} overall sum: {}".format(dataset_name, self.data.shape, self.data.sum()))
+                print("dataset: {:20} has dimensions: {} overall sum: {:16}".format(dataset_name, self.data.shape, self.data.sum()))
                 (dim_a, dim_b) = self.data.shape
                 completely_empty = True
 
                 for loop in range(dim_a):
                     summed = self.data[loop].sum()
                     if summed > 0:
-                        print(" image{}: {} > 0.0".format(loop, summed))
+                        print("  image{}: {} > 0.0".format(loop, summed))
                         completely_empty = False
 
                 if completely_empty:
