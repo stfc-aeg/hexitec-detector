@@ -23,7 +23,7 @@ jobs:
         sudo apt-get install libzmq3-dev libpcap-dev liblog4cxx-dev libblosc-dev libhdf5-dev
     - name: Clone Odin-data
       run: |
-        git clone https://github.com/odin-detector/odin-data.git
+        git clone -b 1.7.0 https://github.com/odin-detector/odin-data.git
     - name: Build odin-data
       run: |
         cd odin-data
