@@ -352,12 +352,14 @@ class TestDAQ(unittest.TestCase):
 
             self.test_daq.fp_data["value"][0]["hdf"]["frames_processed"] = 0
             self.test_daq.daq.first_initialisation = False
-            self.test_daq.daq.start_acquisition(10)
+            odin_ready = self.test_daq.daq.prepare_odin()
+            self.test_daq.daq.prepare_daq(10)
 
             assert self.test_daq.daq.frame_start_acquisition == 0
             assert self.test_daq.daq.frame_end_acquisition == 10
             assert self.test_daq.daq.in_progress is True
             assert self.test_daq.daq.file_writing is True
+            assert odin_ready is True
 
             mock_loop.instance().call_later.assert_called_with(1.3,
                                                                self.test_daq.daq.acquisition_check_loop)
@@ -369,6 +371,7 @@ class TestDAQ(unittest.TestCase):
                 "connected": True
             }]
         }
+
         config = {"configuration_complete": True}
         with patch("hexitec.HexitecDAQ.IOLoop"), \
             patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
@@ -376,18 +379,8 @@ class TestDAQ(unittest.TestCase):
                 patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
 
             self.test_daq.daq.first_initialisation = False
-            self.test_daq.daq.start_acquisition(10)
-
-            # Calls to daq._config_odin_data() removed, therefore these two never called:
-            # self.test_daq.fake_fp.put.assert_any_call("config/config_file", mock_request())
-            # self.test_daq.fake_fr.put.assert_called_with("config/config_file", mock_request())
-
-            # TODO: find a better check (start, end should be 0, 10 if configured OK)
-            assert self.test_daq.daq.frame_start_acquisition == 0
-            assert self.test_daq.daq.frame_end_acquisition == 0
-
-            # mock_loop.instance().call_later.assert_called_with(1.3,
-            #                                                    self.test_daq.daq.acquisition_check_loop)
+            return_value = self.test_daq.daq.prepare_odin()
+            assert return_value == False
 
     def test_start_acquisition_unconfigured_fp_fails(self):
         """Test function works."""
@@ -403,11 +396,9 @@ class TestDAQ(unittest.TestCase):
                 patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
 
             self.test_daq.daq.first_initialisation = False
-            self.test_daq.daq.start_acquisition(10)
+            odin_ready = self.test_daq.daq.prepare_odin()
+            assert odin_ready is False
 
-            # TODO: find a better check (start, end should be 0, 10 if configured OK)
-            assert self.test_daq.daq.frame_start_acquisition == 0
-            assert self.test_daq.daq.frame_end_acquisition == 0
             # Check that HexitecDAQ.acquisition_check_loop() not called:
             mock_loop.instance().call_later.assert_not_called()
 
@@ -421,10 +412,11 @@ class TestDAQ(unittest.TestCase):
             patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
                 patch.dict(self.test_daq.fr_data, new_fr_data, clear=True):
 
-            self.test_daq.daq.start_acquisition(10)
+            odin_ready = self.test_daq.daq.prepare_odin()
 
             assert self.test_daq.daq.file_writing is False
             assert self.test_daq.daq.in_progress is False
+            assert odin_ready is False
 
             mock_loop.instance().add_callback.assert_not_called()
 
@@ -438,10 +430,11 @@ class TestDAQ(unittest.TestCase):
             patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
                 patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
 
-            self.test_daq.daq.start_acquisition(10)
+            odin_ready = self.test_daq.daq.prepare_odin()
 
             assert self.test_daq.daq.file_writing is False
             assert self.test_daq.daq.in_progress is False
+            assert odin_ready is False
 
             mock_loop.instance().add_callback.assert_not_called()
 

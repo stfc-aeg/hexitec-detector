@@ -296,7 +296,8 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.initialise_system = Mock()
             self.test_fem.fem.first_initialisation = True
             self.test_fem.fem.parent.daq = Mock(in_progress=False)
-            self.test_fem.fem.parent.daq.start_acquisition = Mock()
+            self.test_fem.fem.parent.daq.prepare_odin = Mock()
+            self.test_fem.fem.parent.daq.prepare_daq = Mock()
             self.test_fem.fem.initialise_hardware()
             assert self.test_fem.fem.operation_percentage_complete == 0
             assert self.test_fem.fem.operation_percentage_steps == 108

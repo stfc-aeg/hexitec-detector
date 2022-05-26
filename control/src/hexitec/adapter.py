@@ -572,7 +572,7 @@ class Hexitec():
         # TODO: To be removed once firmware updated? FP may be slow to process frame_number reset
         time.sleep(0.5)
 
-        # Reset histograms, call DAQ's start_acquisition() once per acquisition
+        # Reset histograms, call DAQ's prepare_odin(), prepare_daq() once per acquisition
         if self.initial_acquisition:
             # Issue reset to histogram
             command = "config/histogram/reset_histograms"
@@ -581,7 +581,10 @@ class Hexitec():
             self.adapters["fp"].put(command, request)
 
             self.daq_target = time.time()
-            self.daq.start_acquisition(self.number_frames)
+            # TODO: how handle if prepare_odin() unsuccessful?
+            rc = self.daq.prepare_odin()
+            print("\n\tadp.acquisition(), rc: {}\n".format(rc))
+            self.daq.prepare_daq(self.number_frames)
             self.initial_acquisition = False
             # Acquisition (whether single/multi-run) starts here
             self.acquisition_in_progress = True

@@ -530,7 +530,8 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.adapters = self.test_adapter.adapters
 
         self.test_adapter.detector.acquisition("data")
-        self.test_adapter.detector.daq.start_acquisition.assert_called_with(10)
+        self.test_adapter.detector.daq.prepare_odin()
+        self.test_adapter.detector.daq.prepare_daq.assert_called_with(10)
 
     def test_detector_acquisition_respects_bias_blocking(self):
         """Test function won't acquire data while bias blocking."""
@@ -569,8 +570,7 @@ class TestDetector(unittest.TestCase):
             in_progress=True
         )
         self.test_adapter.detector.acquisition("data")
-
-        self.test_adapter.detector.daq.start_acquisition.assert_not_called()
+        self.test_adapter.detector.daq.prepare_daq.assert_not_called()
 
     def test_await_daq_ready_waits_for_daq(self):
         """Test adapter's await_daq_ready waits for DAQ to be ready."""

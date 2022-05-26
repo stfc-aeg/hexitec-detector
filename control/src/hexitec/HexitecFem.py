@@ -460,7 +460,8 @@ class HexitecFem():
                 else:
                     # Start daq, expecting to collect 2 token frames
                     #   Token gesture as file writing disabled
-                    self.parent.daq.start_acquisition(2)
+                    if self.parent.daq.prepare_odin():
+                        self.parent.daq.prepare_daq(2)
                     IOLoop.instance().call_later(0.1, self.check_all_processes_ready)
                     return
             else:

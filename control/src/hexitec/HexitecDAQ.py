@@ -126,6 +126,7 @@ class HexitecDAQ():
         self.number_frames = 10
         self.number_nodes = 1
         self.in_error = False
+        self.daq_ready = False
 
         # Diagnostics
         self.daq_start_time = 0
@@ -154,6 +155,7 @@ class HexitecDAQ():
                 "file_dir": (lambda: self.file_dir, self.set_data_dir)
             },
             "in_progress": (lambda: self.in_progress, None),
+            "daq_ready":(lambda: self.daq_ready, None),
             "config": {
                 "addition": {
                     "enable": (lambda: self.addition_enable, self._set_addition_enable),
@@ -221,22 +223,21 @@ class HexitecDAQ():
         self.get_config_file("fr")
         self.is_initialised = True
 
-    def start_acquisition(self, number_frames):
+    def prepare_odin(self):
         """Ensure the odin data FP and FR are configured, and turn on File Writing."""
         logging.debug("Setting up Acquisition")
-
         fr_status = self.get_adapter_status("fr")
         fp_status = self.get_adapter_status("fp")
         if self.are_processes_connected(fr_status) is False:
             self.parent.fem._set_status_error("Frame Receiver(s) not connected!")
             logging.error("Cannot start Acquisition: Frame Receiver(s) not found")
             self.in_error = True
-            return
+            return False
         elif self.are_processes_configured(fr_status, "fr") is False:
             self.parent.fem._set_status_error("Frame Receiver(s) not configured!")
             logging.error("Frame Receiver(s) not configured!")
             self.in_error = True
-            return
+            return False
         else:
             logging.debug("Frame Receiver(s) connected and configured")
 
@@ -244,15 +245,19 @@ class HexitecDAQ():
             self.parent.fem._set_status_error("Frame Processor(s) not connected!")
             logging.error("Cannot Start Acquisition: Frame Processor(s) not found")
             self.in_error = True
-            return
+            return False
         elif self.are_processes_configured(fp_status, "fp") is False:
             self.parent.fem._set_status_error("Frame Processor(s) not configured!")
             logging.error("Frame Processor(s) not configured!")
             self.in_error = True
-            return
+            return False
         else:
             logging.debug("Frame Processor(s) connected and configured")
+        self.daq_ready = True
+        return True
 
+    def prepare_daq(self, number_frames):
+        """Turn on File Writing."""
         # Count hdf's frames_processed across node(s)
         self.frame_start_acquisition = self.get_total_frames_processed('hdf')
         self.frame_end_acquisition = number_frames
@@ -271,7 +276,8 @@ class HexitecDAQ():
             self.set_file_writing(True)
         # Diagnostics:
         self.daq_start_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
-
+        # About to receive fem data, daq therefore now busy
+        self.daq_ready = False
         # Wait while fem finish sending data
         IOLoop.instance().call_later(1.3, self.acquisition_check_loop)
 
@@ -504,7 +510,7 @@ class HexitecDAQ():
             # Called from ParameterTree init, build list of node(s)
             status = self.get_connection_status(adapter)
         else:
-            # Called by start_acquisition()
+            # Called by prepare_daq()
             status_list = []
             for index in status:
                 status_list.append(index.get('connected'))
