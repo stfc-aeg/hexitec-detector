@@ -266,8 +266,7 @@ class Hexitec():
                 "duration": (lambda: self.duration, self.set_duration),
                 "duration_enable": (lambda: self.duration_enable, self.set_duration_enable),
                 "start_acq": (None, self.acquisition),
-                "stop_acq": (None, self.cancel_acquisition),
-                "in_progress": (lambda: self.acquisition_in_progress, None)
+                "stop_acq": (None, self.cancel_acquisition)
             },
             "status": {
                 "system_health": (lambda: self.system_health, None),
@@ -331,7 +330,7 @@ class Hexitec():
 
                 if self.first_initialisation:
                     self.first_initialisation = False
-                    self.number_frames = self.backed_up_number_frames
+                    self.number_frames = self.backed_up_number_frames  # TODO: redundant
 
                 # Reset FEM's acquisiton status ahead of future acquisitions
                 self.fem.acquisition_completed = False
@@ -463,8 +462,8 @@ class Hexitec():
             self.fem.acquire_timestamp = time.time()
             self.acquisition_in_progress = True
         self.fem.initialise_hardware(msg)
-        # Wait for fudge frames to come through
-        IOLoop.instance().call_later(0.5, self.check_fem_finished_sending_data)
+        # Wait for fem initialisation/fudge frames
+        IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
 
     def disconnect_hardware(self, msg):
         """Disconnect FEM's hardware connection."""
@@ -572,7 +571,7 @@ class Hexitec():
         # TODO: To be removed once firmware updated? FP may be slow to process frame_number reset
         time.sleep(0.5)
 
-        # Reset histograms, call DAQ's prepare_odin(), prepare_daq() once per acquisition
+           # Reset histograms, call DAQ's prepare_daq() once per acquisition
         if self.initial_acquisition:
             # Issue reset to histogram
             command = "config/histogram/reset_histograms"
@@ -581,9 +580,6 @@ class Hexitec():
             self.adapters["fp"].put(command, request)
 
             self.daq_target = time.time()
-            # TODO: how handle if prepare_odin() unsuccessful?
-            rc = self.daq.prepare_odin()
-            print("\n\tadp.acquisition(), rc: {}\n".format(rc))
             self.daq.prepare_daq(self.number_frames)
             self.initial_acquisition = False
             # Acquisition (whether single/multi-run) starts here
@@ -605,7 +601,7 @@ class Hexitec():
             IOLoop.instance().call_later(0.08, self.trigger_fem_acquisition)
 
     def trigger_fem_acquisition(self):
-        """Trigger data acquisition in FEM(s)."""
+        """Trigger data acquisition in fem."""
         # TODO: Temp hack: Prevent frames being 1 (continuous readout) by setting to 2 if it is
         self.number_frames_to_request = 2 if (self.number_frames_to_request == 1) else \
             self.number_frames_to_request
@@ -615,17 +611,19 @@ class Hexitec():
         self.frames_already_acquired += self.number_frames_to_request
         # Note when FEM told to begin collecting data
         self.fem_start_timestamp = time.time()
-        IOLoop.instance().call_later(self.total_delay, self.check_fem_finished_sending_data)
+        IOLoop.instance().call_later(self.total_delay, self.monitor_fem_progress)
 
-    def check_fem_finished_sending_data(self):
-        """Check whether FEM stopped transmitting data.
+    def monitor_fem_progress(self):
+        """Check fem hardware progress.
 
-        Wait until FEM has finished sending data, then either finish
-        acquisition (single run) or request more frames (multi run)
+        Busy either:
+        -Initialising from cold (2 fudge frames)
+        -Normal initialisation
+        -Waiting for data collection to complete, either single/multi run
         """
         if (self.fem.hardware_busy):
             # Still sending data
-            IOLoop.instance().call_later(0.5, self.check_fem_finished_sending_data)
+            IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
             return
         else:
             # Current collection completed; Do we have all the requested frames?
@@ -641,12 +639,17 @@ class Hexitec():
         request.body = "{}".format(1)
         self.adapters["fp"].put(command, request)
 
+        rc = self.daq.prepare_odin()
+        print("\n\tadp.monitor_fem_progress(), rc: {}\n".format(rc))
+        if not rc:
+            self.status_error = "Prepare Odin failed!"
+
         self.reset_state_variables()
 
     def reset_state_variables(self):
         """Reset state variables.
 
-        Utilised by await_daq_ready(), check_fem_finished_sending_data()
+        Utilised by await_daq_ready(), monitor_fem_progress()
         """
         self.initial_acquisition = True
         self.extended_acquisition = False

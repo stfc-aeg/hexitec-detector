@@ -460,8 +460,9 @@ class HexitecFem():
                 else:
                     # Start daq, expecting to collect 2 token frames
                     #   Token gesture as file writing disabled
-                    if self.parent.daq.prepare_odin():
-                        self.parent.daq.prepare_daq(2)
+                    # TODO: Ignoring rc of prepare_odin(), 2x6 system won't require fudge initialisation
+                    self.parent.daq.prepare_odin()
+                    self.parent.daq.prepare_daq(2)
                     IOLoop.instance().call_later(0.1, self.check_all_processes_ready)
                     return
             else:
@@ -1133,6 +1134,8 @@ class HexitecFem():
         """Reset related variables."""
         self.first_initialisation = False
         self.number_frames = self.number_frames_backed_up
+        # TODO: Part of cold initialisation (to be removed)
+        self.parent.number_frames = self.number_frames
 
     def set_up_state_machine(self):
         """Set up state machine, optionally with values from hexitec ini file."""

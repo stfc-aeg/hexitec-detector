@@ -253,7 +253,9 @@ class HexitecDAQ():
             return False
         else:
             logging.debug("Frame Processor(s) connected and configured")
-        self.daq_ready = True
+        # DAQ ready only if no data collection in progress
+        if not self.in_progress:
+            self.daq_ready = True
         return True
 
     def prepare_daq(self, number_frames):
@@ -300,6 +302,7 @@ class HexitecDAQ():
             #   without reopening (non-existent) file to add meta data
             self.first_initialisation = False
             self.in_progress = False
+            self.daq_ready = True
             # Delay calling stop_acquisition, otherwise software may beat fem to it
             IOLoop.instance().call_later(2.0, self.stop_acquisition)
             return
@@ -319,6 +322,7 @@ class HexitecDAQ():
                 if self.shutdown_processing:
                     self.shutdown_processing = False
                     self.in_progress = False
+                    self.daq_ready = True
                     # Don't turn off FileWriterPlugin; Wait for EndOfAcquisition to flush out histograms
                     self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
                     self.file_writing = False
@@ -359,6 +363,7 @@ class HexitecDAQ():
                 self.parent.fem._set_status_error("No file to add meta: %s" %
                                                   self.hdf_file_location)
                 self.in_progress = False
+                self.daq_ready = True
 
     def prepare_hdf_file(self):
         """Re-open HDF5 file, prepare meta data."""
@@ -376,6 +381,7 @@ class HexitecDAQ():
                 return
             logging.error("Failed to open '%s' with error: %s" % (self.hdf_file_location, e))
             self.in_progress = False
+            self.daq_ready = True
             self.parent.fem._set_status_error("Error reopening HDF file: %s" % e)
             return
 
@@ -398,6 +404,7 @@ class HexitecDAQ():
 
         hdf_file.close()
         self.in_progress = False
+        self.daq_ready = True
 
     def build_metadata_attributes(self, param_tree_dict, metadata_group):
         """Build metadata attributes from parameter tree."""

@@ -244,7 +244,6 @@ function poll_fem()
         const hardware_connected = fem["hardware_connected"];
         const hardware_busy = fem["hardware_busy"];
         
-        const adapter_in_progress = result["detector"]["acquisition"]["in_progress"];   // Debug info
         const daq_in_progress = result["detector"]["daq"]["in_progress"];
 
         // Enable buttons when connection completed
@@ -290,8 +289,8 @@ function poll_fem()
         document.querySelector('#frame_rate').innerHTML = frame_rate.toFixed(2);
 
         /// UNCOMMENT ME
-        // console.log(hardware_busy + " " + adapter_in_progress + " " + daq_in_progress + 
-        //             " <= hw_busy, apd_in_prog, daq_in_prog " + "   %_compl: "
+        // console.log(hardware_busy + " " + daq_in_progress + 
+        //             " <= hw_busy, daq_in_prog " + "   %_compl: "
         //             + fem["operation_percentage_complete"] 
         //             + " reads: " + num_reads + " msg: " + adapter_status["status_message"]);
 

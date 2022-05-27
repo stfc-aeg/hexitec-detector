@@ -427,7 +427,7 @@ class TestDetector(unittest.TestCase):
             assert self.test_adapter.detector.backed_up_number_frames == frames
             assert self.test_adapter.detector.number_frames == 2
             mock_loop.instance().call_later.assert_called_with(0.5,
-                                                               self.test_adapter.detector.check_fem_finished_sending_data)
+                                                               self.test_adapter.detector.monitor_fem_progress)
 
     def test_disconnect_hardware(self):
         """Test function disconnects hardware and stops bias clock."""
@@ -613,21 +613,21 @@ class TestDetector(unittest.TestCase):
         with patch("hexitec.adapter.IOLoop") as mock_loop:
             self.test_adapter.detector.trigger_fem_acquisition()
             mock_loop.instance().call_later.assert_called_with(0.0,
-                                                               self.test_adapter.detector.check_fem_finished_sending_data)
+                                                               self.test_adapter.detector.monitor_fem_progress)
         init_time = self.test_adapter.detector.fem_start_timestamp
         assert pytest.approx(init_time) == time.time()
 
-    def test_check_fem_finished_sending_data_loop_if_hardware_busy(self):
+    def test_monitor_fem_progress_loop_if_hardware_busy(self):
         """Test function calls itself while fem busy sending data."""
         self.test_adapter.detector.fem.hardware_busy = True
 
         with patch("hexitec.adapter.IOLoop") as mock_loop:
 
-            self.test_adapter.detector.check_fem_finished_sending_data()
+            self.test_adapter.detector.monitor_fem_progress()
             mock_loop.instance().call_later.assert_called_with(0.5,
-                                                               self.test_adapter.detector.check_fem_finished_sending_data)
+                                                               self.test_adapter.detector.monitor_fem_progress)
 
-    def test_check_fem_finished_sending_data_acquire_outstanding_frames(self):
+    def test_monitor_fem_progress_acquire_outstanding_frames(self):
         """Test function calls acquire to collect all required frames.
 
         Where collection spans single bias window, need to revisit acquisition()
@@ -640,10 +640,10 @@ class TestDetector(unittest.TestCase):
 
         with patch("hexitec.adapter.IOLoop") as mock_loop:
 
-            self.test_adapter.detector.check_fem_finished_sending_data()
+            self.test_adapter.detector.monitor_fem_progress()
             mock_loop.instance().add_callback.assert_called_with(self.test_adapter.detector.acquisition)
 
-    def test_check_fem_finished_sending_data_resets_variables_on_completion(self):
+    def test_monitor_fem_progress_resets_variables_on_completion(self):
         """Test function resets variables when all data has been sent.
 
         Testing scenario: user requested 10 frames on cold start, therefore
@@ -659,11 +659,23 @@ class TestDetector(unittest.TestCase):
 
         with patch("hexitec.adapter.IOLoop"):
 
-            self.test_adapter.detector.check_fem_finished_sending_data()
+            self.test_adapter.detector.monitor_fem_progress()
             assert self.test_adapter.detector.number_frames == frames
             assert self.test_adapter.detector.initial_acquisition is True
             assert self.test_adapter.detector.extended_acquisition is False
             assert self.test_adapter.detector.acquisition_in_progress is False
+
+    def test_monitor_fem_progress_flags_odin_error(self):
+        """Test function flags daq.prepare_odin() returns False."""
+        self.test_adapter.detector.fem.hardware_busy = False
+        self.test_adapter.detector.extended_acquisition = False
+        self.test_adapter.detector.daq.prepare_odin = Mock(return_value=False)
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+
+        with patch("hexitec.adapter.IOLoop"):
+
+            self.test_adapter.detector.monitor_fem_progress()
+            assert self.test_adapter.detector.status_error == "Prepare Odin failed!"
 
     def test_reset_state_variables(self):
         """Test function resets state variables."""
