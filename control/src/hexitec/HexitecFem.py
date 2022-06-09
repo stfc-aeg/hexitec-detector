@@ -458,11 +458,14 @@ class HexitecFem():
                 if self.parent.daq.in_progress:
                     logging.warning("Cannot Start Acquistion: Already in progress")
                 else:
+                    # TODO: Note 2x6 system won't require fudge initialisation
+                    # TODO: BUT, calls to prepare_odin(), prepare_daq() will still be needed
                     # Start daq, expecting to collect 2 token frames
                     #   Token gesture as file writing disabled
-                    # TODO: Ignoring rc of prepare_odin(), 2x6 system won't require fudge initialisation
-                    self.parent.daq.prepare_odin()
-                    self.parent.daq.prepare_daq(2)
+                    # Only call prepare_daq if prepare_odin OK,
+                    # otherwise prepare_daq raise uncaught exception
+                    if self.parent.daq.prepare_odin():
+                        self.parent.daq.prepare_daq(2)
                     IOLoop.instance().call_later(0.1, self.check_all_processes_ready)
                     return
             else:
