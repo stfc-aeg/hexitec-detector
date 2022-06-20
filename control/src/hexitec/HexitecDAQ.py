@@ -355,20 +355,13 @@ class HexitecDAQ():
         if self.check_hdf_write_statuses():
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
-            self.hdf_file_location = self.file_dir + self.file_name + '_000001.h5'
-            # Check file exists before reopening to add metadata
-            if os.path.exists(self.hdf_file_location):
-                self.prepare_hdf_file()
-            else:
-                self.parent.fem._set_status_error("No file to add meta: %s" %
-                                                  self.hdf_file_location)
-                self.in_progress = False
-                self.daq_ready = True
+            self.hdf_file_location = self.file_dir + self.file_name + '.h5'
+            self.prepare_hdf_file()
 
     def prepare_hdf_file(self):
         """Re-open HDF5 file, prepare meta data."""
         try:
-            hdf_file = h5py.File(self.hdf_file_location, 'r+')
+            hdf_file = h5py.File(self.hdf_file_location, 'w')
             self.parent.fem._set_status_message("Reopening file to add meta data..")
             self.hdf_retry = 0
         except IOError as e:
@@ -398,7 +391,7 @@ class HexitecDAQ():
         self.write_metadata(hdf_metadata_group, hdf_tree_dict)
 
         if (error_code == 0):
-            self.parent.fem._set_status_message("Meta data added")
+            self.parent.fem._set_status_message("Meta data added to {}".format(self.hdf_file_location))
         else:
             self.parent.fem._set_status_error("Meta data writer unable to access file(s)!")
 
@@ -410,10 +403,10 @@ class HexitecDAQ():
         """Build metadata attributes from parameter tree."""
         for param, val in param_tree_dict.items():
             if val is None:
-                # Replace None or TypeError will be thrown as:
-                #   ("Object dtype dtype('O') has no native HDF5 equivalent")
-                val = "N/A"
-            metadata_group.attrs[param] = val
+                pass    # Do not add Odin control controls
+                # Avoid None or TypeError will be thrown as:
+            else:
+                metadata_group.attrs[param] = val
         return metadata_group
 
     def write_metadata(self, metadata_group, param_tree_dict):

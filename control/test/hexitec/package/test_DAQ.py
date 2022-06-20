@@ -589,7 +589,8 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.fp_data["value"][0]["hdf"]["writing"] = False
         self.test_daq.daq.in_progress = True
         self.test_daq.daq.hdf_closing_loop()
-        assert self.test_daq.daq.in_progress is False
+        full_filename = self.test_daq.file_dir + self.test_daq.file_name + '.h5'
+        assert self.test_daq.daq.hdf_file_location == full_filename
 
     def test_hdf_closing_loop_handles_file_closed_but_cannot_reopen(self):
         """Test the function handles processed file shut but cannot be reopened.
@@ -621,7 +622,7 @@ class TestDAQ(unittest.TestCase):
 
             assert self.test_daq.daq.hdf_retry == 0
             assert self.test_daq.daq.in_progress is False
-            assert self.test_daq.daq.parent.fem.status_message == "Meta data added"
+            assert self.test_daq.daq.parent.fem.status_message == "Meta data added to "
 
     def test_prepare_hdf_file_fails_inaccessible_config_files(self):
         """Test that function flags if a config file is inaccessible to write_metadata."""
