@@ -451,7 +451,7 @@ class GenerateConfigFiles():
         return store_temp_name, execute_temp_name, store_string[1:-1], execute_config[1:-1]
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
                   'sensors_layout': '2x2', 'receiver':
                   {'config_file': '', 'configured': False, 'connected': False},

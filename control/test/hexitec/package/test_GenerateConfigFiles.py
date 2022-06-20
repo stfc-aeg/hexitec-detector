@@ -1,4 +1,5 @@
-"""Test Cases for GenerateConfigFiles class.
+"""
+Test Cases for GenerateConfigFiles class.
 
 Christian Angelsen, STFC Detector Systems Software Group
 """
@@ -8,18 +9,12 @@ from hexitec.GenerateConfigFiles import GenerateConfigFiles
 import unittest
 import pytest
 
-# if sys.version_info[0] == 3:  # pragma: no cover
-#     from unittest.mock import Mock, MagicMock, patch
-# else:                         # pragma: no cover
-#     from mock import Mock, MagicMock, patch
-
 
 class ObjectTestFixture(object):
     """Test fixture class."""
 
-    def __init__(self):
+    def __init__(self, selected_os="CentOS", live_view_selected=True):
         """Initialise object."""
-
         param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
                       'sensors_layout': '1x1', 'receiver':
                       {'config_file': '', 'configured': False, 'connected': False},
@@ -50,7 +45,7 @@ class ObjectTestFixture(object):
 
         self.adapter = GenerateConfigFiles(param_tree, number_histograms, compression_type="blosc",
                                            master_dataset=master_dataset, extra_datasets=extra_datasets,
-                                           selected_os="CentOS")
+                                           selected_os=selected_os, live_view_selected=live_view_selected)
 
 
 class TestObject(unittest.TestCase):
@@ -145,21 +140,15 @@ class TestObject(unittest.TestCase):
 
     def test_generate_config_files(self):
         """Test function works ok."""
-
         self.test_detector_adapter.adapter.generate_config_files()
 
-    # Doesn't work (somehow)
-    # def test_generate_config_files_supports_ubuntu(self):
-    #     """Test function works ok."""
-    #     self.test_detector_adapter.adapter.elected_os = "ubuntu"
-    #     self.test_detector_adapter.adapter.generate_config_files()
 
 class TestObject2(unittest.TestCase):
-    """Unit test for single, bad config test."""
+    """Unit tests for bad config, Ubuntu, live view disabled tests."""
 
     def setUp(self):
         """Set up test fixture for each unit test."""
-        self.test_detector_badadapter = ObjectTestFixture()
+        self.test_detector_badadapter = ObjectTestFixture("Ubuntu", live_view_selected=False)
 
     def test_generate_config_files_fails_missing_enable_key(self):
         """Test function fail on missing enable key."""
@@ -170,3 +159,7 @@ class TestObject2(unittest.TestCase):
             self.test_detector_badadapter.adapter.generate_config_files()
         assert exc_info.type is Exception
         assert exc_info.value.args[0] == "Plugin %s missing 'enable' setting!" % 'next_frame'
+
+    def testing_ubuntu_config(self):
+        """Test function."""
+        self.test_detector_badadapter.adapter.generate_config_files()

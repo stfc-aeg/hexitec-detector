@@ -43,13 +43,11 @@ document.addEventListener("DOMContentLoaded", function()
 // Apply UI configuration choices
 function applyButtonClicked()
 {
-    console.log("appliedButton");
     apply_ui_values();
 }
 
 function applyButton2Clicked()
 {
-    console.log("applyButton 2");
     apply_ui_values();
 }
 
@@ -239,14 +237,13 @@ function poll_fem()
 
     hexitec_endpoint.get_url(hexitec_url + 'detector')
     .then(result => {
-        const fems = result["detector"]["fems"]
+        const fem = result["detector"]["fem"]
         const adapter_status = result["detector"]["status"] // adapter.py's status
 
-        const percentage_complete = fems["fem_0"]["operation_percentage_complete"];
-        const hardware_connected = fems["fem_0"]["hardware_connected"];
-        const hardware_busy = fems["fem_0"]["hardware_busy"];
+        const percentage_complete = fem["operation_percentage_complete"];
+        const hardware_connected = fem["hardware_connected"];
+        const hardware_busy = fem["hardware_busy"];
         
-        const adapter_in_progress = result["detector"]["acquisition"]["in_progress"];   // Debug info
         const daq_in_progress = result["detector"]["daq"]["in_progress"];
 
         // Enable buttons when connection completed
@@ -286,15 +283,15 @@ function poll_fem()
             document.querySelector('#hexitec-config-text').disabled = false;        
         }
 
-        var fem_diagnostics = fems["fem_0"]["diagnostics"];
+        var fem_diagnostics = fem["diagnostics"];
         var num_reads = fem_diagnostics["successful_reads"];
-        var frame_rate = fems["fem_0"]["frame_rate"];
+        var frame_rate = fem["frame_rate"];
         document.querySelector('#frame_rate').innerHTML = frame_rate.toFixed(2);
 
         /// UNCOMMENT ME
-        // console.log(hardware_busy + " " + adapter_in_progress + " " + daq_in_progress + 
-        //             " <= hw_busy, apd_in_prog, daq_in_prog " + "   %_compl: "
-        //             + fems["fem_0"]["operation_percentage_complete"] 
+        // console.log(hardware_busy + " " + daq_in_progress + 
+        //             " <= hw_busy, daq_in_prog " + "   %_compl: "
+        //             + fem["operation_percentage_complete"] 
         //             + " reads: " + num_reads + " msg: " + adapter_status["status_message"]);
 
         var acquire_start = fem_diagnostics["acquire_start_time"];
@@ -322,31 +319,26 @@ function poll_fem()
         var status = "";
         if (status_error.length > 0)
         {
-            status = "Fem: " + adapter_status["fem_id"] + " caused: '" + status_error + "'";
+            status = "Error: '" + status_error + "'";
         }
         document.querySelector('#odin-control-error').innerHTML = status;
 
-        for (fem in fems)
-        {
-            // Hardcoded reading out all sensor data from one Fem:
-            document.querySelector('#vsr1_humidity').innerHTML = fems[fem]["vsr1_sensors"]["humidity"].toFixed(2);
-            document.querySelector('#vsr1_ambient').innerHTML = fems[fem]["vsr1_sensors"]["ambient"].toFixed(2);
-            document.querySelector('#vsr1_asic1').innerHTML = fems[fem]["vsr1_sensors"]["asic1"].toFixed(2);
-            document.querySelector('#vsr1_asic2').innerHTML = fems[fem]["vsr1_sensors"]["asic2"].toFixed(2);
-            document.querySelector('#vsr1_adc').innerHTML = fems[fem]["vsr1_sensors"]["adc"].toFixed(2);
-            document.querySelector('#vsr1_hv').innerHTML = fems[fem]["vsr1_sensors"]["hv"].toFixed(3);
-            document.querySelector('#vsr1_sync').innerHTML = fems[fem]["vsr1_sync"];
+        document.querySelector('#vsr1_humidity').innerHTML = fem["vsr1_sensors"]["humidity"].toFixed(2);
+        document.querySelector('#vsr1_ambient').innerHTML = fem["vsr1_sensors"]["ambient"].toFixed(2);
+        document.querySelector('#vsr1_asic1').innerHTML = fem["vsr1_sensors"]["asic1"].toFixed(2);
+        document.querySelector('#vsr1_asic2').innerHTML = fem["vsr1_sensors"]["asic2"].toFixed(2);
+        document.querySelector('#vsr1_adc').innerHTML = fem["vsr1_sensors"]["adc"].toFixed(2);
+        document.querySelector('#vsr1_hv').innerHTML = fem["vsr1_sensors"]["hv"].toFixed(3);
+        document.querySelector('#vsr1_sync').innerHTML = fem["vsr1_sync"];
 
-            document.querySelector('#vsr2_humidity').innerHTML = fems[fem]["vsr2_sensors"]["humidity"].toFixed(2);
-            document.querySelector('#vsr2_ambient').innerHTML = fems[fem]["vsr2_sensors"]["ambient"].toFixed(2);
-            document.querySelector('#vsr2_asic1').innerHTML = fems[fem]["vsr2_sensors"]["asic1"].toFixed(2);
-            document.querySelector('#vsr2_asic2').innerHTML = fems[fem]["vsr2_sensors"]["asic2"].toFixed(2);
-            document.querySelector('#vsr2_adc').innerHTML = fems[fem]["vsr2_sensors"]["adc"].toFixed(2);
-            document.querySelector('#vsr2_hv').innerHTML = fems[fem]["vsr2_sensors"]["hv"].toFixed(3);
-            document.querySelector('#vsr2_sync').innerHTML = fems[fem]["vsr2_sync"];
+        document.querySelector('#vsr2_humidity').innerHTML = fem["vsr2_sensors"]["humidity"].toFixed(2);
+        document.querySelector('#vsr2_ambient').innerHTML = fem["vsr2_sensors"]["ambient"].toFixed(2);
+        document.querySelector('#vsr2_asic1').innerHTML = fem["vsr2_sensors"]["asic1"].toFixed(2);
+        document.querySelector('#vsr2_asic2').innerHTML = fem["vsr2_sensors"]["asic2"].toFixed(2);
+        document.querySelector('#vsr2_adc').innerHTML = fem["vsr2_sensors"]["adc"].toFixed(2);
+        document.querySelector('#vsr2_hv').innerHTML = fem["vsr2_sensors"]["hv"].toFixed(3);
+        document.querySelector('#vsr2_sync').innerHTML = fem["vsr2_sync"];
 
-            // console.log("fem id: '" + fems[fem]["id"] + "' health: '" + fems[fem]["health"] + "' stat msg: '" + fems[fem]["status_message"] + "'.");
-        }
         /// To be implemented: system_health - true=fem OK, false=fem bad
 
         // Traffic "light" green/red to indicate system good/bad
@@ -468,7 +460,7 @@ function commit_configuration()
 function apply_ui_values()
 {
     if (cold_initialisation) {
-        console.log("apply_UI_values() - cold_initialisation");
+        // console.log("apply_UI_values() - cold_initialisation");
         cold_initialisation = false;
     }
     // Load all UI settings into HexitecDAQ's ParameterTree
@@ -492,7 +484,7 @@ function apply_ui_values()
         threshold_mode_changed();
         threshold_value_changed();
         var threshold_mode = document.querySelector('#threshold-mode-text').value;
-        console.log("apply_UI_values)), comparison: " + threshold_mode.localeCompare("filename"));
+        // console.log("apply_UI_values)), comparison: " + threshold_mode.localeCompare("filename"));
         // Update threshold filename if threshold filename mode set
         //  (0: strings equal [filename mode], 1: not [none/value mode])
         if (threshold_mode.localeCompare("filename") === 0)
@@ -519,7 +511,7 @@ function threshold_filename_changed()
     // Update threshold filename if threshold filename mode set
     //  (0: strings equal [filename mode], 1: not [none/value mode])
     var threshold_mode = document.querySelector('#threshold-mode-text').value;
-    console.log("threshold_filename_changed, comparison: " + threshold_mode.localeCompare("filename"));
+    // console.log("threshold_filename_changed, comparison: " + threshold_mode.localeCompare("filename"));
     if (threshold_mode.localeCompare("filename") === 0)
     {
         var threshold_filename = document.querySelector('#threshold-filename-text').value;
@@ -884,7 +876,7 @@ function image_frequency_changed()
 function hexitec_config_changed()
 {
     var hexitec_config = document.querySelector('#hexitec-config-text').value;
-    hexitec_endpoint.put({"hexitec_config": hexitec_config}, 'detector/fems/fem_0/')
+    hexitec_endpoint.put({"hexitec_config": hexitec_config}, 'detector/fem/')
     .then(result => {
         document.querySelector('#hexitec-config-warning').innerHTML = "";
     })

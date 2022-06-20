@@ -81,7 +81,6 @@ namespace FrameProcessor
    * plugin supports the following configuration parameters:
    * 
    * - sensors_layout_str_    <=> sensors_layout
-   * - max_frames_received_   <=> max_frames_received
    * - threshold_mode_        <=> threshold_mode
    * - threshold_value_       <=> threshold_value
    * - threshold_filename_    <=> threshold_file

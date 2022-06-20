@@ -20,7 +20,7 @@ import sys
 import os
 
 
-class HexitecUdpProducerError(Exception):
+class HexitecMultiProducerError(Exception):
     """Customised exception class."""
 
     def __init__(self, msg):
@@ -32,7 +32,7 @@ class HexitecUdpProducerError(Exception):
         return repr(self.msg)
 
 
-class HexitecUdpProducerDefaults(object):
+class HexitecMultiProducerDefaults(object):
     """Holds default values for frame producer parameters."""
 
     def __init__(self):
@@ -45,7 +45,7 @@ class HexitecUdpProducerDefaults(object):
         self.filename = 'hexitec_triangle_100G.pcapng'
 
 
-class HexitecUdpProducer(object):
+class HexitecMultiProducer(object):
     """Produce and transmit specified UDP frames."""
 
     def __init__(self, host, port, frames, rows,
@@ -216,7 +216,7 @@ class HexitecUdpProducer(object):
 
 if __name__ == '__main__':
 
-    desc = "HexitecUdpProducer - generate UDP data stream from pcap file"
+    desc = "HexitecMultiProducer - generate UDP data stream from pcap file"
     parser = argparse.ArgumentParser(description=desc)
 
     parser.add_argument('--host', type=str, default='127.0.0.1',
@@ -241,5 +241,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    producer = HexitecUdpProducer(**vars(args))
+    producer = HexitecMultiProducer(**vars(args))
     producer.run()

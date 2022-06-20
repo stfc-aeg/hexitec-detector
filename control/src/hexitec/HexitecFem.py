@@ -75,7 +75,7 @@ class HexitecFem():
     # Define timestamp format
     DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
 
-    def __init__(self, parent, fem_id=1,
+    def __init__(self, parent,
                  server_ctrl_ip_addr='10.0.2.2', camera_ctrl_ip_addr='10.0.2.1',
                  server_data_ip_addr='10.0.4.2', camera_data_ip_addr='10.0.4.1'):
         """
@@ -83,7 +83,6 @@ class HexitecFem():
 
         This constructor initializes the HexitecFem object.
         :param parent: Reference to adapter object
-        :param fem_id: HexitecFem object identifier
         :param server_ctrl_ip_addr: PC interface for control path
         :param camera_ctrl_ip_addr: FEM interface for control path
         :param server_data_ip_addr: PC interface for data path
@@ -91,7 +90,6 @@ class HexitecFem():
         """
         # Give access to parent class (Hexitec) - for potential future use
         self.parent = parent
-        self.id = int(fem_id)
         self.x10g_rdma = None
 
         # 10G RDMA IP addresses
@@ -197,7 +195,6 @@ class HexitecFem():
                 "acquire_stop_time": (lambda: self.acquire_stop_time, None),
                 "acquire_time": (lambda: self.acquire_time, None),
             },
-            "id": (lambda: self.id, None),
             "debug": (self.get_debug, self.set_debug),
             "frame_rate": (lambda: self.frame_rate, None),
             "health": (lambda: self.health, None),
@@ -400,10 +397,6 @@ class HexitecFem():
         """Get FEM health status."""
         return self.health
 
-    def get_id(self):
-        """Get FEM id."""
-        return self.id
-
     def _start_polling(self):  # pragma: no cover
         IOLoop.instance().add_callback(self.poll_sensors)
 
@@ -465,11 +458,16 @@ class HexitecFem():
                 if self.parent.daq.in_progress:
                     logging.warning("Cannot Start Acquistion: Already in progress")
                 else:
+                    # TODO: Note 2x6 system won't require fudge initialisation
+                    # TODO: BUT, calls to prepare_odin(), prepare_daq() will still be needed
                     # Start daq, expecting to collect 2 token frames
                     #   Token gesture as file writing disabled
-                    self.parent.daq.start_acquisition(2)
-                    for fem in self.parent.fems:
-                        fem.collect_data()
+                    # Only call prepare_daq if prepare_odin OK,
+                    # otherwise prepare_daq raise uncaught exception
+                    if self.parent.daq.prepare_odin():
+                        self.parent.daq.prepare_daq(2)
+                    IOLoop.instance().call_later(0.1, self.check_all_processes_ready)
+                    return
             else:
                 # Not cold initialisation, clear hardware_busy here
                 self.hardware_busy = False
@@ -480,6 +478,22 @@ class HexitecFem():
         except Exception as e:
             self._set_status_error("Uncaught Exception; Camera initialisation failed: %s" % str(e))
             logging.error("%s" % str(e))
+
+    def check_all_processes_ready(self):
+        """Wait until DAQ, Odin adapters ready or in error."""
+        if self.parent.daq.in_error:
+            # Reset variables
+            self.operation_percentage_complete = 100
+            self.initialise_progress = 0
+            self.hardware_busy = False
+            if self.first_initialisation:
+                self.ignore_busy = False
+                self.first_initialisation_done_update_gui()
+        elif not self.parent.daq.in_progress:
+            IOLoop.instance().call_later(0.5, self.check_all_processes_ready)
+        else:
+            self.collect_data()
+            self.initialise_progress = 0
 
     def collect_data(self, msg=None):
         """Acquire data from camera."""
@@ -937,7 +951,7 @@ class HexitecFem():
         if self.debug:
             logging.debug("number of Frames := %s" % self.number_frames)
 
-        logging.debug("Initiate Data Capture")
+        logging.info("Initiate Data Capture")
         self.data_stream(self.number_frames)
         self.acquire_start_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
         # How to convert datetime object to float?
@@ -962,6 +976,7 @@ class HexitecFem():
                     self.acquire_data_completed()
                     return
                 else:
+                    # print(" ! Fem.check_acquire_finished()")
                     self.waited += delay
                     IOLoop.instance().call_later(delay, self.check_acquire_finished)
                     return
@@ -1122,6 +1137,8 @@ class HexitecFem():
         """Reset related variables."""
         self.first_initialisation = False
         self.number_frames = self.number_frames_backed_up
+        # TODO: Part of cold initialisation (to be removed)
+        self.parent.number_frames = self.number_frames
 
     def set_up_state_machine(self):
         """Set up state machine, optionally with values from hexitec ini file."""

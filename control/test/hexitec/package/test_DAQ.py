@@ -1,4 +1,5 @@
-"""Test Cases for the Hexitec DAQ in hexitec.HexitecDAQ.
+"""
+Test Cases for the Hexitec DAQ in hexitec.HexitecDAQ.
 
 Christian Angelsen, STFC Detector Systems Software Group
 """
@@ -26,9 +27,8 @@ class DAQTestFixture(object):
     def __init__(self):
         """Initialise object."""
         self.options = {
-            "fem_0":
+            "fem":
                 """
-                id = 0,
                 server_ctrl_ip = 127.0.0.1,
                 camera_ctrl_ip = 127.0.0.1,
                 server_data_ip = 127.0.0.1,
@@ -124,21 +124,20 @@ class DAQTestFixture(object):
         self.parameter_dict = \
             {'odin_version': '0.3.1+102.g01c51d7', 'tornado_version': '4.5.3',
              'server_uptime': 48.4, 'detector':
-             {'fems':
-              {'fem_0':
-               {'diagnostics':
-                {'successful_reads': 116, 'acquire_start_time': '', 'acquire_stop_time': '',
-                 'acquire_time': 1.303241}, 'id': 0, 'debug': False, 'frame_rate': 7154.0,
-                'health': True, 'status_message': '', 'status_error': '',
-                'initialise_progress': 0,
-                'operation_percentage_complete': 100, 'number_frames': 10, 'duration': 1,
-                'hexitec_config': '~/path/to/config_file',
-                'read_sensors': None, 'hardware_connected': True, 'hardware_busy': False,
-                'firmware_date': 'N/A', 'firmware_time': 'N/A',
-                'vsr1_sensors':
-                {'ambient': 0, 'humidity': 0, 'asic1': 0, 'asic2': 0, 'adc': 0, 'hv': 0},
-                'vsr2_sensors':
-                {'ambient': 0, 'humidity': 0, 'asic1': 0, 'asic2': 0, 'adc': 0, 'hv': 0}}},
+             {'fem':
+              {'diagnostics':
+               {'successful_reads': 116, 'acquire_start_time': '', 'acquire_stop_time': '',
+                'acquire_time': 1.303241}, 'debug': False, 'frame_rate': 7154.0,
+               'health': True, 'status_message': '', 'status_error': '',
+               'initialise_progress': 0,
+               'operation_percentage_complete': 100, 'number_frames': 10, 'duration': 1,
+               'hexitec_config': '~/path/to/config_file',
+               'read_sensors': None, 'hardware_connected': True, 'hardware_busy': False,
+               'firmware_date': 'N/A', 'firmware_time': 'N/A',
+               'vsr1_sensors':
+               {'ambient': 0, 'humidity': 0, 'asic1': 0, 'asic2': 0, 'adc': 0, 'hv': 0},
+               'vsr2_sensors':
+               {'ambient': 0, 'humidity': 0, 'asic1': 0, 'asic2': 0, 'adc': 0, 'hv': 0}},
               'daq':
               {'diagnostics':
                {'daq_start_time': '', 'daq_stop_time': '', 'fem_not_busy': ''},
@@ -166,7 +165,7 @@ class DAQTestFixture(object):
               {'number_frames': 10, 'duration': 1, 'duration_enable': False, 'start_acq': None,
                'stop_acq': None, 'in_progress': False},
               'status':
-              {'fem_id': 0, 'system_health': True, 'status_message': '', 'status_error': ''}}}
+              {'system_health': True, 'status_message': '', 'status_error': ''}}}
 
         self.daq.initialize(self.adapters)
 
@@ -195,9 +194,13 @@ class TestDAQ(unittest.TestCase):
 
         assert self.test_daq.daq.adapters == self.test_daq.adapters
         self.test_daq.fake_fi.get.assert_called()
-        assert self.test_daq.daq.config_files['fr'] == "hexitec_fr.config"
+        assert self.test_daq.daq.config_files['fr'] == ["hexitec_fr.config"]
         assert self.test_daq.daq.config_dir == self.test_daq.fi_data["config_dir"]
         assert self.test_daq.daq.is_initialised is True
+
+    def test_initialize_missing_adapter(self):
+        """Test initialisation (part 3)."""
+        self.test_daq.daq.initialize({})
 
     def test_get_od_status_fr(self):
         """Test status of fr adapter."""
@@ -232,12 +235,12 @@ class TestDAQ(unittest.TestCase):
 
     def test_is_fr_connected_with_status(self):
         """Test function works."""
-        connected = self.test_daq.daq._is_od_connected(self.test_daq.fr_data['value'][0])
+        connected = self.test_daq.daq._is_od_connected(self.test_daq.fr_data['value'])
         assert connected
 
     def test_is_fp_connected_with_status(self):
         """Test function works."""
-        connected = self.test_daq.daq._is_od_connected(self.test_daq.fp_data['value'][0])
+        connected = self.test_daq.daq._is_od_connected(self.test_daq.fp_data['value'])
         assert connected
 
     def test_is_fr_connected_without_status(self):
@@ -252,12 +255,12 @@ class TestDAQ(unittest.TestCase):
 
     def test_is_fr_configured_with_status(self):
         """Test function works."""
-        configured = self.test_daq.daq._is_fr_configured(self.test_daq.fr_data['value'][0])
+        configured = self.test_daq.daq._is_fr_configured(self.test_daq.fr_data['value'])
         assert configured
 
     def test_is_fp_configured_with_status(self):
         """Test function works."""
-        configured = self.test_daq.daq._is_fp_configured(self.test_daq.fp_data['value'][0])
+        configured = self.test_daq.daq._is_fp_configured(self.test_daq.fp_data['value'])
         assert configured
 
     def test_is_fr_configured_without_status(self):
@@ -273,37 +276,38 @@ class TestDAQ(unittest.TestCase):
     def test_get_config(self):
         """Test getting config file."""
         fp_file = self.test_daq.daq.get_config_file("fp")
-        assert fp_file == "hexitec_fp.config"
+        assert fp_file == ["hexitec_fp.config"]
 
-    def test_get_config_file_not_found(self):
-        """Test function works."""
-        new_dict = {
-            "config_dir": "fake/config_dir",
-            "fr_config_files": [
-                "first.config",
-                "not.config"
-            ],
-            "fp_config_files": [
-                "not.config",
-                "hexitec_fp.config"
-            ]
-        }
-        with patch.dict(self.test_daq.fi_data, new_dict, clear=True):
-            fr_file = self.test_daq.daq.get_config_file("fr")
+    # TODO: fix this later/Remove get_config_file() altogether  ?
+    # def test_get_config_file_not_found(self):
+    #     """Test function works."""
+    #     new_dict = {
+    #         "config_dir": "fake/config_dir",
+    #         "fr_config_files": [
+    #             "first.config",
+    #             "not.config"
+    #         ],
+    #         "fp_config_files": [
+    #             "not.config",
+    #             "hexitec_fp.config"
+    #         ]
+    #     }
+    #     with patch.dict(self.test_daq.fi_data, new_dict, clear=True):
+    #         fr_file = self.test_daq.daq.get_config_file("fr")
 
-        assert fr_file == "first.config"
+    #     assert fr_file == "first.config"
 
     def test_get_config_bad_key(self):
         """Test get on non-existent key."""
         value = self.test_daq.daq.get_config_file("bad_key")
-        assert value == ""
+        assert value == []
 
     def test_get_config_pre_init(self):
         """Test function works."""
         with patch("hexitec.HexitecDAQ.ParameterTree"):
             daq = HexitecDAQ(self.test_daq.file_dir, self.test_daq.file_name)
         value = daq.get_config_file("fr")
-        assert value == ""
+        assert value == []
 
     def test_set_data_dir(self):
         """Test set data directory."""
@@ -329,17 +333,18 @@ class TestDAQ(unittest.TestCase):
         ])
         assert self.test_daq.daq.file_writing is True
 
-    def test_config_odin_data(self):
-        """Test configure Odin data works."""
-        with patch("hexitec.HexitecDAQ.ApiAdapterRequest") as mock_request:
-            self.test_daq.daq.config_dir = "fake/dir"
-            self.test_daq.daq.config_files["fp"] = "fp_hexitec.config"
+    # TODO: NO LONGER USED??
+    # def test_config_odin_data(self):
+    #     """Test configure Odin data works."""
+    #     with patch("hexitec.HexitecDAQ.ApiAdapterRequest") as mock_request:
+    #         self.test_daq.daq.config_dir = "fake/dir"
+    #         self.test_daq.daq.config_files["fp"] = "fp_hexitec.config"
 
-            self.test_daq.daq._config_odin_data("fp")
-            config = "/{}/{}".format(self.test_daq.daq.config_dir, self.test_daq.daq.config_files["fp"])
+    #         self.test_daq.daq._config_odin_data("fp")
+    #         config = "/{}/{}".format(self.test_daq.daq.config_dir, self.test_daq.daq.config_files["fp"])
 
-            mock_request.assert_called_with(config, content_type="application/json")
-            self.test_daq.fake_fp.put.assert_called_with("config/config_file", mock_request())
+    #         mock_request.assert_called_with(config, content_type="application/json")
+    #         self.test_daq.fake_fp.put.assert_called_with("config/config_file", mock_request())
 
     def test_start_acquisition(self):
         """Test function works."""
@@ -347,12 +352,14 @@ class TestDAQ(unittest.TestCase):
 
             self.test_daq.fp_data["value"][0]["hdf"]["frames_processed"] = 0
             self.test_daq.daq.first_initialisation = False
-            self.test_daq.daq.start_acquisition(10)
+            odin_ready = self.test_daq.daq.prepare_odin()
+            self.test_daq.daq.prepare_daq(10)
 
             assert self.test_daq.daq.frame_start_acquisition == 0
             assert self.test_daq.daq.frame_end_acquisition == 10
             assert self.test_daq.daq.in_progress is True
             assert self.test_daq.daq.file_writing is True
+            assert odin_ready is True
 
             mock_loop.instance().call_later.assert_called_with(1.3,
                                                                self.test_daq.daq.acquisition_check_loop)
@@ -364,25 +371,36 @@ class TestDAQ(unittest.TestCase):
                 "connected": True
             }]
         }
-        config = {"configuration_complete": False}
-        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop, \
-            patch("hexitec.HexitecDAQ.ApiAdapterRequest") as mock_request, \
+
+        config = {"configuration_complete": True}
+        with patch("hexitec.HexitecDAQ.IOLoop"), \
+            patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
                 patch.dict(self.test_daq.fr_data['value'][0]['status'], config, clear=True), \
                 patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
 
             self.test_daq.daq.first_initialisation = False
-            self.test_daq.daq.start_acquisition(10)
+            return_value = self.test_daq.daq.prepare_odin()
+            assert return_value == False
 
-            self.test_daq.fake_fp.put.assert_any_call("config/config_file", mock_request())
-            self.test_daq.fake_fr.put.assert_called_with("config/config_file", mock_request())
+    def test_start_acquisition_unconfigured_fp_fails(self):
+        """Test function works."""
+        new_fp_data = {
+            "value": [{
+                "connected": True
+            }]
+        }
+        config = {"configuration_complete": False}
+        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop, \
+            patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
+                patch.dict(self.test_daq.fr_data['value'][0]['status'], config, clear=True), \
+                patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
 
-            assert self.test_daq.daq.frame_start_acquisition == 0
-            assert self.test_daq.daq.frame_end_acquisition == 10
-            assert self.test_daq.daq.in_progress is True
-            assert self.test_daq.daq.file_writing is True
+            self.test_daq.daq.first_initialisation = False
+            odin_ready = self.test_daq.daq.prepare_odin()
+            assert odin_ready is False
 
-            mock_loop.instance().call_later.assert_called_with(1.3,
-                                                               self.test_daq.daq.acquisition_check_loop)
+            # Check that HexitecDAQ.acquisition_check_loop() not called:
+            mock_loop.instance().call_later.assert_not_called()
 
     def test_start_acquisition_fr_disconnected(self):
         """Test acquisition won't start with fr disconnected."""
@@ -394,10 +412,11 @@ class TestDAQ(unittest.TestCase):
             patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
                 patch.dict(self.test_daq.fr_data, new_fr_data, clear=True):
 
-            self.test_daq.daq.start_acquisition(10)
+            odin_ready = self.test_daq.daq.prepare_odin()
 
             assert self.test_daq.daq.file_writing is False
             assert self.test_daq.daq.in_progress is False
+            assert odin_ready is False
 
             mock_loop.instance().add_callback.assert_not_called()
 
@@ -411,10 +430,11 @@ class TestDAQ(unittest.TestCase):
             patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
                 patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
 
-            self.test_daq.daq.start_acquisition(10)
+            odin_ready = self.test_daq.daq.prepare_odin()
 
             assert self.test_daq.daq.file_writing is False
             assert self.test_daq.daq.in_progress is False
+            assert odin_ready is False
 
             mock_loop.instance().add_callback.assert_not_called()
 
@@ -422,7 +442,7 @@ class TestDAQ(unittest.TestCase):
         """Test that function calls itself if hardware busy."""
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
 
-            self.test_daq.adapter.hexitec.fems[0].hardware_busy = True
+            self.test_daq.adapter.hexitec.fem.hardware_busy = True
 
             self.test_daq.daq.acquisition_check_loop()
             mock_loop.instance().call_later.assert_called_with(.5,
@@ -463,10 +483,11 @@ class TestDAQ(unittest.TestCase):
         """Test processing check loop will stop acquisition if data ceases mid-flow."""
         with patch("hexitec.HexitecDAQ.IOLoop"):
             self.test_daq.daq.first_initialisation = False
-            self.test_daq.daq.parent.fems[0].hardware_busy = True
+            self.test_daq.daq.parent.fem.hardware_busy = True
             self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.shutdown_processing = True
             self.test_daq.daq.frames_processed = 0
+            self.test_daq.daq.plugin = "hdf"
             self.test_daq.daq.processing_check_loop()
             assert self.test_daq.daq.file_writing is False
             assert self.test_daq.daq.shutdown_processing is False
@@ -477,6 +498,7 @@ class TestDAQ(unittest.TestCase):
             self.test_daq.daq.first_initialisation = False
             self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.frames_processed = 5
+            self.test_daq.daq.plugin = "hdf"
             self.test_daq.daq.processing_check_loop()
             assert pytest.approx(self.test_daq.daq.processed_timestamp) == time.time()
 
@@ -504,7 +526,7 @@ class TestDAQ(unittest.TestCase):
                     mock_isfile.return_value = True
                     rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict)
 
-            key = 'detector/fems/fem_0/hexitec_config'
+            key = 'detector/fem/hexitec_config'
             assert key in self.test_daq.daq.config_ds
             assert rc_value == 0
 
@@ -567,7 +589,8 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.fp_data["value"][0]["hdf"]["writing"] = False
         self.test_daq.daq.in_progress = True
         self.test_daq.daq.hdf_closing_loop()
-        assert self.test_daq.daq.in_progress is False
+        full_filename = self.test_daq.file_dir + self.test_daq.file_name + '.h5'
+        assert self.test_daq.daq.hdf_file_location == full_filename
 
     def test_hdf_closing_loop_handles_file_closed_but_cannot_reopen(self):
         """Test the function handles processed file shut but cannot be reopened.
@@ -583,12 +606,12 @@ class TestDAQ(unittest.TestCase):
                 mock_h5py.side_effect = IOError(Mock(status=404))
                 mock_exists.return_value = "True"
 
-                self.test_daq.adapter.hexitec.fems[0].status_error
+                self.test_daq.adapter.hexitec.fem.status_error
                 self.test_daq.daq.hdf_retry = 6
                 self.test_daq.daq.hdf_closing_loop()
                 error = "Error reopening HDF file:"
                 assert self.test_daq.daq.in_progress is False
-                assert self.test_daq.adapter.hexitec.fems[0].status_error[:25] == error
+                assert self.test_daq.adapter.hexitec.fem.status_error[:25] == error
 
     def test_prepare_hdf_file(self):
         """Test that function prepares processed file."""
@@ -599,7 +622,7 @@ class TestDAQ(unittest.TestCase):
 
             assert self.test_daq.daq.hdf_retry == 0
             assert self.test_daq.daq.in_progress is False
-            assert self.test_daq.daq.parent.fems[0].status_message == "Meta data added"
+            assert self.test_daq.daq.parent.fem.status_message == "Meta data added to "
 
     def test_prepare_hdf_file_fails_inaccessible_config_files(self):
         """Test that function flags if a config file is inaccessible to write_metadata."""
@@ -611,7 +634,7 @@ class TestDAQ(unittest.TestCase):
             assert self.test_daq.daq.hdf_retry == 0
             assert self.test_daq.daq.in_progress is False
             error = "Meta data writer unable to access file(s)!"
-            assert self.test_daq.daq.parent.fems[0].status_error == error
+            assert self.test_daq.daq.parent.fem.status_error == error
 
     def test_prepare_hdf_file_fails_ioerror(self):
         """Test function handles repeated I/O error."""
@@ -632,6 +655,42 @@ class TestDAQ(unittest.TestCase):
 
         d = self.test_daq.daq._flatten_dict(test_dict)
         assert d == flattened_dict
+
+    def test_are_processes_configured_fails_unknown_adapter(self):
+        """Test returns False for unknown adapter."""
+        status = None
+        adapter = "rubbish"
+        configured = self.test_daq.daq.are_processes_configured(status, adapter)
+        assert configured is False
+
+    def test_are_processes_configured_works(self):
+        """Test checking node(s) status can be resolved."""
+        status = [{'shared_memory': {'configured': True},
+                   'plugins': {'names': ['hdf', 'live_view', 'reorder', 'summed_image', 'threshold']},
+                   'connected': True}]
+        adapter = "fp"
+        configured = self.test_daq.daq.are_processes_configured(status, adapter)
+        assert configured is True
+
+    def test_get_connection_status_fails_uninitialised_adapters(self):
+        """Test returns Error if adapter(s) not initialised."""
+        self.test_daq.daq.is_initialised = False
+        return_value = self.test_daq.daq.get_connection_status("fp")
+        assert return_value == [{"Error": "Adapter not initialised with references yet"}]
+
+    def test_get_connection_status_fails_unknown_adapters(self):
+        """Test unknown adapter returns Error."""
+        adapter = "unknown"
+        return_value = self.test_daq.daq.get_connection_status(adapter)
+        assert return_value == [{"Error": "Adapter {} not found".format(adapter)}]
+
+    def test_get_adapter_status_fails_initialised(self):
+        """Test uninitialised adapter returns Error."""
+        adapter = "fp"
+        self.test_daq.daq.is_initialised = False
+        return_value = self.test_daq.daq.get_adapter_status(adapter)
+        error = [{"Error": "Adapter {} not initialised with references yet".format(adapter)}]
+        assert return_value == error
 
     def test_set_number_frames(self):
         """Test function sets number of frames."""
@@ -872,11 +931,13 @@ class TestDAQ(unittest.TestCase):
         assert self.test_daq.daq._get_sensors_layout() == sensors_layout
 
     def test_get_compression_type(self):
+        """Test function gets compression type."""
         compression_type = "blosc"
         self.test_daq.daq._set_compression_type(compression_type)
         assert self.test_daq.daq._get_compression_type() == compression_type
 
     def test_set_compression_type(self):
+        """Test function sets compression type."""
         COMPRESSIONOPTIONS = self.test_daq.daq.COMPRESSIONOPTIONS
         error = "Invalid compression type; Valid options: {}".format(COMPRESSIONOPTIONS)
         with pytest.raises(ParameterTreeError) as exc_info:

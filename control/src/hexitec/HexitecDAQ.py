@@ -125,6 +125,8 @@ class HexitecDAQ():
         self.pixels = self.rows * self.columns
         self.number_frames = 10
         self.number_nodes = 1
+        self.in_error = False
+        self.daq_ready = False
 
         # Diagnostics
         self.daq_start_time = 0
@@ -153,6 +155,7 @@ class HexitecDAQ():
                 "file_dir": (lambda: self.file_dir, self.set_data_dir)
             },
             "in_progress": (lambda: self.in_progress, None),
+            "daq_ready":(lambda: self.daq_ready, None),
             "config": {
                 "addition": {
                     "enable": (lambda: self.addition_enable, self._set_addition_enable),
@@ -210,42 +213,55 @@ class HexitecDAQ():
 
     def initialize(self, adapters):
         """Initialise adapters and related parameter tree entries."""
-        self.adapters["fp"] = adapters['fp']
-        self.adapters["fr"] = adapters['fr']
-        self.adapters["file_interface"] = adapters['file_interface']
+        try:
+            self.adapters["fp"] = adapters['fp']
+            self.adapters["fr"] = adapters['fr']
+            self.adapters["file_interface"] = adapters['file_interface']
+        except KeyError as e:
+            logging.error("The odin_server config file missing %s entry" % e)
         self.get_config_file("fp")
         self.get_config_file("fr")
         self.is_initialised = True
 
-    def start_acquisition(self, number_frames):
+    def prepare_odin(self):
         """Ensure the odin data FP and FR are configured, and turn on File Writing."""
         logging.debug("Setting up Acquisition")
-
-        fr_status = self.get_od_status("fr")
-        fp_status = self.get_od_status("fp")
-        if self._is_od_connected(fr_status) is False:
-            logging.error("Cannot start Acquisition: Frame Receiver not found")
-            return
-        elif self._is_fr_configured(fr_status) is False:
-            self._config_odin_data("fr")
+        fr_status = self.get_adapter_status("fr")
+        fp_status = self.get_adapter_status("fp")
+        if self.are_processes_connected(fr_status) is False:
+            self.parent.fem._set_status_error("Frame Receiver(s) not connected!")
+            logging.error("Cannot start Acquisition: Frame Receiver(s) not found")
+            self.in_error = True
+            return False
+        elif self.are_processes_configured(fr_status, "fr") is False:
+            self.parent.fem._set_status_error("Frame Receiver(s) not configured!")
+            logging.error("Frame Receiver(s) not configured!")
+            self.in_error = True
+            return False
         else:
-            logging.debug("Frame Receiver Already connected/configured")
+            logging.debug("Frame Receiver(s) connected and configured")
 
-        if self._is_od_connected(fp_status) is False:
-            logging.error("Cannot Start Acquisition: Frame Processor not found")
-            return
-        elif self._is_fp_configured(fp_status) is False:
-            self._config_odin_data("fp")
+        if self.are_processes_connected(fp_status) is False:
+            self.parent.fem._set_status_error("Frame Processor(s) not connected!")
+            logging.error("Cannot Start Acquisition: Frame Processor(s) not found")
+            self.in_error = True
+            return False
+        elif self.are_processes_configured(fp_status, "fp") is False:
+            self.parent.fem._set_status_error("Frame Processor(s) not configured!")
+            logging.error("Frame Processor(s) not configured!")
+            self.in_error = True
+            return False
         else:
-            logging.debug("Frame Processor Already connected/configured")
+            logging.debug("Frame Processor(s) connected and configured")
+        # DAQ ready only if no data collection in progress
+        if not self.in_progress:
+            self.daq_ready = True
+        return True
 
-        hdf_status = fp_status.get('hdf', None)
-        if hdf_status is None:
-            fp_status = self.get_od_status('fp')
-            # Get current frame written number. If not found, assume FR
-            # just started up and it will be 0
-            hdf_status = fp_status.get('hdf', {"frames_processed": 0})
-        self.frame_start_acquisition = hdf_status['frames_processed']
+    def prepare_daq(self, number_frames):
+        """Turn on File Writing."""
+        # Count hdf's frames_processed across node(s)
+        self.frame_start_acquisition = self.get_total_frames_processed('hdf')
         self.frame_end_acquisition = number_frames
         logging.info("FRAME START ACQ: %d END ACQ: %d",
                      self.frame_start_acquisition,
@@ -253,22 +269,23 @@ class HexitecDAQ():
         self.in_progress = True
         # Reset timeout watchdog
         self.processed_timestamp = time.time()
-        logging.debug("Starting File Writer")
         if self.first_initialisation:
             # First initialisation captures data without writing to disk
             #   therefore don't enable file writing here
             pass  # pragma: no cover
         else:
+            logging.debug("Starting File Writer")
             self.set_file_writing(True)
         # Diagnostics:
         self.daq_start_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
-
-        # Wait while fem(s) finish sending data
+        # About to receive fem data, daq therefore now busy
+        self.daq_ready = False
+        # Wait while fem finish sending data
         IOLoop.instance().call_later(1.3, self.acquisition_check_loop)
 
     def acquisition_check_loop(self):
         """Wait for acquisition to complete without blocking current thread."""
-        bBusy = self.parent.fems[0].hardware_busy
+        bBusy = self.parent.fem.hardware_busy
         if bBusy:
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
@@ -285,13 +302,13 @@ class HexitecDAQ():
             #   without reopening (non-existent) file to add meta data
             self.first_initialisation = False
             self.in_progress = False
+            self.daq_ready = True
             # Delay calling stop_acquisition, otherwise software may beat fem to it
             IOLoop.instance().call_later(2.0, self.stop_acquisition)
             return
         # Not fudge initialisation; Check HDF/histogram processing progress
-        processing_status = self.get_od_status('fp').get(self.plugin, {'frames_processed': 0})
-
-        if processing_status['frames_processed'] == self.frame_end_acquisition:
+        total_frames_processed = self.get_total_frames_processed(self.plugin)
+        if total_frames_processed == self.frame_end_acquisition:
             delay = 1.0
             IOLoop.instance().call_later(delay, self.stop_acquisition)
             logging.debug("Acquisition Complete")
@@ -300,11 +317,12 @@ class HexitecDAQ():
             IOLoop.instance().call_later(delay, self.hdf_closing_loop)
         else:
             # Not all frames processed yet; Check data still in flow
-            if processing_status['frames_processed'] == self.frames_processed:
+            if total_frames_processed == self.frames_processed:
                 # No frames processed in at least 0.5 sec, did processing time out?
                 if self.shutdown_processing:
                     self.shutdown_processing = False
                     self.in_progress = False
+                    self.daq_ready = True
                     # Don't turn off FileWriterPlugin; Wait for EndOfAcquisition to flush out histograms
                     self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
                     self.file_writing = False
@@ -312,7 +330,7 @@ class HexitecDAQ():
             else:
                 # Data still bein' processed
                 self.processed_timestamp = time.time()
-                self.frames_processed = processing_status['frames_processed']
+                self.frames_processed = total_frames_processed
             # Wait 0.5 seconds and check again
             IOLoop.instance().call_later(.5, self.processing_check_loop)
 
@@ -321,27 +339,30 @@ class HexitecDAQ():
         self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
         self.set_file_writing(False)
 
+    def check_hdf_write_statuses(self):
+        """Check hdf node(s) statuses, return True until all finished writing."""
+        fp_statuses = self.get_adapter_status("fp")
+        hdf_status = False
+        for status in fp_statuses:
+            writing = status.get('hdf').get("writing")
+            # print("Rank: ", status.get('hdf', None).get('rank'), " hdf writing: ", writing)
+            if writing:
+                hdf_status = True
+        return hdf_status
+
     def hdf_closing_loop(self):
         """Wait for processing to complete but don't block, before prep to write meta data."""
-        hdf_status = self.get_od_status('fp').get('hdf', {"writing": True})
-        if hdf_status['writing']:
+        if self.check_hdf_write_statuses():
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
-            self.hdf_file_location = self.file_dir + self.file_name + '_000001.h5'
-            # Check file exists before reopening to add metadata
-            if os.path.exists(self.hdf_file_location):
-                self.prepare_hdf_file()
-            else:
-                self.parent.fems[0]._set_status_error("No file to add meta: %s" %
-                                                      self.hdf_file_location)
-                self.in_progress = False
+            self.hdf_file_location = self.file_dir + self.file_name + '.h5'
+            self.prepare_hdf_file()
 
     def prepare_hdf_file(self):
         """Re-open HDF5 file, prepare meta data."""
         try:
-            hdf_file = h5py.File(self.hdf_file_location, 'r+')
-            for fem in self.parent.fems:
-                fem._set_status_message("Reopening file to add meta data..")
+            hdf_file = h5py.File(self.hdf_file_location, 'w')
+            self.parent.fem._set_status_message("Reopening file to add meta data..")
             self.hdf_retry = 0
         except IOError as e:
             # Let's retry a couple of times in case file temporary busy
@@ -353,8 +374,8 @@ class HexitecDAQ():
                 return
             logging.error("Failed to open '%s' with error: %s" % (self.hdf_file_location, e))
             self.in_progress = False
-            for fem in self.parent.fems:
-                fem._set_status_error("Error reopening HDF file: %s" % e)
+            self.daq_ready = True
+            self.parent.fem._set_status_error("Error reopening HDF file: %s" % e)
             return
 
         error_code = 0
@@ -370,23 +391,22 @@ class HexitecDAQ():
         self.write_metadata(hdf_metadata_group, hdf_tree_dict)
 
         if (error_code == 0):
-            for fem in self.parent.fems:
-                fem._set_status_message("Meta data added")
+            self.parent.fem._set_status_message("Meta data added to {}".format(self.hdf_file_location))
         else:
-            for fem in self.parent.fems:
-                fem._set_status_error("Meta data writer unable to access file(s)!")
+            self.parent.fem._set_status_error("Meta data writer unable to access file(s)!")
 
         hdf_file.close()
         self.in_progress = False
+        self.daq_ready = True
 
     def build_metadata_attributes(self, param_tree_dict, metadata_group):
         """Build metadata attributes from parameter tree."""
         for param, val in param_tree_dict.items():
             if val is None:
-                # Replace None or TypeError will be thrown as:
-                #   ("Object dtype dtype('O') has no native HDF5 equivalent")
-                val = "N/A"
-            metadata_group.attrs[param] = val
+                pass    # Do not add Odin control controls
+                # Avoid None or TypeError will be thrown as:
+            else:
+                metadata_group.attrs[param] = val
         return metadata_group
 
     def write_metadata(self, metadata_group, param_tree_dict):
@@ -404,7 +424,7 @@ class HexitecDAQ():
             str_type = h5py.special_dtype(vlen=str)
 
             # Write contents of config file, and selected coefficients file(s)
-            file_name = ['detector/fems/fem_0/hexitec_config']
+            file_name = ['detector/fem/hexitec_config']
             if self.calibration_enable:
                 file_name.append('detector/daq/config/calibration/gradients_filename')
                 file_name.append('detector/daq/config/calibration/intercepts_filename')
@@ -447,21 +467,104 @@ class HexitecDAQ():
                 items.append((new_key, v))
         return dict(items)
 
+    def are_processes_connected(self, status):
+        """Check all node(s) connected from 'status' (list of dictionary)."""
+        fr_connections = self._is_od_connected(status)
+        fr_connected = True
+        # Check list of fr connections, any not connected?
+        for connection in fr_connections:
+            if not connection:
+                fr_connected = False
+        return fr_connected  # True if all node(s) connected, else False
+
+    def are_processes_configured(self, status, adapter):
+        """Check all node(s) configured from 'status' (list of dictionary)."""
+        if adapter == "fr":
+            configurations = self._is_fr_configured(status)
+        elif adapter == "fp":
+            configurations = self._is_fp_configured(status)
+        else:
+            logging.error("'{}' unknown adapter, unknown configuration state".format(adapter))
+            return False
+        is_configured = True
+        # Check list of configurations, any not configured?
+        for config in configurations:
+            if not config:
+                is_configured = False
+        return is_configured  # True if all node(s) connected, else False
+
+    def get_total_frames_processed(self, plugin):
+        """Count frames_processed across all of 'plugin' process(es)."""
+        fp_statuses = self.get_adapter_status("fp")
+        # print("get_adapter_status", self.get_adapter_status("fp"))
+        frames_processed = 0
+        for fp_status in fp_statuses:
+            fw_status = fp_status.get(plugin, None).get('frames_processed')
+            # print("Rank:", fp_status.get('hdf', None).get('rank'), " frames_processed: ", fw_status)
+            if fw_status > 0:   # TODO: Sort out this better
+                frames_processed = frames_processed + fw_status
+        return frames_processed
+
     def _is_od_connected(self, status=None, adapter=""):
         if status is None:
-            status = self.get_od_status(adapter)
-        return status.get("connected", False)
+            # Called from ParameterTree init, build list of node(s)
+            status = self.get_connection_status(adapter)
+        else:
+            # Called by prepare_daq()
+            status_list = []
+            for index in status:
+                status_list.append(index.get('connected'))
+            status = status_list
+        return status
 
-    def _is_fr_configured(self, status={}):
-        if status.get('status') is None:
-            status = self.get_od_status("fr")
-        config_status = status.get("status", {}).get("configuration_complete", False)
-        return config_status
+    def get_connection_status(self, adapter):
+        """Get connection status from adapter."""
+        if not self.is_initialised:
+            return [{"Error": "Adapter not initialised with references yet"}]
+        try:
+            return_value = []
+            request = ApiAdapterRequest(None, content_type="application/json")
+            response = self.adapters[adapter].get("status", request)
+            response = response.data["value"]
+            for node in response:
+                return_value.append(node["connected"])
+        except KeyError:
+            logging.warning("%s Adapter Not Found" % adapter)
+            return_value = [{"Error": "Adapter {} not found".format(adapter)}]
+        finally:
+            return return_value
+
+    def _is_fr_configured(self, status=None):
+        if status is None:
+            status = self.get_adapter_status("fr")
+        configured = []
+        for index in status:
+            config_status = index.get("status", {}).get("configuration_complete", False)
+            configured.append(config_status)
+        return configured
 
     def _is_fp_configured(self, status=None):
-        status = self.get_od_status("fp")
-        config_status = status.get("plugins")  # if plugins key exists, it has been configured
-        return config_status is not None
+        if status is None:
+            status = self.get_adapter_status("fp")
+        configured = []
+        for index in status:
+            config_status = index.get("plugins")  # if plugins key exists, it has been configured
+            configured.append(config_status is not None)
+        return configured
+
+    def get_adapter_status(self, adapter):
+        """Get status from adapter. - To replace get_od_status()?"""
+        if not self.is_initialised:
+            return [{"Error": "Adapter {} not initialised with references yet".format(adapter)}]
+        try:
+            request = ApiAdapterRequest(None, content_type="application/json")
+            response = self.adapters[adapter].get("status", request)
+            response = response.data["value"]
+        except KeyError:
+            logging.warning("%s Adapter Not Found" % adapter)
+            response = [{"Error": "Adapter {} not found".format(adapter)}]
+        finally:
+            return response
 
     def get_od_status(self, adapter):
         """Get status from adapter."""
@@ -481,22 +584,19 @@ class HexitecDAQ():
         """Get config file from adapter."""
         if not self.is_initialised:
             # IAC not setup yet
-            return ""
+            return []
         try:
-            return_val = ""
+            return_val = []
             request = ApiAdapterRequest(None)
             response = self.adapters['file_interface'].get('', request).data
             self.config_dir = response['config_dir']
+            # print("\n *** get_config_file(), response: {}\n\t ({})".format(response, type(response)))
             for config_file in response["{}_config_files".format(adapter)]:
                 if "hexitec" in config_file.lower():
-                    return_val = config_file
-                    break
-            else:  # else of for loop: calls if loop finished without hitting break
-                # just return the first config file found
-                return_val = response["{}_config_files".format(adapter)][0]
+                    return_val.append(config_file)
         except KeyError as key_error:
             logging.warning("KeyError when trying to get config file: %s" % key_error)
-            return_val = ""
+            return_val = []
         finally:
             self.config_files[adapter] = return_val
             return return_val
@@ -539,24 +639,26 @@ class HexitecDAQ():
         self.adapters["fp"].put(command, request)
 
         # Target both config/histogram/max_frames_received and own ParameterTree
-        self._set_max_frames_received(self.number_frames)
+        max_frames_received = self.number_frames // self.number_nodes
+        self._set_max_frames_received(max_frames_received)
         command = "config/histogram/max_frames_received"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-        request.body = "{}".format(self.number_frames)
+        request.body = "{}".format(max_frames_received)
         self.adapters["fp"].put(command, request)
 
         # Finally, update own file_writing so FEM(s) know the status
         self.file_writing = writing
 
-    def _config_odin_data(self, adapter):
-        config = os.path.join(self.config_dir, self.config_files[adapter])
-        config = os.path.expanduser(config)
-        if not config.startswith('/'):
-            config = '/' + config
-        logging.debug(config)
-        request = ApiAdapterRequest(config, content_type="application/json")
-        command = "config/config_file"
-        _ = self.adapters[adapter].put(command, request)
+    # def _config_odin_data(self, adapter):
+    #     print("_config_odin_data() self.config_files: {}".format(self.config_files))
+    #     config = os.path.join(self.config_dir, self.config_files[adapter])
+    #     config = os.path.expanduser(config)
+    #     if not config.startswith('/'):
+    #         config = '/' + config
+    #     logging.debug(config)
+    #     request = ApiAdapterRequest(config, content_type="application/json")
+    #     command = "config/config_file"
+    #     _ = self.adapters[adapter].put(command, request)
 
     def update_rows_columns_pixels(self):
         """Update rows, columns and pixels from selected sensors_layout value.
@@ -736,7 +838,7 @@ class HexitecDAQ():
         if (status_code != 200):
             error = "Error {} deleting existing datasets in fp adapter".format(status_code)
             logging.error(error)
-            self.parent.fems[0]._set_status_error(error)
+            self.parent.fem._set_status_error(error)
 
         self.extra_datasets = []
         self.master_dataset = "spectra_bins"
@@ -757,10 +859,7 @@ class HexitecDAQ():
         # live_view_selected=True
         store_config, execute_config, store_string, execute_string = self.gcf.generate_config_files()
 
-        # print("\n\n\n")
-        # print("  store: {}".format(store_string))
-        # print("  exec:  {}".format(execute_string))
-        # print("\n\n\n")
+        # print("\n\n\n  store: {}\n  exec:  {}\n\n\n".format(store_string, execute_string))
 
         # Loop over node(s)
         for index in range(self.number_nodes):
@@ -786,7 +885,7 @@ class HexitecDAQ():
             if (status_code != 200):
                 error = "Error {} parsing store json config file in fp adapter".format(status_code)
                 logging.error(error)
-                self.parent.fems[0]._set_status_error(error)
+                self.parent.fem._set_status_error(error)
 
             # request = ApiAdapterRequest(execute_string, content_type="application/json")        # string
             # request = ApiAdapterRequest(dict(execute_string), content_type="application/json")  # dict(string)
@@ -797,7 +896,7 @@ class HexitecDAQ():
             if (status_code != 200):
                 error = "Error {} parsing execute json config file in fp adapter".format(status_code)
                 logging.error(error)
-                self.parent.fems[0]._set_status_error(error)
+                self.parent.fem._set_status_error(error)
 
         # Allow FP time to process above PUT requests before configuring plugin settings
         IOLoop.instance().call_later(0.4, self.submit_configuration)
