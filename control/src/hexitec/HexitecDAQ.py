@@ -55,7 +55,6 @@ class HexitecDAQ():
 
         # these varables used to tell when an acquisiton is completed
         self.frame_start_acquisition = 0  # number of frames received at start of acq
-        self.frame_end_acquisition = 0  # number of frames at end of acq (acq number)
 
         # First initialisation fudges data acquisition (but without writing to disk)
         self.first_initialisation = True
@@ -125,8 +124,10 @@ class HexitecDAQ():
         self.pixels = self.rows * self.columns
         self.number_frames = 10
         self.number_nodes = 1
+        # Status variables
         self.in_error = False
         self.daq_ready = False
+        self.frames_received = 0
 
         # Diagnostics
         self.daq_start_time = 0
@@ -154,8 +155,13 @@ class HexitecDAQ():
                 "file_name": (lambda: self.file_name, self.set_file_name),
                 "file_dir": (lambda: self.file_dir, self.set_data_dir)
             },
-            "in_progress": (lambda: self.in_progress, None),
-            "daq_ready":(lambda: self.daq_ready, None),
+            "status": {
+                "in_progress": (lambda: self.in_progress, None),
+                "daq_ready": (lambda: self.daq_ready, None),
+                "frames_expected": (lambda: self.number_frames, None),
+                "frames_received": (lambda: self.frames_received, None),
+                "frames_processed": (lambda: self.frames_processed, None)
+            },
             "config": {
                 "addition": {
                     "enable": (lambda: self.addition_enable, self._set_addition_enable),
@@ -260,9 +266,10 @@ class HexitecDAQ():
 
     def prepare_daq(self, number_frames):
         """Turn on File Writing."""
+        self.frames_processed = 0
         # Count hdf's frames_processed across node(s)
         self.frame_start_acquisition = self.get_total_frames_processed('hdf')
-        self.frame_end_acquisition = number_frames
+        self.number_frames = number_frames
         logging.info("FRAME START ACQ: %d END ACQ: %d",
                      self.frame_start_acquisition,
                      self.frame_start_acquisition + number_frames)
@@ -287,12 +294,13 @@ class HexitecDAQ():
         """Wait for acquisition to complete without blocking current thread."""
         bBusy = self.parent.fem.hardware_busy
         if bBusy:
+            self.frames_received = self.get_total_frames_received()
+            self.frames_processed = self.get_total_frames_processed(self.plugin)
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
             self.fem_not_busy = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
             # Reset timeout watchdog
             self.processed_timestamp = time.time()
-            self.frames_processed = 0
             IOLoop.instance().call_later(0.5, self.processing_check_loop)
 
     def processing_check_loop(self):
@@ -308,7 +316,8 @@ class HexitecDAQ():
             return
         # Not fudge initialisation; Check HDF/histogram processing progress
         total_frames_processed = self.get_total_frames_processed(self.plugin)
-        if total_frames_processed == self.frame_end_acquisition:
+        self.frames_received = self.get_total_frames_received()
+        if total_frames_processed == self.number_frames:
             delay = 1.0
             IOLoop.instance().call_later(delay, self.stop_acquisition)
             logging.debug("Acquisition Complete")
@@ -338,6 +347,7 @@ class HexitecDAQ():
         """Disable file writing so processing can access the saved data to add Meta data."""
         self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
         self.set_file_writing(False)
+        self.frames_processed = self.get_total_frames_processed(self.plugin)
 
     def check_hdf_write_statuses(self):
         """Check hdf node(s) statuses, return True until all finished writing."""
@@ -505,12 +515,23 @@ class HexitecDAQ():
                 frames_processed = frames_processed + fw_status
         return frames_processed
 
+    def get_total_frames_received(self):
+        """Count frames received across all frameReceiver(s)."""
+        fr_statuses = self.get_adapter_status("fr")
+        total_received = 0
+        for fr_status in fr_statuses:
+            received = fr_status.get("frames", None).get("received", None)
+            if received > 0:
+                total_received = total_received + received
+        # print(" *** FR total received frames: {}".format(total_received))
+        return total_received
+
     def _is_od_connected(self, status=None, adapter=""):
         if status is None:
             # Called from ParameterTree init, build list of node(s)
             status = self.get_connection_status(adapter)
         else:
-            # Called by prepare_daq()
+            # Called by are_processes_connected()
             status_list = []
             for index in status:
                 status_list.append(index.get('connected'))

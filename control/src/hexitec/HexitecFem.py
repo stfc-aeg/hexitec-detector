@@ -976,7 +976,6 @@ class HexitecFem():
                     self.acquire_data_completed()
                     return
                 else:
-                    # print(" ! Fem.check_acquire_finished()")
                     self.waited += delay
                     IOLoop.instance().call_later(delay, self.check_acquire_finished)
                     return

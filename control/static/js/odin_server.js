@@ -244,7 +244,20 @@ function poll_fem()
         const hardware_connected = fem["hardware_connected"];
         const hardware_busy = fem["hardware_busy"];
         
-        const daq_in_progress = result["detector"]["daq"]["in_progress"];
+        const daq_in_progress = result["detector"]["daq"]["status"]["in_progress"];
+
+        const frames_expected = result["detector"]["daq"]["status"]["frames_expected"];
+        const frames_received = result["detector"]["daq"]["status"]["frames_received"];
+        const frames_processed = result["detector"]["daq"]["status"]["frames_processed"];
+        const fraction_received = (frames_received/frames_expected).toFixed(2);
+        const fraction_processed = (frames_processed/frames_expected).toFixed(2);
+        console.log(" rxd: " + frames_received + " (" + fraction_received +
+            ") proc'd: " + frames_processed + " (" + fraction_processed +
+            ") tot: " + frames_expected );    /// DEBUGGING
+        var daq_progress = document.getElementById("daq-progress");
+        daq_progress.value = fraction_received * 100;
+        var processing_progress = document.getElementById("processing-progress");
+        processing_progress.value = fraction_processed * 100;
 
         // Enable buttons when connection completed
         if (hardware_connected === true)
@@ -363,9 +376,6 @@ function poll_fem()
                 lampDOM.classList.add("lampRed");
             }
         }
-
-        var progress_element = document.getElementById("progress-odin");
-        progress_element.value = percentage_complete;
 
         if (polling_thread_running === true)
         {

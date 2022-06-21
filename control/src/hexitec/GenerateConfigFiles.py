@@ -455,7 +455,7 @@ if __name__ == '__main__':  # pragma: no cover
     param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
                   'sensors_layout': '2x2', 'receiver':
                   {'config_file': '', 'configured': False, 'connected': False},
-                  'in_progress': False,
+                  'status': {'in_progress': False, 'daq_ready': False},
                   # The 'config' nested dictionary control which plugin(s) are loaded:
                   'config':
                   {'calibration':

@@ -308,7 +308,7 @@ class TestFem(unittest.TestCase):
 
     def test_initialise_hardware_handles_fudge_initialisation_prepare_odin_error(self):
         """Test cold initialisation handles prepare_odin error."""
-        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+        with patch("hexitec.HexitecFem.IOLoop"):
 
             self.test_fem.fem.hardware_connected = True
             self.test_fem.fem.hardware_busy = False

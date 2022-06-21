@@ -55,6 +55,12 @@ class DAQTestFixture(object):
                     "connected": True,
                     "status": {
                         "configuration_complete": True
+                    },
+                    'frames': {
+                        'timedout': 0,
+                        'received': 3188,
+                        'released': 3186,
+                        'dropped': 0
                     }
                 }
             ]
@@ -75,6 +81,19 @@ class DAQTestFixture(object):
                         "frames_written": 0,
                         "frames_processed": 0,
                         "writing": True
+                    },
+                    "histogram": {
+                        "sensors_layout": "2x2",
+                        "max_frames_received": 10,
+                        "bin_start": 0,
+                        "bin_end": 8000,
+                        "bin_width": 10.0,
+                        "flush_histograms": 0,
+                        "frames_processed": 0,
+                        "histograms_written": 0,
+                        "histogram_index": 1000,
+                        "pass_processed": False,
+                        "pass_raw": False
                     }
                 }
             ]
@@ -144,7 +163,7 @@ class DAQTestFixture(object):
                'receiver': {'connected': True, 'configured': True, 'config_file': 'fr_hexitec_config.json'},
                'processor': {'connected': True, 'configured': True, 'config_file': 'file.json'},
                'file_info': {'enabled': False, 'file_name': 'filename', 'file_dir': '/tmp/'},
-               'in_progress': True,
+               'status': {'in_progress': True, 'daq_ready': False},
                'config':
                {'addition': {'enable': False, 'pixel_grid_size': 3},
                 'calibration':
@@ -356,8 +375,8 @@ class TestDAQ(unittest.TestCase):
             self.test_daq.daq.prepare_daq(10)
 
             assert self.test_daq.daq.frame_start_acquisition == 0
-            assert self.test_daq.daq.frame_end_acquisition == 10
             assert self.test_daq.daq.in_progress is True
+            assert self.test_daq.daq.daq_ready is False
             assert self.test_daq.daq.file_writing is True
             assert odin_ready is True
 
@@ -380,7 +399,7 @@ class TestDAQ(unittest.TestCase):
 
             self.test_daq.daq.first_initialisation = False
             return_value = self.test_daq.daq.prepare_odin()
-            assert return_value == False
+            assert return_value is False
 
     def test_start_acquisition_unconfigured_fp_fails(self):
         """Test function works."""
@@ -955,7 +974,7 @@ class TestDAQ(unittest.TestCase):
                 {'connected': True, 'configured': False, 'config_file': 'file.json'},
              'file_info':
                 {'enabled': False, 'file_name': 'default_file', 'file_dir': '/tmp/'},
-             'in_progress': False,
+             'status': {'in_progress': False, 'daq_ready': False},
              'config':
                 {'addition':
                     {'enable': False, 'pixel_grid_size': 3},
