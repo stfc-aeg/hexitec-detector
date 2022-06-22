@@ -261,6 +261,8 @@ class Hexitec():
             "disconnect_hardware": (None, self.disconnect_hardware),
             "collect_offsets": (None, self._collect_offsets),
             "commit_configuration": (None, self.commit_configuration),
+            "hv_on": (None, self.hv_on),
+            "hv_off": (None, self.hv_off),
             "acquisition": {
                 "number_frames": (lambda: self.number_frames, self.set_number_frames),
                 "duration": (lambda: self.duration, self.set_duration),
@@ -675,6 +677,18 @@ class Hexitec():
     def commit_configuration(self, msg):
         """Push HexitecDAQ's 'config/' ParameterTree settings into FP's plugins."""
         self.daq.commit_configuration()
+
+    def hv_on(self, msg):
+        """Switch HV on."""
+        print("\n *** HV ON\n")
+        # TODO: Complete placeholder
+        self.fem.hv_bias_enabled = True
+
+    def hv_off(self, msg):
+        """Switch HV off."""
+        print("\n *** HV OFF\n")
+        # TODO: Complete placeholder
+        self.fem.hv_bias_enabled = False
 
     def get(self, path):
         """

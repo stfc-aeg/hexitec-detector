@@ -714,7 +714,7 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.stop_acquisition = False
             self.test_fem.fem.x10g_rdma.read = Mock()
             self.test_fem.fem.x10g_rdma.read.side_effect = [0]  # >0 Signals all data sent
-
+            self.test_fem.fem.duration_enabled = True
             self.test_fem.fem.check_acquire_finished()
             mock_loop.instance().call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
             assert self.test_fem.fem.waited == 0.1

@@ -134,6 +134,7 @@ class HexitecFem():
         self.frame_rate = 0
         self.duration = 1
         self.duration_enabled = False
+        self.duration_remaining = 0
 
         self.bias_refresh_interval = 60.0
         self.bias_voltage_refresh = False
@@ -175,6 +176,9 @@ class HexitecFem():
         self.vsr2_hv = 0
         self.vsr2_sync = -1
 
+        # TODO: Placeholder, not yet implemented in hardware
+        self.hv_bias_enabled = False
+
         self.read_firmware_version = True
         self.firmware_date = "N/A"
         self.firmware_time = "N/A"
@@ -187,6 +191,7 @@ class HexitecFem():
         self.acquire_stop_time = ""
         self.acquire_time = 0.0
         self.acquire_timestamp = 0
+        self.offsets_timestamp = 0
 
         param_tree_dict = {
             "diagnostics": {
@@ -195,6 +200,8 @@ class HexitecFem():
                 "acquire_stop_time": (lambda: self.acquire_stop_time, None),
                 "acquire_time": (lambda: self.acquire_time, None),
             },
+            "offsets_timestamp": (lambda: self.offsets_timestamp, None),
+            "hv_bias_enabled": (lambda: self.hv_bias_enabled, None),
             "debug": (self.get_debug, self.set_debug),
             "frame_rate": (lambda: self.frame_rate, None),
             "health": (lambda: self.health, None),
@@ -204,6 +211,7 @@ class HexitecFem():
             "operation_percentage_complete": (self._get_operation_percentage_complete, None),
             "number_frames": (self.get_number_frames, self.set_number_frames),
             "duration": (self.get_duration, self.set_duration),
+            "duration_remaining": (lambda: self.duration_remaining, None),
             "hexitec_config": (lambda: self.hexitec_config, self._set_hexitec_config),
             "read_sensors": (None, self.read_sensors),
             "hardware_connected": (lambda: self.hardware_connected, None),
@@ -955,7 +963,7 @@ class HexitecFem():
         self.data_stream(self.number_frames)
         self.acquire_start_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
         # How to convert datetime object to float?
-        self.acquire_timestamp = time.time()
+        self.acquire_timestamp = time.time()    # Utilised by adapter's watchdog
 
         self.waited = 0.1
         IOLoop.instance().call_later(0.1, self.check_acquire_finished)
@@ -977,6 +985,11 @@ class HexitecFem():
                     return
                 else:
                     self.waited += delay
+                    if self.duration_enabled:
+                        self.duration_remaining = round((self.duration - self.waited), 1)
+                        if self.duration_remaining < 0:
+                            self.duration_remaining = 0
+                        # print("\t dur'n_remain'g: {} secs".format(self.duration_remaining))
                     IOLoop.instance().call_later(delay, self.check_acquire_finished)
                     return
         except (HexitecFemError, ParameterTreeError) as e:
@@ -1421,6 +1434,14 @@ class HexitecFem():
             self.operation_percentage_complete = 100
             self._set_status_message("Offsets collections operation completed.")
             self.hardware_busy = False
+            # Timestamp when offsets collected
+            self.offsets_timestamp = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
+            # # String format can be turned into millisecond format:
+            # date_time = datetime.strptime(self.offsets_timestamp, HexitecFem.DATE_FORMAT)
+            # ts = date_time.timestamp() * 1000
+            # # convert timestamp to string in dd-mm-yyyy HH:MM:SS
+            # str_date_time = date_time.strftime("%d-%m-%Y, %H:%M:%S")
+            # print("Offsets timestamp, format of dd-mm-yyyy HH:MM:SS: ", str_date_time)
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Can't collect offsets while disconnected: %s" % str(e))
             logging.error("%s" % str(e))

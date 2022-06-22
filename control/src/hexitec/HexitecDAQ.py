@@ -128,6 +128,8 @@ class HexitecDAQ():
         self.in_error = False
         self.daq_ready = False
         self.frames_received = 0
+        self.processed_remaining = self.number_frames - self.frames_processed
+        self.received_remaining = self.number_frames - self.frames_received
 
         # Diagnostics
         self.daq_start_time = 0
@@ -160,7 +162,9 @@ class HexitecDAQ():
                 "daq_ready": (lambda: self.daq_ready, None),
                 "frames_expected": (lambda: self.number_frames, None),
                 "frames_received": (lambda: self.frames_received, None),
-                "frames_processed": (lambda: self.frames_processed, None)
+                "frames_processed": (lambda: self.frames_processed, None),
+                "processed_remaining": (lambda: self.processed_remaining, None),
+                "received_remaining": (lambda: self.received_remaining, None)
             },
             "config": {
                 "addition": {
@@ -296,6 +300,10 @@ class HexitecDAQ():
         if bBusy:
             self.frames_received = self.get_total_frames_received()
             self.frames_processed = self.get_total_frames_processed(self.plugin)
+            self.processed_remaining = self.number_frames - self.frames_processed
+            self.received_remaining = self.number_frames - self.frames_received
+            # print("\n0\t rxd {} left: {} proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
+            #                                                           self.frames_processed, self.processed_remaining))
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
             self.fem_not_busy = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
@@ -317,6 +325,9 @@ class HexitecDAQ():
         # Not fudge initialisation; Check HDF/histogram processing progress
         total_frames_processed = self.get_total_frames_processed(self.plugin)
         self.frames_received = self.get_total_frames_received()
+        self.received_remaining = self.number_frames - self.frames_received
+        # print("\nX\t rxd {} left: {} proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
+        #                                                           self.frames_processed, self.processed_remaining))
         if total_frames_processed == self.number_frames:
             delay = 1.0
             IOLoop.instance().call_later(delay, self.stop_acquisition)
@@ -340,6 +351,9 @@ class HexitecDAQ():
                 # Data still bein' processed
                 self.processed_timestamp = time.time()
                 self.frames_processed = total_frames_processed
+                self.processed_remaining = self.number_frames - self.frames_processed
+                # print("\n1\t rxd {} left: {} proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
+                #                                                           self.frames_processed, self.processed_remaining))
             # Wait 0.5 seconds and check again
             IOLoop.instance().call_later(.5, self.processing_check_loop)
 
@@ -348,6 +362,9 @@ class HexitecDAQ():
         self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
         self.set_file_writing(False)
         self.frames_processed = self.get_total_frames_processed(self.plugin)
+        self.processed_remaining = self.number_frames - self.frames_processed
+        # print("\n2\t rxd {} left: {} proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
+        #                                                           self.frames_processed, self.processed_remaining))
 
     def check_hdf_write_statuses(self):
         """Check hdf node(s) statuses, return True until all finished writing."""
@@ -629,6 +646,8 @@ class HexitecDAQ():
     def set_number_frames(self, number_frames):
         """Set number of frames to be acquired."""
         self.number_frames = number_frames
+        self.processed_remaining = self.number_frames - self.frames_processed
+        self.received_remaining = self.number_frames - self.frames_received
 
     def set_number_nodes(self, nodes):
         """Set number of nodes."""

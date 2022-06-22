@@ -716,3 +716,15 @@ class TestDetector(unittest.TestCase):
         """Test function calls daq's commit_configuration."""
         self.test_adapter.detector.commit_configuration("")
         self.test_adapter.detector.daq.commit_configuration.assert_called()
+
+    def test_hv_on(self):
+        """Test function switches HV on."""
+        # TODO: Complete placeholder when HV available
+        self.test_adapter.detector.hv_on("")
+        assert self.test_adapter.detector.fem.hv_bias_enabled is True
+
+    def test_hv_off(self):
+        """Test function switches HV off."""
+        # TODO: Complete placeholder when HV available
+        self.test_adapter.detector.hv_off("")
+        assert self.test_adapter.detector.fem.hv_bias_enabled is False

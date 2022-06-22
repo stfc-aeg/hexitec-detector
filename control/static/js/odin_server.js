@@ -82,6 +82,7 @@ function hvOnButtonClicked()
     document.querySelector('#hvOnButton').disabled = true;
     document.querySelector('#hvOffButton').disabled = false;
     console.log("Switching HV on");
+    hv_on();
 }
 
 function hvOffButtonClicked()
@@ -91,6 +92,7 @@ function hvOffButtonClicked()
     document.querySelector('#hvOnButton').disabled = false;
     document.querySelector('#hvOffButton').disabled = true;
     console.log("Switching HV off");
+    hv_off();
 }
 
 function initialiseButtonClicked()
@@ -249,11 +251,13 @@ function poll_fem()
         const frames_expected = result["detector"]["daq"]["status"]["frames_expected"];
         const frames_received = result["detector"]["daq"]["status"]["frames_received"];
         const frames_processed = result["detector"]["daq"]["status"]["frames_processed"];
+        const processed_remaining = result["detector"]["daq"]["status"]["processed_remaining"];
+        const received_remaining = result["detector"]["daq"]["status"]["received_remaining"];
         const fraction_received = (frames_received/frames_expected).toFixed(2);
         const fraction_processed = (frames_processed/frames_expected).toFixed(2);
-        console.log(" rxd: " + frames_received + " (" + fraction_received +
-            ") proc'd: " + frames_processed + " (" + fraction_processed +
-            ") tot: " + frames_expected );    /// DEBUGGING
+        // console.log(" rxd: " + frames_received + " " + received_remaining + " (" + fraction_received + ")" +
+        //         " proc'd: " + frames_processed + " " + processed_remaining + " (" + fraction_processed + ")" +
+        //         " tot: " + frames_expected);    /// DEBUGGING
         var daq_progress = document.getElementById("daq-progress");
         daq_progress.value = fraction_received * 100;
         var processing_progress = document.getElementById("processing-progress");
@@ -390,6 +394,28 @@ function poll_fem()
 function connect_hardware()
 {
     hexitec_endpoint.put({"connect_hardware": ""}, 'detector')
+    .then(result => {
+        document.querySelector('#odin-control-error').innerHTML = "";
+    })
+    .catch(error => {
+        document.querySelector('#odin-control-error').innerHTML = error.message;
+    });
+}
+
+function hv_on()
+{
+    hexitec_endpoint.put({"hv_on": ""}, 'detector')
+    .then(result => {
+        document.querySelector('#odin-control-error').innerHTML = "";
+    })
+    .catch(error => {
+        document.querySelector('#odin-control-error').innerHTML = error.message;
+    });
+}
+
+function hv_off()
+{
+    hexitec_endpoint.put({"hv_off": ""}, 'detector')
     .then(result => {
         document.querySelector('#odin-control-error').innerHTML = "";
     })
