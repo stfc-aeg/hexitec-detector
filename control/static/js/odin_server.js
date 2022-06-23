@@ -324,6 +324,9 @@ function poll_fem()
         document.querySelector('#daq_stop').innerHTML = daq_stop;
         document.querySelector('#fem_not_busy').innerHTML = fem_not_busy;
 
+        const offsets_timestamp = fem["offsets_timestamp"];
+        document.querySelector('#offsets_ts').innerHTML = offsets_timestamp
+
         // Obtain overall adapter(.py's) status
 
         var status_message = adapter_status["status_message"];
