@@ -469,8 +469,18 @@ class Hexitec():
 
     def disconnect_hardware(self, msg):
         """Disconnect FEM's hardware connection."""
-        self.fem.disconnect_hardware(msg)
-        # With the FEM disconnected, reset system status
+        if self.daq.in_progress:
+            # Stop hardware if still in acquisition
+            if self.fem.hardware_busy:
+                self.cancel_acquisition()
+            # Reset daq
+            self.shutdown_processing()
+            # Allow processing to shutdown before disconnecting hardware
+            IOLoop.instance().call_later(0.2, self.fem.disconnect_hardware)
+        else:
+            # Nothing in progress, disconnect hardware
+            self.fem.disconnect_hardware(msg)
+        # Reset system status
         self.status_error = ""
         self.status_message = ""
         self.system_health = True
@@ -528,6 +538,7 @@ class Hexitec():
         if self.extended_acquisition is False:
             if self.daq.in_progress:
                 logging.warning("Cannot Start Acquistion: Already in progress")
+                self.fem._set_status_error("Cannot Start Acquistion: Already in progress")
                 return
 
         self.total_delay = 0
@@ -642,9 +653,10 @@ class Hexitec():
         self.adapters["fp"].put(command, request)
 
         rc = self.daq.prepare_odin()
-        # print("\n\tadp.monitor_fem_progress(), rc: {}\n".format(rc))
         if not rc:
-            self.status_error = "Prepare Odin failed!"
+            message = "Prepare Odin failed!"
+            self.fem._set_status_error(message)
+            self.status_error = message
 
         self.reset_state_variables()
 
@@ -680,13 +692,11 @@ class Hexitec():
 
     def hv_on(self, msg):
         """Switch HV on."""
-        print("\n *** HV ON\n")
         # TODO: Complete placeholder
         self.fem.hv_bias_enabled = True
 
     def hv_off(self, msg):
         """Switch HV off."""
-        print("\n *** HV OFF\n")
         # TODO: Complete placeholder
         self.fem.hv_bias_enabled = False
 

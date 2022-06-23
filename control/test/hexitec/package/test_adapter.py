@@ -431,9 +431,28 @@ class TestDetector(unittest.TestCase):
 
     def test_disconnect_hardware(self):
         """Test function disconnects hardware and stops bias clock."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.bias_clock_running = True
+        self.test_adapter.detector.daq.in_progress = False
         self.test_adapter.detector.disconnect_hardware("")
         assert self.test_adapter.detector.bias_clock_running is False
+
+    def test_disconnect_hardware_stalled_daq_and_hardware(self):
+        """Test function gracefully handles stalled daq, hardware."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.daq.in_progress = True
+        self.test_adapter.detector.fem.hardware_busy = True
+        self.test_adapter.detector.status_message = "dummy message"
+        with patch("hexitec.adapter.IOLoop") as mock:
+            self.test_adapter.detector.cancel_acquisition = Mock()
+            self.test_adapter.detector.shutdown_processing = Mock()
+            self.test_adapter.detector.disconnect_hardware("")
+            assert self.test_adapter.detector.status_message == ""
+            assert self.test_adapter.detector.acquisition_in_progress is False
+            self.test_adapter.detector.cancel_acquisition.assert_called_with()
+            self.test_adapter.detector.shutdown_processing.assert_called_with()
+            mock.instance().call_later.assert_called_with(0.2,
+                                                          self.test_adapter.detector.fem.disconnect_hardware)
 
     def test_set_duration_enable_true(self):
         """Test function can update duration enable to True."""

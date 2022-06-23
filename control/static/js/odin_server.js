@@ -242,7 +242,6 @@ function poll_fem()
         const fem = result["detector"]["fem"]
         const adapter_status = result["detector"]["status"] // adapter.py's status
 
-        const percentage_complete = fem["operation_percentage_complete"];
         const hardware_connected = fem["hardware_connected"];
         const hardware_busy = fem["hardware_busy"];
         
@@ -308,7 +307,6 @@ function poll_fem()
         /// UNCOMMENT ME
         // console.log(hardware_busy + " " + daq_in_progress + 
         //             " <= hw_busy, daq_in_prog " + "   %_compl: "
-        //             + fem["operation_percentage_complete"] 
         //             + " reads: " + num_reads + " msg: " + adapter_status["status_message"]);
 
         var acquire_start = fem_diagnostics["acquire_start_time"];

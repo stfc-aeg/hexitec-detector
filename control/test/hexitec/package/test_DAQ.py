@@ -147,12 +147,10 @@ class DAQTestFixture(object):
               {'diagnostics':
                {'successful_reads': 116, 'acquire_start_time': '', 'acquire_stop_time': '',
                 'acquire_time': 1.303241}, 'debug': False, 'frame_rate': 7154.0,
-               'health': True, 'status_message': '', 'status_error': '',
-               'initialise_progress': 0,
-               'operation_percentage_complete': 100, 'number_frames': 10, 'duration': 1,
-               'hexitec_config': '~/path/to/config_file',
-               'read_sensors': None, 'hardware_connected': True, 'hardware_busy': False,
-               'firmware_date': 'N/A', 'firmware_time': 'N/A',
+               'health': True, 'status_message': '', 'status_error': '', 'number_frames': 10,
+               'duration': 1, 'hexitec_config': '~/path/to/config_file', 'read_sensors': None,
+               'hardware_connected': True, 'hardware_busy': False, 'firmware_date': 'N/A',
+               'firmware_time': 'N/A',
                'vsr1_sensors':
                {'ambient': 0, 'humidity': 0, 'asic1': 0, 'asic2': 0, 'adc': 0, 'hv': 0},
                'vsr2_sensors':

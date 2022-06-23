@@ -299,9 +299,6 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.parent.daq.prepare_odin = Mock()
             self.test_fem.fem.parent.daq.prepare_daq = Mock()
             self.test_fem.fem.initialise_hardware()
-            assert self.test_fem.fem.operation_percentage_complete == 0
-            assert self.test_fem.fem.operation_percentage_steps == 108
-            assert self.test_fem.fem.initialise_progress == 0
             self.test_fem.fem.parent.daq.prepare_daq.assert_called_with(2)
             mock_loop.instance().call_later.assert_called_with(0.1,
                                                                self.test_fem.fem.check_all_processes_ready)
@@ -320,9 +317,6 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.parent.daq.prepare_odin = False
             self.test_fem.fem.parent.daq.prepare_daq = Mock()
             self.test_fem.fem.initialise_hardware()
-            assert self.test_fem.fem.operation_percentage_complete == 0
-            assert self.test_fem.fem.operation_percentage_steps == 108
-            assert self.test_fem.fem.initialise_progress == 0
             self.test_fem.fem.parent.daq.prepare_daq.assert_not_called()
 
     def test_check_all_processes_ready_handles_daq_error(self):
@@ -331,8 +325,6 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.parent.daq.in_error = True
         self.test_fem.fem.check_all_processes_ready()
 
-        assert self.test_fem.fem.operation_percentage_complete == 100
-        assert self.test_fem.fem.initialise_progress == 0
         assert self.test_fem.fem.hardware_busy is False
         assert self.test_fem.fem.ignore_busy is False
 
@@ -349,8 +341,9 @@ class TestFem(unittest.TestCase):
         """Test function collect data in normal operation."""
         self.test_fem.fem.parent.daq.in_error = False
         self.test_fem.fem.parent.daq.in_progress = True
+        self.test_fem.fem.collect_data = Mock()
         self.test_fem.fem.check_all_processes_ready()
-        assert self.test_fem.fem.initialise_progress == 0
+        self.test_fem.fem.collect_data.assert_called()
 
     def test_initialise_hardware_handles_daq_busy(self):
         """Test function handles cold start with daq already busy."""
@@ -407,14 +400,22 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.acquisition_completed = False
         self.test_fem.fem.acquire_data = Mock()
         self.test_fem.fem.collect_data()
-        assert self.test_fem.fem.operation_percentage_steps == 100
-        assert self.test_fem.fem.initialise_progress == 0
+        assert self.test_fem.fem.hardware_busy is True
+        self.test_fem.fem.acquire_data.assert_called()
 
     def test_disconnect_hardware(self):
         """Test the function works ok."""
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.disconnect_hardware()
         assert self.test_fem.fem.hardware_connected is False
+
+    def test_disconnect_hardware_handle_hardware_stuck(self):
+        """Test the function works ok."""
+        self.test_fem.fem.hardware_connected = True
+        self.test_fem.fem.hardware_busy = True
+        self.test_fem.fem.disconnect_hardware()
+        assert self.test_fem.fem.hardware_connected is False
+        assert self.test_fem.fem.stop_acquisition is True
 
     def test_disconnect_hardware_fails_without_connection(self):
         """Test function fails without established hardware connection."""
@@ -715,9 +716,25 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.x10g_rdma.read = Mock()
             self.test_fem.fem.x10g_rdma.read.side_effect = [0]  # >0 Signals all data sent
             self.test_fem.fem.duration_enabled = True
+            self.test_fem.fem.duration = 2.0
             self.test_fem.fem.check_acquire_finished()
             mock_loop.instance().call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
             assert self.test_fem.fem.waited == 0.1
+            assert self.test_fem.fem.duration_remaining == 1.9
+
+    def test_check_acquire_finished_handles_negative_duration_remaining(self):
+        """Test check_acquire_finished handles data sent, edge case of 'negative' duration."""
+        # Because polling at 1Hz, will reached -0.1s once all data sent, which is 'rounded' to 0.0
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.stop_acquisition = False
+            self.test_fem.fem.x10g_rdma.read = Mock()
+            self.test_fem.fem.x10g_rdma.read.side_effect = [0]  # >0 Signals all data sent
+            self.test_fem.fem.duration_enabled = True
+            self.test_fem.fem.duration = 0.0
+            self.test_fem.fem.check_acquire_finished()
+            mock_loop.instance().call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
+            assert self.test_fem.fem.waited == 0.1
+            assert self.test_fem.fem.duration_remaining == 0.0
 
     def test_check_acquire_finished_handles_HexitecFemError(self):
         """Test check_choir_finished handles HexitecFemError exception."""
@@ -834,7 +851,6 @@ class TestFem(unittest.TestCase):
 
         self.test_fem.fem.acquire_data_completed()
 
-        assert self.test_fem.fem.operation_percentage_complete == 100
         assert self.test_fem.fem.hardware_busy is False
         assert self.test_fem.fem.acquisition_completed is True
         assert self.test_fem.fem.first_initialisation is False

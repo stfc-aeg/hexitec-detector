@@ -153,9 +153,6 @@ class HexitecFem():
         self.status_message = ""
         self.status_error = ""
         self.stop_acquisition = False
-        self.initialise_progress = 0
-        self.operation_percentage_complete = 0
-        self.operation_percentage_steps = 108
 
         self.selected_sensor = HexitecFem.OPTIONS[2]        # "Sensor_2_1"
         self.sensors_layout = HexitecFem.READOUTMODE[1]     # "2x2"
@@ -207,8 +204,6 @@ class HexitecFem():
             "health": (lambda: self.health, None),
             "status_message": (self._get_status_message, None),
             "status_error": (self._get_status_error, None),
-            "initialise_progress": (self._get_initialise_progress, None),
-            "operation_percentage_complete": (self._get_operation_percentage_complete, None),
             "number_frames": (self.get_number_frames, self.set_number_frames),
             "duration": (self.get_duration, self.set_duration),
             "duration_remaining": (lambda: self.duration_remaining, None),
@@ -354,12 +349,6 @@ class HexitecFem():
         self.frame_gate_settings(num_images - 1, 0)
         self.frame_gate_trigger()
 
-    def _get_operation_percentage_complete(self):
-        return self.operation_percentage_complete
-
-    def _get_initialise_progress(self):
-        return self.initialise_progress
-
     def _get_status_message(self):
         return self.status_message
 
@@ -421,11 +410,8 @@ class HexitecFem():
                 raise ParameterTreeError("Connection already established")
             else:
                 self._set_status_error("")
-            self.operation_percentage_complete = 0
             self.cam_connect()
-            self.operation_percentage_complete = 100
             self._set_status_message("Camera connected.")
-            self.initialise_progress = 0
         except ParameterTreeError as e:
             self._set_status_error("%s" % str(e))
         except HexitecFemError as e:
@@ -454,8 +440,6 @@ class HexitecFem():
                 self._set_status_error("")
 
             self.hardware_busy = True
-            self.operation_percentage_complete = 0
-            self.operation_percentage_steps = 108
             self.initialise_system()
             if self.first_initialisation:
                 # On cold start: Fudge initialisation to include silently capturing data without
@@ -479,7 +463,6 @@ class HexitecFem():
             else:
                 # Not cold initialisation, clear hardware_busy here
                 self.hardware_busy = False
-            self.initialise_progress = 0
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to initialise camera: %s" % str(e))
             logging.error("%s" % str(e))
@@ -491,8 +474,6 @@ class HexitecFem():
         """Wait until DAQ, Odin adapters ready or in error."""
         if self.parent.daq.in_error:
             # Reset variables
-            self.operation_percentage_complete = 100
-            self.initialise_progress = 0
             self.hardware_busy = False
             if self.first_initialisation:
                 self.ignore_busy = False
@@ -501,7 +482,6 @@ class HexitecFem():
             IOLoop.instance().call_later(0.5, self.check_all_processes_ready)
         else:
             self.collect_data()
-            self.initialise_progress = 0
 
     def collect_data(self, msg=None):
         """Acquire data from camera."""
@@ -516,8 +496,6 @@ class HexitecFem():
             if self.ignore_busy:
                 self.ignore_busy = False
             self.hardware_busy = True
-            self.operation_percentage_complete = 0
-            self.operation_percentage_steps = 100
             self._set_status_message("Acquiring data..")
             self.acquire_data()
         except (HexitecFemError, ParameterTreeError) as e:
@@ -535,15 +513,12 @@ class HexitecFem():
             else:
                 self._set_status_error("")
             # Stop acquisition if it's hung
-            if self.operation_percentage_complete < 100:
+            if self.hardware_busy:
                 self.stop_acquisition = True
             self.hardware_connected = False
-            self.operation_percentage_complete = 0
             self._set_status_message("Disconnecting camera..")
             self.cam_disconnect()
             self._set_status_message("Camera disconnected")
-            self.operation_percentage_complete = 100
-            self.initialise_progress = 0
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to disconnect: %s" % str(e))
             logging.error("%s" % str(e))
@@ -559,13 +534,8 @@ class HexitecFem():
         """Get debug messages status."""
         return self.debug
 
-    def send_cmd(self, cmd, track_progress=True):
+    def send_cmd(self, cmd):
         """Send a command string to the microcontroller."""
-        if track_progress:
-            self.initialise_progress += 1
-            self.operation_percentage_complete = (self.initialise_progress * 100) \
-                // self.operation_percentage_steps
-
         while len(cmd) % 4 != 0:
             cmd.append(13)
         if self.debug:
@@ -1021,8 +991,6 @@ class HexitecFem():
             logging.info("Acquisition cancelled")
             # Reset variables
             self.stop_acquisition = False
-            self.operation_percentage_complete = 100
-            self.initialise_progress = 0
             self.hardware_busy = False
             self.acquisition_completed = True
             if self.first_initialisation:
@@ -1137,8 +1105,6 @@ class HexitecFem():
 
         # Wrap up by updating GUI
 
-        self.operation_percentage_complete = 100
-        self.initialise_progress = 0
         # Acquisition completed, note completion
         self.acquisition_completed = True
         if self.first_initialisation:
@@ -1333,8 +1299,6 @@ class HexitecFem():
                 self._set_status_error("")
 
             self.hardware_busy = True
-            self.operation_percentage_complete = 0
-            self.operation_percentage_steps = 1
 
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0],
                           HexitecFem.READ_REG_VALUE, 0x32, 0x34, 0x0D])
@@ -1431,7 +1395,6 @@ class HexitecFem():
                            0x32, 0x34, 0x32, 0x30, 0x0D])
             self.read_response()
 
-            self.operation_percentage_complete = 100
             self._set_status_message("Offsets collections operation completed.")
             self.hardware_busy = False
             # Timestamp when offsets collected
