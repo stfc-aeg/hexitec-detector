@@ -234,7 +234,7 @@ function poll_fem()
         document.querySelector('#buffers_mapped').innerHTML = buffers.mapped;
     })
     .catch(error => {
-        console.log("poll_fem(), fr: " + error.message);
+        document.querySelector('#odin-control-error').innerHTML = "Polling FR: " + error.message;
     });
 
     hexitec_endpoint.get_url(hexitec_url + 'detector')
@@ -332,14 +332,13 @@ function poll_fem()
         var status_message = adapter_status["status_message"];
         document.querySelector('#odin-control-message').innerHTML = status_message;
 
-        // Get adapter error (either set or empty)
+        // Get adapter error (if set)
         const status_error = adapter_status["status_error"];
-        var status = "";
         if (status_error.length > 0)
         {
-            status = "Error: '" + status_error + "'";
+            const status = "Error: '" + status_error + "'";
+            document.querySelector('#odin-control-error').innerHTML = status;
         }
-        document.querySelector('#odin-control-error').innerHTML = status;
 
         document.querySelector('#vsr1_humidity').innerHTML = fem["vsr1_sensors"]["humidity"].toFixed(2);
         document.querySelector('#vsr1_ambient').innerHTML = fem["vsr1_sensors"]["ambient"].toFixed(2);
@@ -388,7 +387,7 @@ function poll_fem()
         }
     })
     .catch(error => {
-        console.log("poll_fem(), detector: " + error.message);
+        document.querySelector('#odin-control-error').innerHTML = "Polling Detector: " + error.message;
     });
 }
 
@@ -551,26 +550,30 @@ function threshold_filename_changed()
     // console.log("threshold_filename_changed, comparison: " + threshold_mode.localeCompare("filename"));
     if (threshold_mode.localeCompare("filename") === 0)
     {
-        var threshold_filename = document.querySelector('#threshold-filename-text').value;
-        hexitec_endpoint.put(threshold_filename, 'detector/daq/config/threshold/threshold_filename')
+        var threshold_filename = document.querySelector('#threshold-filename-text');
+        hexitec_endpoint.put(threshold_filename.value, 'detector/daq/config/threshold/threshold_filename')
         .then(result => {
-            document.querySelector('#threshold-filename-warning').innerHTML = "";
+            threshold_filename.classList.remove('alert-danger');
         })
         .catch(error => {
-            document.querySelector('#threshold-filename-warning').innerHTML = error.message;
+            threshold_filename.setCustomValidity(error.message);
+            threshold_filename.reportValidity();
+            threshold_filename.classList.add('alert-danger');
         });
     }
 }
 
 function threshold_value_changed()
 {
-    var threshold_value = document.querySelector('#threshold-value-text').value;
-    hexitec_endpoint.put(parseInt(threshold_value), 'detector/daq/config/threshold/threshold_value')
+    var threshold_value = document.querySelector('#threshold-value-text');
+    hexitec_endpoint.put(parseInt(threshold_value.value), 'detector/daq/config/threshold/threshold_value')
     .then(result => {
-        document.querySelector('#threshold-value-warning').innerHTML = "";
+        threshold_value.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#threshold-value-warning').innerHTML = error.message;
+        threshold_value.setCustomValidity(error.message);
+        threshold_value.reportValidity();
+        threshold_value.classList.add('alert-danger');
     });
 }
 
@@ -597,13 +600,15 @@ function gradients_filename_changed()
     // Only check/update gradients filename if calibration is enabled
     if (calibration_enable === true)
     {
-        var gradients_filename = document.querySelector('#gradients-filename-text').value;
-        hexitec_endpoint.put(gradients_filename, 'detector/daq/config/calibration/gradients_filename')
+        var gradients_filename = document.querySelector('#gradients-filename-text');
+        hexitec_endpoint.put(gradients_filename.value, 'detector/daq/config/calibration/gradients_filename')
         .then(result => {
-            document.querySelector('#gradients-filename-warning').innerHTML = "";
+            gradients_filename.classList.remove('alert-danger');
         })
         .catch(error => {
-            document.querySelector('#gradients-filename-warning').innerHTML = error.message;
+            gradients_filename.setCustomValidity(error.message);
+            gradients_filename.reportValidity();
+            gradients_filename.classList.add('alert-danger');
         });
     }
 }
@@ -613,71 +618,83 @@ function intercepts_filename_changed()
     // Only check/update intercepts filename if calibration is enabled
     if (calibration_enable === true)
     {
-        var intercepts_filename = document.querySelector('#intercepts-filename-text').value;
-        hexitec_endpoint.put(intercepts_filename, 'detector/daq/config/calibration/intercepts_filename')
+        var intercepts_filename = document.querySelector('#intercepts-filename-text');
+        hexitec_endpoint.put(intercepts_filename.value, 'detector/daq/config/calibration/intercepts_filename')
         .then(result => {
-            document.querySelector('#intercepts-filename-warning').innerHTML = "";
+            intercepts_filename.classList.remove('alert-danger');
         })
         .catch(error => {
-            document.querySelector('#intercepts-filename-warning').innerHTML = error.message;
+            intercepts_filename.setCustomValidity(error.message);
+            intercepts_filename.reportValidity();
+            intercepts_filename.classList.add('alert-danger');
         });
     }
 }
 
 function pixel_grid_size_changed()
 {
-    var pixel_grid_size = document.querySelector('#pixel-grid-size-text').value;
+    var pixel_grid_size = document.querySelector('#pixel-grid-size-text');
 
-    hexitec_endpoint.put(parseInt(pixel_grid_size), 'detector/daq/config/addition/pixel_grid_size')
+    hexitec_endpoint.put(parseInt(pixel_grid_size.value), 'detector/daq/config/addition/pixel_grid_size')
     .then(result => {
-        document.querySelector('#pixel-grid-size-warning').innerHTML = "";
+        pixel_grid_size.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#pixel-grid-size-warning').innerHTML = error.message;
+        pixel_grid_size.setCustomValidity(error.message);
+        pixel_grid_size.reportValidity();
+        pixel_grid_size.classList.add('alert-danger');
     });
 
-    hexitec_endpoint.put(parseInt(pixel_grid_size), 'detector/daq/config/discrimination/pixel_grid_size')
+    hexitec_endpoint.put(parseInt(pixel_grid_size.value), 'detector/daq/config/discrimination/pixel_grid_size')
     .then(result => {
-        document.querySelector('#pixel-grid-size-warning').innerHTML = "";
+        pixel_grid_size.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#pixel-grid-size-warning').innerHTML = error.message;
+        pixel_grid_size.setCustomValidity(error.message);
+        pixel_grid_size.reportValidity();
+        pixel_grid_size.classList.add('alert-danger');
     });
 }
 
 function bin_start_changed()
 {
-    var bin_start = document.querySelector('#bin-start-text').value;
-    hexitec_endpoint.put(parseInt(bin_start), 'detector/daq/config/histogram/bin_start')
+    var bin_start = document.querySelector('#bin-start-text');
+    hexitec_endpoint.put(parseInt(bin_start.value), 'detector/daq/config/histogram/bin_start')
     .then(result => {
-        document.querySelector('#bin-start-warning').innerHTML = "";
+        bin_start.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#bin-start-warning').innerHTML = error.message;
+        bin_start.setCustomValidity(error.message);
+        bin_start.reportValidity();
+        bin_start.classList.add('alert-danger');
     });
 }
 
 function bin_end_changed()
 {
-    var bin_end = document.querySelector('#bin-end-text').value;
-    hexitec_endpoint.put(parseInt(bin_end), 'detector/daq/config/histogram/bin_end')
+    var bin_end = document.querySelector('#bin-end-text');
+    hexitec_endpoint.put(parseInt(bin_end.value), 'detector/daq/config/histogram/bin_end')
     .then(result => {
-        document.querySelector('#bin-end-warning').innerHTML = "";
+        bin_end.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#bin-end-warning').innerHTML = error.message;
+        bin_end.setCustomValidity(error.message);
+        bin_end.reportValidity();
+        bin_end.classList.add('alert-danger');
     });
 }
 
 function bin_width_changed()
 {
-    var bin_width = document.querySelector('#bin-width-text').value;
-    hexitec_endpoint.put(parseFloat(bin_width), 'detector/daq/config/histogram/bin_width')
+    var bin_width = document.querySelector('#bin-width-text');
+    hexitec_endpoint.put(parseFloat(bin_width.value), 'detector/daq/config/histogram/bin_width')
     .then(result => {
-        document.querySelector('#bin-width-warning').innerHTML = "";
+        bin_width.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#bin-width-warning').innerHTML = error.message;
+        bin_width.setCustomValidity(error.message);
+        bin_width.reportValidity();
+        bin_width.classList.add('alert-danger');
     });
 }
 
@@ -876,88 +893,100 @@ function hdf_file_name_changed()
 
 function threshold_lower_changed()
 {
-    var threshold_lower = document.querySelector('#threshold-lower-text').value;
-    hexitec_endpoint.put(parseInt(threshold_lower), 'detector/daq/config/summed_image/threshold_lower')
+    var threshold_lower = document.querySelector('#threshold-lower-text');
+    hexitec_endpoint.put(parseInt(threshold_lower.value), 'detector/daq/config/summed_image/threshold_lower')
     .then(result => {
-        document.querySelector('#threshold-lower-warning').innerHTML = "";
+        threshold_lower.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#threshold-lower-warning').innerHTML = error.message;
+        threshold_lower.setCustomValidity(error.message);
+        threshold_lower.reportValidity();
+        threshold_lower.classList.add('alert-danger');
     });
 };
 
 function threshold_upper_changed()
 {
-    var threshold_upper = document.querySelector('#threshold-upper-text').value;
-    hexitec_endpoint.put(parseInt(threshold_upper), 'detector/daq/config/summed_image/threshold_upper')
+    var threshold_upper = document.querySelector('#threshold-upper-text');
+    hexitec_endpoint.put(parseInt(threshold_upper.value), 'detector/daq/config/summed_image/threshold_upper')
     .then(result => {
-        document.querySelector('#threshold-upper-warning').innerHTML = "";
+        threshold_upper.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#threshold-upper-warning').innerHTML = error.message;
+        threshold_upper.setCustomValidity(error.message);
+        threshold_upper.reportValidity();
+        threshold_upper.classList.add('alert-danger');
     });
 };
 
 function image_frequency_changed()
 {
-    var image_frequency = document.querySelector('#image-frequency-text').value;
-    hexitec_endpoint.put(parseInt(image_frequency), 'detector/daq/config/summed_image/image_frequency')
+    var image_frequency = document.querySelector('#image-frequency-text');
+    hexitec_endpoint.put(parseInt(image_frequency.value), 'detector/daq/config/summed_image/image_frequency')
     .then(result => {
-        document.querySelector('#image-frequency-warning').innerHTML = "";
+        image_frequency.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#image-frequency-warning').innerHTML = error.message;
+        image_frequency.setCustomValidity(error.message);
+        image_frequency.reportValidity();
+        image_frequency.classList.add('alert-danger');
     });
 };
 
 function hexitec_config_changed()
 {
-    var hexitec_config = document.querySelector('#hexitec-config-text').value;
-    hexitec_endpoint.put({"hexitec_config": hexitec_config}, 'detector/fem/')
+    var hexitec_config = document.querySelector('#hexitec-config-text');
+    hexitec_endpoint.put({"hexitec_config": hexitec_config.value}, 'detector/fem/')
     .then(result => {
-        document.querySelector('#hexitec-config-warning').innerHTML = "";
+        hexitec_config.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#hexitec-config-warning').innerHTML = error.message;
+        hexitec_config.setCustomValidity(error.message);
+        hexitec_config.reportValidity();
+        hexitec_config.classList.add('alert-danger');
     });
 };
 
 function frames_changed()
 {
-    var ui_frames = document.querySelector('#frames-text').value;
-    hexitec_endpoint.put(Number(ui_frames), 'detector/acquisition/number_frames')
+    var ui_frames = document.querySelector('#frames-text');
+    hexitec_endpoint.put(Number(ui_frames.value), 'detector/acquisition/number_frames')
     .then(result => {
-        document.querySelector('#frames-warning').innerHTML = "";
+        ui_frames.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#frames-warning').innerHTML = error.message;
+        ui_frames.setCustomValidity(error.message);
+        ui_frames.reportValidity();
+        ui_frames.classList.add('alert-danger');
     });
 };
 
 function duration_changed()
 {
-    var duration = document.querySelector('#duration-text').value;
-    hexitec_endpoint.put(Number(duration), 'detector/acquisition/duration')
+    var duration = document.querySelector('#duration-text');
+    hexitec_endpoint.put(Number(duration.value), 'detector/acquisition/duration')
     .then(result => {
-        document.querySelector('#duration-warning').innerHTML = "";
-        document.getElementById("duration-warning").classList.remove('alert-danger');
+        duration.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#duration-warning').innerHTML = error.message;
-        document.getElementById("duration-warning").classList.add('alert-danger');
+        duration.setCustomValidity(error.message);
+        duration.reportValidity();
+        duration.classList.add('alert-danger');
     });
 };
 
 function elog_changed()
 {
-    var entry = document.querySelector('#elog-text').value;
-    var payload = {"elog": entry};
+    var entry = document.querySelector('#elog-text');
+    var payload = {"elog": entry.value};
     hexitec_endpoint.put(payload, 'detector/status')
     .then(result => {
-        // console.log("elog_changed OK");
+        entry.classList.remove('alert-danger');
     })
     .catch(error => {
-        console.log("elog: " + error.message);
+        entry.setCustomValidity(error.message);
+        entry.reportValidity();
+        entry.classList.add('alert-danger');
     });
 };
 
@@ -978,25 +1007,29 @@ function lv_dataset_changed()
 
 function frame_frequency_changed()
 {
-    var frame_frequency = document.querySelector('#frame-frequency-text').value;
-    hexitec_endpoint.put(parseInt(frame_frequency), 'detector/daq/config/live_view/frame_frequency')
+    var frame_frequency = document.querySelector('#frame-frequency-text');
+    hexitec_endpoint.put(parseInt(frame_frequency.value), 'detector/daq/config/live_view/frame_frequency')
     .then(result => {
-        document.querySelector('#frame-frequency-warning').innerHTML = "";
+        frame_frequency.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#frame-frequency-warning').innerHTML = error.message;
+        frame_frequency.setCustomValidity(error.message);
+        frame_frequency.reportValidity();
+        frame_frequency.classList.add('alert-danger');
     });
 };
 
 function per_second_changed()
 {
-    var per_second = document.querySelector('#per-second-text').value;
-    hexitec_endpoint.put(parseInt(per_second), 'detector/daq/config/live_view/per_second')
+    var per_second = document.querySelector('#per-second-text');
+    hexitec_endpoint.put(parseInt(per_second.value), 'detector/daq/config/live_view/per_second')
     .then(result => {
-        document.querySelector('#per-second-warning').innerHTML = "";
+        per_second.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#per-second-warning').innerHTML = error.message;
+        per_second.setCustomValidity(error.message);
+        per_second.reportValidity();
+        per_second.classList.add('alert-danger');
     });
 };
 
