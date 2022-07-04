@@ -1,85 +1,94 @@
-#
+"""
+Rdma - UDP 10 G access.
+
+Christian Angelsen, STFC Detector Systems Software Group, 2022.
+"""
 
 import socket
 import struct
+import time
 
 
 class RdmaUDP(object):
 
-    def __init__(self, MasterTxUDPIPAddress='192.168.0.1', MasterTxUDPIPPort=65535,
-                 MasterRxUDPIPAddress='192.168.0.1', MasterRxUDPIPPort=65536,
-                 TargetRxUDPIPAddress='192.168.0.2', TargetRxUDPIPPort=65536,
-                 RxUDPBuf=1024, UDPMTU=9000, UDPTimeout=10, debug=False):
+    def __init__(self, local_ip='192.168.0.1', local_port=65535,
+                 rdma_ip='192.168.0.2', rdma_port=65536,
+                 UDPMTU=9000, UDPTimeout=5, debug=False):
 
         self.debug = debug
         if self.debug:
             print("RdmaUDP:")
-            print("	Binding to:   ({}, {})".format(MasterTxUDPIPAddress, MasterTxUDPIPPort))
-            print(" Transmitting: ({}, {})".format(TargetRxUDPIPAddress, TargetRxUDPIPPort))
+            print("	Binding: ({}, {})".format(local_ip, local_port))
+            print(" Send to: ({}, {})".format(rdma_ip, rdma_port))
             print("___________________________________________________________ ")
 
-        self.txsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-        timeval = struct.pack('ll', 5, 100)
-        self.txsocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, timeval)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.settimeout(UDPTimeout)
         self.error_OK = True
 
         try:
-            self.txsocket.bind((MasterTxUDPIPAddress, MasterTxUDPIPPort))
+            self.socket.bind((local_ip, local_port))
         except socket.error as e:
             error_string = "  Error: '{}' ".format(e)
-            error_string += "on TX Socket: {}:{}".format(MasterRxUDPIPAddress, MasterRxUDPIPPort)
+            error_string += "on TX Socket: {}:{}".format(local_ip, local_port)
             print(error_string)
             self.error_OK = False
 
-        self.TgtRxUDPIPAddr = TargetRxUDPIPAddress
-        self.TgtRxUDPIPPrt = TargetRxUDPIPPort
+        self.rdma_ip = rdma_ip
+        self.rdma_port = rdma_port
         self.UDPMaxRx = UDPMTU
         self.ack = False
 
     def __del__(self):
-        self.txsocket.close()
+        self.socket.close()
 
     def read(self, address, comment=''):
         command = struct.pack('=BBBBI', 2, 0, 0, 1, address)
-        # print("Going to send the command: ({})".format(type(command)));print(command)#;return 0
-        self.txsocket.sendto(command, (self.TgtRxUDPIPAddr, self.TgtRxUDPIPPrt))
-        print("read, acknowledged: ", self.ack)
-        if self.ack:
-            response = self.txsocket.recv(self.UDPMaxRx)
-            data = 0x00000000
-            if len(response) == 16:
-                decoded = struct.unpack('=BBBBIII', response)
-                data = decoded[5]
-            else:
-                print(" Read ack Error! Response (length:{}) != 16".format(len(response)))
-
-        if self.debug:
-            print('R %08X : %08X %s' % (address, data, comment))
-
+        data = 0
+        try:
+            self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
+            if self.ack:
+                # Receive acknowledge packet
+                response = self.socket.recv(self.UDPMaxRx)
+                data = 0x00000000
+                if len(response) == 12:
+                    decoded = struct.unpack('=BBBBII', response)
+                    data = decoded[5]
+                elif len(response) == 16:
+                    decoded = struct.unpack('=BBBBIII', response)
+                    data = decoded[5]
+                else:
+                    print("Read Ack of unexpected length: {}".format(len(response)))
+                print("R 0x{0:08X} : 0x{1:08X} {2}".format(address, data, comment))
+            time.sleep(2)
+        except socket.error as e:
+            print("Read Error: {1} Address: 0x{0:08X} ".format(address, e))
         return data
 
     def write(self, address, data, comment=''):
-        if self.debug:
-            print('W %08X : %08X %s' % (address, data, comment))
-
-        command = struct.pack('=BBBBII', 1, 0, 0, 0, address, data)
-        # print("Going to send the (Write) command: ({})".format(type(command)));print(command)#;return 0
-        # Send the single write command packet
-        self.txsocket.sendto(command, (self.TgtRxUDPIPAddr, self.TgtRxUDPIPPrt))
-        print("writing, acknowledged: ", self.ack)
         if self.ack:
-            # Receive acknowledge packet
-            response = self.txsocket.recv(self.UDPMaxRx)
-            # TODO: Remove as redundant?
-            if len(response) == 16:
-                decoded = struct.unpack('=BBBBIII', response)
-                print("Ack: %08X : %08X " % (decoded[4], decoded[5]))
-            else:
-                print("Write ack Error! Response (length: {}) != 16".format(len(response)))
+            print("W 0x{0:08X} : 0x{1:08X} {2}".format(address, data, comment))
+        command = struct.pack('=BBBBII', 1, 0, 0, 0, address, data)
+        # Send the single write command packet
+        try:
+            self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
+            if self.ack:
+                # Receive acknowledge packet
+                response = self.socket.recv(self.UDPMaxRx)
+                if len(response) == 12:
+                    decoded = struct.unpack('=BBBBII', response)
+                    print("Ack 0x{0:08X} : 0x{1:08X}".format(decoded[4], decoded[5]))
+                elif len(response) == 16:
+                    decoded = struct.unpack('=BBBBIII', response)
+                    print("Ack 0x{0:08X} : 0x{1:08X}".format(decoded[4], decoded[5]))
+                else:
+                    print("Write Ack of unexpected length: {}".format(len(response)))
+        except socket.error as e:
+            print("Write Error: {2} Address: 0x{0:08X} Data: 0x{1:08X}".format(address, data, e))
+        time.sleep(2)
 
     def close(self):
-        self.txsocket.close()
+        self.socket.close()
 
     def setDebug(self, enabled=True):
         self.debug = enabled

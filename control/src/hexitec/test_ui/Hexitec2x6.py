@@ -5,7 +5,7 @@ Christian Angelsen, STFC Detector Systems Software Group, 2022.
 """
 
 from RdmaUDP import RdmaUDP
-import time
+
 
 class Hexitec2x6():
     """
@@ -15,19 +15,24 @@ class Hexitec2x6():
     """
 
     def __init__(self, debug=False):
+        """."""
         self.debug = debug
         # Control IP addresses
-        self.server_ctrl_ip_addr = "10.0.3.1"  # Network card
-        self.camera_ctrl_ip_addr = "10.0.3.2"  # Hexitec 2x6 interface
+        self.local_ip = "10.0.3.1"  # Network card
+        self.rdma_ip = "10.0.3.2"   # Hexitec 2x6 interface
+        self.local_port = 61649
+        self.rdma_port = 61648
         self.x10g_rdma = None
 
     def __del__(self):
+        """."""
         self.x10g_rdma.close()
 
     def connect(self):
         """Connect to the 10 G UDP control channel."""
-        self.x10g_rdma = RdmaUDP(self.server_ctrl_ip_addr, 61649, self.server_ctrl_ip_addr, 61648,
-                                 self.camera_ctrl_ip_addr, 61648, 2000000, 9000, 20, self.debug)
+        self.x10g_rdma = RdmaUDP(self.local_ip, self.local_port,
+                                 self.rdma_ip, self.rdma_port,
+                                 9000, 3, self.debug)
         self.x10g_rdma.setDebug(self.debug)
         self.x10g_rdma.ack = True
         return self.x10g_rdma.error_OK
@@ -38,18 +43,14 @@ class Hexitec2x6():
         scratch1 = self.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
         scratch2 = self.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
         scratch3 = self.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
-        print("Scratch: 0x{0:08x} {1:08x} {2:08x} {3:08X}".format(scratch3, scratch2, scratch1, scratch0))
+        print("Scratch: 0x{0:08x}{1:08x}{2:08x}{3:08X}".format(scratch3, scratch2, scratch1, scratch0))
 
     def write_scratch_registers(self):
         """Write values to the four scratch registers."""
-        # self.x10g_rdma.write(0x8030, 0x12345678, "New Scratch Register1 value")
-        time.sleep(1)
-        self.x10g_rdma.write(0x8034, 0x9A0000F1, "New Scratch Register2 value")
-        time.sleep(1)
+        self.x10g_rdma.write(0x8030, 0x12345678, "New Scratch Register1 value")
+        # self.x10g_rdma.write(0x8034, 0x9A0000F1, "New Scratch Register2 value")
         # self.x10g_rdma.write(0x8038, 0xAAAAAAAA, "New Scratch Register3 value")
-        # time.sleep(1)
         # self.x10g_rdma.write(0x803C, 0x60054003, "New Scratch Register4 value")
-        # time.sleep(1)
 
     def read_fpga_dna_registers(self):
         """Read the three DNA registers."""
@@ -84,14 +85,13 @@ def display_register_information(name, read_bytes):
 
 if __name__ == '__main__':  # pragma: no cover
 
-    hxt = Hexitec2x6(True)
+    hxt = Hexitec2x6(False)
     hxt.connect()
     # hxt.read_scratch_registers()
     hxt.write_scratch_registers()
     hxt.read_scratch_registers()
     # hxt.read_fpga_dna_registers()
     hxt.disconnect()
-    print("All done!")
 
     # A few example bytes objects, converted into human readable format
 
