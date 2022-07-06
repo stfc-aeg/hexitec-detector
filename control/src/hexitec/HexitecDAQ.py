@@ -88,8 +88,8 @@ class HexitecDAQ():
         self.next_frame_enable = False
 
         self.pixel_grid_size = 3
-        self.gradients_filename = ""
-        self.intercepts_filename = ""
+        self.gradients_filename = self.base_path + "data/config/m_2018_01_001_400V_20C.txt"
+        self.intercepts_filename = self.base_path + "data/config/c_2018_01_001_400V_20C.txt"
         self.bin_end = 8000
         self.bin_start = 0
         self.bin_width = 10.0
@@ -116,7 +116,7 @@ class HexitecDAQ():
         self.threshold_upper = 4400
         self.image_frequency = 1
 
-        self.threshold_filename = ""
+        self.threshold_filename = self.base_path + "data/config/thresh_2018_01_001_400V_20C.txt"
         self.threshold_mode = "value"
         self.threshold_value = 120
 

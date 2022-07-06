@@ -1795,9 +1795,7 @@ class TestFem(unittest.TestCase):
                     rsrv2[0], rsrv2[1], rsrv2[2], rsrv2[3],
                     0x0D]
 
-        self.test_fem.fem.send_cmd.assert_has_calls([
-            call(scommand)
-        ])
+        self.test_fem.fem.send_cmd.assert_has_calls([call(scommand)])
 
     def test_enable_adc(self):
         """Test function handles enables ADCs ok."""
@@ -1894,9 +1892,7 @@ class TestFem(unittest.TestCase):
 
         # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
         power_command = [0x23, vsr_addr, HexitecFem.READ_PWR_VOLT, 0x0D]
-        self.test_fem.fem.send_cmd.assert_has_calls([
-            call(power_command, False)
-        ])
+        self.test_fem.fem.send_cmd.assert_has_calls([call(power_command)])
         assert self.test_fem.fem.vsr1_hv == -2.001293772893632
 
     def test_read_pwr_voltages_vsr2(self):
@@ -1912,9 +1908,7 @@ class TestFem(unittest.TestCase):
 
         # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
         power_command = [0x23, vsr_addr, HexitecFem.READ_PWR_VOLT, 0x0D]
-        self.test_fem.fem.send_cmd.assert_has_calls([
-            call(power_command, False)
-        ])
+        self.test_fem.fem.send_cmd.assert_has_calls([call(power_command)])
         assert self.test_fem.fem.vsr2_hv == -0.37647571428567517
 
     def test_get_hv_value_handles_value_error(self):
@@ -1940,9 +1934,7 @@ class TestFem(unittest.TestCase):
         vsr2_asic2 = 43.0
         vsr2_adc = 45.375
 
-        self.test_fem.fem.send_cmd.assert_has_calls([
-            call(command, False)
-        ])
+        self.test_fem.fem.send_cmd.assert_has_calls([call(command)])
         assert self.test_fem.fem.vsr2_ambient == vsr2_ambient
         assert self.test_fem.fem.vsr2_humidity == vsr2_humidity
         assert self.test_fem.fem.vsr2_asic1 == vsr2_asic1
@@ -1967,9 +1959,7 @@ class TestFem(unittest.TestCase):
         vsr1_asic2 = 160.0
         vsr1_adc = 44.5625
 
-        self.test_fem.fem.send_cmd.assert_has_calls([
-            call(command, False)
-        ])
+        self.test_fem.fem.send_cmd.assert_has_calls([call(command)])
         assert self.test_fem.fem.vsr1_ambient == vsr1_ambient
         assert self.test_fem.fem.vsr1_humidity == vsr1_humidity
         assert self.test_fem.fem.vsr1_asic1 == vsr1_asic1
