@@ -234,7 +234,7 @@ class HexitecDAQ():
         self.is_initialised = True
 
     def prepare_odin(self):
-        """Ensure the odin data FP and FR are configured, and turn on File Writing."""
+        """Ensure the odin data FP and FR are configured."""
         logging.debug("Setting up Acquisition")
         fr_status = self.get_adapter_status("fr")
         fp_status = self.get_adapter_status("fp")

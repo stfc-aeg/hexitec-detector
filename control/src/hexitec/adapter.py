@@ -666,9 +666,7 @@ class Hexitec():
 
         rc = self.daq.prepare_odin()
         if not rc:
-            message = "Prepare Odin failed!"
-            self.fem._set_status_error(message)
-            self.status_error = message
+            logging.error("Odin's frameReceiver/frameProcessor not ready")
 
         self.reset_state_variables()
 
