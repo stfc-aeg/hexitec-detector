@@ -21,6 +21,9 @@ from socket import error as socket_error
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from tornado.ioloop import IOLoop
+# Sequence used to generate Python source code sequence diagram
+from .SequenceOn import SequenceOn
+import sys
 
 
 class HexitecFem():
@@ -88,6 +91,7 @@ class HexitecFem():
         :param server_data_ip_addr: PC interface for data path
         :param camera_data_ip_addr: FEM interface for data path
         """
+        s = SequenceOn()
         # Give access to parent class (Hexitec) - for potential future use
         self.parent = parent
         self.x10g_rdma = None
@@ -408,6 +412,7 @@ class HexitecFem():
 
     def connect_hardware(self, msg=None):
         """Connect with hardware, wait 10 seconds for the VSRs' FPGAs to initialise."""
+        s = SequenceOn()
         try:
             if self.hardware_connected:
                 raise ParameterTreeError("Connection already established")
@@ -416,12 +421,15 @@ class HexitecFem():
             self.cam_connect()
             self._set_status_message("Camera connected.")
         except ParameterTreeError as e:
+            s.note("ParameterTreeError Thrown")
             self._set_status_error("%s" % str(e))
         except HexitecFemError as e:
+            s.note("HexitecFemError thrown")
             self._set_status_error("Failed to connect with camera: %s" % str(e))
             self._set_status_message("Is the camera powered?")
             logging.error("%s" % str(e))
         except Exception as e:
+            s.note("Exception thrown")
             error = "Uncaught Exception; Camera connection: %s" % str(e)
             self._set_status_error(error)
             logging.error("Camera connection: %s" % str(e))
@@ -434,6 +442,7 @@ class HexitecFem():
 
     def initialise_hardware(self, msg=None):
         """Initialise sensors, load enables, etc to initialise both VSR boards."""
+        s = SequenceOn()
         try:
             if self.hardware_connected is not True:
                 raise ParameterTreeError("No connection established")
@@ -467,15 +476,19 @@ class HexitecFem():
                 # Not cold initialisation, clear hardware_busy here
                 self.hardware_busy = False
         except (HexitecFemError, ParameterTreeError) as e:
+            s.note("HexitecFemError/ParameterTreeError thrown")
             self._set_status_error("Failed to initialise camera: %s" % str(e))
             logging.error("%s" % str(e))
         except Exception as e:
+            s.note("Exception thrown")
             self._set_status_error("Uncaught Exception; Camera initialisation failed: %s" % str(e))
             logging.error("%s" % str(e))
 
     def check_all_processes_ready(self):
         """Wait until DAQ, Odin adapters ready or in error."""
         if self.parent.daq.in_error:
+            s = SequenceOn()
+            s.note("daq.in_error")
             # Reset variables
             self.hardware_busy = False
             if self.first_initialisation:
@@ -488,6 +501,7 @@ class HexitecFem():
 
     def collect_data(self, msg=None):
         """Acquire data from camera."""
+        s = SequenceOn()
         try:
             if self.hardware_connected is not True:
                 raise ParameterTreeError("No connection established")
@@ -502,14 +516,17 @@ class HexitecFem():
             self._set_status_message("Acquiring data..")
             self.acquire_data()
         except (HexitecFemError, ParameterTreeError) as e:
+            s.note("HexitecFemError/ParameterTreeError thrown")
             self._set_status_error("Failed to collect data: %s" % str(e))
             logging.error("%s" % str(e))
         except Exception as e:
+            s.note("Exception thrown")
             self._set_status_error("Uncaught Exception; Data collection failed: %s" % str(e))
             logging.error("%s" % str(e))
 
     def disconnect_hardware(self, msg=None):
         """Disconnect camera."""
+        s = SequenceOn()
         try:
             if self.hardware_connected is False:
                 raise ParameterTreeError("No connection to disconnect")
@@ -523,9 +540,11 @@ class HexitecFem():
             self.cam_disconnect()
             self._set_status_message("Camera disconnected")
         except (HexitecFemError, ParameterTreeError) as e:
+            s.note("HexitecFemError/ParameterTreeError thrown")
             self._set_status_error("Failed to disconnect: %s" % str(e))
             logging.error("%s" % str(e))
         except Exception as e:
+            s.note("Exception thrown")
             self._set_status_error("Uncaught Exception; Disconnection failed: %s" % str(e))
             logging.error("%s" % str(e))
 
@@ -888,6 +907,7 @@ class HexitecFem():
 
     def acquire_data(self):  # noqa: C901
         """Acquire data, poll fem for completion and read out fem monitors."""
+        s = SequenceOn()
         # If called as part of cold initialisation, only need one frame so
         #   temporarily overwrite UI's number of frames for this call only
         self.number_frames_backed_up = self.number_frames
@@ -971,7 +991,8 @@ class HexitecFem():
         except Exception as e:
             self._set_status_error("Uncaught Exception; Data collection failed: %s" % str(e))
             logging.error("%s" % str(e))
-
+        s = SequenceOn()
+        s.note("Acquisition interrupted")
         # Acquisition interrupted
         self.acquisition_completed = True
         if self.first_initialisation:
@@ -979,6 +1000,7 @@ class HexitecFem():
 
     def acquire_data_completed(self):
         """Reset variables and read out Firmware monitors post data transfer."""
+        s = SequenceOn()
         self.acquire_stop_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
         # Stop the state machine
         self.x10g_rdma.write(0x60000002, 0, 'Dis-Enable State Machine')
@@ -988,6 +1010,7 @@ class HexitecFem():
         self.x10g_rdma.write(0xD0000000, 0, 'Clear enable signal')
 
         if self.stop_acquisition:
+            s.note("CANCELLED;stop_acquisition = False, hardware_busy = False, acquisition_completed = True")
             logging.info("Cancelling Acquisition..")
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[0], 0xE2, 0x0D])
             self.send_cmd([0x23, HexitecFem.VSR_ADDRESS[1], 0xE2, 0x0D])
@@ -1096,6 +1119,7 @@ class HexitecFem():
         m0 = self.x10g_rdma.read(0x9000001A, 'frame in progress flag')
         logging.debug("frame in progress flag: %s" % m0)
 
+        s.note("COMPLETE; hardware_busy = False, acquisition_completed = True")
         # Fem finished sending data/monitoring info, clear hardware busy
         self.hardware_busy = False
 
@@ -1116,6 +1140,7 @@ class HexitecFem():
 
     def first_initialisation_done_update_gui(self):
         """Reset related variables."""
+        s = SequenceOn()
         self.first_initialisation = False
         self.number_frames = self.number_frames_backed_up
         # TODO: Part of cold initialisation (to be removed)
@@ -1914,7 +1939,6 @@ class HexitecFem():
         logging.debug("Calibrated sensor returned synchronised status: %s" % synced_status)
 
         self._set_status_message("Initialisation completed. VSR2 and VS1 configured.")
-        print(" -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=- ")
 
     def calculate_frame_rate(self):
         """Calculate variables to determine frame rate (See ASICTimingRateDefault.xlsx)."""

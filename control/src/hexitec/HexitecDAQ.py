@@ -18,6 +18,9 @@ from datetime import datetime
 import collections.abc
 import time
 import os
+# Sequence used to generate Python source code sequence diagram
+from .SequenceOn import SequenceOn
+import sys
 
 
 class HexitecDAQ():
@@ -44,6 +47,7 @@ class HexitecDAQ():
         :param save_file_dir: save processed file to directory
         :param save_file_name: save processed file name as
         """
+        s = SequenceOn()
         self.parent = parent
         self.adapters = {}
 
@@ -235,15 +239,18 @@ class HexitecDAQ():
 
     def prepare_odin(self):
         """Ensure the odin data FP and FR are configured."""
+        s = SequenceOn()
         logging.debug("Setting up Acquisition")
         fr_status = self.get_adapter_status("fr")
         fp_status = self.get_adapter_status("fp")
         if self.are_processes_connected(fr_status) is False:
+            s.note("FR disconnected: self.in_error = True, return False")
             self.parent.fem._set_status_error("Frame Receiver(s) not connected!")
             logging.error("Cannot start Acquisition: Frame Receiver(s) not found")
             self.in_error = True
             return False
         elif self.are_processes_configured(fr_status, "fr") is False:
+            s.note("FR unconfigured: self.in_error = True, return False")
             self.parent.fem._set_status_error("Frame Receiver(s) not configured!")
             logging.error("Frame Receiver(s) not configured!")
             self.in_error = True
@@ -252,11 +259,13 @@ class HexitecDAQ():
             logging.debug("Frame Receiver(s) connected and configured")
 
         if self.are_processes_connected(fp_status) is False:
+            s.note("FP disconnected: self.in_error = True, return False")
             self.parent.fem._set_status_error("Frame Processor(s) not connected!")
             logging.error("Cannot Start Acquisition: Frame Processor(s) not found")
             self.in_error = True
             return False
         elif self.are_processes_configured(fp_status, "fp") is False:
+            s.note("FP unconfigured: self.in_error = True, return False")
             self.parent.fem._set_status_error("Frame Processor(s) not configured!")
             logging.error("Frame Processor(s) not configured!")
             self.in_error = True
@@ -266,10 +275,12 @@ class HexitecDAQ():
         # DAQ ready only if no data collection in progress
         if not self.in_progress:
             self.daq_ready = True
+            s.note("self.daq_ready = True")
         return True
 
     def prepare_daq(self, number_frames):
         """Turn on File Writing."""
+        s = SequenceOn()
         self.frames_processed = 0
         # Count hdf's frames_processed across node(s)
         self.frame_start_acquisition = self.get_total_frames_processed('hdf')
@@ -281,12 +292,14 @@ class HexitecDAQ():
         # Reset timeout watchdog
         self.processed_timestamp = time.time()
         if self.first_initialisation:
+            s.note("Fudge collection")
             # First initialisation captures data without writing to disk
             #   therefore don't enable file writing here
             pass  # pragma: no cover
         else:
             logging.debug("Starting File Writer")
             self.set_file_writing(True)
+        s.note("in_progress = True;daq_ready = False")
         # Diagnostics:
         self.daq_start_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
         # About to receive fem data, daq therefore now busy
@@ -296,6 +309,7 @@ class HexitecDAQ():
 
     def acquisition_check_loop(self):
         """Wait for acquisition to complete without blocking current thread."""
+        s = SequenceOn()
         bBusy = self.parent.fem.hardware_busy
         if bBusy:
             self.frames_received = self.get_total_frames_received()
@@ -313,7 +327,9 @@ class HexitecDAQ():
 
     def processing_check_loop(self):
         """Check that the processing has completed."""
+        s = SequenceOn()
         if self.first_initialisation:
+            s.note("First_init;first_initialisation = False, in_progress = False, daq_ready = True")
             # First initialisation runs without file writing; Stop acquisition
             #   without reopening (non-existent) file to add meta data
             self.first_initialisation = False
@@ -329,6 +345,7 @@ class HexitecDAQ():
         # print("\nX\t rxd {} left: {} proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
         #                                                           self.frames_processed, self.processed_remaining))
         if total_frames_processed == self.number_frames:
+            s.note("total_frames_processed == number_frames")
             delay = 1.0
             IOLoop.instance().call_later(delay, self.stop_acquisition)
             logging.debug("Acquisition Complete")
@@ -340,6 +357,7 @@ class HexitecDAQ():
             if total_frames_processed == self.frames_processed:
                 # No frames processed in at least 0.5 sec, did processing time out?
                 if self.shutdown_processing:
+                    s.note("Stalled, shutting down; shutdown_process = False, in_progress = False, daq_ready = True, file_writing = False")
                     self.shutdown_processing = False
                     self.in_progress = False
                     self.daq_ready = True
@@ -359,6 +377,7 @@ class HexitecDAQ():
 
     def stop_acquisition(self):
         """Disable file writing so processing can access the saved data to add Meta data."""
+        s = SequenceOn()
         self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
         self.set_file_writing(False)
         self.frames_processed = self.get_total_frames_processed(self.plugin)
@@ -399,6 +418,8 @@ class HexitecDAQ():
                                 (self.hdf_retry, e))
                 IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
                 return
+            s = SequenceOn()
+            s.note("Couldn't reopen file; in_progress = False, daq_ready = True")
             logging.error("Failed to open '%s' with error: %s" % (self.hdf_file_location, e))
             self.in_progress = False
             self.daq_ready = True
@@ -417,9 +438,12 @@ class HexitecDAQ():
         # Only "hexitec" group contain filename entries, ignore return value of write_metadata
         self.write_metadata(hdf_metadata_group, hdf_tree_dict)
 
+        s = SequenceOn()
         if (error_code == 0):
+            s.note("Meta added; in_progress = False, daq_ready = True")
             self.parent.fem._set_status_message("Meta data added to {}".format(self.hdf_file_location))
         else:
+            s.note("No Meta added; in_progress = False, daq_ready = True")
             self.parent.fem._set_status_error("Meta data writer unable to access file(s)!")
 
         hdf_file.close()
@@ -438,6 +462,7 @@ class HexitecDAQ():
 
     def write_metadata(self, metadata_group, param_tree_dict):
         """Write parameter tree(s) and config files as meta data."""
+        s = SequenceOn()
         param_tree_dict = self._flatten_dict(param_tree_dict)
         # Build metadata attributes from dictionary
         self.build_metadata_attributes(param_tree_dict, metadata_group)
@@ -470,10 +495,12 @@ class HexitecDAQ():
                         with open(file_name, 'r') as xml_file:
                             self.config_ds[param_file][:] = xml_file.read()
                     except IOError as e:
+                        s.note("XML File IOError: %s" % e)
                         logging.error("Failed to read %s XML file %s : %s " %
                                       (param_file, file_name, e))
                         return -1
                     except Exception as e:
+                        s.note("Exception: %s" % e)
                         logging.error("Exception creating metadata for %s XML file %s : %s" %
                                       (param_file, param_file, e))
                         return -2

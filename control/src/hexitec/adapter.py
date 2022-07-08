@@ -20,6 +20,9 @@ from odin.adapters.system_info import SystemInfo
 
 from .HexitecFem import HexitecFem
 from .HexitecDAQ import HexitecDAQ
+# Sequence used to generate Python source code sequence diagram
+from .SequenceOn import SequenceOn
+import sys
 
 class HexitecAdapter(ApiAdapter):
     """
@@ -36,6 +39,14 @@ class HexitecAdapter(ApiAdapter):
 
         :param kwargs: keyword arguments specifying options
         """
+        # Create file to save sequence diagram info to
+        self.original_stdout = sys.stdout   # Original stream probably not needed, but just in case..
+        self.sequence_file = open("Source_sequence.txt", "w")
+        sys.stdout = self.sequence_file
+        # # Reset the standard output
+        # sys.stdout = self.original_stdout
+        s = SequenceOn()
+        # s.note("HexitecAdapter init")
         # Initialise superclass
         super(HexitecAdapter, self).__init__(**kwargs)
 
@@ -176,6 +187,9 @@ class Hexitec():
         This constructor initialises the Hexitec object, building a
         parameter tree and launching a background task if enabled
         """
+        s = SequenceOn()
+        # s.note("Hexitec init")
+        # s.note("Hexitec second note")
         defaults = HexitecDetectorDefaults()
         self.file_dir = options.get("save_dir", defaults.save_dir)
         self.file_name = options.get("save_file", defaults.save_file)
