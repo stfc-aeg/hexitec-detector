@@ -34,7 +34,7 @@ class Hexitec2x6():
                                  self.rdma_ip, self.rdma_port,
                                  9000, 3, self.debug)
         self.x10g_rdma.setDebug(self.debug)
-        self.x10g_rdma.ack = True
+        self.x10g_rdma.ack = False  #True
         return self.x10g_rdma.error_OK
 
     def read_scratch_registers(self):
@@ -58,6 +58,53 @@ class Hexitec2x6():
         fpga_dna1 = self.x10g_rdma.read(0x00008010, 'Read FPGA DNA part 2')
         fpga_dna2 = self.x10g_rdma.read(0x00008014, 'Read FPGA DNA part 3')
         print("FPGA DNA: 0x{0:08x} {1:08x} {2:08x}".format(fpga_dna2, fpga_dna1, fpga_dna0))
+
+    def uart_rx(self, uart_address):
+        """Replicating functionality of the tickle function: as_uart_rx."""
+        deassert_all = 0x0
+        assert_bit = 0x1
+        uart_status_offset = 0x10
+        uart_rx_ctrl_offset = 0x14
+        rx_buff_strb_mask = 0x2
+        rx_buff_empty_mask = 0x8
+        rx_buff_level_mask = 0xFF00
+        rx_buff_data_mask = 0xFF0000
+##
+        uart_status_addr = uart_address + uart_status_offset
+        uart_rx_ctrl_addr = uart_address + uart_rx_ctrl_offset
+        print("Read targeting address: {}".format(uart_status_addr))
+        read_value = self.x10g_rdma.read(uart_status_addr, 'Read UART Buffer Status (0)') #read_axi $uart_status_addr 1
+        rx_status_masked = (read_value & rx_buff_empty_mask)
+        rx_has_data_flag = not rx_status_masked
+        print("read_value: {0:08X} ({1:08X} & {2}) = {3}".format(read_value, read_value, rx_buff_empty_mask, rx_has_data_flag))
+        # set rx_has_data_flag [ expr { ! ([ read_axi $uart_status_addr 1 ]  & $::rx_buff_empty_mask) } ]
+
+        rx_data = []
+        while (rx_has_data_flag):
+            print("-=-=-=-")
+            buffer_status = self.x10g_rdma.read(uart_status_addr, 'Read UART Buffer status (1)')
+            buff_level = (buffer_status & rx_buff_level_mask) >> 8
+            print("buff_level: ", buff_level)
+            self.x10g_rdma.write(uart_rx_ctrl_addr, rx_buff_strb_mask, "Write RX Buffer Strobe")
+            self.x10g_rdma.write(uart_rx_ctrl_addr, deassert_all, "Write RX Deassert All")
+            # print("Write {0:08X} {1:X}".format(uart_rx_ctrl_addr, rx_buff_strb_mask))
+            # print("Write {0:08X} {1:X}".format(uart_rx_ctrl_addr, deassert_all))
+            uart_status = self.x10g_rdma.read(uart_status_addr, 'Read UART Buffer status (2)')
+            rx_d = (uart_status & rx_buff_data_mask) >> 16
+            print(" rx_d: {0} ({1:02X})".format(rx_d, rx_d))
+            rx_data.append(rx_d)
+            read_value = self.x10g_rdma.read(uart_status_addr, 'Read UART Buffer status (3)')
+            rx_has_data_flag = not (read_value & rx_buff_empty_mask)
+        return rx_data
+
+        # while { $rx_has_data_flag } {
+        #     # set buff_level [ expr { ( [ read_axi $uart_status_addr 1 ] & $::rx_buff_level_mask ) >> 8 } ]
+        #     # write_axi $uart_rx_ctrl_addr $::rx_buff_strb_mask
+        #     # write_axi $uart_rx_ctrl_addr $::deassert_all
+        #     # set rx_d [ expr { ( [ read_axi $uart_status_addr 1 ] & $::rx_buff_data_mask ) >> 16 } ]
+        #     # lappend rx_data [ format %02X $rx_d ]
+        #     # set rx_has_data_flag [ expr { ! ([ read_axi $uart_status_addr 1 ]  & $::rx_buff_empty_mask) } ]
+        # }
 
     def disconnect(self):
         """."""
@@ -88,9 +135,13 @@ if __name__ == '__main__':  # pragma: no cover
     hxt = Hexitec2x6(False)
     hxt.connect()
     # hxt.read_scratch_registers()
-    hxt.write_scratch_registers()
-    hxt.read_scratch_registers()
-    # hxt.read_fpga_dna_registers()
+    # Testing out translating tickle script into Python:
+    rx = hxt.uart_rx(0x0)
+    print("rx: ", rx)
+    # # hxt.read_scratch_registers()
+    # hxt.write_scratch_registers()
+    # hxt.read_scratch_registers()
+    # # hxt.read_fpga_dna_registers()
     hxt.disconnect()
 
     # A few example bytes objects, converted into human readable format

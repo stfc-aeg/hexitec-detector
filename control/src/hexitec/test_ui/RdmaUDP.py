@@ -48,6 +48,7 @@ class RdmaUDP(object):
         try:
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
             if self.ack:
+                print("Read is going for acknowledgement receiving data..")
                 # Receive acknowledge packet
                 response = self.socket.recv(self.UDPMaxRx)
                 data = 0x00000000
@@ -60,9 +61,9 @@ class RdmaUDP(object):
                 else:
                     print("Read Ack of unexpected length: {}".format(len(response)))
                 print("R 0x{0:08X} : 0x{1:08X} {2}".format(address, data, comment))
-            time.sleep(2)
         except socket.error as e:
             print("Read Error: {1} Address: 0x{0:08X} ".format(address, e))
+        time.sleep(2)
         return data
 
     def write(self, address, data, comment=''):
@@ -73,6 +74,7 @@ class RdmaUDP(object):
         try:
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
             if self.ack:
+                print("Write is going for acknowledgement receiving data..")
                 # Receive acknowledge packet
                 response = self.socket.recv(self.UDPMaxRx)
                 if len(response) == 12:
