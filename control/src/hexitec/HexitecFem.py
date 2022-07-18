@@ -248,7 +248,7 @@ class HexitecFem():
                                      self.server_ctrl_ip_addr, 61651,
                                      self.camera_ctrl_ip_addr, 61650,
                                      self.camera_ctrl_ip_addr, 61651,
-                                     2000000, 9000, 20)
+                                     2000000, 9000)
             self.x10g_rdma.setDebug(False)
             self.x10g_rdma.ack = True
         except socket_error as e:
@@ -1914,7 +1914,6 @@ class HexitecFem():
         logging.debug("Calibrated sensor returned synchronised status: %s" % synced_status)
 
         self._set_status_message("Initialisation completed. VSR2 and VS1 configured.")
-        print(" -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=- ")
 
     def calculate_frame_rate(self):
         """Calculate variables to determine frame rate (See ASICTimingRateDefault.xlsx)."""

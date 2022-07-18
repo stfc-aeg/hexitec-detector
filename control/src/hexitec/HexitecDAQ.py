@@ -400,6 +400,7 @@ class HexitecDAQ():
                 IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
                 return
             logging.error("Failed to open '%s' with error: %s" % (self.hdf_file_location, e))
+            self.hdf_retry = 0
             self.in_progress = False
             self.daq_ready = True
             self.parent.fem._set_status_error("Error reopening HDF file: %s" % e)

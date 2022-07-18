@@ -8,15 +8,12 @@ var raw_data_enable = false;
 var processed_data_enable = false;
 var addition_enable = false;
 var discrimination_enable = false;
-var charged_sharing_enable = false;
 var next_frame_enable = false;
 var calibration_enable = false;
-
 var duration_enable = false;
 
 var polling_thread_running = false;
 var system_health = true;
-var fem_error_id = -1;
 var ui_frames = 10;
 var cold_initialisation = true;
 var hv_enabled = false;
@@ -73,8 +70,6 @@ function connectButtonClicked()
     setTimeout(function() {
         connect_hardware();
     }, time_delay);
-    document.querySelector('#disconnectButton').disabled = false;
-    document.querySelector('#connectButton').disabled = true;
 }
 
 function hvOnButtonClicked()
@@ -120,8 +115,6 @@ function cancelButtonClicked()
 function disconnectButtonClicked()
 {
     disconnect_hardware();
-    document.querySelector('#disconnectButton').disabled = true;
-    document.querySelector('#connectButton').disabled = false;
 }
 
 // Set Charged Sharing selection, supporting function
@@ -276,13 +269,16 @@ function poll_fem()
             // Enable buttons when connection completed
             if (hardware_connected === true)
             {
+                // Disable connect, enable disconnect button
+                document.querySelector('#disconnectButton').disabled = false;
+                document.querySelector('#connectButton').disabled = true;
                 if (hardware_busy === true)
                 {
-                    toggle_ui_elements(true);   // Disable
+                    toggle_ui_elements(true);   // Disable UI elements
                 }
                 else
                 {
-                    toggle_ui_elements(false);  // Enable
+                    toggle_ui_elements(false);  // Enable UI elements
                 }
                 if (daq_in_progress === true)
                 {
@@ -301,7 +297,8 @@ function poll_fem()
             }
             else
             {
-                // toggle_ui_elements(true);
+                document.querySelector('#disconnectButton').disabled = true;
+                document.querySelector('#connectButton').disabled = false;
                 document.querySelector('#initialiseButton').disabled = true;
                 document.querySelector('#acquireButton').disabled = true;
                 document.querySelector('#cancelButton').disabled = true;
@@ -955,7 +952,7 @@ function hexitec_config_changed()
 
 function frames_changed()
 {
-    var ui_frames = document.querySelector('#frames-text');
+    ui_frames = document.querySelector('#frames-text');
     hexitec_endpoint.put(Number(ui_frames.value), 'detector/acquisition/number_frames')
     .then(result => {
         ui_frames.classList.remove('alert-danger');
@@ -1061,7 +1058,7 @@ function update_ui_with_odin_settings()
 
         const acquisition = result["detector"]["acquisition"];
 
-        const duration_enable = acquisition.duration_enable;
+        duration_enable = acquisition.duration_enable;
         if (duration_enable === true)
         {
             const duration = acquisition.duration;
@@ -1096,7 +1093,7 @@ function update_ui_with_odin_settings()
             document.querySelector('#raw_data_radio2').checked = true;    // Disables raw dataset
         }
 
-        const next_frame_enable = daq_config.next_frame.enable;
+        next_frame_enable = daq_config.next_frame.enable;
         if (next_frame_enable === true)
         {
             document.querySelector('#next_frame_radio1').checked = true;
@@ -1106,7 +1103,7 @@ function update_ui_with_odin_settings()
             document.querySelector('#next_frame_radio2').checked = true;
         }
 
-        const calibration_enable = daq_config.calibration.enable;
+        calibration_enable = daq_config.calibration.enable;
         if (calibration_enable === true)
         {
             document.querySelector('#calibration_radio1').checked = true;

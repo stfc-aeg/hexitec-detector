@@ -627,6 +627,7 @@ class TestDAQ(unittest.TestCase):
                 self.test_daq.daq.hdf_retry = 6
                 self.test_daq.daq.hdf_closing_loop()
                 error = "Error reopening HDF file:"
+                assert self.test_daq.daq.hdf_retry == 0
                 assert self.test_daq.daq.in_progress is False
                 assert self.test_daq.adapter.hexitec.fem.status_error[:25] == error
 

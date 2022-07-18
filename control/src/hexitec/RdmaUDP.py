@@ -18,7 +18,7 @@ class RdmaUDP(object):
                  MasterRxUDPIPAddress='192.168.0.1', MasterRxUDPIPPort=61651,
                  TargetTxUDPIPAddress='192.168.0.2', TargetTxUDPIPPort=61650,
                  TargetRxUDPIPAddress='192.168.0.2', TargetRxUDPIPPort=61651,
-                 RxUDPBuf=1024, UDPMTU=9000, UDPTimeout=10):
+                 RxUDPBuf=1024, UDPMTU=9000):
         """
         Initialize the RdmaUDP object.
 

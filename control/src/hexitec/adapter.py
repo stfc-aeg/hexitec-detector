@@ -552,6 +552,10 @@ class Hexitec():
                 self.fem._set_status_error("Cannot Start Acquistion: Already in progress")
                 return
 
+        if not self.daq.prepare_odin():
+            logging.error("Odin's frameReceiver/frameProcessor not ready")
+            return
+
         self.total_delay = 0
         self.number_frames_to_request = self.number_frames
 
@@ -663,10 +667,6 @@ class Hexitec():
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         request.body = "{}".format(1)
         self.adapters["fp"].put(command, request)
-
-        rc = self.daq.prepare_odin()
-        if not rc:
-            logging.error("Odin's frameReceiver/frameProcessor not ready")
 
         self.reset_state_variables()
 

@@ -79,7 +79,7 @@ class TestFem(unittest.TestCase):
                                          self.test_fem.ip, 61651,
                                          self.test_fem.ip, 61650,
                                          self.test_fem.ip, 61651,
-                                         2000000, 9000, 20)
+                                         2000000, 9000)
             assert self.test_fem.fem.x10g_rdma.ack is True
 
     def test_connect_fails(self):
