@@ -23,6 +23,7 @@ var software_state = "Unknown";
 document.addEventListener("DOMContentLoaded", function()
 {
     hexitec_endpoint = new AdapterEndpoint("hexitec");
+    liveview_endpoint = new AdapterEndpoint("live_view");
     'use strict';
 
     document.querySelector('#odin-control-message').innerHTML = "Disconnected, Idle";
@@ -671,6 +672,11 @@ function bin_start_changed()
         bin_start.reportValidity();
         bin_start.classList.add('alert-danger');
     });
+    // Support histogram (1D) Live view data
+    liveview_endpoint.put(parseFloat(bin_start.value), 'bin_start')
+    .catch(error => {
+        console.log("Couldn't update bin_start");
+    });
 }
 
 function bin_end_changed()
@@ -685,6 +691,11 @@ function bin_end_changed()
         bin_end.reportValidity();
         bin_end.classList.add('alert-danger');
     });
+    // Support histogram (1D) Live view data
+    liveview_endpoint.put(parseFloat(bin_end.value), 'bin_end')
+    .catch(error => {
+        console.log("Couldn't update bin_end");
+    });
 }
 
 function bin_width_changed()
@@ -698,6 +709,11 @@ function bin_width_changed()
         bin_width.setCustomValidity(error.message);
         bin_width.reportValidity();
         bin_width.classList.add('alert-danger');
+    });
+    // Support histogram (1D) Live view data
+    liveview_endpoint.put(parseFloat(bin_width.value), 'bin_width')
+    .catch(error => {
+        console.log("Couldn't update bin_width");
     });
 }
 

@@ -108,7 +108,7 @@ class HexitecDAQ():
         self.frames_processed = 0
         self.shutdown_processing = False
 
-        self.dataset_name = "raw_frames"
+        self.dataset_name = "summed_spectra"    #"raw_frames"
         self.frame_frequency = 50
         self.per_second = 0
 
@@ -271,6 +271,7 @@ class HexitecDAQ():
     def prepare_daq(self, number_frames):
         """Turn on File Writing."""
         self.frames_processed = 0
+        self.frames_received = 0
         # Count hdf's frames_processed across node(s)
         self.frame_start_acquisition = self.get_total_frames_processed('hdf')
         self.number_frames = number_frames
@@ -352,7 +353,7 @@ class HexitecDAQ():
                 self.processed_timestamp = time.time()
                 self.frames_processed = total_frames_processed
                 self.processed_remaining = self.number_frames - self.frames_processed
-                # print("\n1\t rxd {} left: {} proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
+                # print("\n1\t rxd {} (left: {}) proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
                 #                                                           self.frames_processed, self.processed_remaining))
             # Wait 0.5 seconds and check again
             IOLoop.instance().call_later(.5, self.processing_check_loop)
@@ -363,7 +364,7 @@ class HexitecDAQ():
         self.set_file_writing(False)
         self.frames_processed = self.get_total_frames_processed(self.plugin)
         self.processed_remaining = self.number_frames - self.frames_processed
-        # print("\n2\t rxd {} left: {} proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
+        # print("\n2\t rxd {} (left: {}) proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
         #                                                           self.frames_processed, self.processed_remaining))
 
     def check_hdf_write_statuses(self):
@@ -681,6 +682,7 @@ class HexitecDAQ():
 
         # Target both config/histogram/max_frames_received and own ParameterTree
         max_frames_received = self.number_frames // self.number_nodes
+        max_frames_received = max_frames_received // 100    #TODO: change this hack ! ! !
         self._set_max_frames_received(max_frames_received)
         command = "config/histogram/max_frames_received"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
