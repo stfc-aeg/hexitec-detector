@@ -203,9 +203,19 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.set_duration_enable(True)
         assert self.test_fem.fem.duration_enabled is True
 
-    def test_set_duration(self):
-        """Test set_duration works."""
+    def test_set_duration_handle_defaults(self):
+        """Test set_duration handle cleared frame_rate."""
         # Ensure clocks configured
+        self.test_fem.fem.frame_rate = 0
+        self.test_fem.fem.row_s1 = 135
+        self.test_fem.fem.s1_sph = 1
+        self.test_fem.fem.sph_s2 = 5
+        duration = 1
+        self.test_fem.fem.set_duration(duration)
+        assert pytest.approx(self.test_fem.fem.frame_rate) == 1589.34
+
+    def test_set_duration_handle_changed_settings(self):
+        """Test set_duration handled changed clocks."""
         row_s1 = 5
         s1_sph = 1
         sph_s2 = 5
@@ -433,12 +443,15 @@ class TestFem(unittest.TestCase):
         error = "Uncaught Exception; Disconnection failed: "
         assert self.test_fem.fem._get_status_error() == error
 
-    def test_accessor_functions(self):
-        """Test access functions handle bools."""
+    def test_set_number_frames(self):
+        """Test setting number of frames works."""
         number_frames = 1001
+        self.test_fem.fem.frame_rate = 0
         self.test_fem.fem.set_number_frames(number_frames)
         assert self.test_fem.fem.get_number_frames() == number_frames
 
+    def test_accessor_functions(self):
+        """Test access functions handle bools."""
         for bEnabled in True, False:
             self.test_fem.fem.set_debug(bEnabled)
             assert self.test_fem.fem.get_debug() == bEnabled

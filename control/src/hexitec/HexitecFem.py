@@ -131,7 +131,7 @@ class HexitecFem():
         self.row_s1 = 135
         self.s1_sph = 1
         self.sph_s2 = 5
-        self.frame_rate = 0
+        self.frame_rate = 1589.34   # Corresponds to the above three settings
         self.duration = 1
         self.duration_enabled = False
         self.duration_remaining = 0

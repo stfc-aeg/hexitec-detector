@@ -50,7 +50,7 @@ namespace FrameProcessor
     // Set image_width_, image_height_, image_pixels_
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
-
+    end_of_acquisition_processed_ = false;
     initialiseHistograms();
     ///
     debugCounter = 0;
@@ -283,6 +283,7 @@ namespace FrameProcessor
     status.set_param(get_name() + "/histogram_index", histogram_index_);
     status.set_param(get_name() + "/pass_processed", pass_processed_);
     status.set_param(get_name() + "/pass_raw", pass_raw_);
+    status.set_param(get_name() + "/eoa_processed", end_of_acquisition_processed_);
   }
 
   /**
@@ -290,8 +291,8 @@ namespace FrameProcessor
    */
   bool HexitecHistogramPlugin::reset_statistics(void)
   {
-  	// Nothing to reset??
-
+    // Reset frames_processed_??
+    // frames_processed_ = 0;
     return true;
   }
 
@@ -303,8 +304,9 @@ namespace FrameProcessor
   {
     LOG4CXX_INFO(logger_, "End of acquisition frame received, writing histograms to disk");
     writeHistogramsToDisk();
-    histograms_written_ = frames_processed_ + 1;
+    histograms_written_ = frames_processed_;
     frames_processed_ = 0;
+    end_of_acquisition_processed_ = true;
   }
 
   /**
@@ -331,6 +333,10 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
+      if (frame->get_frame_number() == 0)
+      {
+        end_of_acquisition_processed_ = false;
+      }
       if (pass_raw_)
       {
         LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "

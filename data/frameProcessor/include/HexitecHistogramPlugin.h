@@ -118,6 +118,7 @@ namespace FrameProcessor
       long long number_bins_;
       void initialiseHistograms();
       void writeHistogramsToDisk();
+      bool end_of_acquisition_processed_;
       /// Debug only:
       int debugCounter;
   };

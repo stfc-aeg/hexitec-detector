@@ -108,7 +108,7 @@ class HexitecDAQ():
         self.frames_processed = 0
         self.shutdown_processing = False
 
-        self.dataset_name = "summed_spectra"    #"raw_frames"
+        self.dataset_name = "raw_frames"
         self.frame_frequency = 50
         self.per_second = 0
 
@@ -315,13 +315,14 @@ class HexitecDAQ():
     def processing_check_loop(self):
         """Check that the processing has completed."""
         if self.first_initialisation:
+            # TODO: this will soon become redundant
             # First initialisation runs without file writing; Stop acquisition
             #   without reopening (non-existent) file to add meta data
             self.first_initialisation = False
             self.in_progress = False
             self.daq_ready = True
-            # Delay calling stop_acquisition, otherwise software may beat fem to it
-            IOLoop.instance().call_later(2.0, self.stop_acquisition)
+            # Wrapup acquisition
+            IOLoop.instance().call_later(0.5, self.stop_acquisition)
             return
         # Not fudge initialisation; Check HDF/histogram processing progress
         total_frames_processed = self.get_total_frames_processed(self.plugin)
@@ -330,12 +331,11 @@ class HexitecDAQ():
         # print("\nX\t rxd {} left: {} proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
         #                                                           self.frames_processed, self.processed_remaining))
         if total_frames_processed == self.number_frames:
-            delay = 1.0
-            IOLoop.instance().call_later(delay, self.stop_acquisition)
+            IOLoop.instance().add_callback(self.flush_data)
             logging.debug("Acquisition Complete")
             # All required frames acquired; if either of frames based datasets
             #   selected, wait for hdf file to close
-            IOLoop.instance().call_later(delay, self.hdf_closing_loop)
+            IOLoop.instance().call_later(0.1, self.hdf_closing_loop)
         else:
             # Not all frames processed yet; Check data still in flow
             if total_frames_processed == self.frames_processed:
@@ -358,8 +358,33 @@ class HexitecDAQ():
             # Wait 0.5 seconds and check again
             IOLoop.instance().call_later(.5, self.processing_check_loop)
 
+    def flush_data(self):
+        """Flush out histograms, ensure complete datasets included."""
+        # Inject End of Acquisition Frame
+        command = "config/inject_eoa"
+        request = ApiAdapterRequest("", content_type="application/json")
+        self.adapters["fp"].put(command, request)
+        IOLoop.instance().call_later(0.02, self.monitor_eoa_progress)
+
+    def monitor_eoa_progress(self):
+        """Check whether End of Acquisition completed."""
+        if self.get_eoa_processed_status():
+            self.stop_acquisition()
+        else:
+            IOLoop.instance().call_later(0.25, self.monitor_eoa_progress)
+
     def stop_acquisition(self):
-        """Disable file writing so processing can access the saved data to add Meta data."""
+        """Disable file writing so processing can add local Meta data to file."""
+        if self.check_hdf_write_statuses():
+            # hdf file still open
+            if self.hdf_retry < 5:
+                IOLoop.instance().call_later(1.0, self.stop_acquisition)
+                self.hdf_retry += 1
+                return
+            else:
+                logging.error("Stop Acquisition timed out, H5 file still open")
+                self.parent.fem._set_status_error("DAQ timed out, file didn't close")
+        self.hdf_retry = 0
         self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
         self.set_file_writing(False)
         self.frames_processed = self.get_total_frames_processed(self.plugin)
@@ -534,6 +559,17 @@ class HexitecDAQ():
                 frames_processed = frames_processed + fw_status
         return frames_processed
 
+    def get_eoa_processed_status(self):
+        """Check whether End Of Acquisition (eoa) propogated through node(s)' histogram plugin."""
+        fp_statuses = self.get_adapter_status("fp")
+        eoa_processed = True
+        for fp_status in fp_statuses:
+            eoa_status = fp_status.get("histogram", None).get('eoa_processed')
+            # print("Rank:", fp_status.get('hdf', None).get('rank'), " eoa_processed: ", eoa_status)
+            if eoa_status is False:
+                eoa_processed = eoa_status
+        return eoa_processed
+
     def get_total_frames_received(self):
         """Count frames received across all frameReceiver(s)."""
         fr_statuses = self.get_adapter_status("fr")
@@ -681,8 +717,8 @@ class HexitecDAQ():
         self.adapters["fp"].put(command, request)
 
         # Target both config/histogram/max_frames_received and own ParameterTree
-        max_frames_received = self.number_frames // self.number_nodes
-        max_frames_received = max_frames_received // 100    #TODO: change this hack ! ! !
+        frame_rate = self.parent.fem.frame_rate
+        max_frames_received = round(frame_rate // self.number_nodes)
         self._set_max_frames_received(max_frames_received)
         command = "config/histogram/max_frames_received"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
