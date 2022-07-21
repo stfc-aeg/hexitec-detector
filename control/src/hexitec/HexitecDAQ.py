@@ -108,9 +108,9 @@ class HexitecDAQ():
         self.frames_processed = 0
         self.shutdown_processing = False
 
-        self.dataset_name = "raw_frames"
+        self.dataset_name = "summed_spectra"    # "raw_frames"
         self.frame_frequency = 50
-        self.per_second = 0
+        self.per_second = 1
 
         self.threshold_lower = 0
         self.threshold_upper = 4400

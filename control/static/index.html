@@ -396,9 +396,9 @@
                                   <div class="row sidebar-row vertical-align">
                                     <div class="col-xs-7">
                                       <select class="form-control" id="lv_dataset_select" onchange="lv_dataset_changed(this.value)">
-                                        <option selected="selected" value="raw_frames">raw_frames</option>
+                                        <option value="raw_frames">raw_frames</option>
                                         <option value="processed_frames">processed_frames</option>
-                                        <option value="summed_spectra">summed_spectra</option>
+                                        <option selected="selected" value="summed_spectra">summed_spectra</option>
                                         <option value="summed_images">summed_images</option>
                                       </select>
                                     </div>
@@ -424,7 +424,7 @@
                                 </td>
                                 <td>
                                   <div class="text-columns">
-                                    <input type="text" id="per-second-text" onChange='per_second_changed()' value="0">
+                                    <input type="text" id="per-second-text" onChange='per_second_changed()' value="1">
                                   </div>
                                 </td>
                               </tr>
