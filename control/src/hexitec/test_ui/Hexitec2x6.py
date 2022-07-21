@@ -40,7 +40,9 @@ class Hexitec2x6():
     def read_scratch_registers(self):
         """Read scratch registers."""
         scratch0 = self.x10g_rdma.read(0x00008030, 'Read Scratch Register 1')
+        # print(scratch0)
         scratch1 = self.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
+        # print(scratch1)
         scratch2 = self.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
         scratch3 = self.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
         print("Scratch: 0x{0:08x}{1:08x}{2:08x}{3:08X}".format(scratch3, scratch2, scratch1, scratch0))
@@ -48,16 +50,16 @@ class Hexitec2x6():
     def write_scratch_registers(self):
         """Write values to the four scratch registers."""
         self.x10g_rdma.write(0x8030, 0x12345678, "New Scratch Register1 value")
-        # self.x10g_rdma.write(0x8034, 0x9A0000F1, "New Scratch Register2 value")
-        # self.x10g_rdma.write(0x8038, 0xAAAAAAAA, "New Scratch Register3 value")
-        # self.x10g_rdma.write(0x803C, 0x60054003, "New Scratch Register4 value")
+        self.x10g_rdma.write(0x8034, 0x9ABCDEF1, "New Scratch Register2 value")
+        self.x10g_rdma.write(0x8038, 0xAAAAAAAA, "New Scratch Register3 value")
+        self.x10g_rdma.write(0x803C, 0x60054003, "New Scratch Register4 value")
 
     def read_fpga_dna_registers(self):
         """Read the three DNA registers."""
         fpga_dna0 = self.x10g_rdma.read(0x0000800C, 'Read FPGA DNA part 1')
         fpga_dna1 = self.x10g_rdma.read(0x00008010, 'Read FPGA DNA part 2')
         fpga_dna2 = self.x10g_rdma.read(0x00008014, 'Read FPGA DNA part 3')
-        print("FPGA DNA: 0x{0:08x} {1:08x} {2:08x}".format(fpga_dna2, fpga_dna1, fpga_dna0))
+        print("FPGA DNA: 0x{0:08X} {1:08X} {2:08X}".format(fpga_dna2, fpga_dna1, fpga_dna0))
 
     def uart_rx(self, uart_address):
         """Replicating functionality of the tickle function: as_uart_rx."""
@@ -136,54 +138,26 @@ if __name__ == '__main__':  # pragma: no cover
     hxt.connect()
     # hxt.read_scratch_registers()
     # Testing out translating tickle script into Python:
-    rx = hxt.uart_rx(0x0)
-    print("rx: ", rx)
-    # # hxt.read_scratch_registers()
+    # rx = hxt.uart_rx(0x0)
+    # print("rx: ", rx)
+    # hxt.read_scratch_registers()
     # hxt.write_scratch_registers()
     # hxt.read_scratch_registers()
     # # hxt.read_fpga_dna_registers()
+    for index in range(100):
+        print(index)
+        hxt.x10g_rdma.write(0x8030, 0x10203040, "New Scratch Register1 value")
+        scratch0 = hxt.x10g_rdma.read(0x00008030, 'Read Scratch Register 1')
+        print("Reg1: {0:08X}".format(scratch0))
+        hxt.x10g_rdma.write(0x8034, 0x71625344, "New Scratch Register2 value")
+        scratch1 = hxt.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
+        print("Reg2: {0:08X}".format(scratch1))
+        hxt.x10g_rdma.write(0x8038, 0xBEEFBEEF, "New Scratch Register3 value")
+        scratch2 = hxt.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
+        print("Reg3: {0:08X}".format(scratch2))
+        hxt.x10g_rdma.write(0x803C, 0xDEADDEAD, "New Scratch Register4 value")
+        scratch3 = hxt.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
+        print("Scratch: 0x{0:08X}{1:08X}{2:08X}{3:08X}".format(scratch3, scratch2, scratch1, scratch0))
+        # break
+
     hxt.disconnect()
-
-    # A few example bytes objects, converted into human readable format
-
-    # # #Scratch register 1
-    # # #*** READ, Going to send:
-    # # #b'\x02\x00\x00\x010\x80\x00\x00'
-    # # #Read Back Data:
-    # sr1 =	b'\x02\x00\x00\x010\x80\x00\x00\x11\x11\x11\x11\xef\xbe\xad\xde'
-    # display_register_information("sr1", sr1)
-
-    # # #Scratch Register 2
-    # # #*** READ, Going to send:
-    # # # b'\x02\x00\x00\x014\x80\x00\x00'
-    # # # Read Back Data:
-    # sr2 = b'\x02\x00\x00\x014\x80\x00\x00\xef\xbe\xad\xde3333'
-    # display_register_information("sr2", sr2)
-
-    # # # Scratch Register 3
-    # # # *** READ, Going to send:
-    # # # b'\x02\x00\x00\x018\x80\x00\x00'
-    # # # Read Back Data:
-    # sr3 = b'\x02\x00\x00\x018\x80\x00\x003333DDDD'
-    # display_register_information("sr3", sr3)
-
-    # # # Scratch Register 4
-    # # # *** READ, Going to send:
-    # # # b'\x02\x00\x00\x01<\x80\x00\x00'
-    # # # Read Back Data:
-    # sr4 = b'\x02\x00\x00\x01<\x80\x00\x00DDDD\x00\x00\x00\x00'
-    # display_register_information("sr4", sr4)
-
-    # # Source Mac address, lower
-    # # *** READ, Going to send:
-    # # b'\x02\x00\x00\x01\x00\x00\x02\x00'
-    # # Read Back Data:
-    # sml = b'\x02\x00\x00\x01\x00\x00\x02\x00\x04\x00\x00\x00\x00b\x00\x00'
-    # display_register_information("sml", sml)
-
-    # # Source Mac address, upper
-    # # *** READ, Going to send:
-    # # b'\x02\x00\x00\x01\x04\x00\x02\x00'
-    # # Read Back Data:
-    # smu = b"\x02\x00\x00\x01\x04\x00\x02\x00\x00b\x00\x00'\xb8`\xb4"
-    # display_register_information("smu", smu)

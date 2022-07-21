@@ -44,25 +44,25 @@ class RdmaUDP(object):
 
     def read(self, address, comment=''):
         command = struct.pack('=BBBBI', 2, 0, 0, 1, address)
+        # print(" rdma.read(address={0:08X}), command: {1}, or: ".format(address, struct.unpack('=BBBBI', command)), command);return 0
         data = 0
         try:
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
+            # Receive acknowledge packet
+            response = self.socket.recv(self.UDPMaxRx)
+            data = 0x00000000
+            if len(response) == 12:
+                decoded = struct.unpack('=BBBBII', response)
+                data = decoded[5]
+            elif len(response) == 16:
+                decoded = struct.unpack('=BBBBIII', response)
+                data = decoded[5]
+            else:
+                print("Read Ack of unexpected length: {}".format(len(response)))
             if self.ack:
-                print("Read is going for acknowledgement receiving data..")
-                # Receive acknowledge packet
-                response = self.socket.recv(self.UDPMaxRx)
-                data = 0x00000000
-                if len(response) == 12:
-                    decoded = struct.unpack('=BBBBII', response)
-                    data = decoded[5]
-                elif len(response) == 16:
-                    decoded = struct.unpack('=BBBBIII', response)
-                    data = decoded[5]
-                else:
-                    print("Read Ack of unexpected length: {}".format(len(response)))
-                print("R 0x{0:08X} : 0x{1:08X} {2}".format(address, data, comment))
+                    print("R 0x{0:08X} : 0x{1:08X} {2}".format(address, data, comment))
         except socket.error as e:
-            print("Read Error: {1} Address: 0x{0:08X} ".format(address, e))
+            print(" *** Read Error: {1} Address: 0x{0:08X} ***".format(address, e))
         time.sleep(2)
         return data
 
@@ -70,13 +70,14 @@ class RdmaUDP(object):
         if self.ack:
             print("W 0x{0:08X} : 0x{1:08X} {2}".format(address, data, comment))
         command = struct.pack('=BBBBII', 1, 0, 0, 0, address, data)
+        # print(" rdma.write(address={0:08X}, data={1:08X}), command: {2}, or: ".format(
+        #         address, data, struct.unpack('=BBBBII', command)), command);return 0
         # Send the single write command packet
         try:
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
+            # Receive acknowledgement
+            response = self.socket.recv(self.UDPMaxRx)
             if self.ack:
-                print("Write is going for acknowledgement receiving data..")
-                # Receive acknowledge packet
-                response = self.socket.recv(self.UDPMaxRx)
                 if len(response) == 12:
                     decoded = struct.unpack('=BBBBII', response)
                     print("Ack 0x{0:08X} : 0x{1:08X}".format(decoded[4], decoded[5]))
@@ -86,7 +87,7 @@ class RdmaUDP(object):
                 else:
                     print("Write Ack of unexpected length: {}".format(len(response)))
         except socket.error as e:
-            print("Write Error: {2} Address: 0x{0:08X} Data: 0x{1:08X}".format(address, data, e))
+            print(" *** Write Error: {2} Address: 0x{0:08X} Data: 0x{1:08X} ***".format(address, data, e))
         time.sleep(2)
 
     def close(self):
