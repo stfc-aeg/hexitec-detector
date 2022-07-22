@@ -87,7 +87,6 @@ class DAQTestFixture(object):
                         "bin_start": 0,
                         "bin_end": 8000,
                         "bin_width": 10.0,
-                        "flush_histograms": 0,
                         "frames_processed": 0,
                         "histograms_written": 0,
                         "histogram_index": 1000,

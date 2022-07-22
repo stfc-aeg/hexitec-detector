@@ -164,9 +164,9 @@ class GenerateConfigFiles():
         # Extract configuration from HexitecDAQ config
         d = self.param_tree['config']
 
-        # Sort parameter tree dict into R, T, N, C, A, D, H, SI, LV plugin order
+        # Sort parameter tree dict into R, T, N, C, A, D, SI, H, LV plugin order
         keyorder = ['reorder', 'threshold', 'next_frame', 'calibration', 'addition',
-                    'discrimination', 'histogram', 'summed_image', 'live_view']
+                    'discrimination', 'summed_image', 'histogram', 'live_view']
         config = OrderedDict(sorted(d.items(), key=lambda i: keyorder.index(i[0])))
 
         # Determine plugin chain (to configure frameProcessor)
@@ -190,7 +190,7 @@ class GenerateConfigFiles():
                 logging.debug("Plugin %s missing 'enable' setting!" % key)
                 raise Exception("Plugin %s missing 'enable' setting!" % key)
 
-        plugin_chain += ["histogram", "summed_image"]
+        plugin_chain += ["summed_image", "histogram"]
         if self.live_view_selected:
             plugin_chain += ["live_view"]
 
@@ -252,13 +252,13 @@ class GenerateConfigFiles():
                         odin_plugins[plugin][2])
 
         if self.live_view_selected:
-            # Chain plugins together, with live view now branched off summed_image
+            # Chain plugins together, with live view now branched off histogram(was summed_image)
             store_plugin_connect = ''',
                 {
                     "plugin": {
                         "connect": {
                             "index": "live_view",
-                            "connection": "summed_image"
+                            "connection": "histogram"
                         }
                     }
                 }'''
