@@ -108,6 +108,52 @@ class Hexitec2x6():
         #     # set rx_has_data_flag [ expr { ! ([ read_axi $uart_status_addr 1 ]  & $::rx_buff_empty_mask) } ]
         # }
 
+    def uart_tx(self, vsr_addr, vsr_cmd, vsr_data="", uart_addr=0x0):
+        """Replicating functionality of the tickle function: as_uart_tx."""
+        deassert_all = 0x0
+        uart_status_offset = 0x10
+        uart_rx_ctrl_offset = 0x14
+        uart_tx_ctrl_offset = 0xC
+        tx_fill_strb_mask = 0x2
+        tx_buff_strb_mask = 0x4
+        tx_data_mask = 0xFF00
+        vsr_start_char = 0x23
+        vsr_end_char = 0x0D
+        uart_tx_ctrl_addr = uart_addr + uart_tx_ctrl_offset
+        uart_status_addr  = uart_addr + uart_status_offset
+        uart_rx_ctrl_addr = uart_addr + uart_rx_ctrl_offset
+
+proc as_uart_tx { vsr_addr vsr_cmd { vsr_data "" } { uart_addr 0x0 } { lines "" } { hw_axi_idx 0 } } {
+    # puts " uart_tx_ctrl_addr = $uart_addr + $::uart_tx_ctrl_offset" # 0x0C
+    # puts " uart_status_addr  = $uart_addr + $::uart_status_offset"  # 0x10
+    # puts " uart_rx_ctrl_addr = $uart_addr + $::uart_rx_ctrl_offset" # 0x14
+    set uart_tx_ctrl_addr [ expr { $uart_addr + $::uart_tx_ctrl_offset } ]
+    set uart_status_addr  [ expr { $uart_addr + $::uart_status_offset } ]
+    set uart_rx_ctrl_addr [ expr { $uart_addr + $::uart_rx_ctrl_offset } ]
+
+    set vsr_seq $::vsr_start_char
+    lappend vsr_seq $vsr_addr
+    lappend vsr_seq $vsr_cmd
+    if { $vsr_data ne "" } {
+        foreach d $vsr_data {
+            lappend vsr_seq $d
+        }
+    }
+    lappend vsr_seq $::vsr_end_char
+    puts -nonewline "...sending: $vsr_seq"
+    foreach b $vsr_seq {
+        write_axi $uart_tx_ctrl_addr [ expr { $b << 8 } ]
+        write_axi $uart_tx_ctrl_addr [ expr { ( [ read_axi $uart_tx_ctrl_addr 1 ]  & $::tx_data_mask ) | $::tx_fill_strb_mask } ]
+        write_axi $uart_tx_ctrl_addr [ expr { $b << 8 } ]
+    }
+    write_axi $uart_tx_ctrl_addr $::tx_buff_strb_mask
+    write_axi $uart_tx_ctrl_addr $::deassert_all
+    # Wait for sequence to be transmitted via UART, and allow time for response
+    after $::uart_tx_delay
+    return $lines
+
+}
+
     def disconnect(self):
         """."""
         self.x10g_rdma.close()
@@ -158,6 +204,20 @@ if __name__ == '__main__':  # pragma: no cover
         hxt.x10g_rdma.write(0x803C, 0xDEADDEAD, "New Scratch Register4 value")
         scratch3 = hxt.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
         print("Scratch: 0x{0:08X}{1:08X}{2:08X}{3:08X}".format(scratch3, scratch2, scratch1, scratch0))
+        break
+        # # This matches writes made by rdma.py:
+        # hxt.x10g_rdma.write(0x8030, 0xBAB00EFE, "New Scratch Register1 value")
+        # scratch0 = hxt.x10g_rdma.read(0x00008030, 'Read Scratch Register 1')
+        # print("Reg1: {0:08X}".format(scratch0))
+        # hxt.x10g_rdma.write(0x8034, 0x23232323, "New Scratch Register2 value")
+        # scratch1 = hxt.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
+        # print("Reg2: {0:08X}".format(scratch1))
+        # hxt.x10g_rdma.write(0x8038, 0x45454545, "New Scratch Register3 value")
+        # scratch2 = hxt.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
+        # print("Reg3: {0:08X}".format(scratch2))
+        # hxt.x10g_rdma.write(0x803C, 0x67676767, "New Scratch Register4 value")
+        # scratch3 = hxt.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
+        # print("Scratch: 0x{0:08X}{1:08X}{2:08X}{3:08X}".format(scratch3, scratch2, scratch1, scratch0))
         # break
 
     hxt.disconnect()

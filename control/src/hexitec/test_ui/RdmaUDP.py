@@ -8,6 +8,8 @@ import socket
 import struct
 import time
 
+# This global variable to be removed post debugging
+SLEEP_DELAY = 0.5   #2
 
 class RdmaUDP(object):
 
@@ -44,7 +46,7 @@ class RdmaUDP(object):
 
     def read(self, address, comment=''):
         command = struct.pack('=BBBBI', 2, 0, 0, 1, address)
-        # print(" rdma.read(address={0:08X}), command: {1}, or: ".format(address, struct.unpack('=BBBBI', command)), command);return 0
+        # print(" rdma.read(address={0:08X}), command: {1}, or: ".format(address, struct.unpack('=BBBBI', command)), command)#;return 0
         data = 0
         try:
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
@@ -63,7 +65,7 @@ class RdmaUDP(object):
                     print("R 0x{0:08X} : 0x{1:08X} {2}".format(address, data, comment))
         except socket.error as e:
             print(" *** Read Error: {1} Address: 0x{0:08X} ***".format(address, e))
-        time.sleep(2)
+        time.sleep(SLEEP_DELAY)
         return data
 
     def write(self, address, data, comment=''):
@@ -71,7 +73,7 @@ class RdmaUDP(object):
             print("W 0x{0:08X} : 0x{1:08X} {2}".format(address, data, comment))
         command = struct.pack('=BBBBII', 1, 0, 0, 0, address, data)
         # print(" rdma.write(address={0:08X}, data={1:08X}), command: {2}, or: ".format(
-        #         address, data, struct.unpack('=BBBBII', command)), command);return 0
+        #         address, data, struct.unpack('=BBBBII', command)), command)#;return 0
         # Send the single write command packet
         try:
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
@@ -88,7 +90,7 @@ class RdmaUDP(object):
                     print("Write Ack of unexpected length: {}".format(len(response)))
         except socket.error as e:
             print(" *** Write Error: {2} Address: 0x{0:08X} Data: 0x{1:08X} ***".format(address, data, e))
-        time.sleep(2)
+        time.sleep(SLEEP_DELAY)
 
     def close(self):
         self.socket.close()
