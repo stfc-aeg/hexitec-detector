@@ -1,8 +1,7 @@
 """
 Takes a pcap file and transmits specified number of frames.
 
-Supports 2x2 sensors, multiple nodes, 8008/3208 packet sizes, 
-extracting headers from PCAPNG file.
+Supports 2x2 sensors, multiple nodes, 8008/3208 packet sizes, extracting headers from PCAPNG file.
 
 Created on April 22, 2022
 
@@ -154,7 +153,7 @@ class HexitecNodesProducer(object):
         runStartTime = time.time()
 
         bytesRemaining = len(self.byteStream)
-        #TODO: BEWARE Merging with script supporting multiple port(s) transmission!
+        # TODO: BEWARE Merging with script supporting multiple port(s) transmission!
         nodes = len(self.host)
 
         # Loop over selected number of frame(s)

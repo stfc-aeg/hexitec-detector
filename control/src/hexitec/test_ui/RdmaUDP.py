@@ -8,8 +8,8 @@ import socket
 import struct
 import time
 
-# This global variable to be removed post debugging
-SLEEP_DELAY = 0.5   #2
+# TODO: This global variable to be removed post debugging
+SLEEP_DELAY = 0.5   # 2
 
 class RdmaUDP(object):
 
@@ -62,7 +62,7 @@ class RdmaUDP(object):
             else:
                 print("Read Ack of unexpected length: {}".format(len(response)))
             if self.ack:
-                    print("R 0x{0:08X} : 0x{1:08X} {2}".format(address, data, comment))
+                print("R 0x{0:08X} : 0x{1:08X} {2}".format(address, data, comment))
         except socket.error as e:
             print(" *** Read Error: {1} Address: 0x{0:08X} ***".format(address, e))
         time.sleep(SLEEP_DELAY)

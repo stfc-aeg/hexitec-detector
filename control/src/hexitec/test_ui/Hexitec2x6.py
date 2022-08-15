@@ -34,7 +34,7 @@ class Hexitec2x6():
                                  self.rdma_ip, self.rdma_port,
                                  9000, 3, self.debug)
         self.x10g_rdma.setDebug(self.debug)
-        self.x10g_rdma.ack = False  #True
+        self.x10g_rdma.ack = False  # True
         return self.x10g_rdma.error_OK
 
     def read_scratch_registers(self):
@@ -75,7 +75,7 @@ class Hexitec2x6():
         uart_status_addr = uart_address + uart_status_offset
         uart_rx_ctrl_addr = uart_address + uart_rx_ctrl_offset
         print("Read targeting address: {}".format(uart_status_addr))
-        read_value = self.x10g_rdma.read(uart_status_addr, 'Read UART Buffer Status (0)') #read_axi $uart_status_addr 1
+        read_value = self.x10g_rdma.read(uart_status_addr, 'Read UART Buffer Status (0)')  # read_axi $uart_status_addr 1
         rx_status_masked = (read_value & rx_buff_empty_mask)
         rx_has_data_flag = not rx_status_masked
         print("read_value: {0:08X} ({1:08X} & {2}) = {3}".format(read_value, read_value, rx_buff_empty_mask, rx_has_data_flag))
@@ -120,39 +120,40 @@ class Hexitec2x6():
         vsr_start_char = 0x23
         vsr_end_char = 0x0D
         uart_tx_ctrl_addr = uart_addr + uart_tx_ctrl_offset
-        uart_status_addr  = uart_addr + uart_status_offset
+        uart_status_addr = uart_addr + uart_status_offset
         uart_rx_ctrl_addr = uart_addr + uart_rx_ctrl_offset
 
-proc as_uart_tx { vsr_addr vsr_cmd { vsr_data "" } { uart_addr 0x0 } { lines "" } { hw_axi_idx 0 } } {
-    # puts " uart_tx_ctrl_addr = $uart_addr + $::uart_tx_ctrl_offset" # 0x0C
-    # puts " uart_status_addr  = $uart_addr + $::uart_status_offset"  # 0x10
-    # puts " uart_rx_ctrl_addr = $uart_addr + $::uart_rx_ctrl_offset" # 0x14
-    set uart_tx_ctrl_addr [ expr { $uart_addr + $::uart_tx_ctrl_offset } ]
-    set uart_status_addr  [ expr { $uart_addr + $::uart_status_offset } ]
-    set uart_rx_ctrl_addr [ expr { $uart_addr + $::uart_rx_ctrl_offset } ]
+# TODO: Continue translating this:
+# proc as_uart_tx { vsr_addr vsr_cmd { vsr_data "" } { uart_addr 0x0 } { lines "" } { hw_axi_idx 0 } } {
+#     # puts " uart_tx_ctrl_addr = $uart_addr + $::uart_tx_ctrl_offset" # 0x0C
+#     # puts " uart_status_addr  = $uart_addr + $::uart_status_offset"  # 0x10
+#     # puts " uart_rx_ctrl_addr = $uart_addr + $::uart_rx_ctrl_offset" # 0x14
+#     set uart_tx_ctrl_addr [ expr { $uart_addr + $::uart_tx_ctrl_offset } ]
+#     set uart_status_addr  [ expr { $uart_addr + $::uart_status_offset } ]
+#     set uart_rx_ctrl_addr [ expr { $uart_addr + $::uart_rx_ctrl_offset } ]
 
-    set vsr_seq $::vsr_start_char
-    lappend vsr_seq $vsr_addr
-    lappend vsr_seq $vsr_cmd
-    if { $vsr_data ne "" } {
-        foreach d $vsr_data {
-            lappend vsr_seq $d
-        }
-    }
-    lappend vsr_seq $::vsr_end_char
-    puts -nonewline "...sending: $vsr_seq"
-    foreach b $vsr_seq {
-        write_axi $uart_tx_ctrl_addr [ expr { $b << 8 } ]
-        write_axi $uart_tx_ctrl_addr [ expr { ( [ read_axi $uart_tx_ctrl_addr 1 ]  & $::tx_data_mask ) | $::tx_fill_strb_mask } ]
-        write_axi $uart_tx_ctrl_addr [ expr { $b << 8 } ]
-    }
-    write_axi $uart_tx_ctrl_addr $::tx_buff_strb_mask
-    write_axi $uart_tx_ctrl_addr $::deassert_all
-    # Wait for sequence to be transmitted via UART, and allow time for response
-    after $::uart_tx_delay
-    return $lines
+#     set vsr_seq $::vsr_start_char
+#     lappend vsr_seq $vsr_addr
+#     lappend vsr_seq $vsr_cmd
+#     if { $vsr_data ne "" } {
+#         foreach d $vsr_data {
+#             lappend vsr_seq $d
+#         }
+#     }
+#     lappend vsr_seq $::vsr_end_char
+#     puts -nonewline "...sending: $vsr_seq"
+#     foreach b $vsr_seq {
+#         write_axi $uart_tx_ctrl_addr [ expr { $b << 8 } ]
+#         write_axi $uart_tx_ctrl_addr [ expr { ( [ read_axi $uart_tx_ctrl_addr 1 ]  & $::tx_data_mask ) | $::tx_fill_strb_mask } ]
+#         write_axi $uart_tx_ctrl_addr [ expr { $b << 8 } ]
+#     }
+#     write_axi $uart_tx_ctrl_addr $::tx_buff_strb_mask
+#     write_axi $uart_tx_ctrl_addr $::deassert_all
+#     # Wait for sequence to be transmitted via UART, and allow time for response
+#     after $::uart_tx_delay
+#     return $lines
 
-}
+# }
 
     def disconnect(self):
         """."""
