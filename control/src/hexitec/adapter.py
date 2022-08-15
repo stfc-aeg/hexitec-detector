@@ -252,6 +252,10 @@ class Hexitec():
         self.status_error = ""
         self.elog = ""
         self.number_nodes = 1
+        # Software states:
+        #   Cold, Disconnected, Idle, Acquiring
+        self.software_state = "Cold"
+        self.cold_initialisation = True
 
         detector = ParameterTree({
             "fem": self.fem.param_tree,
@@ -261,6 +265,8 @@ class Hexitec():
             "disconnect_hardware": (None, self.disconnect_hardware),
             "collect_offsets": (None, self._collect_offsets),
             "commit_configuration": (None, self.commit_configuration),
+            "software_state": (lambda: self.software_state, None),
+            "cold_initialisation": (lambda: self.cold_initialisation, None),
             "hv_on": (None, self.hv_on),
             "hv_off": (None, self.hv_off),
             "acquisition": {
@@ -311,7 +317,7 @@ class Hexitec():
         IOLoop.instance().call_later(1.0, self.polling)
 
     def get_frames_processed(self):
-        """."""
+        """Get number of frames processed across node(s)."""
         status = self._get_od_status("fp")
         frames_processed = 0
         for index in status:
@@ -412,6 +418,7 @@ class Hexitec():
         if not self.bias_clock_running:
             IOLoop.instance().add_callback(self.start_bias_clock)
         self.fem.connect_hardware(msg)
+        self.software_state = "Idle"
 
     def start_bias_clock(self):
         """Set up bias 'clock'."""
@@ -480,6 +487,7 @@ class Hexitec():
         else:
             # Nothing in progress, disconnect hardware
             self.fem.disconnect_hardware(msg)
+        self.software_state = "Disconnected"
         # Reset system status
         self.status_error = ""
         self.status_message = ""
@@ -496,10 +504,12 @@ class Hexitec():
         if duration_enable:
             self.set_duration(self.duration)
         else:
+            # print("\n\tadp.set_duration_enable({}) number_frames: {}\n".format(duration_enable, self.number_frames))
             self.set_number_frames(self.number_frames)
 
     def set_number_frames(self, frames):
         """Set number of frames in DAQ, FEM."""
+        # print("\n\tadp.set_number_frames({}) -> number_frames: {}\n".format(frames, self.number_frames))
         self.number_frames = frames
         # Update number of frames in Hardware, and (via DAQ) in histogram and hdf plugins
         self.fem.set_number_frames(self.number_frames)
@@ -509,6 +519,7 @@ class Hexitec():
         """Set duration, calculate frames from frame rate and update DAQ, FEM."""
         self.duration = duration
         self.fem.set_duration(self.duration)
+        # print("\n\tadp.set_duration({}) number_frames {} -> {}\n".format(duration, self.fem.get_number_frames(), self.number_frames))
         self.number_frames = self.fem.get_number_frames()
         self.daq.set_number_frames(self.number_frames)
 
@@ -610,6 +621,7 @@ class Hexitec():
         elif (self.daq.file_writing is False):
             IOLoop.instance().call_later(0.05, self.await_daq_ready)
         else:
+            self.software_state = "Acquiring"
             # Add additional 8 ms delay to ensure file writer's file open before first frame arrives
             IOLoop.instance().call_later(0.08, self.trigger_fem_acquisition)
 
@@ -654,9 +666,7 @@ class Hexitec():
 
         rc = self.daq.prepare_odin()
         if not rc:
-            message = "Prepare Odin failed!"
-            self.fem._set_status_error(message)
-            self.status_error = message
+            logging.error("Odin's frameReceiver/frameProcessor not ready")
 
         self.reset_state_variables()
 
@@ -669,6 +679,7 @@ class Hexitec():
         self.extended_acquisition = False
         self.acquisition_in_progress = False
         self.frames_already_acquired = 0
+        self.software_state = "Idle"
 
     def cancel_acquisition(self, put_data=None):
         """Cancel ongoing acquisition in Software.
@@ -681,6 +692,7 @@ class Hexitec():
         request = ApiAdapterRequest("", content_type="application/json")
         self.adapters["fp"].put(command, request)
         self.shutdown_processing()
+        self.software_state = "Idle"
 
     def _collect_offsets(self, msg):
         """Instruct FEM to collect offsets."""
@@ -689,6 +701,9 @@ class Hexitec():
     def commit_configuration(self, msg):
         """Push HexitecDAQ's 'config/' ParameterTree settings into FP's plugins."""
         self.daq.commit_configuration()
+        # Clear cold initialisation if first config commit
+        if self.cold_initialisation:
+            self.cold_initialisation = False
 
     def hv_on(self, msg):
         """Switch HV on."""

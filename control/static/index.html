@@ -78,7 +78,7 @@
                       </td>
                       <td>
                         <div class="text-columns">
-                          <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' value="/tmp/">
+                          <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' value="/tmp/" maxlength="256" size="35">
                         </div>
                       </td>
                       <td>
@@ -91,7 +91,7 @@
                       </td>
                       <td>
                         <div class="text-columns">
-                          <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' value="a">
+                          <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' value="a" maxlength="256" size="35">
                         </div>
                       </td>
                       <td>
@@ -103,7 +103,7 @@
                         Compression:&nbsp;
                       </td>
                       <td>
-                        <select class="double-width" onchange="compressionChange(this.value)">
+                        <select class="double-width" id="compression-text" onchange="compressionChange(this.value)">
                           <option selected="selected" value="none">none</option>
                           <option value="blosc">blosc</option>
                         </select>
@@ -168,7 +168,7 @@
                       </td>
                       <td>
                         <div class="text-columns">
-                          <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' value="control/config/hexitec_unified_CSD__performance.ini">
+                          <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' value="control/config/hexitec_unified_CSD__performance.ini" maxlength="256" size="35">
                         </div>
                       </td>
                     </tr>

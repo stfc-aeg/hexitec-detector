@@ -694,7 +694,6 @@ class TestDetector(unittest.TestCase):
         with patch("hexitec.adapter.IOLoop"):
 
             self.test_adapter.detector.monitor_fem_progress()
-            assert self.test_adapter.detector.status_error == "Prepare Odin failed!"
 
     def test_reset_state_variables(self):
         """Test function resets state variables."""

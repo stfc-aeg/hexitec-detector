@@ -374,7 +374,7 @@ class HexitecFem():
         """Set number of frames, initialise frame_rate if not set."""
         if self.frame_rate == 0:
             self.calculate_frame_rate()
-
+        # print("\n\tfem.set_number_frames({}) > number_frames {} duration {}\n".format(frames, self.number_frames, self.number_frames / self.frame_rate))
         if self.number_frames != frames:
             self.number_frames = frames
             self.duration = self.number_frames / self.frame_rate
@@ -386,6 +386,9 @@ class HexitecFem():
 
     def set_duration(self, duration):
         """Set duration, calculate frames to acquire using frame rate."""
+        if self.frame_rate == 0:
+            self.calculate_frame_rate()
+        # print("\n\tfem.set_duration({}) frames {}\n".format(duration, self.duration * self.frame_rate))
         self.duration = duration
         frames = self.duration * self.frame_rate
         self.number_frames = int(round(frames))
@@ -424,8 +427,8 @@ class HexitecFem():
             logging.error("Camera connection: %s" % str(e))
             # Cannot raise error beyond current thread
 
-        # # print("\n\nReinstate polling before merging with master !\n\n")
-        # # Start polling thread (connect successfully set up)
+        # print("\n\nReinstate polling before merging with master !\n\n")
+        # Start polling thread (connect successfully set up)
         # if len(self.status_error) == 0:
         #     self._start_polling()
 
@@ -1116,6 +1119,7 @@ class HexitecFem():
         self.first_initialisation = False
         self.number_frames = self.number_frames_backed_up
         # TODO: Part of cold initialisation (to be removed)
+        # print("\n\tfem.1st_initialisation_done_update_GUI(), updating parent's frames {}\n".format(self.number_frames))
         self.parent.number_frames = self.number_frames
 
     def set_up_state_machine(self):
@@ -1938,6 +1942,7 @@ class HexitecFem():
 
         self.frame_rate = frame_rate
         if self.duration_enabled:
+            # print("\n\tfem.calculate_frame_rate() (duration {} setting parent's number_frames {})\n".format(self.duration, self.number_frames))
             # With duration enabled, recalculate number of frames in case clocks changed
             self.set_duration(self.duration)
             self.parent.set_number_frames(self.number_frames)
@@ -2013,7 +2018,7 @@ class HexitecFem():
 
     def read_pwr_voltages(self):
         """Read and convert power data into voltages."""
-        self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_PWR_VOLT, 0x0D], False)
+        self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_PWR_VOLT, 0x0D])
         sensors_values = self.read_response()
         sensors_values = sensors_values.strip()
 
@@ -2044,7 +2049,7 @@ class HexitecFem():
 
     def read_temperatures_humidity_values(self):
         """Read and convert sensor data into temperatures and humidity values."""
-        self.send_cmd([0x23, self.vsr_addr, 0x52, 0x0D], False)
+        self.send_cmd([0x23, self.vsr_addr, 0x52, 0x0D])
         sensors_values = self.read_response()
         sensors_values = sensors_values.strip()
         if self.debug:

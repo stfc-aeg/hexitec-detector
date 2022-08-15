@@ -20,6 +20,7 @@ var fem_error_id = -1;
 var ui_frames = 10;
 var cold_initialisation = true;
 var hv_enabled = false;
+var software_state = "Unknown";
 
 // Called once, when page 1st loaded
 document.addEventListener("DOMContentLoaded", function()
@@ -38,6 +39,14 @@ document.addEventListener("DOMContentLoaded", function()
     document.querySelector('#offsetsButton').disabled = true;
     document.querySelector('#hvOnButton').disabled = true;
     document.querySelector('#hvOffButton').disabled = true;
+    // Start polling after page loaded (800 ms)
+    setTimeout(function() {
+        if (polling_thread_running === false)
+        {
+            polling_thread_running = true;
+            start_polling_thread();
+        }
+    }, 800);
 });
 
 // Apply UI configuration choices
@@ -60,16 +69,9 @@ function connectButtonClicked()
         commit_configuration();
         hexitec_config_changed();
         time_delay = 800;
-        cold_initialisation = false;
     }
-
     setTimeout(function() {
         connect_hardware();
-        if (polling_thread_running === false)
-        {
-            polling_thread_running = true;
-            start_polling_thread();
-        }
     }, time_delay);
     document.querySelector('#disconnectButton').disabled = false;
     document.querySelector('#connectButton').disabled = true;
@@ -118,51 +120,49 @@ function cancelButtonClicked()
 function disconnectButtonClicked()
 {
     disconnect_hardware();
-    // Stop polling thread after a 2 second delay to 
-    //  allow any lingering message(s) through
-    setTimeout(function() {
-        polling_thread_running = false;
-    }, 2000);
     document.querySelector('#disconnectButton').disabled = true;
     document.querySelector('#connectButton').disabled = false;
 }
 
-// Supports selecting Charged Sharing algorithm (none/add/dis Buttons)
-function setCS(e)
+// Set Charged Sharing selection, supporting function
+function setCSSelection(value)
 {
-    let target = e.target;
-
-    // Define colours to note which button is selected, and which are unselected
+    addition_enable = false;
+    discrimination_enable = false;
+    // Define colours to note which button is selected, and which buttons are unselected
     selected = '#0000FF';
     unselected = '#337ab7';
-    target.style.backgroundColor = selected;
-
-    charged_sharing_enable = false;
-    discrimination_enable = false;
-    addition_enable = false;
-
-    switch (target.value)
+    switch (value)
     {
         case "None":
+            document.getElementById("noneButton").style.backgroundColor = selected;
             document.getElementById("addButton").style.backgroundColor = unselected;
             document.getElementById("disButton").style.backgroundColor = unselected;
             break;
         case "Add":
             document.getElementById("noneButton").style.backgroundColor = unselected;
+            document.getElementById("addButton").style.backgroundColor = selected;
             document.getElementById("disButton").style.backgroundColor = unselected;
             addition_enable = true;
-            charged_sharing_enable = true;
             break;
         case "Dis":
             document.getElementById("noneButton").style.backgroundColor = unselected;
             document.getElementById("addButton").style.backgroundColor = unselected;
+            document.getElementById("disButton").style.backgroundColor = selected;
             discrimination_enable = true;
-            charged_sharing_enable = true;
             break;
         default:
             console.log("You must have added a fourth button, Neither None/Add/Dis pressed");
+            document.querySelector('#odin-control-error').innerHTML = "setCSSelection: " + error.message;
             break;
     }
+}
+
+// HTML callback function selecting Charged Sharing algorithm (none/add/dis Buttons)
+function setCS(e)
+{
+    let target = e.target;
+    setCSSelection(target.value);
 
     var pixel_grid_size = document.querySelector('#pixel-grid-size-text').value;
 
@@ -175,17 +175,11 @@ function setCS(e)
                         "pixel_grid_size": parseInt(pixel_grid_size)} };
 
     hexitec_endpoint.put(addition_payload, 'detector/daq/config')
-    .then(result => {
-        // console.log("Updating Addition successful");
-    })
     .catch(error => {
         console.log("FAILED to update Addition: " + error.message);
     });
 
     hexitec_endpoint.put(discrimination_payload, 'detector/daq/config')
-    .then(result => {
-        // console.log("Updating Discrimination successful");
-    })
     .catch(error => {
         console.log("FAILED to update Discrimination: " + error.message);
     });
@@ -216,179 +210,208 @@ function toggle_ui_elements(bBool)
 
 function poll_fem()
 {
-    // Polls the fem(s) for hardware status, environmental data, etc
-    hexitec_endpoint.get_url(hexitec_url + 'fr/status/')
-    .then(result => {
-        const frames = result["value"][0].frames;
-        const decoder = result["value"][0].decoder;
-        const buffers = result["value"][0].buffers;
-
-        document.querySelector('#frames_received').innerHTML = frames.received;
-        document.querySelector('#frames_released').innerHTML = frames.released;
-        document.querySelector('#frames_dropped').innerHTML = frames.dropped;
-        document.querySelector('#frames_timedout').innerHTML = frames.timedout;
-
-        document.querySelector('#fem_packets_lost').innerHTML = decoder.fem_packets_lost;
-        document.querySelector('#packets_lost').innerHTML = decoder.packets_lost;
-        document.querySelector('#buffers_empty').innerHTML = buffers.empty;
-        document.querySelector('#buffers_mapped').innerHTML = buffers.mapped;
-    })
-    .catch(error => {
-        document.querySelector('#odin-control-error').innerHTML = "Polling FR: " + error.message;
-    });
-
+    // Check whether odin_server is running
     hexitec_endpoint.get_url(hexitec_url + 'detector')
     .then(result => {
-        const fem = result["detector"]["fem"]
-        const adapter_status = result["detector"]["status"] // adapter.py's status
+        // Clear any previous error
+        document.querySelector('#odin-control-error').innerHTML = "";
+        software_state = result["detector"]["software_state"];
+        const odin_cold_initialisation = result["detector"]["cold_initialisation"];
 
-        const hardware_connected = fem["hardware_connected"];
-        const hardware_busy = fem["hardware_busy"];
-        
-        const daq_in_progress = result["detector"]["daq"]["status"]["in_progress"];
-
-        const frames_expected = result["detector"]["daq"]["status"]["frames_expected"];
-        const frames_received = result["detector"]["daq"]["status"]["frames_received"];
-        const frames_processed = result["detector"]["daq"]["status"]["frames_processed"];
-        const processed_remaining = result["detector"]["daq"]["status"]["processed_remaining"];
-        const received_remaining = result["detector"]["daq"]["status"]["received_remaining"];
-        const fraction_received = (frames_received/frames_expected).toFixed(2);
-        const fraction_processed = (frames_processed/frames_expected).toFixed(2);
-        // console.log(" rxd: " + frames_received + " " + received_remaining + " (" + fraction_received + ")" +
-        //         " proc'd: " + frames_processed + " " + processed_remaining + " (" + fraction_processed + ")" +
-        //         " tot: " + frames_expected);    /// DEBUGGING
-        var daq_progress = document.getElementById("daq-progress");
-        daq_progress.value = fraction_received * 100;
-        var processing_progress = document.getElementById("processing-progress");
-        processing_progress.value = fraction_processed * 100;
-
-        // Enable buttons when connection completed
-        if (hardware_connected === true)
+        // If Odin already initiated, but javascript isn't, populate UI with Odin settings
+        if ((odin_cold_initialisation === false) && (cold_initialisation === true))
         {
-            if (hardware_busy === true)
+            update_ui_with_odin_settings();
+            cold_initialisation = odin_cold_initialisation;
+        }
+
+        // Odin running, commence polling
+
+        // Polls the fem(s) for hardware status, environmental data, etc
+        hexitec_endpoint.get_url(hexitec_url + 'fr/status/')
+        .then(result => {
+            const frames = result["value"][0].frames;
+            const decoder = result["value"][0].decoder;
+            const buffers = result["value"][0].buffers;
+
+            document.querySelector('#frames_received').innerHTML = frames.received;
+            document.querySelector('#frames_released').innerHTML = frames.released;
+            document.querySelector('#frames_dropped').innerHTML = frames.dropped;
+            document.querySelector('#frames_timedout').innerHTML = frames.timedout;
+
+            document.querySelector('#fem_packets_lost').innerHTML = decoder.fem_packets_lost;
+            document.querySelector('#packets_lost').innerHTML = decoder.packets_lost;
+            document.querySelector('#buffers_empty').innerHTML = buffers.empty;
+            document.querySelector('#buffers_mapped').innerHTML = buffers.mapped;
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = "Polling FR: " + error.message;
+        });
+
+        hexitec_endpoint.get_url(hexitec_url + 'detector')
+        .then(result => {
+            const fem = result["detector"]["fem"]
+            const adapter_status = result["detector"]["status"] // adapter.py's status
+
+            const hardware_connected = fem["hardware_connected"];
+            const hardware_busy = fem["hardware_busy"];
+
+            const daq_in_progress = result["detector"]["daq"]["status"]["in_progress"];
+
+            const frames_expected = result["detector"]["daq"]["status"]["frames_expected"];
+            const frames_received = result["detector"]["daq"]["status"]["frames_received"];
+            const frames_processed = result["detector"]["daq"]["status"]["frames_processed"];
+            const processed_remaining = result["detector"]["daq"]["status"]["processed_remaining"];
+            const received_remaining = result["detector"]["daq"]["status"]["received_remaining"];
+            const fraction_received = (frames_received/frames_expected).toFixed(2);
+            const fraction_processed = (frames_processed/frames_expected).toFixed(2);
+            // console.log(" rxd: " + frames_received + " " + received_remaining + " (" + fraction_received + ")" +
+            //         " proc'd: " + frames_processed + " " + processed_remaining + " (" + fraction_processed + ")" +
+            //         " tot: " + frames_expected);    /// DEBUGGING
+            var daq_progress = document.getElementById("daq-progress");
+            daq_progress.value = fraction_received * 100;
+            var processing_progress = document.getElementById("processing-progress");
+            processing_progress.value = fraction_processed * 100;
+
+            // Enable buttons when connection completed
+            if (hardware_connected === true)
             {
-                toggle_ui_elements(true);   // Disable
+                if (hardware_busy === true)
+                {
+                    toggle_ui_elements(true);   // Disable
+                }
+                else
+                {
+                    toggle_ui_elements(false);  // Enable
+                }
+                if (daq_in_progress === true)
+                {
+                    // Enable cancelButton but disable changing file[path]
+                    document.querySelector('#cancelButton').disabled = false;
+                    document.querySelector('#hdf-file-path-text').disabled = true;
+                    document.querySelector('#hdf-file-name-text').disabled = true;
+                }
+                else
+                {
+                    // Disable cancelButton but enable changing file[path]
+                    document.querySelector('#cancelButton').disabled = true;
+                    document.querySelector('#hdf-file-path-text').disabled = false;
+                    document.querySelector('#hdf-file-name-text').disabled = false;
+                }
             }
             else
             {
-                toggle_ui_elements(false);  // Enable
-            }
-            if (daq_in_progress === true)
-            {
-                // Enable cancelButton but disable changing file[path]
-                document.querySelector('#cancelButton').disabled = false;
-                document.querySelector('#hdf-file-path-text').disabled = true;
-                document.querySelector('#hdf-file-name-text').disabled = true;
-            }
-            else
-            {
-                // Disable cancelButton but enable changing file[path]
+                // toggle_ui_elements(true);
+                document.querySelector('#initialiseButton').disabled = true;
+                document.querySelector('#acquireButton').disabled = true;
                 document.querySelector('#cancelButton').disabled = true;
+                if (hv_enabled)
+                    document.querySelector('#hvOffButton').disabled = true;
+                else
+                    document.querySelector('#hvOnButton').disabled = true;
+                document.querySelector('#offsetsButton').disabled = true;
+
+                // Unlock configuration related UI elements
+                document.querySelector('#applyButton').disabled = false;
+                document.querySelector('#applyButton2').disabled = false;
                 document.querySelector('#hdf-file-path-text').disabled = false;
                 document.querySelector('#hdf-file-name-text').disabled = false;
+                document.querySelector('#hexitec-config-text').disabled = false;
             }
-        }
-        else
-        {
-            toggle_ui_elements(true);
-            // Unlock configuration related UI elements
-            document.querySelector('#applyButton').disabled = false;
-            document.querySelector('#applyButton2').disabled = false;
-            document.querySelector('#hdf-file-path-text').disabled = false;
-            document.querySelector('#hdf-file-name-text').disabled = false;
-            document.querySelector('#hexitec-config-text').disabled = false;        
-        }
 
-        var fem_diagnostics = fem["diagnostics"];
-        var num_reads = fem_diagnostics["successful_reads"];
-        var frame_rate = fem["frame_rate"];
-        document.querySelector('#frame_rate').innerHTML = frame_rate.toFixed(2);
+            var fem_diagnostics = fem["diagnostics"];
+            var num_reads = fem_diagnostics["successful_reads"];
+            var frame_rate = fem["frame_rate"];
+            document.querySelector('#frame_rate').innerHTML = frame_rate.toFixed(2);
 
-        /// UNCOMMENT ME
-        // console.log(hardware_busy + " " + daq_in_progress + 
-        //             " <= hw_busy, daq_in_prog " + "   %_compl: "
-        //             + " reads: " + num_reads + " msg: " + adapter_status["status_message"]);
+            /// UNCOMMENT ME
+            // console.log(hardware_busy + " " + daq_in_progress + 
+            //             " <= hw_busy, daq_in_prog " + "   %_compl: "
+            //             + " reads: " + num_reads + " msg: " + adapter_status["status_message"]);
 
-        var acquire_start = fem_diagnostics["acquire_start_time"];
-        var acquire_stop = fem_diagnostics["acquire_stop_time"];
-        var acquire_time = fem_diagnostics["acquire_time"];
-        document.querySelector('#acquire_start').innerHTML = acquire_start;
-        document.querySelector('#acquire_stop').innerHTML = acquire_stop;
-        document.querySelector('#acquire_time').innerHTML = acquire_time;
+            var acquire_start = fem_diagnostics["acquire_start_time"];
+            var acquire_stop = fem_diagnostics["acquire_stop_time"];
+            var acquire_time = fem_diagnostics["acquire_time"];
+            document.querySelector('#acquire_start').innerHTML = acquire_start;
+            document.querySelector('#acquire_stop').innerHTML = acquire_stop;
+            document.querySelector('#acquire_time').innerHTML = acquire_time;
 
-        var daq_diagnostics = result["detector"]["daq"]["diagnostics"];
-        var daq_start = daq_diagnostics["daq_start_time"];
-        var daq_stop = daq_diagnostics["daq_stop_time"];
-        var fem_not_busy = daq_diagnostics["fem_not_busy"];
-        document.querySelector('#daq_start').innerHTML = daq_start;
-        document.querySelector('#daq_stop').innerHTML = daq_stop;
-        document.querySelector('#fem_not_busy').innerHTML = fem_not_busy;
+            var daq_diagnostics = result["detector"]["daq"]["diagnostics"];
+            var daq_start = daq_diagnostics["daq_start_time"];
+            var daq_stop = daq_diagnostics["daq_stop_time"];
+            var fem_not_busy = daq_diagnostics["fem_not_busy"];
+            document.querySelector('#daq_start').innerHTML = daq_start;
+            document.querySelector('#daq_stop').innerHTML = daq_stop;
+            document.querySelector('#fem_not_busy').innerHTML = fem_not_busy;
 
-        const offsets_timestamp = fem["offsets_timestamp"];
-        document.querySelector('#offsets_ts').innerHTML = offsets_timestamp
+            const offsets_timestamp = fem["offsets_timestamp"];
+            document.querySelector('#offsets_ts').innerHTML = offsets_timestamp
 
-        // Obtain overall adapter(.py's) status
+            // Obtain overall adapter(.py's) status
 
-        var status_message = adapter_status["status_message"];
-        document.querySelector('#odin-control-message').innerHTML = status_message;
+            var status_message = adapter_status["status_message"];
+            document.querySelector('#odin-control-message').innerHTML = status_message;
 
-        // Get adapter error (if set)
-        const status_error = adapter_status["status_error"];
-        if (status_error.length > 0)
-        {
-            const status = "Error: '" + status_error + "'";
-            document.querySelector('#odin-control-error').innerHTML = status;
-        }
-
-        document.querySelector('#vsr1_humidity').innerHTML = fem["vsr1_sensors"]["humidity"].toFixed(2);
-        document.querySelector('#vsr1_ambient').innerHTML = fem["vsr1_sensors"]["ambient"].toFixed(2);
-        document.querySelector('#vsr1_asic1').innerHTML = fem["vsr1_sensors"]["asic1"].toFixed(2);
-        document.querySelector('#vsr1_asic2').innerHTML = fem["vsr1_sensors"]["asic2"].toFixed(2);
-        document.querySelector('#vsr1_adc').innerHTML = fem["vsr1_sensors"]["adc"].toFixed(2);
-        document.querySelector('#vsr1_hv').innerHTML = fem["vsr1_sensors"]["hv"].toFixed(3);
-        document.querySelector('#vsr1_sync').innerHTML = fem["vsr1_sync"];
-
-        document.querySelector('#vsr2_humidity').innerHTML = fem["vsr2_sensors"]["humidity"].toFixed(2);
-        document.querySelector('#vsr2_ambient').innerHTML = fem["vsr2_sensors"]["ambient"].toFixed(2);
-        document.querySelector('#vsr2_asic1').innerHTML = fem["vsr2_sensors"]["asic1"].toFixed(2);
-        document.querySelector('#vsr2_asic2').innerHTML = fem["vsr2_sensors"]["asic2"].toFixed(2);
-        document.querySelector('#vsr2_adc').innerHTML = fem["vsr2_sensors"]["adc"].toFixed(2);
-        document.querySelector('#vsr2_hv').innerHTML = fem["vsr2_sensors"]["hv"].toFixed(3);
-        document.querySelector('#vsr2_sync').innerHTML = fem["vsr2_sync"];
-
-        /// To be implemented: system_health - true=fem OK, false=fem bad
-
-        // Traffic "light" green/red to indicate system good/bad
-
-        lampDOM = document.getElementById("Green");
-
-        // Clear status if camera disconnected, otherwise look for any error
-        if (status_message === "Camera disconnected")
-        {
-            lampDOM.classList.remove("lampGreen");
-            lampDOM.classList.remove("lampRed");
-        }
-        else
-        {
-            if (status_error.length  === 0)
+            // Get adapter error (if set)
+            const status_error = adapter_status["status_error"];
+            if (status_error.length > 0)
             {
-                lampDOM.classList.add("lampGreen");
+                const status = "Error: '" + status_error + "'";
+                document.querySelector('#odin-control-error').innerHTML = status;
+            }
+
+            document.querySelector('#vsr1_humidity').innerHTML = fem["vsr1_sensors"]["humidity"].toFixed(2);
+            document.querySelector('#vsr1_ambient').innerHTML = fem["vsr1_sensors"]["ambient"].toFixed(2);
+            document.querySelector('#vsr1_asic1').innerHTML = fem["vsr1_sensors"]["asic1"].toFixed(2);
+            document.querySelector('#vsr1_asic2').innerHTML = fem["vsr1_sensors"]["asic2"].toFixed(2);
+            document.querySelector('#vsr1_adc').innerHTML = fem["vsr1_sensors"]["adc"].toFixed(2);
+            document.querySelector('#vsr1_hv').innerHTML = fem["vsr1_sensors"]["hv"].toFixed(3);
+            document.querySelector('#vsr1_sync').innerHTML = fem["vsr1_sync"];
+
+            document.querySelector('#vsr2_humidity').innerHTML = fem["vsr2_sensors"]["humidity"].toFixed(2);
+            document.querySelector('#vsr2_ambient').innerHTML = fem["vsr2_sensors"]["ambient"].toFixed(2);
+            document.querySelector('#vsr2_asic1').innerHTML = fem["vsr2_sensors"]["asic1"].toFixed(2);
+            document.querySelector('#vsr2_asic2').innerHTML = fem["vsr2_sensors"]["asic2"].toFixed(2);
+            document.querySelector('#vsr2_adc').innerHTML = fem["vsr2_sensors"]["adc"].toFixed(2);
+            document.querySelector('#vsr2_hv').innerHTML = fem["vsr2_sensors"]["hv"].toFixed(3);
+            document.querySelector('#vsr2_sync').innerHTML = fem["vsr2_sync"];
+
+            /// To be implemented: system_health - true=fem OK, false=fem bad
+
+            // Traffic "light" green/red to indicate system good/bad
+
+            lampDOM = document.getElementById("Green");
+
+            // Clear status if camera disconnected, otherwise look for any error
+            if (status_message === "Camera disconnected")
+            {
+                lampDOM.classList.remove("lampGreen");
+                lampDOM.classList.remove("lampRed");
             }
             else
             {
-                lampDOM.classList.remove("lampGreen");
-                lampDOM.classList.add("lampRed");
+                if (status_error.length  === 0)
+                {
+                    lampDOM.classList.add("lampGreen");
+                }
+                else
+                {
+                    lampDOM.classList.remove("lampGreen");
+                    lampDOM.classList.add("lampRed");
+                }
             }
-        }
-
-        if (polling_thread_running === true)
-        {
-            window.setTimeout(poll_fem, 850);
-        }
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = "Polling Detector: " + error.message;
+        });
     })
     .catch(error => {
-        document.querySelector('#odin-control-error').innerHTML = "Polling Detector: " + error.message;
+        document.querySelector('#odin-control-error').innerHTML = "Odin_server unreachable";
     });
+    if (polling_thread_running === true)
+    {
+        window.setTimeout(poll_fem, 850);
+    }
 }
 
 function connect_hardware()
@@ -495,10 +518,6 @@ function commit_configuration()
 //  load the sequence of plugins corresponding to UI settings
 function apply_ui_values()
 {
-    if (cold_initialisation) {
-        // console.log("apply_UI_values() - cold_initialisation");
-        cold_initialisation = false;
-    }
     // Load all UI settings into HexitecDAQ's ParameterTree
 
     // Generate temporary config file(s) loading plugins chain,
@@ -519,14 +538,7 @@ function apply_ui_values()
         changeProcessedDataEnable();
         threshold_mode_changed();
         threshold_value_changed();
-        var threshold_mode = document.querySelector('#threshold-mode-text').value;
-        // console.log("apply_UI_values)), comparison: " + threshold_mode.localeCompare("filename"));
-        // Update threshold filename if threshold filename mode set
-        //  (0: strings equal [filename mode], 1: not [none/value mode])
-        if (threshold_mode.localeCompare("filename") === 0)
-        {
-            threshold_filename_changed();
-        }
+        threshold_filename_changed();
         gradients_filename_changed();
         intercepts_filename_changed();
         pixel_grid_size_changed();
@@ -547,7 +559,6 @@ function threshold_filename_changed()
     // Update threshold filename if threshold filename mode set
     //  (0: strings equal [filename mode], 1: not [none/value mode])
     var threshold_mode = document.querySelector('#threshold-mode-text').value;
-    // console.log("threshold_filename_changed, comparison: " + threshold_mode.localeCompare("filename"));
     if (threshold_mode.localeCompare("filename") === 0)
     {
         var threshold_filename = document.querySelector('#threshold-filename-text');
@@ -587,12 +598,7 @@ function threshold_mode_changed()
     .catch(error => {
         document.querySelector('#threshold-mode-warning').innerHTML = error.message;
     });
-    // Check valid filename/Update threshold filename if threshold filename mode set
-    //  (0: strings equal [filename mode], 1: not [none/value mode])
-    if (threshold_mode.localeCompare("filename") === 0)
-    {
-        threshold_filename_changed();
-    }
+    threshold_filename_changed();
 }
 
 function gradients_filename_changed()
@@ -704,13 +710,15 @@ function changeModeEnable()
     duration_enable = document.getElementById('mode_radio1').checked;
 
     hexitec_endpoint.put(duration_enable, 'detector/acquisition/duration_enable')
-    .then(result => {
-        // console.log("duration enable  updated");
-    })
     .catch(error => {
         console.log("duration enable: couldn't be changed: " + error.message);
     });
+    configure_duration(duration_enable);
+};
 
+// Helper function, configures duration/frames according to selection
+function configure_duration(duration_enable)
+{
     if (duration_enable)
     {
         document.querySelector('#duration-text').disabled = false;
@@ -733,17 +741,11 @@ function changeProcessedDataEnable()
     processed_data_enable = JSON.stringify(processed_data_enable);
     processed_data_enable = (processed_data_enable === "true");
     hexitec_endpoint.put(processed_data_enable, 'fp/config/histogram/pass_processed')
-    .then(result => {
-        // console.log("changeProcessDataEnabled fp updated");
-    })
     .catch(error => {
         console.log("Processed dataset in FP: couldn't be changed: " + errorr.message);
     });
 
     hexitec_endpoint.put(processed_data_enable, 'detector/daq/config/histogram/pass_processed')
-    .then(result => {
-        // console.log("changeProcessDataEnabled daq updated");
-    })
     .catch(error => {
         console.log("Processed dataset in daq: couldn't be changed: " + error.message);
     });
@@ -757,17 +759,11 @@ function changeRawDataEnable()
     raw_data_enable = JSON.stringify(raw_data_enable);
     raw_data_enable = (raw_data_enable === "true");
     hexitec_endpoint.put(raw_data_enable, 'fp/config/histogram/pass_raw')
-    .then(result => {
-        // console.log("changeRawDataEnable fp updated");
-    })
     .catch(error => {
         console.log("Raw dataset in FP: couldn't be changed: " + error.message);
     });
 
     hexitec_endpoint.put(raw_data_enable, 'detector/daq/config/histogram/pass_raw')
-    .then(result => {
-        // console.log("changeRawDataEnable daq updated");
-    })
     .catch(error => {
         console.log("Raw dataset in daq: couldn't be changed: " + error.message);
     });
@@ -779,43 +775,32 @@ function changeNextFrameEnable()
     next_frame_enable = JSON.stringify(next_frame_enable);
     next_frame_enable = (next_frame_enable === "true");
     hexitec_endpoint.put(next_frame_enable, 'detector/daq/config/next_frame/enable')
-    .then(result => {
-        // console.log("changeFrameEnable OK");
-    })
     .catch(error => {
         console.log("Next Frame couldn't be changed: " + error.message);
     });
 };
 
+// Function only ever called from HTML page
 function changeCalibrationEnable()
 {
     calibration_enable = document.getElementById('calibration_radio1').checked;
     calibration_enable = JSON.stringify(calibration_enable);
     calibration_enable = (calibration_enable === "true");
-
+    configure_bin_labels(calibration_enable);
     if (calibration_enable)
     {
-        document.querySelector('#bin_start').innerHTML = "Bin Start: [keV]&nbsp;";
-        document.querySelector('#bin_end').innerHTML = "Bin End: [keV]&nbsp;";
-        document.querySelector('#bin_width').innerHTML = "Bin Width: [keV]&nbsp;";
         document.querySelector('#bin-start-text').value = 0;
         document.querySelector('#bin-end-text').value = 200;
         document.querySelector('#bin-width-text').value = 0.25;
     }
     else
     {
-        document.querySelector('#bin_start').innerHTML = "Bin Start: [ADU]&nbsp;";
-        document.querySelector('#bin_end').innerHTML = "Bin End: [ADU]&nbsp;";
-        document.querySelector('#bin_width').innerHTML = "Bin Width: [ADU]&nbsp;";
         document.querySelector('#bin-start-text').value = 0;
         document.querySelector('#bin-end-text').value = 8000;
         document.querySelector('#bin-width-text').value = 10;
    }
 
     hexitec_endpoint.put(calibration_enable, 'detector/daq/config/calibration/enable')
-    .then(result => {
-        // console.log(" calibration_enable success");
-    })
     .catch(error => {
         console.log("calibration_enable failed: " + error.message);
     });
@@ -827,6 +812,23 @@ function changeCalibrationEnable()
         intercepts_filename_changed()
     }
 };
+
+// Helper function, configures histogram bin labels according to calibration setting
+function configure_bin_labels(calibration_enable)
+{
+    if (calibration_enable)
+    {
+        document.querySelector('#bin_start').innerHTML = "Bin Start: [keV]&nbsp;";
+        document.querySelector('#bin_end').innerHTML = "Bin End: [keV]&nbsp;";
+        document.querySelector('#bin_width').innerHTML = "Bin Width: [keV]&nbsp;";
+    }
+    else
+    {
+        document.querySelector('#bin_start').innerHTML = "Bin Start: [ADU]&nbsp;";
+        document.querySelector('#bin_end').innerHTML = "Bin End: [ADU]&nbsp;";
+        document.querySelector('#bin_width').innerHTML = "Bin Width: [ADU]&nbsp;";
+   }
+}
 
 function sensorsLayoutChange(sensors_layout)
 {
@@ -866,28 +868,32 @@ function compressionChange(compression)
 
 function hdf_file_path_changed()
 {
-    var hdf_file_path = document.querySelector('#hdf-file-path-text').value;
-    var payload = {"file_dir": hdf_file_path};
+    var hdf_file_path = document.querySelector('#hdf-file-path-text');
+    var payload = {"file_dir": hdf_file_path.value};
     hexitec_endpoint.put(payload, 'detector/daq/file_info')
     .then(result => {
-        document.querySelector('#hdf-file-path-warning').innerHTML = "";
+        hdf_file_path.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#hdf-file-path-warning').innerHTML = error.message;
+        hdf_file_path.setCustomValidity(error.message);
+        hdf_file_path.reportValidity();
+        hdf_file_path.classList.add('alert-danger');
     });
 };
 
 function hdf_file_name_changed()
 {
-    // Appends timestamp to filename, updates hdf file name
-    var hdf_file_name = document.querySelector('#hdf-file-name-text').value;
-    var payload = {"file_name": hdf_file_name + "_" + showTime()};
+    // (Don't) Append timestamp to filename, update hdf file name
+    var hdf_file_name = document.querySelector('#hdf-file-name-text');
+    var payload = {"file_name": hdf_file_name.value}; // + "_" + showTime()};
     hexitec_endpoint.put(payload, 'detector/daq/file_info')
     .then(result => {
-        document.querySelector('#hdf-file-name-warning').innerHTML = "";
+        hdf_file_name.classList.remove('alert-danger');
     })
     .catch(error => {
-        document.querySelector('#hdf-file-name-warning').innerHTML = error.message;
+        hdf_file_name.setCustomValidity(error.message);
+        hdf_file_name.reportValidity();
+        hdf_file_name.classList.add('alert-danger');
     });
 };
 
@@ -1002,6 +1008,144 @@ function lv_dataset_changed()
     .catch(error => {
         document.querySelector('#lv-dataset-changed-warning').innerHTML = error.message;
         document.getElementById("lv-dataset-changed-warning").classList.add('alert-danger');
+    });
+}
+
+function update_ui_with_odin_settings()
+{
+    hexitec_endpoint.get_url(hexitec_url + 'detector')
+    .then(result => {
+        const daq_config = result["detector"]["daq"]["config"];
+
+        // Update CS selections
+        var selection = "None";
+        var pixel_grid_size = 3;
+        if (daq_config.addition.enable === true)
+        {
+            selection = "Add";
+            pixel_grid_size = daq_config.addition.pixel_grid_size;
+        }
+        else if (daq_config.discrimination.enable === true)
+        {
+            selection = "Dis";
+            pixel_grid_size = daq_config.discrimination.pixel_grid_size;
+        }
+        setCSSelection(selection);
+        document.querySelector('#pixel-grid-size-text').value = pixel_grid_size;
+
+        // Update Threshold
+        const threshold_mode = daq_config.threshold.threshold_mode;
+        // Reduce absolute path: /abs/path/to/hexitec/hexitec-detector/data/config/t_threshold_file.txt
+        // to the relative path: data/config/t_threshold_file.txt
+        const abs_path = daq_config.threshold.threshold_filename;
+        const threshold_filename = abs_path.substring(abs_path.search("data/"));
+        const threshold_value = daq_config.threshold.threshold_value;
+        document.querySelector('#threshold-mode-text').value = threshold_mode;
+        document.querySelector('#threshold-filename-text').value = threshold_filename;
+        document.querySelector('#threshold-value-text').value = threshold_value;
+
+        // Updated Gradients, Intercepts files
+        const abs_gradients = daq_config.calibration.gradients_filename;
+        const gradients_filename = abs_gradients.substring(abs_gradients.search("data/"));
+        const abs_intercepts = daq_config.calibration.intercepts_filename;
+        const intercepts_filename = abs_intercepts.substring(abs_intercepts.search("data/"));
+        document.querySelector('#gradients-filename-text').value = gradients_filename;
+        document.querySelector('#intercepts-filename-text').value = intercepts_filename;
+
+        const bin_start = daq_config.histogram.bin_start;
+        const bin_end = daq_config.histogram.bin_end;
+        const bin_width = daq_config.histogram.bin_width;
+        document.querySelector('#bin-start-text').value = bin_start;
+        document.querySelector('#bin-end-text').value = bin_end;
+        document.querySelector('#bin-width-text').value = bin_width;
+
+        const acquisition = result["detector"]["acquisition"];
+
+        const duration_enable = acquisition.duration_enable;
+        if (duration_enable === true)
+        {
+            const duration = acquisition.duration;
+            document.querySelector('#mode_radio1').checked = true;	// Seconds
+            document.querySelector('#duration-text').value = duration;
+        }
+        else
+        {
+            const frames = acquisition.number_frames;
+            document.querySelector('#mode_radio2').checked = true;	// Frames
+            document.querySelector('#frames-text').value = frames;
+        }
+        configure_duration(duration_enable);
+
+        const processed_dataset = daq_config.histogram.pass_processed;
+        if (processed_dataset === true)
+        {
+            document.querySelector('#processed_data_radio1').checked = true;    // Enables processing Dataset
+        }
+        else
+        {
+            document.querySelector('#processed_data_radio2').checked = true;    // Disables processing dataset
+        }
+
+        const raw_dataset = daq_config.histogram.pass_raw;
+        if (raw_dataset === true)
+        {
+            document.querySelector('#raw_data_radio1').checked = true;    // Enables raw Dataset
+        }
+        else
+        {
+            document.querySelector('#raw_data_radio2').checked = true;    // Disables raw dataset
+        }
+
+        const next_frame_enable = daq_config.next_frame.enable;
+        if (next_frame_enable === true)
+        {
+            document.querySelector('#next_frame_radio1').checked = true;
+        }
+        else
+        {
+            document.querySelector('#next_frame_radio2').checked = true;
+        }
+
+        const calibration_enable = daq_config.calibration.enable;
+        if (calibration_enable === true)
+        {
+            document.querySelector('#calibration_radio1').checked = true;
+        }
+        else
+        {
+            document.querySelector('#calibration_radio2').checked = true;
+        }
+        configure_bin_labels(calibration_enable);
+
+        const compression = result["detector"]["daq"].compression_type;
+        document.querySelector('#compression-text').value = compression;
+
+        const file_info = result["detector"]["daq"]["file_info"];
+        document.querySelector('#hdf-file-path-text').value = file_info.file_dir;
+        document.querySelector('#hdf-file-name-text').value = file_info.file_name;
+
+        const summed_image = daq_config.summed_image;
+        document.querySelector('#threshold-lower-text').value = summed_image.threshold_lower;
+        document.querySelector('#threshold-upper-text').value = summed_image.threshold_upper;
+        document.querySelector('#image-frequency-text').value = summed_image.image_frequency;
+
+        const config_path = result["detector"]["fem"].hexitec_config;
+        const hexitec_config = config_path.substring(config_path.search("control/"))
+        document.querySelector('#hexitec-config-text').value = hexitec_config;
+
+        const elog = result["detector"]["status"].elog;
+        document.querySelector('#elog-text').value = elog;
+
+        const dataset_name = daq_config.live_view.dataset_name;
+        document.querySelector('#lv_dataset_select').value = dataset_name;
+
+        const frame_frequency = daq_config.live_view.frame_frequency;
+        document.querySelector('#frame-frequency-text').value = frame_frequency;
+        const per_second = daq_config.live_view.per_second;
+        document.querySelector('#per-second-text').value = per_second;
+    })
+    .catch(error => {
+        console.log("update_ui_with_odin_settings() ERROR: " + error.message);
     });
 }
 
