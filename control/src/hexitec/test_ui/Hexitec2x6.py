@@ -40,12 +40,13 @@ class Hexitec2x6():
     def read_scratch_registers(self):
         """Read scratch registers."""
         scratch0 = self.x10g_rdma.read(0x00008030, 'Read Scratch Register 1')
-        # print(scratch0)
-        scratch1 = self.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
-        # print(scratch1)
-        scratch2 = self.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
-        scratch3 = self.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
-        print("Scratch: 0x{0:08x}{1:08x}{2:08x}{3:08X}".format(scratch3, scratch2, scratch1, scratch0))
+        # # print(scratch0)
+        # scratch1 = self.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
+        # # print(scratch1)
+        # scratch2 = self.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
+        # scratch3 = self.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
+        # print("Scratch: 0x{0:08x}{1:08x}{2:08x}{3:08X}".format(scratch3, scratch2, scratch1, scratch0))
+        print("Scratch: 0x{0:08x}".format(scratch0))
 
     def write_scratch_registers(self):
         """Write values to the four scratch registers."""
@@ -187,38 +188,38 @@ if __name__ == '__main__':  # pragma: no cover
     # Testing out translating tickle script into Python:
     # rx = hxt.uart_rx(0x0)
     # print("rx: ", rx)
-    # hxt.read_scratch_registers()
+    hxt.read_scratch_registers()
     # hxt.write_scratch_registers()
     # hxt.read_scratch_registers()
     # # hxt.read_fpga_dna_registers()
-    for index in range(100):
-        print(index)
-        hxt.x10g_rdma.write(0x8030, 0x10203040, "New Scratch Register1 value")
-        scratch0 = hxt.x10g_rdma.read(0x00008030, 'Read Scratch Register 1')
-        print("Reg1: {0:08X}".format(scratch0))
-        hxt.x10g_rdma.write(0x8034, 0x71625344, "New Scratch Register2 value")
-        scratch1 = hxt.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
-        print("Reg2: {0:08X}".format(scratch1))
-        hxt.x10g_rdma.write(0x8038, 0xBEEFBEEF, "New Scratch Register3 value")
-        scratch2 = hxt.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
-        print("Reg3: {0:08X}".format(scratch2))
-        hxt.x10g_rdma.write(0x803C, 0xDEADDEAD, "New Scratch Register4 value")
-        scratch3 = hxt.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
-        print("Scratch: 0x{0:08X}{1:08X}{2:08X}{3:08X}".format(scratch3, scratch2, scratch1, scratch0))
-        break
-        # # This matches writes made by rdma.py:
-        # hxt.x10g_rdma.write(0x8030, 0xBAB00EFE, "New Scratch Register1 value")
-        # scratch0 = hxt.x10g_rdma.read(0x00008030, 'Read Scratch Register 1')
-        # print("Reg1: {0:08X}".format(scratch0))
-        # hxt.x10g_rdma.write(0x8034, 0x23232323, "New Scratch Register2 value")
-        # scratch1 = hxt.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
-        # print("Reg2: {0:08X}".format(scratch1))
-        # hxt.x10g_rdma.write(0x8038, 0x45454545, "New Scratch Register3 value")
-        # scratch2 = hxt.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
-        # print("Reg3: {0:08X}".format(scratch2))
-        # hxt.x10g_rdma.write(0x803C, 0x67676767, "New Scratch Register4 value")
-        # scratch3 = hxt.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
-        # print("Scratch: 0x{0:08X}{1:08X}{2:08X}{3:08X}".format(scratch3, scratch2, scratch1, scratch0))
-        # break
+    # for index in range(100):
+    #     print(index)
+    #     hxt.x10g_rdma.write(0x8030, 0x10203040, "New Scratch Register1 value")
+    #     scratch0 = hxt.x10g_rdma.read(0x00008030, 'Read Scratch Register 1')
+    #     print("Reg1: {0:08X}".format(scratch0))
+    #     hxt.x10g_rdma.write(0x8034, 0x71625344, "New Scratch Register2 value")
+    #     scratch1 = hxt.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
+    #     print("Reg2: {0:08X}".format(scratch1))
+    #     hxt.x10g_rdma.write(0x8038, 0xBEEFBEEF, "New Scratch Register3 value")
+    #     scratch2 = hxt.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
+    #     print("Reg3: {0:08X}".format(scratch2))
+    #     hxt.x10g_rdma.write(0x803C, 0xDEADDEAD, "New Scratch Register4 value")
+    #     scratch3 = hxt.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
+    #     print("Scratch: 0x{0:08X}{1:08X}{2:08X}{3:08X}".format(scratch3, scratch2, scratch1, scratch0))
+    #     break
+    #     # # This matches writes made by rdma.py:
+    #     # hxt.x10g_rdma.write(0x8030, 0xBAB00EFE, "New Scratch Register1 value")
+    #     # scratch0 = hxt.x10g_rdma.read(0x00008030, 'Read Scratch Register 1')
+    #     # print("Reg1: {0:08X}".format(scratch0))
+    #     # hxt.x10g_rdma.write(0x8034, 0x23232323, "New Scratch Register2 value")
+    #     # scratch1 = hxt.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
+    #     # print("Reg2: {0:08X}".format(scratch1))
+    #     # hxt.x10g_rdma.write(0x8038, 0x45454545, "New Scratch Register3 value")
+    #     # scratch2 = hxt.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
+    #     # print("Reg3: {0:08X}".format(scratch2))
+    #     # hxt.x10g_rdma.write(0x803C, 0x67676767, "New Scratch Register4 value")
+    #     # scratch3 = hxt.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
+    #     # print("Scratch: 0x{0:08X}{1:08X}{2:08X}{3:08X}".format(scratch3, scratch2, scratch1, scratch0))
+    #     # break
 
     hxt.disconnect()
