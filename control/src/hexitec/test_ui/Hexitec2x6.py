@@ -4,7 +4,9 @@ Hexitec2x6: Exercises UDP control plane.
 Christian Angelsen, STFC Detector Systems Software Group, 2022.
 """
 
+import sys
 from RdmaUDP import RdmaUDP
+from ast import literal_eval
 
 
 class Hexitec2x6():
@@ -14,12 +16,17 @@ class Hexitec2x6():
     Test we can access scratch registers in the KinteX FPGA.
     """
 
-    def __init__(self, debug=False):
+    def __init__(self, esdg_lab=False, debug=False):
         """."""
         self.debug = debug
-        # Control IP addresses
-        self.local_ip = "10.0.3.1"  # Network card
-        self.rdma_ip = "10.0.3.2"   # Hexitec 2x6 interface
+        if esdg_lab:
+            # Control IP addresses - MR
+            self.local_ip = "192.168.4.1"  # Network card
+            self.rdma_ip = "192.168.4.2"   # Hexitec 2x6 interface
+        else:
+            # Control IP addresses - CA
+            self.local_ip = "10.0.3.1"  # Network card
+            self.rdma_ip = "10.0.3.2"   # Hexitec 2x6 interface
         self.local_port = 61649
         self.rdma_port = 61648
         self.x10g_rdma = None
@@ -124,6 +131,29 @@ class Hexitec2x6():
         uart_status_addr = uart_addr + uart_status_offset
         uart_rx_ctrl_addr = uart_addr + uart_rx_ctrl_offset
 
+        vsr_seq = [vsr_start_char]
+        vsr_seq.append(vsr_addr)
+        vsr_seq.append(vsr_cmd)
+        if vsr_data != "":
+            for d in vsr_data:
+                vsr_seq.append(d)
+        vsr_seq.append(vsr_end_char)
+        print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in vsr_seq)))
+        for b in vsr_seq:
+            print("_______")
+            continue    # TODO: KEEP TRANSLATING !!!1!
+            # print("loop b: 0x{0:02X} ( b << 8: {1}".format(b, b << 8))
+            # print("write_axi: {} {}".format(uart_tx_ctrl_addr, b << 8))
+            # #
+            # read_tx_value = self.x10g_rdma.read(uart_tx_ctrl_addr, "uart, read {0:02X}".format(uart_tx_ctrl_addr))
+            # print("write 0x{0:02X} [ ( [ 0x{1:08X} & 0x{2:04X} ) | 0x{3:02}]".format(uart_tx_ctrl_addr, read_tx_value, tx_data_mask, tx_fill_strb_mask))
+            # write_value = (uart_tx_ctrl_addr, ((read_tx_value & tx_data_mask) | tx_fill_strb_mask)
+            # print("write " write_value = (uart_tx_ctrl_addr, ((read_tx_value & tx_data_mask) | tx_fill_strb_mask))
+            # write_value = (uart_tx_ctrl_addr, ((read_tx_value & tx_data_mask) | tx_fill_strb_mask)
+            # self.x10g_rdma.write(uart_tx_ctrl_addr, b << 8, "Writing uart_tx {0:02X} << 8".format(b))
+            # self.x10g_rdma.write(uart_tx_ctrl_addr, b << 8, "Writing uart_tx {0:02X} << 8".format(b))
+            # # self.x10g_rdma.write(0x8030, 0x12345678, "New Scratch Register1 value")
+
 # TODO: Continue translating this:
 # proc as_uart_tx { vsr_addr vsr_cmd { vsr_data "" } { uart_addr 0x0 } { lines "" } { hw_axi_idx 0 } } {
 #     # puts " uart_tx_ctrl_addr = $uart_addr + $::uart_tx_ctrl_offset" # 0x0C
@@ -181,31 +211,55 @@ def display_register_information(name, read_bytes):
 
 
 if __name__ == '__main__':  # pragma: no cover
-
-    hxt = Hexitec2x6(False)
+    esdg_lab = literal_eval(sys.argv[1])
+    debug = literal_eval(sys.argv[2])
+    hxt = Hexitec2x6(esdg_lab=esdg_lab, debug=debug)
     hxt.connect()
     # hxt.read_scratch_registers()
     # Testing out translating tickle script into Python:
     # rx = hxt.uart_rx(0x0)
     # print("rx: ", rx)
-    hxt.read_scratch_registers()
+##    hxt.uart_tx(0xFF, 0xF7, "", 0x0) #, 0)
+    # hxt.read_scratch_registers()	# THIS IS THE BARE CALL THAT MR USED
     # hxt.write_scratch_registers()
     # hxt.read_scratch_registers()
     # # hxt.read_fpga_dna_registers()
-    # for index in range(100):
-    #     print(index)
+
+    hxt.ack = True
+    scratch1 = hxt.x10g_rdma.read(0x00008030, comment='Read Scratch Register 1')
+    print("Reg   1, raw: {}".format(scratch1))
+    scratch12 = hxt.x10g_rdma.read(0x00008030, burst_len=2, comment='Read Scratch Register 1, 2')
+    print("Reg  12, raw: {}".format(scratch12))
+    scratch123 = hxt.x10g_rdma.read(0x00008030, burst_len=3, comment='Read Scratch Register 1, 2, 3')
+    print("Reg 123, raw: {}".format(scratch123))
+    scratch1234 = hxt.x10g_rdma.read(0x00008030, burst_len=4, comment='Read Scratch Register 1, 2, 3, 4')
+    print("Reg1234, raw: {}".format(scratch1234))
+
+    # hxt.ack = True
+    # hxt.x10g_rdma.write(0x8034, 0x71625344, "New Scratch Register2 value")
+    # scratch1 = hxt.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
+    # print("Reg2: {0:08X}".format(scratch1))
+
+    # hxt.x10g_rdma.write(0x8038, 0xBEEFBEEF, "New Scratch Register3 value")
+    # scratch2 = hxt.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
+    # # print("Reg3: {0:08X}".format(scratch2))
+    # hxt.x10g_rdma.write(0x803C, 0xDEADDEAD, "New Scratch Register4 value")
+    # scratch3 = hxt.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
+
+    # for index in range(200):
+    #     # print(index)
     #     hxt.x10g_rdma.write(0x8030, 0x10203040, "New Scratch Register1 value")
     #     scratch0 = hxt.x10g_rdma.read(0x00008030, 'Read Scratch Register 1')
-    #     print("Reg1: {0:08X}".format(scratch0))
+    #     # print("Reg1: {0:08X}".format(scratch0))
     #     hxt.x10g_rdma.write(0x8034, 0x71625344, "New Scratch Register2 value")
     #     scratch1 = hxt.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
-    #     print("Reg2: {0:08X}".format(scratch1))
+    #     # print("Reg2: {0:08X}".format(scratch1))
     #     hxt.x10g_rdma.write(0x8038, 0xBEEFBEEF, "New Scratch Register3 value")
     #     scratch2 = hxt.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
-    #     print("Reg3: {0:08X}".format(scratch2))
+    #     # print("Reg3: {0:08X}".format(scratch2))
     #     hxt.x10g_rdma.write(0x803C, 0xDEADDEAD, "New Scratch Register4 value")
     #     scratch3 = hxt.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
-    #     print("Scratch: 0x{0:08X}{1:08X}{2:08X}{3:08X}".format(scratch3, scratch2, scratch1, scratch0))
+    #     print("{4:000} Scratch: 0x{0:08X}{1:08X}{2:08X}{3:08X}".format(scratch3, scratch2, scratch1, scratch0, index))
     #     break
     #     # # This matches writes made by rdma.py:
     #     # hxt.x10g_rdma.write(0x8030, 0xBAB00EFE, "New Scratch Register1 value")
