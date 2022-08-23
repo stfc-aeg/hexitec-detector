@@ -22,6 +22,7 @@ class RdmaUDP(object):
             print("RdmaUDP:")
             print("	Binding: ({}, {})".format(local_ip, local_port))
             print(" Send to: ({}, {})".format(rdma_ip, rdma_port))
+            print(" UDPMaxRx: {}".format(UDPMTU))
             print("___________________________________________________________ ")
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -56,6 +57,7 @@ class RdmaUDP(object):
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
             # Receive acknowledge packet
             response = self.socket.recv(self.UDPMaxRx)
+            print("length of response: {} response: {}".format(len(response), response))    # DEBUGGING
             data = 0x00000000
             header_str = "HBBI"   # Equivalent length: 8
             payload_length = len(response) - 8  # 8 = header length
@@ -65,6 +67,7 @@ class RdmaUDP(object):
             if payload_length != (burst_len + padding):
                 raise Exception("read expected {}, received {}, words!".format(burst_len, payload_length))
             decoded = struct.unpack(packet_str, response)
+            print("R Ack Raw: {}".format(decoded))
             if self.debug:
                 print('R decoded: {}'.format(', '.join("0x{0:X}".format(x) for x in decoded)))
             if padding:
@@ -80,28 +83,63 @@ class RdmaUDP(object):
         time.sleep(SLEEP_DELAY)
         return data
 
-    def write(self, address, data, comment=''):
+    def write(self, address, data, burst_len=1, comment=''):
+        self.ack = True
+        print("  burst_len: {}".format(burst_len))
         if self.ack:
             print("W 0x{0:08X} : 0x{1:08X} {2}".format(address, data, comment))
-        command = struct.pack('=BBBBII', 1, 0, 0, 0, address, data)
-        # print(" rdma.write(address={0:08X}, data={1:08X}), command: {2}, or: ".format(
-        #         address, data, struct.unpack('=BBBBII', command)), command)#;return 0
+        burst_len = burst_len
+        cmd_no = 0
+        op_code = 0
+        # H = burst len, B = cmd no, B = Op code, I = address, I = data
+        # H = unsigned short (2), B = unsigned char (1), I = signed int (4 Bytes)
+        header_str = "HBBI"   # Equivalent length: 8
+        packet_str = header_str + "I" * burst_len
+        if burst_len == 1:
+            command = struct.pack(packet_str, burst_len, cmd_no, op_code, address, data)
+        elif burst_len == 2:
+            data = (data & 0xFFFFFFFF), (data >> 32)
+            print("data: {0:08X} {1:08X}".format(data[0], data[1]))
+            command = struct.pack(packet_str, burst_len, cmd_no, op_code, address, data[0], data[1])
+        elif burst_len == 3:
+            data = (data & 0xFFFFFFFF), ((data >> 32) & 0xFFFFFFFF), (data >> 64)
+            print("data: {0:08X} {1:08X} {2:08X}".format(data[0], data[1], data[2]))
+            command = struct.pack(packet_str, burst_len, cmd_no, op_code, address, data[0], data[1], data[2])
+        elif burst_len == 4:
+            data = (data & 0xFFFFFFFF), ((data >> 32) & 0xFFFFFFFF), ((data >> 64) & 0xFFFFFFFF), (data >> 96)
+            print("data: {0:08X} {1:08X} {2:08X} {3:08X}".format(data[0], data[1], data[2], data[3]))
+            command = struct.pack(packet_str, burst_len, cmd_no, op_code, address, data[0], data[1], data[2], data[3])
+        else:
+            print("burst_length of: {} is not supported".format(burst_len))
+            return -1
+        # command = struct.pack('=HBBII', burst_len, cmd_no, op_code, address, data)
         # Send the single write command packet
         try:
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
             # Receive acknowledgement
             response = self.socket.recv(self.UDPMaxRx)
+            print("length of response: {} response: {}".format(len(response), response))    # DEBUGGING
             if self.ack:
-                if len(response) == 12:
-                    decoded = struct.unpack('=BBBBII', response)
-                    print("Ack 0x{0:08X} : 0x{1:08X}".format(decoded[4], decoded[5]))
-                elif len(response) == 16:
-                    decoded = struct.unpack('=BBBBIII', response)
-                    print("Ack 0x{0:08X} : 0x{1:08X}".format(decoded[4], decoded[5]))
-                else:
-                    print("Write Ack of unexpected length: {}".format(len(response)))
+                header_str = "HBBI"   # Equivalent length: 8
+                payload_length = len(response) - 8  # 8 = header length
+                payload_length = payload_length // 4    # 32 bit word, therefore 4 bytes per word
+                packet_str = header_str + "I" * payload_length
+                padding = (burst_len % 2)
+                decoded = struct.unpack(packet_str, response)
+                # decoded = struct.unpack('=HBBII', response) # Fine
+                # decoded = struct.unpack(command, response) # struct.error: bad char in struct format
+                # if padding:
+                #     data = decoded[4:-padding]  # Omit burst_len, cmd_no, op_code, address and padding present at the end
+                # else:
+                #     data = decoded[4:]  # Omit burst_len, cmd_no, op_code, address
+                print("W Ack Raw: {}".format(decoded))
+                print("Ack 0x{0:08X} : 0x{1} \"{2}\"".format(address, ''.join("{0:X}".format(x) for x in decoded), comment))
+                # print("     payload : 0x{}".format(''.join("{0:X}".format(x) for x in decoded), comment))
+                print("     payload : 0x{}".format(decoded[4:]))
+
         except socket.error as e:
-            print(" *** Write Error: {2} Address: 0x{0:08X} Data: 0x{1:08X} ***".format(address, data, e))
+            print(" *** Write Error: {2} Address: 0x{0:08X} Data: 0x{1} Comment: \"{3}\" ***".format(address, data, e, comment))
+            # print(" *** Write Error: {1} Address: 0x{0:08X} ***".format(address, e, comment))
         time.sleep(SLEEP_DELAY)
 
     def close(self):

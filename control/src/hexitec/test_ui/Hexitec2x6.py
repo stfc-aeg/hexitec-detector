@@ -226,19 +226,22 @@ if __name__ == '__main__':  # pragma: no cover
     # # hxt.read_fpga_dna_registers()
 
     hxt.ack = True
-    scratch1 = hxt.x10g_rdma.read(0x00008030, comment='Read Scratch Register 1')
+    scratch1 = hxt.x10g_rdma.read(0x00008034, comment='Read Scratch Register 1')
     print("Reg   1, raw: {}".format(scratch1))
-    scratch12 = hxt.x10g_rdma.read(0x00008030, burst_len=2, comment='Read Scratch Register 1, 2')
-    print("Reg  12, raw: {}".format(scratch12))
-    scratch123 = hxt.x10g_rdma.read(0x00008030, burst_len=3, comment='Read Scratch Register 1, 2, 3')
-    print("Reg 123, raw: {}".format(scratch123))
-    scratch1234 = hxt.x10g_rdma.read(0x00008030, burst_len=4, comment='Read Scratch Register 1, 2, 3, 4')
-    print("Reg1234, raw: {}".format(scratch1234))
+    # scratch12 = hxt.x10g_rdma.read(0x00008030, burst_len=2, comment='Read Scratch Register 1, 2')
+    # print("Reg  12, raw: {}".format(scratch12))
+    # scratch123 = hxt.x10g_rdma.read(0x00008030, burst_len=3, comment='Read Scratch Register 1, 2, 3')
+    # print("Reg 123, raw: {}".format(scratch123))
+    # scratch1234 = hxt.x10g_rdma.read(0x00008030, burst_len=4, comment='Read Scratch Register 1, 2, 3, 4')
+    # print("Reg1234, raw: {}".format(scratch1234))
 
     # hxt.ack = True
-    # hxt.x10g_rdma.write(0x8034, 0x71625344, "New Scratch Register2 value")
+    # hxt.x10g_rdma.write(0x8030, 0x20000001, burst_len=1, comment="New Scratch Register1 value")
+    # hxt.x10g_rdma.write(0x8030, 0x4000003320000011, burst_len=2, comment="New Scratch Register12 value")
+    # hxt.x10g_rdma.write(0x8030, 0x600005554000033322200001, burst_len=3, comment="New Scratch Register123 value")
+    # hxt.x10g_rdma.write(0x8030, 0x81657777666600054444000322220001, burst_len=4, comment="New Scratch Register1234 value")
     # scratch1 = hxt.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
-    # print("Reg2: {0:08X}".format(scratch1))
+    # print("Reg   2, raw: {}".format(scratch1))
 
     # hxt.x10g_rdma.write(0x8038, 0xBEEFBEEF, "New Scratch Register3 value")
     # scratch2 = hxt.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
