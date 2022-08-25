@@ -7,7 +7,24 @@ Christian Angelsen, STFC Detector Systems Software Group, 2022.
 import sys
 from RdmaUDP import RdmaUDP
 from ast import literal_eval
+import time  # DEBUGGING only
 
+# TEMPORARY: Global variables to support tickle translation
+deassert_all = 0x0
+uart_status_offset = 0x10
+uart_rx_ctrl_offset = 0x14
+uart_tx_ctrl_offset = 0xC
+tx_fill_strb_mask = 0x2
+tx_buff_strb_mask = 0x4
+tx_data_mask = 0xFF00
+vsr_start_char = 0x23
+vsr_end_char = 0x0D
+#
+assert_bit = 0x1
+rx_buff_strb_mask = 0x2
+rx_buff_empty_mask = 0x8
+rx_buff_level_mask = 0xFF00
+rx_buff_data_mask = 0xFF0000
 
 class Hexitec2x6():
     """
@@ -71,62 +88,39 @@ class Hexitec2x6():
 
     def uart_rx(self, uart_address):
         """Replicating functionality of the tickle function: as_uart_rx."""
-        deassert_all = 0x0
-        assert_bit = 0x1
-        uart_status_offset = 0x10
-        uart_rx_ctrl_offset = 0x14
-        rx_buff_strb_mask = 0x2
-        rx_buff_empty_mask = 0x8
-        rx_buff_level_mask = 0xFF00
-        rx_buff_data_mask = 0xFF0000
-##
+        debug = False    # True
         uart_status_addr = uart_address + uart_status_offset
         uart_rx_ctrl_addr = uart_address + uart_rx_ctrl_offset
-        print("Read targeting address: {}".format(uart_status_addr))
-        read_value = self.x10g_rdma.read(uart_status_addr, 'Read UART Buffer Status (0)')  # read_axi $uart_status_addr 1
-        rx_status_masked = (read_value & rx_buff_empty_mask)
+        read_value = self.x10g_rdma.read(uart_status_addr, burst_len=1, comment='Read UART Buffer Status (0)')
+        buff_level = (read_value[0] & rx_buff_level_mask) >> 8
+        rx_d = (read_value[0] & rx_buff_data_mask) >> 16
+        if debug:
+            print(" init_buff_status: {0} (0x{1:08X})".format(read_value[0], read_value[0]))
+            print(" buff_level: {0} rx_d: {1} (0x{2:X}) [IGNORED - Like tickle script]".format(buff_level, rx_d, rx_d))
+        rx_status_masked = (read_value[0] & rx_buff_empty_mask)
         rx_has_data_flag = not rx_status_masked
-        print("read_value: {0:08X} ({1:08X} & {2}) = {3}".format(read_value, read_value, rx_buff_empty_mask, rx_has_data_flag))
-        # set rx_has_data_flag [ expr { ! ([ read_axi $uart_status_addr 1 ]  & $::rx_buff_empty_mask) } ]
-
         rx_data = []
         while (rx_has_data_flag):
-            print("-=-=-=-")
-            buffer_status = self.x10g_rdma.read(uart_status_addr, 'Read UART Buffer status (1)')
-            buff_level = (buffer_status & rx_buff_level_mask) >> 8
-            print("buff_level: ", buff_level)
-            self.x10g_rdma.write(uart_rx_ctrl_addr, rx_buff_strb_mask, "Write RX Buffer Strobe")
-            self.x10g_rdma.write(uart_rx_ctrl_addr, deassert_all, "Write RX Deassert All")
-            # print("Write {0:08X} {1:X}".format(uart_rx_ctrl_addr, rx_buff_strb_mask))
-            # print("Write {0:08X} {1:X}".format(uart_rx_ctrl_addr, deassert_all))
-            uart_status = self.x10g_rdma.read(uart_status_addr, 'Read UART Buffer status (2)')
-            rx_d = (uart_status & rx_buff_data_mask) >> 16
-            print(" rx_d: {0} ({1:02X})".format(rx_d, rx_d))
+            self.x10g_rdma.write(uart_rx_ctrl_addr, rx_buff_strb_mask, burst_len=1, comment="Write RX Buffer Strobe")
+            read_value = self.x10g_rdma.read(uart_rx_ctrl_addr, burst_len=1, comment='Read (back) UART RX Status Reg (0)')
+            # print(" (strb)  uart_rx_ctrl: {0} (0x{1:08X})".format(read_value[0], read_value[0]))
+            self.x10g_rdma.write(uart_rx_ctrl_addr, deassert_all, burst_len=1, comment="Write RX Deassert All")
+            read_value = self.x10g_rdma.read(uart_rx_ctrl_addr, burst_len=1, comment='Read (back) UART RX Status Reg (1)')
+            # print(" (deass) uart_rx_ctrl: {0} (0x{1:08X})".format(read_value[0], read_value[0]))
+            buffer_status = self.x10g_rdma.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (1)')
+            buff_level = (buffer_status[0] & rx_buff_level_mask) >> 8
+            uart_status = self.x10g_rdma.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (2)')
+            rx_d = (uart_status[0] & rx_buff_data_mask) >> 16
+            if debug:
+                print(" buffer_status: {0} (0x{1:08X})".format(buffer_status[0], buffer_status[0]))
+                print(" buff_level: {0} rx_d: {1} (0x{2:X})".format(buff_level, rx_d, rx_d))
             rx_data.append(rx_d)
-            read_value = self.x10g_rdma.read(uart_status_addr, 'Read UART Buffer status (3)')
-            rx_has_data_flag = not (read_value & rx_buff_empty_mask)
+            read_value = self.x10g_rdma.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (3)')
+            rx_has_data_flag = not (read_value[0] & rx_buff_empty_mask)
         return rx_data
-
-        # while { $rx_has_data_flag } {
-        #     # set buff_level [ expr { ( [ read_axi $uart_status_addr 1 ] & $::rx_buff_level_mask ) >> 8 } ]
-        #     # write_axi $uart_rx_ctrl_addr $::rx_buff_strb_mask
-        #     # write_axi $uart_rx_ctrl_addr $::deassert_all
-        #     # set rx_d [ expr { ( [ read_axi $uart_status_addr 1 ] & $::rx_buff_data_mask ) >> 16 } ]
-        #     # lappend rx_data [ format %02X $rx_d ]
-        #     # set rx_has_data_flag [ expr { ! ([ read_axi $uart_status_addr 1 ]  & $::rx_buff_empty_mask) } ]
-        # }
 
     def uart_tx(self, vsr_addr, vsr_cmd, vsr_data="", uart_addr=0x0):
         """Replicating functionality of the tickle function: as_uart_tx."""
-        deassert_all = 0x0
-        uart_status_offset = 0x10
-        uart_rx_ctrl_offset = 0x14
-        uart_tx_ctrl_offset = 0xC
-        tx_fill_strb_mask = 0x2
-        tx_buff_strb_mask = 0x4
-        tx_data_mask = 0xFF00
-        vsr_start_char = 0x23
-        vsr_end_char = 0x0D
         uart_tx_ctrl_addr = uart_addr + uart_tx_ctrl_offset
         uart_status_addr = uart_addr + uart_status_offset
         uart_rx_ctrl_addr = uart_addr + uart_rx_ctrl_offset
@@ -140,75 +134,29 @@ class Hexitec2x6():
         vsr_seq.append(vsr_end_char)
         print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in vsr_seq)))
         for b in vsr_seq:
-            print("_______")
-            continue    # TODO: KEEP TRANSLATING !!!1!
-            # print("loop b: 0x{0:02X} ( b << 8: {1}".format(b, b << 8))
-            # print("write_axi: {} {}".format(uart_tx_ctrl_addr, b << 8))
-            # #
-            # read_tx_value = self.x10g_rdma.read(uart_tx_ctrl_addr, "uart, read {0:02X}".format(uart_tx_ctrl_addr))
-            # print("write 0x{0:02X} [ ( [ 0x{1:08X} & 0x{2:04X} ) | 0x{3:02}]".format(uart_tx_ctrl_addr, read_tx_value, tx_data_mask, tx_fill_strb_mask))
-            # write_value = (uart_tx_ctrl_addr, ((read_tx_value & tx_data_mask) | tx_fill_strb_mask)
-            # print("write " write_value = (uart_tx_ctrl_addr, ((read_tx_value & tx_data_mask) | tx_fill_strb_mask))
-            # write_value = (uart_tx_ctrl_addr, ((read_tx_value & tx_data_mask) | tx_fill_strb_mask)
-            # self.x10g_rdma.write(uart_tx_ctrl_addr, b << 8, "Writing uart_tx {0:02X} << 8".format(b))
-            # self.x10g_rdma.write(uart_tx_ctrl_addr, b << 8, "Writing uart_tx {0:02X} << 8".format(b))
-            # # self.x10g_rdma.write(0x8030, 0x12345678, "New Scratch Register1 value")
+            print("_______ loop b: 0x{0:02X} (b << 8: {1})".format(b, b << 8))
+            print("write_axi: {} {}".format(uart_tx_ctrl_addr, b << 8))
+            self.x10g_rdma.write(uart_tx_ctrl_addr, b << 8, burst_len=1, comment="Write '{0:X}' to TX Buffer".format(b))
 
-# TODO: Continue translating this:
-# proc as_uart_tx { vsr_addr vsr_cmd { vsr_data "" } { uart_addr 0x0 } { lines "" } { hw_axi_idx 0 } } {
-#     # puts " uart_tx_ctrl_addr = $uart_addr + $::uart_tx_ctrl_offset" # 0x0C
-#     # puts " uart_status_addr  = $uart_addr + $::uart_status_offset"  # 0x10
-#     # puts " uart_rx_ctrl_addr = $uart_addr + $::uart_rx_ctrl_offset" # 0x14
-#     set uart_tx_ctrl_addr [ expr { $uart_addr + $::uart_tx_ctrl_offset } ]
-#     set uart_status_addr  [ expr { $uart_addr + $::uart_status_offset } ]
-#     set uart_rx_ctrl_addr [ expr { $uart_addr + $::uart_rx_ctrl_offset } ]
+            read_tx_value = self.x10g_rdma.read(uart_tx_ctrl_addr, burst_len=1, comment="Read TX Buffer")
+            print("read_tx_value: {}".format(read_tx_value))
+            read_tx_value = read_tx_value[0]
+            print("write 0x{0:02X} [ ( [ {1} & 0x{2:04X} ) | 0x{3:02}]".format(
+                uart_tx_ctrl_addr, read_tx_value, tx_data_mask, tx_fill_strb_mask))
 
-#     set vsr_seq $::vsr_start_char
-#     lappend vsr_seq $vsr_addr
-#     lappend vsr_seq $vsr_cmd
-#     if { $vsr_data ne "" } {
-#         foreach d $vsr_data {
-#             lappend vsr_seq $d
-#         }
-#     }
-#     lappend vsr_seq $::vsr_end_char
-#     puts -nonewline "...sending: $vsr_seq"
-#     foreach b $vsr_seq {
-#         write_axi $uart_tx_ctrl_addr [ expr { $b << 8 } ]
-#         write_axi $uart_tx_ctrl_addr [ expr { ( [ read_axi $uart_tx_ctrl_addr 1 ]  & $::tx_data_mask ) | $::tx_fill_strb_mask } ]
-#         write_axi $uart_tx_ctrl_addr [ expr { $b << 8 } ]
-#     }
-#     write_axi $uart_tx_ctrl_addr $::tx_buff_strb_mask
-#     write_axi $uart_tx_ctrl_addr $::deassert_all
-#     # Wait for sequence to be transmitted via UART, and allow time for response
-#     after $::uart_tx_delay
-#     return $lines
-
-# }
+            write_value = ((read_tx_value & tx_data_mask) | tx_fill_strb_mask)
+            print("To write: {0} (0x{1:X})".format(write_value, write_value))
+# Turning the above into a proper write(...) Function, on thefollowing line:
+            self.x10g_rdma.write(uart_tx_ctrl_addr, write_value, burst_len=1, comment="Write '{0:X}' to TX Buffer".format(write_value))
+            
+            self.x10g_rdma.write(uart_tx_ctrl_addr, b << 8, burst_len=1, comment="Write '{0:X}' to TX Buffer (Again)".format(b))
+            
+        self.x10g_rdma.write(uart_tx_ctrl_addr, tx_buff_strb_mask, burst_len=1, comment="Write TX Buffer Strobe")
+        self.x10g_rdma.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Write TX Deassert All")
 
     def disconnect(self):
         """."""
         self.x10g_rdma.close()
-
-# Testing functionality for Matt Robert 's scripting
-def prod_list(bytes):
-    """."""
-    bytes_list = []
-    for idx in range(len(bytes)):
-        bytes_list.append(bytes[idx])
-    return bytes_list
-
-def display_register_information(name, read_bytes):
-    r"""Take a bytes object, display its name, length, address and value.
-
-    I.e. b"\x02\x00\x00\x01\x04\x00\x02\x00\x00b\x00\x00'\xb8`\xb4"
-    Contain address: 0x00020004, Value: 0x00006200, Length: 16
-    """
-    bytes_list = prod_list(read_bytes)
-    print("Reg: {}, length: {}".format(name, len(read_bytes)))
-    print("     address: 0x{0:02x}{1:02x}{2:02x}{3:02x}".format(bytes_list[7], bytes_list[6], bytes_list[5], bytes_list[4]))
-    print("       Value: 0x{0:02x}{1:02x}{2:02x}{3:02x}".format(bytes_list[11], bytes_list[10], bytes_list[9], bytes_list[8]))
-
 
 if __name__ == '__main__':  # pragma: no cover
     esdg_lab = literal_eval(sys.argv[1])
@@ -216,18 +164,23 @@ if __name__ == '__main__':  # pragma: no cover
     hxt = Hexitec2x6(esdg_lab=esdg_lab, debug=debug)
     hxt.connect()
     # hxt.read_scratch_registers()
+
     # Testing out translating tickle script into Python:
-    # rx = hxt.uart_rx(0x0)
-    # print("rx: ", rx)
-##    hxt.uart_tx(0xFF, 0xF7, "", 0x0) #, 0)
-    # hxt.read_scratch_registers()	# THIS IS THE BARE CALL THAT MR USED
-    # hxt.write_scratch_registers()
-    # hxt.read_scratch_registers()
+    #as_uart_tx 0xFF 0xF7 "" 0x0
+    # tx = hxt.uart_tx(0xFF, 0xF7, "", 0x0)
+    # print("tx: ", tx)
+    rx = hxt.uart_rx(0x0)
+    print("Received from UART: {}".format(' '.join("0x{0:02X}".format(x) for x in rx)))
+
     # # hxt.read_fpga_dna_registers()
 
-    hxt.ack = True
-    scratch1 = hxt.x10g_rdma.read(0x00008034, comment='Read Scratch Register 1')
-    print("Reg   1, raw: {}".format(scratch1))
+    # hxt.x10g_rdma.write(0x8030, 0x20000001, burst_len=1, comment="New Scratch Register1 value")
+    # hxt.x10g_rdma.write(0x8030, 0x4000003320000011, burst_len=2, comment="New Scratch Register12 value")
+    # hxt.x10g_rdma.write(0x8030, 0x600005554000033322200001, burst_len=3, comment="New Scratch Register123 value")
+    # hxt.x10g_rdma.write(0x8030, 0x81657777666600054444000322220001, burst_len=4, comment="New Scratch Register1234 value")
+
+    # scratch1 = hxt.x10g_rdma.read(0x00008030, comment='Read Scratch Register 1')
+    # print("Reg   1, raw: {}".format(scratch1))
     # scratch12 = hxt.x10g_rdma.read(0x00008030, burst_len=2, comment='Read Scratch Register 1, 2')
     # print("Reg  12, raw: {}".format(scratch12))
     # scratch123 = hxt.x10g_rdma.read(0x00008030, burst_len=3, comment='Read Scratch Register 1, 2, 3')
@@ -235,22 +188,11 @@ if __name__ == '__main__':  # pragma: no cover
     # scratch1234 = hxt.x10g_rdma.read(0x00008030, burst_len=4, comment='Read Scratch Register 1, 2, 3, 4')
     # print("Reg1234, raw: {}".format(scratch1234))
 
-    # hxt.ack = True
-    # hxt.x10g_rdma.write(0x8030, 0x20000001, burst_len=1, comment="New Scratch Register1 value")
-    # hxt.x10g_rdma.write(0x8030, 0x4000003320000011, burst_len=2, comment="New Scratch Register12 value")
-    # hxt.x10g_rdma.write(0x8030, 0x600005554000033322200001, burst_len=3, comment="New Scratch Register123 value")
-    # hxt.x10g_rdma.write(0x8030, 0x81657777666600054444000322220001, burst_len=4, comment="New Scratch Register1234 value")
-    # scratch1 = hxt.x10g_rdma.read(0x00008034, 'Read Scratch Register 2')
-    # print("Reg   2, raw: {}".format(scratch1))
+    # for index in range(100):
+    #     print(index)
+    #     hxt.x10g_rdma.write(0x8030, 0x81657777666600054444000322220001, burst_len=4, comment="New Scratch Register1234 value")
+    #     scratch1234 = hxt.x10g_rdma.read(0x00008030, burst_len=4, comment='Read Scratch Register 1, 2, 3, 4')
 
-    # hxt.x10g_rdma.write(0x8038, 0xBEEFBEEF, "New Scratch Register3 value")
-    # scratch2 = hxt.x10g_rdma.read(0x00008038, 'Read Scratch Register 3')
-    # # print("Reg3: {0:08X}".format(scratch2))
-    # hxt.x10g_rdma.write(0x803C, 0xDEADDEAD, "New Scratch Register4 value")
-    # scratch3 = hxt.x10g_rdma.read(0x0000803C, 'Read Scratch Register 4')
-
-    # for index in range(200):
-    #     # print(index)
     #     hxt.x10g_rdma.write(0x8030, 0x10203040, "New Scratch Register1 value")
     #     scratch0 = hxt.x10g_rdma.read(0x00008030, 'Read Scratch Register 1')
     #     # print("Reg1: {0:08X}".format(scratch0))

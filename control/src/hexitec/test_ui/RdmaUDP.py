@@ -51,13 +51,13 @@ class RdmaUDP(object):
         op_code = 1
         # H = burst len, B = cmd no, B = Op code, I = start addr
         # H = unsigned short (2), B = unsigned char (1), I = signed int (4 Bytes)
+        # print("burst_len {}, cmd_no {}, op_code {}, address {} comment {}".format(burst_len, cmd_no, op_code, address, comment))
         command = struct.pack('=HBBI', burst_len, cmd_no, op_code, address)
         data = 0
         try:
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
             # Receive acknowledge packet
             response = self.socket.recv(self.UDPMaxRx)
-            print("length of response: {} response: {}".format(len(response), response))    # DEBUGGING
             data = 0x00000000
             header_str = "HBBI"   # Equivalent length: 8
             payload_length = len(response) - 8  # 8 = header length
@@ -67,9 +67,9 @@ class RdmaUDP(object):
             if payload_length != (burst_len + padding):
                 raise Exception("read expected {}, received {}, words!".format(burst_len, payload_length))
             decoded = struct.unpack(packet_str, response)
-            print("R Ack Raw: {}".format(decoded))
+            # print("R Ack Raw: {}".format(decoded))
             if self.debug:
-                print('R decoded: {}'.format(', '.join("0x{0:X}".format(x) for x in decoded)))
+                print('R decoded: {} Comment: \"{}\" Length: {}'.format(', '.join("0x{0:X}".format(x) for x in decoded), comment, len(response)))
             if padding:
                 data = decoded[4:-padding]  # Omit burst_len, cmd_no, op_code, address and padding present at the end
             else:
@@ -84,8 +84,7 @@ class RdmaUDP(object):
         return data
 
     def write(self, address, data, burst_len=1, comment=''):
-        self.ack = True
-        print("  burst_len: {}".format(burst_len))
+        # self.ack = True
         if self.ack:
             print("W 0x{0:08X} : 0x{1:08X} {2}".format(address, data, comment))
         burst_len = burst_len
@@ -99,15 +98,15 @@ class RdmaUDP(object):
             command = struct.pack(packet_str, burst_len, cmd_no, op_code, address, data)
         elif burst_len == 2:
             data = (data & 0xFFFFFFFF), (data >> 32)
-            print("data: {0:08X} {1:08X}".format(data[0], data[1]))
+            # print("data: {0:08X} {1:08X}".format(data[0], data[1]))
             command = struct.pack(packet_str, burst_len, cmd_no, op_code, address, data[0], data[1])
         elif burst_len == 3:
             data = (data & 0xFFFFFFFF), ((data >> 32) & 0xFFFFFFFF), (data >> 64)
-            print("data: {0:08X} {1:08X} {2:08X}".format(data[0], data[1], data[2]))
+            # print("data: {0:08X} {1:08X} {2:08X}".format(data[0], data[1], data[2]))
             command = struct.pack(packet_str, burst_len, cmd_no, op_code, address, data[0], data[1], data[2])
         elif burst_len == 4:
             data = (data & 0xFFFFFFFF), ((data >> 32) & 0xFFFFFFFF), ((data >> 64) & 0xFFFFFFFF), (data >> 96)
-            print("data: {0:08X} {1:08X} {2:08X} {3:08X}".format(data[0], data[1], data[2], data[3]))
+            # print("data: {0:08X} {1:08X} {2:08X} {3:08X}".format(data[0], data[1], data[2], data[3]))
             command = struct.pack(packet_str, burst_len, cmd_no, op_code, address, data[0], data[1], data[2], data[3])
         else:
             print("burst_length of: {} is not supported".format(burst_len))
@@ -118,8 +117,9 @@ class RdmaUDP(object):
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
             # Receive acknowledgement
             response = self.socket.recv(self.UDPMaxRx)
-            print("length of response: {} response: {}".format(len(response), response))    # DEBUGGING
-            if self.ack:
+            # print("length of response: {} response: {}".format(len(response), response))    # DEBUGGING
+            # if self.ack:
+            if self.debug:
                 header_str = "HBBI"   # Equivalent length: 8
                 payload_length = len(response) - 8  # 8 = header length
                 payload_length = payload_length // 4    # 32 bit word, therefore 4 bytes per word
@@ -132,14 +132,12 @@ class RdmaUDP(object):
                 #     data = decoded[4:-padding]  # Omit burst_len, cmd_no, op_code, address and padding present at the end
                 # else:
                 #     data = decoded[4:]  # Omit burst_len, cmd_no, op_code, address
-                print("W Ack Raw: {}".format(decoded))
-                print("Ack 0x{0:08X} : 0x{1} \"{2}\"".format(address, ''.join("{0:X}".format(x) for x in decoded), comment))
-                # print("     payload : 0x{}".format(''.join("{0:X}".format(x) for x in decoded), comment))
-                print("     payload : 0x{}".format(decoded[4:]))
+                # print("W Ack Raw: {}".format(decoded))
+                print('W decoded: {} Comment: \"{}\" Length: {}'.format(', '.join("0x{0:X}".format(x) for x in decoded), comment, len(response)))
+                # print("Ack 0x{0:08X} : 0x{1} \"{2}\"".format(address, ''.join("{0:X}".format(x) for x in decoded), comment))
 
         except socket.error as e:
             print(" *** Write Error: {2} Address: 0x{0:08X} Data: 0x{1} Comment: \"{3}\" ***".format(address, data, e, comment))
-            # print(" *** Write Error: {1} Address: 0x{0:08X} ***".format(address, e, comment))
         time.sleep(SLEEP_DELAY)
 
     def close(self):
