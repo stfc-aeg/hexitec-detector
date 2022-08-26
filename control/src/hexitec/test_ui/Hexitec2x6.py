@@ -56,7 +56,7 @@ class Hexitec2x6():
         """Connect to the 10 G UDP control channel."""
         self.x10g_rdma = RdmaUDP(self.local_ip, self.local_port,
                                  self.rdma_ip, self.rdma_port,
-                                 9000, 3, self.debug)
+                                 9000, 2, self.debug)
         self.x10g_rdma.setDebug(self.debug)
         self.x10g_rdma.ack = False  # True
         return self.x10g_rdma.error_OK
@@ -121,38 +121,39 @@ class Hexitec2x6():
 
     def uart_tx(self, vsr_addr, vsr_cmd, vsr_data="", uart_addr=0x0):
         """Replicating functionality of the tickle function: as_uart_tx."""
+        debug = False    # True
         uart_tx_ctrl_addr = uart_addr + uart_tx_ctrl_offset
         uart_status_addr = uart_addr + uart_status_offset
-        uart_rx_ctrl_addr = uart_addr + uart_rx_ctrl_offset
+        # uart_rx_ctrl_addr = uart_addr + uart_rx_ctrl_offset   # Unused
 
-        vsr_seq = [vsr_start_char]
-        vsr_seq.append(vsr_addr)
-        vsr_seq.append(vsr_cmd)
+        vsr_seq = [vsr_start_char, vsr_addr, vsr_cmd]
         if vsr_data != "":
             for d in vsr_data:
                 vsr_seq.append(d)
         vsr_seq.append(vsr_end_char)
-        print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in vsr_seq)))
+        if debug:
+            print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in vsr_seq)))
         for b in vsr_seq:
-            print("_______ loop b: 0x{0:02X} (b << 8: {1})".format(b, b << 8))
-            print("write_axi: {} {}".format(uart_tx_ctrl_addr, b << 8))
             self.x10g_rdma.write(uart_tx_ctrl_addr, b << 8, burst_len=1, comment="Write '{0:X}' to TX Buffer".format(b))
-
             read_tx_value = self.x10g_rdma.read(uart_tx_ctrl_addr, burst_len=1, comment="Read TX Buffer")
-            print("read_tx_value: {}".format(read_tx_value))
-            read_tx_value = read_tx_value[0]
-            print("write 0x{0:02X} [ ( [ {1} & 0x{2:04X} ) | 0x{3:02}]".format(
-                uart_tx_ctrl_addr, read_tx_value, tx_data_mask, tx_fill_strb_mask))
 
+            read_tx_value = read_tx_value[0]
+            if debug:
+                # print(" * write 0x{0:02X} [ ( [ {1} & 0x{2:04X} ) | 0x{3:02}]".format(uart_tx_ctrl_addr, read_tx_value, tx_data_mask, tx_fill_strb_mask))
+                print(" TX buffer contain: {0} (0x{1:02X})".format(read_tx_value, read_tx_value))
             write_value = ((read_tx_value & tx_data_mask) | tx_fill_strb_mask)
-            print("To write: {0} (0x{1:X})".format(write_value, write_value))
-# Turning the above into a proper write(...) Function, on thefollowing line:
+
             self.x10g_rdma.write(uart_tx_ctrl_addr, write_value, burst_len=1, comment="Write '{0:X}' to TX Buffer".format(write_value))
-            
             self.x10g_rdma.write(uart_tx_ctrl_addr, b << 8, burst_len=1, comment="Write '{0:X}' to TX Buffer (Again)".format(b))
-            
+
+            self.x10g_rdma.write(uart_tx_ctrl_addr, tx_buff_strb_mask, burst_len=1, comment="Write TX Buffer Strobe")
+            self.x10g_rdma.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Write TX Deassert All")
+
+            self.x10g_rdma.read(uart_tx_ctrl_addr, burst_len=1, comment="Read TX Buffer")
+
         self.x10g_rdma.write(uart_tx_ctrl_addr, tx_buff_strb_mask, burst_len=1, comment="Write TX Buffer Strobe")
-        self.x10g_rdma.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Write TX Deassert All")
+        # Redundant: ?
+        # self.x10g_rdma.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Write TX Deassert All")
 
     def disconnect(self):
         """."""
@@ -166,9 +167,9 @@ if __name__ == '__main__':  # pragma: no cover
     # hxt.read_scratch_registers()
 
     # Testing out translating tickle script into Python:
-    #as_uart_tx 0xFF 0xF7 "" 0x0
-    # tx = hxt.uart_tx(0xFF, 0xF7, "", 0x0)
-    # print("tx: ", tx)
+    print("Calling as_uart_tx(0xFF, 0xF7, \"\", 0x0)")
+    tx = hxt.uart_tx(0xFF, 0xF7, "", 0x0)
+    time.sleep(0.25)
     rx = hxt.uart_rx(0x0)
     print("Received from UART: {}".format(' '.join("0x{0:02X}".format(x) for x in rx)))
 
