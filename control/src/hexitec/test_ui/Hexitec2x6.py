@@ -56,10 +56,14 @@ class Hexitec2x6():
         """Connect to the 10 G UDP control channel."""
         self.x10g_rdma = RdmaUDP(self.local_ip, self.local_port,
                                  self.rdma_ip, self.rdma_port,
-                                 9000, 2, self.debug)
+                                 9000, 1, self.debug)
         self.x10g_rdma.setDebug(self.debug)
         self.x10g_rdma.ack = False  # True
         return self.x10g_rdma.error_OK
+
+    def disconnect(self):
+        """."""
+        self.x10g_rdma.close()
 
     def read_scratch_registers(self):
         """Read scratch registers."""
@@ -95,8 +99,8 @@ class Hexitec2x6():
         buff_level = (read_value[0] & rx_buff_level_mask) >> 8
         rx_d = (read_value[0] & rx_buff_data_mask) >> 16
         if debug:
-            print(" init_buff_status: {0} (0x{1:08X})".format(read_value[0], read_value[0]))
-            print(" buff_level: {0} rx_d: {1} (0x{2:X}) [IGNORED - Like tickle script]".format(buff_level, rx_d, rx_d))
+            print(" RX init_buff_status: {0} (0x{1:08X})".format(read_value[0], read_value[0]))
+            print(" RX buff_level: {0} rx_d: {1} (0x{2:X}) [IGNORED - Like tickle script]".format(buff_level, rx_d, rx_d))
         rx_status_masked = (read_value[0] & rx_buff_empty_mask)
         rx_has_data_flag = not rx_status_masked
         rx_data = []
@@ -112,8 +116,8 @@ class Hexitec2x6():
             uart_status = self.x10g_rdma.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (2)')
             rx_d = (uart_status[0] & rx_buff_data_mask) >> 16
             if debug:
-                print(" buffer_status: {0} (0x{1:08X})".format(buffer_status[0], buffer_status[0]))
-                print(" buff_level: {0} rx_d: {1} (0x{2:X})".format(buff_level, rx_d, rx_d))
+                print(" RX buffer_status: {0} (0x{1:08X})".format(buffer_status[0], buffer_status[0]))
+                print(" RX buff_level: {0} rx_d: {1} (0x{2:X})".format(buff_level, rx_d, rx_d))
             rx_data.append(rx_d)
             read_value = self.x10g_rdma.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (3)')
             rx_has_data_flag = not (read_value[0] & rx_buff_empty_mask)
@@ -155,9 +159,38 @@ class Hexitec2x6():
         # Redundant: ?
         # self.x10g_rdma.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Write TX Deassert All")
 
-    def disconnect(self):
-        """."""
-        self.x10g_rdma.close()
+    def get_ambient_temperature(self, hex_val):
+        """Calculate ambient temperature."""
+        try:
+            return ((int(hex_val, 16) * 175.72) / 65536) - 46.84
+        except ValueError as e:
+            print("Error converting ambient temperature: %s" % e)
+            return -100
+
+    def get_humidity(self, hex_val):
+        """Calculate humidity."""
+        try:
+            return ((int(hex_val, 16) * 125) / 65535) - 6
+        except ValueError as e:
+            print("Error converting humidity: %s" % e)
+            return -100
+
+    def get_asic_temperature(self, hex_val):
+        """Calculate ASIC temperature."""
+        try:
+            return int(hex_val, 16) * 0.0625
+        except ValueError as e:
+            print("Error converting ASIC temperature: %s" % e)
+            return -100
+
+    def get_adc_temperature(self, hex_val):
+        """Calculate ADC Temperature."""
+        try:
+            return int(hex_val, 16) * 0.0625
+        except ValueError as e:
+            print("Error converting ADC temperature: %s" % e)
+            return -100
+
 
 if __name__ == '__main__':  # pragma: no cover
     esdg_lab = literal_eval(sys.argv[1])
@@ -166,12 +199,33 @@ if __name__ == '__main__':  # pragma: no cover
     hxt.connect()
     # hxt.read_scratch_registers()
 
-    # Testing out translating tickle script into Python:
-    print("Calling as_uart_tx(0xFF, 0xF7, \"\", 0x0)")
-    tx = hxt.uart_tx(0xFF, 0xF7, "", 0x0)
+    # # Testing out translated tickle script #
+    # print("Calling uart_tx(0xFF, 0xF7, \"\", 0x0)")
+    # hxt.uart_tx(0xFF, 0xF7, "", 0x0)
+    # time.sleep(0.25)
+    # read_sensors = hxt.uart_rx(0x0)
+    # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+
+    # Request and receive environmental data #
+    print("Calling uart_tx(0x90, 0x52, \"\", 0x0)")
+    hxt.uart_tx(0x90, 0x52, "", 0x0)
     time.sleep(0.25)
-    rx = hxt.uart_rx(0x0)
-    print("Received from UART: {}".format(' '.join("0x{0:02X}".format(x) for x in rx)))
+    read_sensors = hxt.uart_rx(0x0)
+    print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+    # Display the environmentals values
+    read_sensors = read_sensors[1:]     # Omit start of sequence character, matching existing 2x2 source code formatting
+    sensors_values = "{}".format(''.join([chr(x) for x in read_sensors]))   # Turn list of integers into ASCII string
+    print(" ASCII string: {}".format(sensors_values))
+    ambient_hex = sensors_values[1:5]
+    humidity_hex = sensors_values[5:9]
+    asic1_hex = sensors_values[9:13]
+    asic2_hex = sensors_values[13:17]
+    adc_hex = sensors_values[17:21]
+    print(" * ambient_hex:  {} -> {} Celsius".format(sensors_values[1:5], hxt.get_ambient_temperature(sensors_values[1:5])))
+    print(" * humidity_hex: {} -> {}".format(sensors_values[5:9], hxt.get_humidity(sensors_values[5:9])))
+    print(" * asic1_hex:    {} -> {} Celsius".format(sensors_values[9:13], hxt.get_asic_temperature(sensors_values[9:13])))
+    print(" * asic2_hex:    {} -> {} Celsius".format(sensors_values[13:17], hxt.get_asic_temperature(sensors_values[13:17])))
+    print(" * adc_hex:      {} -> {} Celsius".format(sensors_values[17:21], hxt.get_adc_temperature(sensors_values[17:21])))
 
     # # hxt.read_fpga_dna_registers()
 

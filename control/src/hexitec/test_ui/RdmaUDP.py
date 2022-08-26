@@ -53,19 +53,20 @@ class RdmaUDP(object):
         # H = unsigned short (2), B = unsigned char (1), I = signed int (4 Bytes)
         # print("burst_len {}, cmd_no {}, op_code {}, address {} comment {}".format(burst_len, cmd_no, op_code, address, comment))
         command = struct.pack('=HBBI', burst_len, cmd_no, op_code, address)
-        data = 0
+        data = (0, )
         try:
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
             # Receive acknowledge packet
             response = self.socket.recv(self.UDPMaxRx)
-            data = 0x00000000
             header_str = "HBBI"   # Equivalent length: 8
             payload_length = len(response) - 8  # 8 = header length
             payload_length = payload_length // 4    # 32 bit word, therefore 4 bytes per word
             packet_str = header_str + "I" * payload_length
             padding = (burst_len % 2)
             if payload_length != (burst_len + padding):
-                raise Exception("read expected {}, received {}, words!".format(burst_len, payload_length))
+                # raise Exception
+                print("read expected {}, received {}, words!".format(burst_len, payload_length))
+                return data
             decoded = struct.unpack(packet_str, response)
             # print("R Ack Raw: {}".format(decoded))
             if self.debug:
