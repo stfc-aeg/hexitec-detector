@@ -199,33 +199,34 @@ if __name__ == '__main__':  # pragma: no cover
     hxt.connect()
     # hxt.read_scratch_registers()
 
-    # # Testing out translated tickle script #
-    # print("Calling uart_tx(0xFF, 0xF7, \"\", 0x0)")
-    # hxt.uart_tx(0xFF, 0xF7, "", 0x0)
-    # time.sleep(0.25)
-    # read_sensors = hxt.uart_rx(0x0)
-    # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
-
-    # Request and receive environmental data #
-    print("Calling uart_tx(0x90, 0x52, \"\", 0x0)")
-    hxt.uart_tx(0x90, 0x52, "", 0x0)
+    # Testing out translated tickle script #
+    # as_uart_tx 0xFF 0xF7 "" 0x0  0
+    print("Calling uart_tx(0xFF, 0xF7, \"\", 0x0)")
+    hxt.uart_tx(0xFF, 0xF7, "", 0x0)
     time.sleep(0.25)
     read_sensors = hxt.uart_rx(0x0)
     print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
-    # Display the environmentals values
-    read_sensors = read_sensors[1:]     # Omit start of sequence character, matching existing 2x2 source code formatting
-    sensors_values = "{}".format(''.join([chr(x) for x in read_sensors]))   # Turn list of integers into ASCII string
-    print(" ASCII string: {}".format(sensors_values))
-    ambient_hex = sensors_values[1:5]
-    humidity_hex = sensors_values[5:9]
-    asic1_hex = sensors_values[9:13]
-    asic2_hex = sensors_values[13:17]
-    adc_hex = sensors_values[17:21]
-    print(" * ambient_hex:  {} -> {} Celsius".format(sensors_values[1:5], hxt.get_ambient_temperature(sensors_values[1:5])))
-    print(" * humidity_hex: {} -> {}".format(sensors_values[5:9], hxt.get_humidity(sensors_values[5:9])))
-    print(" * asic1_hex:    {} -> {} Celsius".format(sensors_values[9:13], hxt.get_asic_temperature(sensors_values[9:13])))
-    print(" * asic2_hex:    {} -> {} Celsius".format(sensors_values[13:17], hxt.get_asic_temperature(sensors_values[13:17])))
-    print(" * adc_hex:      {} -> {} Celsius".format(sensors_values[17:21], hxt.get_adc_temperature(sensors_values[17:21])))
+
+    # # Request and receive environmental data #
+    # print("Calling uart_tx(0x90, 0x52, \"\", 0x0)")
+    # hxt.uart_tx(0x90, 0x52, "", 0x0)
+    # time.sleep(0.25)
+    # read_sensors = hxt.uart_rx(0x0)
+    # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+    # # Display the environmentals values
+    # read_sensors = read_sensors[1:]     # Omit start of sequence character, matching existing 2x2 source code formatting
+    # sensors_values = "{}".format(''.join([chr(x) for x in read_sensors]))   # Turn list of integers into ASCII string
+    # print(" ASCII string: {}".format(sensors_values))
+    # ambient_hex = sensors_values[1:5]
+    # humidity_hex = sensors_values[5:9]
+    # asic1_hex = sensors_values[9:13]
+    # asic2_hex = sensors_values[13:17]
+    # adc_hex = sensors_values[17:21]
+    # print(" * ambient_hex:  {} -> {} Celsius".format(sensors_values[1:5], hxt.get_ambient_temperature(sensors_values[1:5])))
+    # print(" * humidity_hex: {} -> {}".format(sensors_values[5:9], hxt.get_humidity(sensors_values[5:9])))
+    # print(" * asic1_hex:    {} -> {} Celsius".format(sensors_values[9:13], hxt.get_asic_temperature(sensors_values[9:13])))
+    # print(" * asic2_hex:    {} -> {} Celsius".format(sensors_values[13:17], hxt.get_asic_temperature(sensors_values[13:17])))
+    # print(" * adc_hex:      {} -> {} Celsius".format(sensors_values[17:21], hxt.get_adc_temperature(sensors_values[17:21])))
 
     # # hxt.read_fpga_dna_registers()
 

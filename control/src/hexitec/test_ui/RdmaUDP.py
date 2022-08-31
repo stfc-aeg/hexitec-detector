@@ -8,6 +8,24 @@ import socket
 import struct
 import time
 
+
+# TEMPORARY: Global variables to support tickle translation
+deassert_all = 0x0
+uart_status_offset = 0x10
+uart_rx_ctrl_offset = 0x14
+uart_tx_ctrl_offset = 0xC
+tx_fill_strb_mask = 0x2
+tx_buff_strb_mask = 0x4
+tx_data_mask = 0xFF00
+vsr_start_char = 0x23
+vsr_end_char = 0x0D
+#
+assert_bit = 0x1
+rx_buff_strb_mask = 0x2
+rx_buff_empty_mask = 0x8
+rx_buff_level_mask = 0xFF00
+rx_buff_data_mask = 0xFF0000
+
 # TODO: This global variable to be removed post debugging
 SLEEP_DELAY = 0.000   # 2
 
@@ -146,3 +164,67 @@ class RdmaUDP(object):
 
     def setDebug(self, enabled=True):
         self.debug = enabled
+
+    def uart_rx(self, uart_address):
+        """Replicating functionality of the tickle function: as_uart_rx."""
+        debug = False    # True
+        uart_status_addr = uart_address + uart_status_offset
+        uart_rx_ctrl_addr = uart_address + uart_rx_ctrl_offset
+        read_value = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer Status (0)')
+        buff_level = (read_value[0] & rx_buff_level_mask) >> 8
+        rx_d = (read_value[0] & rx_buff_data_mask) >> 16
+        if debug:
+            print(" RX init_buff_status: {0} (0x{1:08X})".format(read_value[0], read_value[0]))
+            print(" RX buff_level: {0} rx_d: {1} (0x{2:X}) [IGNORED - Like tickle script]".format(buff_level, rx_d, rx_d))
+        rx_status_masked = (read_value[0] & rx_buff_empty_mask)
+        rx_has_data_flag = not rx_status_masked
+        rx_data = []
+        while (rx_has_data_flag):
+            self.write(uart_rx_ctrl_addr, rx_buff_strb_mask, burst_len=1, comment="Write RX Buffer Strobe")
+            read_value = self.read(uart_rx_ctrl_addr, burst_len=1, comment='Read (back) UART RX Status Reg (0)')
+            self.write(uart_rx_ctrl_addr, deassert_all, burst_len=1, comment="Write RX Deassert All")
+            read_value = self.read(uart_rx_ctrl_addr, burst_len=1, comment='Read (back) UART RX Status Reg (1)')
+            buffer_status = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (1)')
+            buff_level = (buffer_status[0] & rx_buff_level_mask) >> 8
+            uart_status = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (2)')
+            rx_d = (uart_status[0] & rx_buff_data_mask) >> 16
+            if debug:
+                print(" RX buffer_status: {0} (0x{1:08X})".format(buffer_status[0], buffer_status[0]))
+                print(" RX buff_level: {0} rx_d: {1} (0x{2:X})".format(buff_level, rx_d, rx_d))
+            rx_data.append(rx_d)
+            read_value = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (3)')
+            rx_has_data_flag = not (read_value[0] & rx_buff_empty_mask)
+        return rx_data
+
+    def uart_tx(self, vsr_addr, vsr_cmd, vsr_data="", uart_addr=0x0):
+        """Replicating functionality of the tickle function: as_uart_tx."""
+        debug = False    # True
+        uart_tx_ctrl_addr = uart_addr + uart_tx_ctrl_offset
+        uart_status_addr = uart_addr + uart_status_offset
+
+        vsr_seq = [vsr_start_char, vsr_addr, vsr_cmd]
+        if vsr_data != "":
+            for d in vsr_data:
+                vsr_seq.append(d)
+        vsr_seq.append(vsr_end_char)
+        if debug:
+            print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in vsr_seq)))
+        for b in vsr_seq:
+            self.write(uart_tx_ctrl_addr, b << 8, burst_len=1, comment="Write '{0:X}' to TX Buffer".format(b))
+            read_tx_value = self.read(uart_tx_ctrl_addr, burst_len=1, comment="Read TX Buffer")
+
+            read_tx_value = read_tx_value[0]
+            if debug:
+                # print(" * write 0x{0:02X} [ ( [ {1} & 0x{2:04X} ) | 0x{3:02}]".format(uart_tx_ctrl_addr, read_tx_value, tx_data_mask, tx_fill_strb_mask))
+                print(" TX buffer contain: {0} (0x{1:02X})".format(read_tx_value, read_tx_value))
+            write_value = ((read_tx_value & tx_data_mask) | tx_fill_strb_mask)
+
+            self.write(uart_tx_ctrl_addr, write_value, burst_len=1, comment="Write '{0:X}' to TX Buffer".format(write_value))
+            self.write(uart_tx_ctrl_addr, b << 8, burst_len=1, comment="Write '{0:X}' to TX Buffer (Again)".format(b))
+
+            self.write(uart_tx_ctrl_addr, tx_buff_strb_mask, burst_len=1, comment="Write TX Buffer Strobe")
+            self.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Write TX Deassert All")
+
+            self.read(uart_tx_ctrl_addr, burst_len=1, comment="Read TX Buffer")
+
+        self.write(uart_tx_ctrl_addr, tx_buff_strb_mask, burst_len=1, comment="Write TX Buffer Strobe")

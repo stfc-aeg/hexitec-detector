@@ -196,20 +196,22 @@ class Hexitec():
         for key, value in options.items():
             if "fem" in key:
                 fem_info = value.split(',')
+                print("fem_info: {}".format(fem_info))
                 fem_info = [(i.split('=')[0], i.split('=')[1])
                             for i in fem_info]
                 fem_dict = {fem_key.strip(): fem_value.strip()
                             for (fem_key, fem_value) in fem_info}
-                logging.debug(fem_dict)
+                logging.debug("From options: {}".format(fem_dict))
                 self.fem = HexitecFem(
                     self,
-                    fem_dict.get("server_ctrl_ip_addr", defaults.fem["server_ctrl_ip"]),
-                    fem_dict.get("camera_ctrl_ip_addr", defaults.fem["camera_ctrl_ip"]),
-                    fem_dict.get("server_data_ip_addr", defaults.fem["server_data_ip"]),
-                    fem_dict.get("camera_data_ip_addr", defaults.fem["camera_data_ip"])
+                    fem_dict.get("server_ctrl_ip", defaults.fem["server_ctrl_ip"]),
+                    fem_dict.get("camera_ctrl_ip", defaults.fem["camera_ctrl_ip"]),
+                    fem_dict.get("server_data_ip", defaults.fem["server_data_ip"]),
+                    fem_dict.get("camera_data_ip", defaults.fem["camera_data_ip"])
                 )
 
         if not self.fem:
+            logging.error("Using default HexitecFem values!")
             self.fem = HexitecFem(
                 parent=self,
                 server_ctrl_ip_addr=defaults.fem["server_ctrl_ip"],

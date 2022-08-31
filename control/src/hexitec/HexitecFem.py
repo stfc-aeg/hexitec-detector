@@ -15,7 +15,8 @@ import logging
 import configparser
 import os
 
-from hexitec.RdmaUDP import RdmaUDP
+# from hexitec.RdmaUDP import RdmaUDP
+from hexitec.test_ui.RdmaUDP import RdmaUDP
 
 from socket import error as socket_error
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
@@ -88,7 +89,9 @@ class HexitecFem():
         :param server_data_ip_addr: PC interface for data path
         :param camera_data_ip_addr: FEM interface for data path
         """
-        # Give access to parent class (Hexitec) - for potential future use
+        # logging.info("server_ctrl_ip_addr={}, camera_ctrl_ip_addr={}".format(server_ctrl_ip_addr, camera_ctrl_ip_addr))
+        # logging.info("server_data_ip_addr={}, camera_data_ip_addr={}".format(server_data_ip_addr, camera_data_ip_addr))
+        # Give access to parent class (Hexitec)
         self.parent = parent
         self.x10g_rdma = None
 
@@ -244,13 +247,11 @@ class HexitecFem():
     def connect(self, bDebug=False):
         """Set up hardware connection."""
         try:
-            self.x10g_rdma = RdmaUDP(self.server_ctrl_ip_addr, 61650,
-                                     self.server_ctrl_ip_addr, 61651,
-                                     self.camera_ctrl_ip_addr, 61650,
-                                     self.camera_ctrl_ip_addr, 61651,
-                                     2000000, 9000, 20)
+            self.x10g_rdma = RdmaUDP(self.server_ctrl_ip_addr, 61649,
+                                     self.camera_ctrl_ip_addr, 61648,
+                                     9000, 0.5, self.debug)
             self.x10g_rdma.setDebug(False)
-            self.x10g_rdma.ack = True
+            self.x10g_rdma.ack = False  # True
         except socket_error as e:
             raise socket_error("Failed to setup Control connection: %s" % e)
         return
@@ -259,21 +260,21 @@ class HexitecFem():
         """Read environmental sensors and updates parameter tree with results."""
         try:
             # Note once, when firmware was built
-            if self.read_firmware_version:
-                date = self.x10g_rdma.read(0x60000015, 'FIRMWARE DATE')
-                time = self.x10g_rdma.read(0x60000016, 'FIRMWARE TIME')
-                date = format(date, '#010x')
-                time = format(time, '#06x')
-                self.firmware_date = "{0:.2}/{1:.2}/{2:.4}".format(date[2:4], date[4:6], date[6:10])
-                self.firmware_time = "{0:.2}:{1:.2}".format(time[2:4], time[4:6])
-                self.read_firmware_version = False
+            # if self.read_firmware_version:
+            #     date = self.x10g_rdma.read(0x60000015, 'FIRMWARE DATE')
+            #     time = self.x10g_rdma.read(0x60000016, 'FIRMWARE TIME')
+            #     date = format(date, '#010x')
+            #     time = format(time, '#06x')
+            #     self.firmware_date = "{0:.2}/{1:.2}/{2:.4}".format(date[2:4], date[4:6], date[6:10])
+            #     self.firmware_time = "{0:.2}:{1:.2}".format(time[2:4], time[4:6])
+            #     self.read_firmware_version = False
             vsr = self.vsr_addr
             self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
             self.read_temperatures_humidity_values()
-            self.read_pwr_voltages()  # pragma: no cover
+            # self.read_pwr_voltages()  # pragma: no cover
             self.vsr_addr = HexitecFem.VSR_ADDRESS[1]  # pragma: no cover
             self.read_temperatures_humidity_values()  # pragma: no cover
-            self.read_pwr_voltages()  # pragma: no cover
+            # self.read_pwr_voltages()  # pragma: no cover
             self.vsr_addr = vsr  # pragma: no cover
         except (HexitecFemError, ParameterTreeError) as e:
             self._set_status_error("Failed to read sensors: %s" % str(e))
@@ -429,8 +430,8 @@ class HexitecFem():
 
         # print("\n\nReinstate polling before merging with master !\n\n")
         # Start polling thread (connect successfully set up)
-        # if len(self.status_error) == 0:
-        #     self._start_polling()
+        if len(self.status_error) == 0:
+            self._start_polling()
 
     def initialise_hardware(self, msg=None):
         """Initialise sensors, load enables, etc to initialise both VSR boards."""
@@ -537,95 +538,102 @@ class HexitecFem():
         """Get debug messages status."""
         return self.debug
 
+    # def send_cmd(self, cmd):
+    #     """Send a command string to the microcontroller."""
+    #     while len(cmd) % 4 != 0:
+    #         cmd.append(13)
+    #     if self.debug:
+    #         logging.debug("Length of command - %s %s" % (len(cmd), len(cmd) % 4))
+
+    #     for i in range(0, len(cmd) // 4):
+    #         reg_value = 256 * 256 * 256 * cmd[(i * 4)] + 256 * 256 * cmd[(i * 4) + 1] \
+    #             + 256 * cmd[(i * 4) + 2] + cmd[(i * 4) + 3]
+    #         self.x10g_rdma.write(0xE0000100, reg_value, 'Write 4 Bytes')
+
     def send_cmd(self, cmd):
         """Send a command string to the microcontroller."""
-        while len(cmd) % 4 != 0:
-            cmd.append(13)
-        if self.debug:
-            logging.debug("Length of command - %s %s" % (len(cmd), len(cmd) % 4))
-
-        for i in range(0, len(cmd) // 4):
-            reg_value = 256 * 256 * 256 * cmd[(i * 4)] + 256 * 256 * cmd[(i * 4) + 1] \
-                + 256 * cmd[(i * 4) + 2] + cmd[(i * 4) + 3]
-            self.x10g_rdma.write(0xE0000100, reg_value, 'Write 4 Bytes')
+        (start, address, command, end) = cmd
+        print(" +++ ", start, address, command, end)
+        self.x10g_rdma.uart_tx(address, command, "", 0x0)
 
     def read_response(self):
         """Read a VSR's microcontroller response, passed on by the FEM."""
-        data_counter = 0
-        f = []
-        ABORT_VALUE = 10000
-        RETURN_START_CHR = 42
-        CARRIAGE_RTN = 13
-        FIFO_EMPTY_FLAG = 1
-        empty_count = 0
-        daty = RETURN_START_CHR
-        # Example: daty will contain:
-        # 0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x30, 0x41, 0x30, 0x30, 0x0D
+        return self.x10g_rdma.uart_rx(0x0)
+        # data_counter = 0
+        # f = []
+        # ABORT_VALUE = 10000
+        # RETURN_START_CHR = 42
+        # CARRIAGE_RTN = 13
+        # FIFO_EMPTY_FLAG = 1
+        # empty_count = 0
+        # daty = RETURN_START_CHR
+        # # Example: daty will contain:
+        # # 0x23, self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x30, 0x41, 0x30, 0x30, 0x0D
 
-        # JE modifications
-        daty1, daty2 = RETURN_START_CHR, RETURN_START_CHR
-        daty3, daty4 = RETURN_START_CHR, RETURN_START_CHR
+        # # JE modifications
+        # daty1, daty2 = RETURN_START_CHR, RETURN_START_CHR
+        # daty3, daty4 = RETURN_START_CHR, RETURN_START_CHR
 
-        while daty != CARRIAGE_RTN:
+        # while daty != CARRIAGE_RTN:
 
-            fifo_empty = FIFO_EMPTY_FLAG
+        #     fifo_empty = FIFO_EMPTY_FLAG
 
-            while fifo_empty == FIFO_EMPTY_FLAG and empty_count < ABORT_VALUE:
-                fifo_empty = self.x10g_rdma.read(0xE0000011, 'FIFO EMPTY FLAG')
-                empty_count = empty_count + 1
+        #     while fifo_empty == FIFO_EMPTY_FLAG and empty_count < ABORT_VALUE:
+        #         fifo_empty = self.x10g_rdma.read(0xE0000011, 'FIFO EMPTY FLAG')
+        #         empty_count = empty_count + 1
 
-            dat = self.x10g_rdma.read(0xE0000200, 'Data')
+        #     dat = self.x10g_rdma.read(0xE0000200, 'Data')
 
-            daty = (dat >> 24) & 0xFF
-            f.append(daty)
-            daty1 = daty
+        #     daty = (dat >> 24) & 0xFF
+        #     f.append(daty)
+        #     daty1 = daty
 
-            daty = (dat >> 16) & 0xFF
-            f.append(daty)
-            daty2 = daty
+        #     daty = (dat >> 16) & 0xFF
+        #     f.append(daty)
+        #     daty2 = daty
 
-            daty = (dat >> 8) & 0xFF
-            f.append(daty)
-            daty3 = daty
+        #     daty = (dat >> 8) & 0xFF
+        #     f.append(daty)
+        #     daty3 = daty
 
-            daty = dat & 0xFF
-            f.append(daty)
-            daty4 = daty
+        #     daty = dat & 0xFF
+        #     f.append(daty)
+        #     daty4 = daty
 
-            if self.debug:
-                logging.debug('{0:0{1}x} {2:0{3}x} {4:0{5}x} {6:0{7}x}'.format(daty1, 2, daty2, 2,
-                                                                               daty3, 2, daty4, 2))
+        #     if self.debug:
+        #         logging.debug('{0:0{1}x} {2:0{3}x} {4:0{5}x} {6:0{7}x}'.format(daty1, 2, daty2, 2,
+        #                                                                        daty3, 2, daty4, 2))
 
-            data_counter = data_counter + 1
-            if empty_count == ABORT_VALUE:
-                logging.error("Error: read_response from FEM aborted")
-                self.exception_triggered = True
-                raise HexitecFemError("read_response aborted")
-            empty_count = 0
+        #     data_counter = data_counter + 1
+        #     if empty_count == ABORT_VALUE:
+        #         logging.error("Error: read_response from FEM aborted")
+        #         self.exception_triggered = True
+        #         raise HexitecFemError("read_response aborted")
+        #     empty_count = 0
 
-        # Diagnostics: Count number of successful reads before 1st Exception thrown
-        if self.exception_triggered is False:
-            self.successful_reads += 1
+        # # Diagnostics: Count number of successful reads before 1st Exception thrown
+        # if self.exception_triggered is False:
+        #     self.successful_reads += 1
 
-        if self.debug:
-            logging.debug("Counter is :- %s Length is:- %s" % (data_counter, len(f)))
+        # if self.debug:
+        #     logging.debug("Counter is :- %s Length is:- %s" % (data_counter, len(f)))
 
-        fifo_empty = self.x10g_rdma.read(0xE0000011, 'Data')
-        if self.debug:
-            logging.debug("FIFO should be empty: %s" % fifo_empty)
-        s = ''
+        # fifo_empty = self.x10g_rdma.read(0xE0000011, 'Data')
+        # if self.debug:
+        #     logging.debug("FIFO should be empty: %s" % fifo_empty)
+        # s = ''
 
-        for i in range(1, data_counter * 4):
-            s = s + chr(f[i])
+        # for i in range(1, data_counter * 4):
+        #     s = s + chr(f[i])
 
-        if self.debug:
-            logging.debug("String :- %s" % s)
-            logging.debug(f[0])
-            logging.debug(f[1])
-            logging.debug(f[2])
-            logging.debug(f[3])
+        # if self.debug:
+        #     logging.debug("String :- %s" % s)
+        #     logging.debug(f[0])
+        #     logging.debug(f[1])
+        #     logging.debug(f[2])
+        #     logging.debug(f[3])
 
-        return s
+        # return s
 
     def cam_connect(self):
         """Send commands to connect camera."""
@@ -2019,8 +2027,13 @@ class HexitecFem():
     def read_pwr_voltages(self):
         """Read and convert power data into voltages."""
         self.send_cmd([0x23, self.vsr_addr, HexitecFem.READ_PWR_VOLT, 0x0D])
-        sensors_values = self.read_response()
-        sensors_values = sensors_values.strip()
+        # sensors_values = self.read_response()
+        # sensors_values = sensors_values.strip()
+        read_sensors = self.read_response()
+        # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+        read_sensors = read_sensors[1:]     # Omit start of sequence character, matching existing 2x2 source code formatting
+        sensors_values = "{}".format(''.join([chr(x) for x in read_sensors]))   # Turn list of integers into ASCII string
+        # print(" ASCII string: {}".format(sensors_values))
 
         if self.debug:
             logging.debug("VSR: %s Power values: %s len: %s" % (format(self.vsr_addr, '#02x'),
@@ -2041,6 +2054,7 @@ class HexitecFem():
             u1 = int(sensors_values[1:5], 16) * (reference_voltage / 2**12)
             # Apply conversion gain # Added 56V following HV tests
             hv_monitoring_voltage = u1 * 1621.65 - 1043.22 + 56
+            # print("hv value: {}\n\n".format(hv_monitoring_voltage))
             return hv_monitoring_voltage
         except ValueError as e:
             logging.error("VSR %s: Error obtaining HV value: %s" %
@@ -2050,8 +2064,15 @@ class HexitecFem():
     def read_temperatures_humidity_values(self):
         """Read and convert sensor data into temperatures and humidity values."""
         self.send_cmd([0x23, self.vsr_addr, 0x52, 0x0D])
-        sensors_values = self.read_response()
-        sensors_values = sensors_values.strip()
+        time.sleep(0.25)
+        # sensors_values = self.read_response()
+        # sensors_values = sensors_values.strip()
+        read_sensors = self.read_response()
+        print("Received ({0}) from 0x{1:02X}: {2}".format(len(read_sensors), self.vsr_addr, ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+        read_sensors = read_sensors[1:]     # Omit start of sequence character, matching existing 2x2 source code formatting
+        sensors_values = "{}".format(''.join([chr(x) for x in read_sensors]))   # Turn list of integers into ASCII string
+        # print(" ASCII string: {}".format(sensors_values))
+
         if self.debug:
             logging.debug("VSR: %s sensors_values: %s len: %s" % (format(self.vsr_addr, '#02x'),
                           sensors_values, len(sensors_values)))
@@ -2060,10 +2081,20 @@ class HexitecFem():
         initial_value = -1
         try:
             initial_value = int(sensors_values[1])
-        except ValueError as e:
+        except (ValueError, IndexError) as e:
             logging.error("Failed to readout intelligible sensor values: %s" % e)
             return None
 
+        ambient_hex = sensors_values[1:5]
+        humidity_hex = sensors_values[5:9]
+        asic1_hex = sensors_values[9:13]
+        asic2_hex = sensors_values[13:17]
+        adc_hex = sensors_values[17:21]
+        print(" * ambient_hex:  {} -> {} Celsius".format(sensors_values[1:5], self.get_ambient_temperature(sensors_values[1:5])))
+        print(" * humidity_hex: {} -> {}".format(sensors_values[5:9], self.get_humidity(sensors_values[5:9])))
+        print(" * asic1_hex:    {} -> {} Celsius".format(sensors_values[9:13], self.get_asic_temperature(sensors_values[9:13])))
+        print(" * asic2_hex:    {} -> {} Celsius".format(sensors_values[13:17], self.get_asic_temperature(sensors_values[13:17])))
+        print(" * adc_hex:      {} -> {} Celsius".format(sensors_values[17:21], self.get_adc_temperature(sensors_values[17:21])))
         if initial_value == HexitecFem.SENSORS_READOUT_OK:
             ambient_hex = sensors_values[1:5]
             humidity_hex = sensors_values[5:9]
