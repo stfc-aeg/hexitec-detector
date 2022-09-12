@@ -133,6 +133,7 @@ class RdmaUDP(object):
         # command = struct.pack('=HBBII', burst_len, cmd_no, op_code, address, data)
         # Send the single write command packet
         try:
+            # print("  command: {}".format(command))
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
             # Receive acknowledgement
             response = self.socket.recv(self.UDPMaxRx)
@@ -194,18 +195,18 @@ class RdmaUDP(object):
             rx_data.append(rx_d)
             read_value = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (3)')
             rx_has_data_flag = not (read_value[0] & rx_buff_empty_mask)
+        # print("(RdmaUDP) UART RX'd: {}".format(' '.join("0x{0:02X}".format(x) for x in rx_data)))
         return rx_data
 
-    def uart_tx(self, vsr_addr, vsr_cmd, vsr_data="", uart_addr=0x0):
+    def uart_tx(self, cmd):
         """Replicating functionality of the tickle function: as_uart_tx."""
-        debug = False    # True
-        uart_tx_ctrl_addr = uart_addr + uart_tx_ctrl_offset
-        uart_status_addr = uart_addr + uart_status_offset
+        debug = False   # True
+        uart_tx_ctrl_addr = uart_tx_ctrl_offset
+        uart_status_addr = uart_status_offset
 
-        vsr_seq = [vsr_start_char, vsr_addr, vsr_cmd]
-        if vsr_data != "":
-            for d in vsr_data:
-                vsr_seq.append(d)
+        vsr_seq = [vsr_start_char]
+        for d in cmd:
+            vsr_seq.append(d)
         vsr_seq.append(vsr_end_char)
         if debug:
             print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in vsr_seq)))

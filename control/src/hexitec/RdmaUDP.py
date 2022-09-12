@@ -68,7 +68,8 @@ class RdmaUDP(object):
         self.txsocket.close()
         self.rxsocket.close()
 
-    def read(self, address, comment=''):
+    def read(self, address, burst_len=1, comment=''):
+    # def read(self, address, comment=''):
         """
         Read 64 bits from the address.
 
@@ -90,7 +91,8 @@ class RdmaUDP(object):
 
         return data
 
-    def write(self, address, data, comment=''):
+    def write(self, address, data, burst_len=1, comment=''):
+    # def write(self, address, data, comment=''):
         """Write data to address."""
         if self.debug:
             logging.debug('W %08X : %08X %s' % (address, data, comment))

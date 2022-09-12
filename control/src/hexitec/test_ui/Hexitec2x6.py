@@ -90,75 +90,6 @@ class Hexitec2x6():
         fpga_dna2 = self.x10g_rdma.read(0x00008014, 'Read FPGA DNA part 3')
         print("FPGA DNA: 0x{0:08X} {1:08X} {2:08X}".format(fpga_dna2, fpga_dna1, fpga_dna0))
 
-    def uart_rx(self, uart_address):
-        """Replicating functionality of the tickle function: as_uart_rx."""
-        debug = False    # True
-        uart_status_addr = uart_address + uart_status_offset
-        uart_rx_ctrl_addr = uart_address + uart_rx_ctrl_offset
-        read_value = self.x10g_rdma.read(uart_status_addr, burst_len=1, comment='Read UART Buffer Status (0)')
-        buff_level = (read_value[0] & rx_buff_level_mask) >> 8
-        rx_d = (read_value[0] & rx_buff_data_mask) >> 16
-        if debug:
-            print(" RX init_buff_status: {0} (0x{1:08X})".format(read_value[0], read_value[0]))
-            print(" RX buff_level: {0} rx_d: {1} (0x{2:X}) [IGNORED - Like tickle script]".format(buff_level, rx_d, rx_d))
-        rx_status_masked = (read_value[0] & rx_buff_empty_mask)
-        rx_has_data_flag = not rx_status_masked
-        rx_data = []
-        while (rx_has_data_flag):
-            self.x10g_rdma.write(uart_rx_ctrl_addr, rx_buff_strb_mask, burst_len=1, comment="Write RX Buffer Strobe")
-            read_value = self.x10g_rdma.read(uart_rx_ctrl_addr, burst_len=1, comment='Read (back) UART RX Status Reg (0)')
-            # print(" (strb)  uart_rx_ctrl: {0} (0x{1:08X})".format(read_value[0], read_value[0]))
-            self.x10g_rdma.write(uart_rx_ctrl_addr, deassert_all, burst_len=1, comment="Write RX Deassert All")
-            read_value = self.x10g_rdma.read(uart_rx_ctrl_addr, burst_len=1, comment='Read (back) UART RX Status Reg (1)')
-            # print(" (deass) uart_rx_ctrl: {0} (0x{1:08X})".format(read_value[0], read_value[0]))
-            buffer_status = self.x10g_rdma.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (1)')
-            buff_level = (buffer_status[0] & rx_buff_level_mask) >> 8
-            uart_status = self.x10g_rdma.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (2)')
-            rx_d = (uart_status[0] & rx_buff_data_mask) >> 16
-            if debug:
-                print(" RX buffer_status: {0} (0x{1:08X})".format(buffer_status[0], buffer_status[0]))
-                print(" RX buff_level: {0} rx_d: {1} (0x{2:X})".format(buff_level, rx_d, rx_d))
-            rx_data.append(rx_d)
-            read_value = self.x10g_rdma.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (3)')
-            rx_has_data_flag = not (read_value[0] & rx_buff_empty_mask)
-        return rx_data
-
-    def uart_tx(self, vsr_addr, vsr_cmd, vsr_data="", uart_addr=0x0):
-        """Replicating functionality of the tickle function: as_uart_tx."""
-        debug = False    # True
-        uart_tx_ctrl_addr = uart_addr + uart_tx_ctrl_offset
-        uart_status_addr = uart_addr + uart_status_offset
-        # uart_rx_ctrl_addr = uart_addr + uart_rx_ctrl_offset   # Unused
-
-        vsr_seq = [vsr_start_char, vsr_addr, vsr_cmd]
-        if vsr_data != "":
-            for d in vsr_data:
-                vsr_seq.append(d)
-        vsr_seq.append(vsr_end_char)
-        if debug:
-            print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in vsr_seq)))
-        for b in vsr_seq:
-            self.x10g_rdma.write(uart_tx_ctrl_addr, b << 8, burst_len=1, comment="Write '{0:X}' to TX Buffer".format(b))
-            read_tx_value = self.x10g_rdma.read(uart_tx_ctrl_addr, burst_len=1, comment="Read TX Buffer")
-
-            read_tx_value = read_tx_value[0]
-            if debug:
-                # print(" * write 0x{0:02X} [ ( [ {1} & 0x{2:04X} ) | 0x{3:02}]".format(uart_tx_ctrl_addr, read_tx_value, tx_data_mask, tx_fill_strb_mask))
-                print(" TX buffer contain: {0} (0x{1:02X})".format(read_tx_value, read_tx_value))
-            write_value = ((read_tx_value & tx_data_mask) | tx_fill_strb_mask)
-
-            self.x10g_rdma.write(uart_tx_ctrl_addr, write_value, burst_len=1, comment="Write '{0:X}' to TX Buffer".format(write_value))
-            self.x10g_rdma.write(uart_tx_ctrl_addr, b << 8, burst_len=1, comment="Write '{0:X}' to TX Buffer (Again)".format(b))
-
-            self.x10g_rdma.write(uart_tx_ctrl_addr, tx_buff_strb_mask, burst_len=1, comment="Write TX Buffer Strobe")
-            self.x10g_rdma.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Write TX Deassert All")
-
-            self.x10g_rdma.read(uart_tx_ctrl_addr, burst_len=1, comment="Read TX Buffer")
-
-        self.x10g_rdma.write(uart_tx_ctrl_addr, tx_buff_strb_mask, burst_len=1, comment="Write TX Buffer Strobe")
-        # Redundant: ?
-        # self.x10g_rdma.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Write TX Deassert All")
-
     def get_ambient_temperature(self, hex_val):
         """Calculate ambient temperature."""
         try:
@@ -202,16 +133,16 @@ if __name__ == '__main__':  # pragma: no cover
     # Testing out translated tickle script #
     # as_uart_tx 0xFF 0xF7 "" 0x0  0
     print("Calling uart_tx(0xFF, 0xF7, \"\", 0x0)")
-    hxt.uart_tx(0xFF, 0xF7, "", 0x0)
-    time.sleep(0.25)
-    read_sensors = hxt.uart_rx(0x0)
-    print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+    hxt.x10g_rdma.uart_tx([0xFF, 0xF7])
+    # time.sleep(0.25)
+    # read_sensors = hxt.x10g_rdma.uart_rx(0x0)
+    # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
 
     # # Request and receive environmental data #
     # print("Calling uart_tx(0x90, 0x52, \"\", 0x0)")
-    # hxt.uart_tx(0x90, 0x52, "", 0x0)
+    # hxt.x10g_rdma.uart_tx([0x90, 0x52])
     # time.sleep(0.25)
-    # read_sensors = hxt.uart_rx(0x0)
+    # read_sensors = hxt.x10g_rdma.uart_rx(0x0)
     # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
     # # Display the environmentals values
     # read_sensors = read_sensors[1:]     # Omit start of sequence character, matching existing 2x2 source code formatting

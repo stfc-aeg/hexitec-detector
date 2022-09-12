@@ -102,6 +102,8 @@ class HexitecAdapter(ApiAdapter):
         response = {}
         checkAdapters = True if len(path) > 0 else False
         requestSent = False
+        # print("   put, Path: {}".format(path))
+        # print("     request: {}".format(request))
         try:
             if checkAdapters:
                 for name, adapter in self.adapters.items():
