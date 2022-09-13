@@ -29,11 +29,12 @@ rx_buff_data_mask = 0xFF0000
 # TODO: This global variable to be removed post debugging
 SLEEP_DELAY = 0.000   # 2
 
+
 class RdmaUDP(object):
 
     def __init__(self, local_ip='192.168.0.1', local_port=65535,
                  rdma_ip='192.168.0.2', rdma_port=65536,
-                 UDPMTU=9000, UDPTimeout=5, debug=False):
+                 UDPMTU=9000, UDPTimeout=5, debug=False, unique_cmd_no=False):
 
         self.debug = debug
         if self.debug:
@@ -59,26 +60,35 @@ class RdmaUDP(object):
         self.rdma_port = rdma_port
         self.UDPMaxRx = UDPMTU
         self.ack = False
+        self.unique_cmd_no = unique_cmd_no
+        if self.unique_cmd_no:
+            self.cmd_no = -1
+        else:
+            self.cmd_no = 0
 
     def __del__(self):
         self.socket.close()
 
     def read(self, address, burst_len=1, comment=''):
         burst_len = burst_len
-        cmd_no = 0
+        if self.unique_cmd_no:
+            self.cmd_no += 1
+        else:
+            self.cmd_no = 0
         op_code = 1
         if self.debug:
             print(" R. burst_len: {0:X} cmd_no: {1:0X} op_code: {2:0X} address: 0x{3:0X} comment: \"{4}\" ***".format(
-                  burst_len, cmd_no, op_code, address, comment))
+                  burst_len, self.cmd_no, op_code, address, comment))
         # H = burst len, B = cmd no, B = Op code, I = start address
         # H = unsigned short (2), B = unsigned char (1), I = signed int (4 Bytes)
-        command = struct.pack('=HBBI', burst_len, cmd_no, op_code, address)
+        command = struct.pack('=HBBI', burst_len, self.cmd_no, op_code, address)
         data = (0, )
         try:
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
         except socket.error as e:
-            print(" *** Read Error: {0}. burst_len: {1:X} cmd_no: {2:0X} op_code: {3:0X} address: 0x{4:0X} comment: \"{5}\" ***".format(e,
-                  burst_len, cmd_no, op_code, address, comment))
+            print(" *** Read (W) Error: {0}. burst_len: {1:X} cmd_no: {2:0X} op_code: {3:0X} address: 0x{4:0X} comment: \"{5}\" ***".format(e,
+                  burst_len, self.cmd_no, op_code, address, comment))
+            raise socket.error(e)
         try:
             # Receive acknowledge packet
             response = self.socket.recv(self.UDPMaxRx)
@@ -97,6 +107,10 @@ class RdmaUDP(object):
                 data = decoded[4:]  # Omit burst_len, cmd_no, op_code, address
             if self.ack:
                 print("R decoded 0x{0:08X} : 0x{1} \"{2}\"".format(address, ''.join("{0:X}".format(x) for x in data), comment))
+        except socket.error as e:
+            print(" *** Read (R) Error: {0}. burst_len: {1:X} cmd_no: {2:0X} op_code: {3:0X} address: 0x{4:0X} comment: \"{5}\" ***".format(e,
+                  burst_len, self.cmd_no, op_code, address, comment))
+            raise socket.error(e)
         except struct.error as e:
             print(" *** Read Error: {} ***".format(e))
         time.sleep(SLEEP_DELAY)
@@ -104,30 +118,33 @@ class RdmaUDP(object):
 
     def write(self, address, data, burst_len=1, comment=''):
         burst_len = burst_len
-        cmd_no = 0
+        if self.unique_cmd_no:
+            self.cmd_no += 1
+        else:
+            self.cmd_no = 0
         op_code = 0
         if self.debug:
             print(" W. burst_len: {0:X} cmd_no: {1:X} op_code: {2:X} address: 0x{3:X} data: {4:X} comment: \"{5}\" ***".format(
-                  burst_len, cmd_no, op_code, address, data, comment))
+                  burst_len, self.cmd_no, op_code, address, data, comment))
             # print(" W. burst_len: {0:X} cmd_no: {1:X} op_code: {2:X} address: 0x{3:X} data: {4} comment: \"{5}\" ***".format(
-            #       burst_len, cmd_no, op_code, ', '.join("0x{0:X}".format(x) for x in address), data, comment))
+            #       burst_len, self.cmd_no, op_code, ', '.join("0x{0:X}".format(x) for x in address), data, comment))
         # H = burst len, B = cmd no, B = Op code, I = address, I = data
         # H = unsigned short (2), B = unsigned char (1), I = signed int (4 Bytes)
         header_str = "HBBI"   # Equivalent length: 8
         packet_str = header_str + "I" * burst_len
         if burst_len == 1:
-            command = struct.pack(packet_str, burst_len, cmd_no, op_code, address, data)
+            command = struct.pack(packet_str, burst_len, self.cmd_no, op_code, address, data)
         elif burst_len == 2:
             data = (data & 0xFFFFFFFF), (data >> 32)
-            command = struct.pack(packet_str, burst_len, cmd_no, op_code, address, data[0], data[1])
+            command = struct.pack(packet_str, burst_len, self.cmd_no, op_code, address, data[0], data[1])
             # print("data: {0:08X} {1:08X}".format(data[0], data[1]))
         elif burst_len == 3:
             data = (data & 0xFFFFFFFF), ((data >> 32) & 0xFFFFFFFF), (data >> 64)
-            command = struct.pack(packet_str, burst_len, cmd_no, op_code, address, data[0], data[1], data[2])
+            command = struct.pack(packet_str, burst_len, self.cmd_no, op_code, address, data[0], data[1], data[2])
             # print("data: {0:08X} {1:08X} {2:08X}".format(data[0], data[1], data[2]))
         elif burst_len == 4:
             data = (data & 0xFFFFFFFF), ((data >> 32) & 0xFFFFFFFF), ((data >> 64) & 0xFFFFFFFF), (data >> 96)
-            command = struct.pack(packet_str, burst_len, cmd_no, op_code, address, data[0], data[1], data[2], data[3])
+            command = struct.pack(packet_str, burst_len, self.cmd_no, op_code, address, data[0], data[1], data[2], data[3])
             # print("data: {0:08X} {1:08X} {2:08X} {3:08X}".format(data[0], data[1], data[2], data[3]))
         else:
             print("burst_length of: {} is not supported".format(burst_len))
@@ -136,8 +153,9 @@ class RdmaUDP(object):
         try:
             self.socket.sendto(command, (self.rdma_ip, self.rdma_port))
         except socket.error as e:
-            print(" *** Write Error: {0}. burst_len: {1:0X} cmd_no: {2:X} op_code: {3:0X} address: 0x{4:X} data: {5:0X} comment: \"{6}\" ***".format(e,
-                  burst_len, cmd_no, op_code, address, data, comment))
+            print(" *** Write (W) Error: {0}. burst_len: {1:0X} cmd_no: {2:X} op_code: {3:0X} address: 0x{4:X} data: {5:0X} comment: \"{6}\" ***".format(e,
+                  burst_len, self.cmd_no, op_code, address, data, comment))
+            raise socket.error(e)
         try:
             # Receive acknowledgement
             response = self.socket.recv(self.UDPMaxRx)
@@ -156,6 +174,10 @@ class RdmaUDP(object):
                 #     data = decoded[4:]  # Omit burst_len, cmd_no, op_code, address
                 # print("W Ack Raw: {}".format(decoded))
                 print('W decoded: {} Comment: \"{}\" Length: {}'.format(', '.join("0x{0:X}".format(x) for x in decoded), comment, len(response)))
+        except socket.error as e:
+            print(" *** Write (R) Error: {0}. burst_len: {1:0X} cmd_no: {2:X} op_code: {3:0X} address: 0x{4:X} data: {5:0X} comment: \"{6}\" ***".format(e,
+                  burst_len, self.cmd_no, op_code, address, data, comment))
+            raise socket.error(e)
         except struct.error as e:
             print(" *** Write Error: {} ***".format(e))
         time.sleep(SLEEP_DELAY)

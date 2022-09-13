@@ -17,9 +17,10 @@ class Hexitec2x6():
     Test we can access scratch registers in the KinteX FPGA.
     """
 
-    def __init__(self, esdg_lab=False, debug=False):
+    def __init__(self, esdg_lab=False, debug=False, unique_cmd_no=False):
         """."""
         self.debug = debug
+        self.unique_cmd_no = unique_cmd_no
         if esdg_lab:
             # Control IP addresses - MR
             self.local_ip = "192.168.4.1"  # Network card
@@ -40,7 +41,8 @@ class Hexitec2x6():
         """Connect to the 10 G UDP control channel."""
         self.x10g_rdma = RdmaUDP(self.local_ip, self.local_port,
                                  self.rdma_ip, self.rdma_port,
-                                 9000, 1, self.debug)
+                                 9000, 1, self.debug,
+                                 unique_cmd_no)
         self.x10g_rdma.setDebug(self.debug)
         self.x10g_rdma.ack = False  # True
         return self.x10g_rdma.error_OK
@@ -110,7 +112,8 @@ class Hexitec2x6():
 if __name__ == '__main__':  # pragma: no cover
     esdg_lab = literal_eval(sys.argv[1])
     debug = literal_eval(sys.argv[2])
-    hxt = Hexitec2x6(esdg_lab=esdg_lab, debug=debug)
+    unique_cmd_no = literal_eval(sys.argv[3])
+    hxt = Hexitec2x6(esdg_lab=esdg_lab, debug=debug, unique_cmd_no=unique_cmd_no)
     hxt.connect()
     # hxt.read_scratch_registers()
 
