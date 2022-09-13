@@ -9,22 +9,6 @@ from RdmaUDP import RdmaUDP
 from ast import literal_eval
 import time  # DEBUGGING only
 
-# TEMPORARY: Global variables to support tickle translation
-deassert_all = 0x0
-uart_status_offset = 0x10
-uart_rx_ctrl_offset = 0x14
-uart_tx_ctrl_offset = 0xC
-tx_fill_strb_mask = 0x2
-tx_buff_strb_mask = 0x4
-tx_data_mask = 0xFF00
-vsr_start_char = 0x23
-vsr_end_char = 0x0D
-#
-assert_bit = 0x1
-rx_buff_strb_mask = 0x2
-rx_buff_empty_mask = 0x8
-rx_buff_level_mask = 0xFF00
-rx_buff_data_mask = 0xFF0000
 
 class Hexitec2x6():
     """
