@@ -7,6 +7,8 @@ Christian Angelsen, STFC Detector Systems Software Group, 2022.
 import sys
 from RdmaUDP import RdmaUDP
 from ast import literal_eval
+import socket
+import struct
 import time  # DEBUGGING only
 
 
@@ -110,6 +112,13 @@ class Hexitec2x6():
 
 
 if __name__ == '__main__':  # pragma: no cover
+    if (len(sys.argv) != 4):
+        print("Correct usage: ")
+        print("python Hexitec2x6.py <esdg_lab> <debug> <unique_cmd_no>")
+        print(" i.e. to not use esdg_lab addresses but enable debugging, and unique headers:")
+        print("python Hexitec2x6.py False True True")
+        sys.exit(-1)
+
     esdg_lab = literal_eval(sys.argv[1])
     debug = literal_eval(sys.argv[2])
     unique_cmd_no = literal_eval(sys.argv[3])
@@ -117,13 +126,34 @@ if __name__ == '__main__':  # pragma: no cover
     hxt.connect()
     # hxt.read_scratch_registers()
 
-    # Testing out translated tickle script #
-    # as_uart_tx 0xFF 0xF7 "" 0x0  0
-    print("Calling uart_tx(0xFF, 0xF7, \"\", 0x0)")
-    hxt.x10g_rdma.uart_tx([0xFF, 0xF7])
-    # time.sleep(0.25)
-    # read_sensors = hxt.x10g_rdma.uart_rx(0x0)
-    # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+    try:
+        # # Testing out translated tickle script #
+        # # as_uart_tx 0xFF 0xF7 "" 0x0  0
+        # print("Calling uart_tx(0xFF, 0xF7)")
+        # hxt.x10g_rdma.uart_tx([0xFF, 0xF7])
+        # time.sleep(0.25)
+        # read_sensors = hxt.x10g_rdma.uart_rx(0x0)
+        # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+
+        # Scratch Registers; Writing, Reading
+        hxt.x10g_rdma.write(0x8030, 0x10203040, burst_len=1, comment="Set Scratch Reg1 value")
+        scratch0 = hxt.x10g_rdma.read(0x00008030, comment='Read Scratch Register 1')
+        print("Reg   1: {0:08X}".format(scratch0[0]))
+
+        # hxt.x10g_rdma.write(0x8030, 0x4000003320000011, burst_len=2, comment="Set Scratch Reg12 value")
+        # scratch12 = hxt.x10g_rdma.read(0x00008030, burst_len=2, comment='Read Scratch Register 1 2')
+        # print("Reg  12: {}".format(', '.join("{0:8X}".format(x) for x in scratch12)))
+
+        # hxt.x10g_rdma.write(0x8030, 0x600005554000033322200001, burst_len=3, comment="Set Scratch Reg123 value")
+        # scratch123 = hxt.x10g_rdma.read(0x00008030, burst_len=3, comment='Read Scratch Register 1 2 3')
+        # print("Reg 123: {}".format(', '.join("{0:8X}".format(x) for x in scratch123)))
+
+        # hxt.x10g_rdma.write(0x8030, 0x81657777666600054444000322220001, burst_len=4, comment="Set Scratch Reg1234 value")
+        # scratch1234 = hxt.x10g_rdma.read(0x00008030, burst_len=4, comment='Read Scratch Register 1 2 3 4')
+        # print("Reg1234: {}".format(', '.join("{0:8X}".format(x) for x in scratch1234)))
+        pass
+    except (socket.error, struct.error) as e:
+        print(" *** Scratch register error: {} ***".format(e))
 
     # # Request and receive environmental data #
     # print("Calling uart_tx(0x90, 0x52, \"\", 0x0)")
@@ -145,22 +175,6 @@ if __name__ == '__main__':  # pragma: no cover
     # print(" * asic1_hex:    {} -> {} Celsius".format(sensors_values[9:13], hxt.get_asic_temperature(sensors_values[9:13])))
     # print(" * asic2_hex:    {} -> {} Celsius".format(sensors_values[13:17], hxt.get_asic_temperature(sensors_values[13:17])))
     # print(" * adc_hex:      {} -> {} Celsius".format(sensors_values[17:21], hxt.get_adc_temperature(sensors_values[17:21])))
-
-    # # hxt.read_fpga_dna_registers()
-
-    # hxt.x10g_rdma.write(0x8030, 0x20000001, burst_len=1, comment="New Scratch Register1 value")
-    # hxt.x10g_rdma.write(0x8030, 0x4000003320000011, burst_len=2, comment="New Scratch Register12 value")
-    # hxt.x10g_rdma.write(0x8030, 0x600005554000033322200001, burst_len=3, comment="New Scratch Register123 value")
-    # hxt.x10g_rdma.write(0x8030, 0x81657777666600054444000322220001, burst_len=4, comment="New Scratch Register1234 value")
-
-    # scratch1 = hxt.x10g_rdma.read(0x00008030, comment='Read Scratch Register 1')
-    # print("Reg   1, raw: {}".format(scratch1))
-    # scratch12 = hxt.x10g_rdma.read(0x00008030, burst_len=2, comment='Read Scratch Register 1, 2')
-    # print("Reg  12, raw: {}".format(scratch12))
-    # scratch123 = hxt.x10g_rdma.read(0x00008030, burst_len=3, comment='Read Scratch Register 1, 2, 3')
-    # print("Reg 123, raw: {}".format(scratch123))
-    # scratch1234 = hxt.x10g_rdma.read(0x00008030, burst_len=4, comment='Read Scratch Register 1, 2, 3, 4')
-    # print("Reg1234, raw: {}".format(scratch1234))
 
     # for index in range(100):
     #     print(index)

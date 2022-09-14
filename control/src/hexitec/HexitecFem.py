@@ -248,7 +248,7 @@ class HexitecFem():
         try:
             self.x10g_rdma = RdmaUDP(self.server_ctrl_ip_addr, 61649,
                                     self.camera_ctrl_ip_addr, 61648,
-                                    9000, 0.5, self.debug)
+                                    9000, 0.5, self.debug, unique_cmd_no=False)
             self.x10g_rdma.setDebug(False)
             self.x10g_rdma.ack = False  # True
         except socket_error as e:
