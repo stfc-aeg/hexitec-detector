@@ -156,12 +156,11 @@ if __name__ == '__main__':  # pragma: no cover
         print(" *** Scratch register error: {} ***".format(e))
 
     uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.poll_uart()
-    print("UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
+    print("      UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
         0, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
 
     # Check status of UART status
     uart = hxt.x10g_rdma.read(0x00000010, burst_len=1, comment="UART register")
-    print("b.UART: {0:08X}".format(uart[0]))
     # Request and receive environmental data #
     print("Calling uart_tx(0x90, 0x52, \"\", 0x0)")
     hxt.x10g_rdma.uart_tx([0x90, 0x52])

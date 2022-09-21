@@ -2001,7 +2001,7 @@ class HexitecFem():
         try:
             initial_value = int(sensors_values[1])
         except (ValueError, IndexError) as e:
-            logging.error("Failed to readout intelligible sensor values: %s" % e)
+            logging.error("VSR (0x{0:X}) unintelligible sensor values: {1}".format(self.vsr_addr, e))
             return None
 
         ambient_hex = sensors_values[1:5]

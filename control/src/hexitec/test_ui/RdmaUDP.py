@@ -13,10 +13,13 @@ import time
 deassert_all = 0x0
 #
 uart_status_offset = 0x10
-rx_buff_emty_mask = 0x8
+tx_buff_full_mask = 0x1
+tx_buff_empty_mask = 0x2
+rx_buff_full_mask = 0x4
+rx_buff_empty_mask = 0x8
+rx_pkt_done_mask = 0x10
 rx_buff_level_mask = 0xFF00
 rx_buff_data_mask = 0xFF0000
-tx_buff_emty_mask = 0x2
 #
 uart_rx_ctrl_offset = 0x14
 uart_tx_ctrl_offset = 0xC
@@ -28,7 +31,6 @@ vsr_end_char = 0x0D
 #
 assert_bit = 0x1
 rx_buff_strb_mask = 0x2
-rx_buff_empty_mask = 0x8
 rx_buff_level_mask = 0xFF00
 rx_buff_data_mask = 0xFF0000
 
@@ -304,11 +306,11 @@ class RdmaUDP(object):
             # self.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Write TX Deassert All")
             uart_status = self.read(uart_status_offset, burst_len=1, comment="Read UART Status")
             uart_status = uart_status[0]
-            is_tx_buff_full = uart_status & 0x1
-            is_tx_buff_empty = (uart_status & 0x2) >> 1
-            is_rx_buff_full = (uart_status & 0x4) >> 2
-            is_rx_buff_empty = (uart_status & 0x8) >> 3
-            is_rx_pkt_done = (uart_status >> 4) & 0x1
+            is_tx_buff_full = uart_status & tx_buff_full_mask
+            is_tx_buff_empty = (uart_status & tx_buff_empty_mask) >> 1
+            is_rx_buff_full = (uart_status & rx_buff_full_mask) >> 2
+            is_rx_buff_empty = (uart_status & rx_buff_empty_mask) >> 3
+            is_rx_pkt_done = (uart_status & rx_pkt_done_mask)  >> 4
         except Exception as e:
             print(" *** poll_uart error: {} ***".format(e))
         return uart_status, is_tx_buff_full, is_tx_buff_empty, is_rx_buff_full, is_rx_buff_empty, is_rx_pkt_done
