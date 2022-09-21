@@ -135,10 +135,10 @@ if __name__ == '__main__':  # pragma: no cover
         # read_sensors = hxt.x10g_rdma.uart_rx(0x0)
         # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
 
-        # Scratch Registers; Writing, Reading
-        hxt.x10g_rdma.write(0x8030, 0x10203040, burst_len=1, comment="Set Scratch Reg1 value")
-        scratch0 = hxt.x10g_rdma.read(0x00008030, comment='Read Scratch Register 1')
-        print("Reg   1: {0:08X}".format(scratch0[0]))
+        # # Scratch Registers; Writing, Reading
+        # hxt.x10g_rdma.write(0x8030, 0x10203040, burst_len=1, comment="Set Scratch Reg1 value")
+        # scratch0 = hxt.x10g_rdma.read(0x00008030, comment='Read Scratch Register 1')
+        # print("Reg   1: {0:08X}".format(scratch0[0]))
 
         # hxt.x10g_rdma.write(0x8030, 0x4000003320000011, burst_len=2, comment="Set Scratch Reg12 value")
         # scratch12 = hxt.x10g_rdma.read(0x00008030, burst_len=2, comment='Read Scratch Register 1 2')
@@ -155,26 +155,45 @@ if __name__ == '__main__':  # pragma: no cover
     except (socket.error, struct.error) as e:
         print(" *** Scratch register error: {} ***".format(e))
 
-    # # Request and receive environmental data #
-    # print("Calling uart_tx(0x90, 0x52, \"\", 0x0)")
-    # hxt.x10g_rdma.uart_tx([0x90, 0x52])
-    # time.sleep(0.25)
-    # read_sensors = hxt.x10g_rdma.uart_rx(0x0)
-    # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+    uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.poll_uart()
+    print("UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
+        0, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
+
+    # Check status of UART status
+    uart = hxt.x10g_rdma.read(0x00000010, burst_len=1, comment="UART register")
+    print("b.UART: {0:08X}".format(uart[0]))
+    # Request and receive environmental data #
+    print("Calling uart_tx(0x90, 0x52, \"\", 0x0)")
+    hxt.x10g_rdma.uart_tx([0x90, 0x52])
+
+    counter = 0
+    while not rx_pkt_done:
+        uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.poll_uart()
+        counter += 1
+    print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
+        counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
+
+    # for index in range(10000):
+    #     uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.poll_uart()
+    #     if index % 100 == 0:
+    #         print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(index, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
+    # # time.sleep(0.25)
+    read_sensors = hxt.x10g_rdma.uart_rx(0x0)
+    print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
     # # Display the environmentals values
-    # read_sensors = read_sensors[1:]     # Omit start of sequence character, matching existing 2x2 source code formatting
-    # sensors_values = "{}".format(''.join([chr(x) for x in read_sensors]))   # Turn list of integers into ASCII string
-    # print(" ASCII string: {}".format(sensors_values))
-    # ambient_hex = sensors_values[1:5]
-    # humidity_hex = sensors_values[5:9]
-    # asic1_hex = sensors_values[9:13]
-    # asic2_hex = sensors_values[13:17]
-    # adc_hex = sensors_values[17:21]
-    # print(" * ambient_hex:  {} -> {} Celsius".format(sensors_values[1:5], hxt.get_ambient_temperature(sensors_values[1:5])))
-    # print(" * humidity_hex: {} -> {}".format(sensors_values[5:9], hxt.get_humidity(sensors_values[5:9])))
-    # print(" * asic1_hex:    {} -> {} Celsius".format(sensors_values[9:13], hxt.get_asic_temperature(sensors_values[9:13])))
-    # print(" * asic2_hex:    {} -> {} Celsius".format(sensors_values[13:17], hxt.get_asic_temperature(sensors_values[13:17])))
-    # print(" * adc_hex:      {} -> {} Celsius".format(sensors_values[17:21], hxt.get_adc_temperature(sensors_values[17:21])))
+    read_sensors = read_sensors[1:]     # Omit start of sequence character, matching existing 2x2 source code formatting
+    sensors_values = "{}".format(''.join([chr(x) for x in read_sensors]))   # Turn list of integers into ASCII string
+    print(" ASCII string: {}".format(sensors_values))
+    ambient_hex = sensors_values[1:5]
+    humidity_hex = sensors_values[5:9]
+    asic1_hex = sensors_values[9:13]
+    asic2_hex = sensors_values[13:17]
+    adc_hex = sensors_values[17:21]
+    print(" * ambient_hex:  {} -> {} Celsius".format(sensors_values[1:5], hxt.get_ambient_temperature(sensors_values[1:5])))
+    print(" * humidity_hex: {} -> {}".format(sensors_values[5:9], hxt.get_humidity(sensors_values[5:9])))
+    print(" * asic1_hex:    {} -> {} Celsius".format(sensors_values[9:13], hxt.get_asic_temperature(sensors_values[9:13])))
+    print(" * asic2_hex:    {} -> {} Celsius".format(sensors_values[13:17], hxt.get_asic_temperature(sensors_values[13:17])))
+    print(" * adc_hex:      {} -> {} Celsius".format(sensors_values[17:21], hxt.get_adc_temperature(sensors_values[17:21])))
 
     # for index in range(100):
     #     print(index)
