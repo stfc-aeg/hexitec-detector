@@ -237,7 +237,7 @@ class Hexitec():
         # Tracks whether first acquisition of multiple, bias-window(s), collection
         self.initial_acquisition = True
         # Tracks whether 2 frame fudge collection: (during cold initialisation)
-        self.first_initialisation = True
+        self.first_initialisation = False   # True
 
         self.acquisition_in_progress = False
 
@@ -466,14 +466,6 @@ class Hexitec():
             self.fem.bias_voltage_settle_time + self.fem.time_refresh_voltage_held
 
         self.daq_rx_timeout = self.collect_and_bias_time + self.error_margin
-        # If first initialisation, ie fudge, temporarily change number_frames to 2
-        # Adapter also controls this change in FEM
-        if self.first_initialisation:
-            self.backed_up_number_frames = self.number_frames
-            self.number_frames = 2
-            # TODO: Fix this fudge?
-            self.fem.acquire_timestamp = time.time()
-            self.acquisition_in_progress = True
         self.fem.initialise_hardware(msg)
         # Wait for fem initialisation/fudge frames
         IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
@@ -713,6 +705,8 @@ class Hexitec():
         """Switch HV on."""
         # TODO: Complete placeholder
         self.fem.hv_bias_enabled = True
+        print(" *** TEMPORARY USAGE: fem.read_sensors() ***")
+        self.fem.read_sensors()
 
     def hv_off(self, msg):
         """Switch HV off."""

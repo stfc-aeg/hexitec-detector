@@ -34,9 +34,6 @@ rx_buff_strb_mask = 0x2
 rx_buff_level_mask = 0xFF00
 rx_buff_data_mask = 0xFF0000
 
-# TODO: This global variable to be removed post debugging
-SLEEP_DELAY = 0.000   # 2
-
 
 class RdmaUDP(object):
     """Class for handling RDMA UDP transactions."""
@@ -74,6 +71,7 @@ class RdmaUDP(object):
             error_string += "on TX Socket: {}:{}".format(local_ip, local_port)
             print(error_string)
             self.error_OK = False
+            raise socket.error("Error: {}".format(e))
 
         self.rdma_ip = rdma_ip
         self.rdma_port = rdma_port
@@ -104,7 +102,7 @@ class RdmaUDP(object):
         """
         burst_len = burst_len
         if self.unique_cmd_no:
-            self.cmd_no = ((self.cmd_no + 1) & 0xFF) # += 1
+            self.cmd_no = (self.cmd_no + 1) & 0xFF
         else:
             self.cmd_no = 0
         op_code = 1
@@ -121,6 +119,7 @@ class RdmaUDP(object):
         except socket.error as e:
             print(" *** Read (W) Error: {0}. burst_len: {1:X} cmd_no: {2:0X} op_code: {3:0X} address: 0x{4:0X} comment: \"{5}\" ***".format(e,
                   burst_len, self.cmd_no, op_code, address, comment))
+            time.sleep(0.5)
             raise socket.error(e)
         try:
             # Receive acknowledge packet
@@ -131,8 +130,7 @@ class RdmaUDP(object):
             packet_str = header_str + "I" * payload_length
             padding = (burst_len % 2)
             if payload_length != (burst_len + padding):
-                print("read expected {}, received {}, words!".format(burst_len, payload_length))
-                raise struct.error("Read Ack Error: expected {}, received {} words!".format(burst_len, payload_length))
+                raise struct.error("expected {}, received {} words!".format(burst_len, payload_length))
             decoded = struct.unpack(packet_str, response)
             if padding:
                 data = decoded[4:-padding]  # Omit burst_len, cmd_no, op_code, address and padding present at the end
@@ -147,8 +145,10 @@ class RdmaUDP(object):
         except struct.error as e:
             print(" *** Read Ack Error: {} ***".format(e))
             raise struct.error(e)
-        time.sleep(SLEEP_DELAY)
         return data
+
+    def debug_var(self, variable):
+        return ("{} : {}".format(variable, type(variable)))
 
     def write(self, address, data, burst_len=1, comment=''):
         """
@@ -163,7 +163,7 @@ class RdmaUDP(object):
         """
         burst_len = burst_len
         if self.unique_cmd_no:
-            self.cmd_no = ((self.cmd_no + 1) & 0xFF) # += 1
+            self.cmd_no = (self.cmd_no + 1) & 0xFF
         else:
             self.cmd_no = 0
         op_code = 0
@@ -199,7 +199,6 @@ class RdmaUDP(object):
             raise socket.error(e)
         except struct.error as e:
             print(" *** Write Ack Error: {} ***".format(e))
-        time.sleep(SLEEP_DELAY)
 
     def convert_to_list(self, data, burst_len):
         """
@@ -290,18 +289,19 @@ class RdmaUDP(object):
             # Tidy up/Clear tx ctrl reg:
             self.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Write TX Deassert All")
 
-        except Exception as e:
-            print(" *** uart_tx error: {} ***".format(e))
+        except socket.error as e:
+            raise socket.error(e)
+        except struct.error as e:
+            raise struct.error("uart_tx([{}]): {}".format(' '.join("0x{0:02X}".format(x) for x in cmd), e))
 
-
-    def poll_uart(self):
+    def read_uart_status(self):
         """Poll the UART reg (0x10)."""
-        debug = False   # True
         is_tx_buff_full = 0
         is_tx_buff_empty = 0
         is_rx_buff_full = 0
         is_rx_buff_empty = 0
         is_rx_pkt_done = 0
+        uart_status = (0, )
         try:
             # self.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Write TX Deassert All")
             uart_status = self.read(uart_status_offset, burst_len=1, comment="Read UART Status")
@@ -310,7 +310,7 @@ class RdmaUDP(object):
             is_tx_buff_empty = (uart_status & tx_buff_empty_mask) >> 1
             is_rx_buff_full = (uart_status & rx_buff_full_mask) >> 2
             is_rx_buff_empty = (uart_status & rx_buff_empty_mask) >> 3
-            is_rx_pkt_done = (uart_status & rx_pkt_done_mask)  >> 4
+            is_rx_pkt_done = (uart_status & rx_pkt_done_mask) >> 4
         except Exception as e:
-            print(" *** poll_uart error: {} ***".format(e))
+            print(" *** read_uart_status error: {} ***".format(e))
         return uart_status, is_tx_buff_full, is_tx_buff_empty, is_rx_buff_full, is_rx_buff_empty, is_rx_pkt_done
