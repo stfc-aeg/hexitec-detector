@@ -19,6 +19,17 @@ class Hexitec2x6():
     Test we can access scratch registers in the KinteX FPGA.
     """
 
+    READ_REG_VALUE = 0x41
+    SEND_REG_BURST = 0x44
+
+    VSR_ADDRESS = [
+        0x90,
+        0x91
+    ]
+
+    HEX_ASCII_CODE = [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
+                      0x41, 0x42, 0x43, 0x44, 0x45, 0x46]
+
     def __init__(self, esdg_lab=False, debug=False, unique_cmd_no=False):
         """."""
         self.debug = debug
@@ -66,10 +77,10 @@ class Hexitec2x6():
 
     def write_scratch_registers(self):
         """Write values to the four scratch registers."""
-        self.x10g_rdma.write(0x8030, 0x12345678, "New Scratch Register1 value")
-        self.x10g_rdma.write(0x8034, 0x9ABCDEF1, "New Scratch Register2 value")
-        self.x10g_rdma.write(0x8038, 0xAAAAAAAA, "New Scratch Register3 value")
-        self.x10g_rdma.write(0x803C, 0x60054003, "New Scratch Register4 value")
+        self.x10g_rdma.write(0x8030, 0x12345678, burst_len=1, comment="New Scratch Register1 value")
+        self.x10g_rdma.write(0x8034, 0x9ABCDEF1, burst_len=1, comment="New Scratch Register2 value")
+        self.x10g_rdma.write(0x8038, 0xAAAAAAAA, burst_len=1, comment="New Scratch Register3 value")
+        self.x10g_rdma.write(0x803C, 0x60054003, burst_len=1, comment="New Scratch Register4 value")
 
     def read_fpga_dna_registers(self):
         """Read the three DNA registers."""
@@ -134,6 +145,218 @@ class Hexitec2x6():
         print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
             counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
 
+###
+    def convert_list_to_string(self, int_list):
+        """Convert list of integer into ASCII string.
+
+        I.e. integer_list = [42, 144, 70, 70, 13], returns '*\x90FF\r'
+        """
+        return "{}".format(''.join([chr(x) for x in int_list]))
+
+    def send_cmd(self, cmd):
+        """Send a command string to the microcontroller."""
+        self.x10g_rdma.uart_tx(cmd)
+
+    def read_response(self):
+        """Read a VSR's microcontroller response, passed on by the FEM."""
+        counter = 0
+        rx_pkt_done = 0
+        while not rx_pkt_done:
+            uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = self.x10g_rdma.read_uart_status()
+            counter += 1
+            if counter == 15001:
+                break
+        response = self.x10g_rdma.uart_rx(0x0)
+        print("R: {}. {}".format(response, counter))
+        return response
+        # return self.x10g_rdma.uart_rx(0x0)
+
+    def debug_register(self, msb, lsb):  # pragma: no cover
+        """Debug function: Display contents of register."""
+        self.send_cmd([0x23, self.VSR_ADDRESS[1], self.READ_REG_VALUE,
+                       msb, lsb, 0x0D])
+        vsr2 = self.read_response()
+        # reply = self.convert_list_to_string(self.read_response()[1:])
+        # print(" VSR2,reply: {}".format(reply))
+        # vsr2 = reply.strip("\r")[1:]
+        time.sleep(0.25)
+        self.send_cmd([0x23, self.VSR_ADDRESS[0], self.READ_REG_VALUE,
+                       msb, lsb, 0x0D])
+        # reply = self.convert_list_to_string(self.read_response()[1:])
+        # vsr1 = reply.strip("\r")[1:]
+        vsr1 = self.read_response()
+        # return (vsr2, vsr1)
+        # print("vsr2: {}".format(vsr2))
+        # print("vsr1: {}".format(vsr1))
+        vsr2 = vsr2[2:-1]
+        vsr1 = vsr1[2:-1]
+        # print("vsr2: {}".format(vsr2))
+        # print("vsr1: {}".format(vsr1))
+        return (vsr2, vsr1)
+
+    def dump_all_registers(self):  # pragma: no cover
+        """Dump register 0x00 - 0xff contents to screen.
+
+        aSpect's address format: 0x3F -> 0x33, 0x46 (i.e. msb, lsb)
+        See HEX_ASCII_CODE, and section 3.3, page 11 of revision 0.5:
+        aS_AM_Hexitec_VSR_Interface.pdf
+        """
+        for msb in range(16):
+            for lsb in range(16):
+                (vsr2, vsr1) = self.debug_register(self.HEX_ASCII_CODE[msb], self.HEX_ASCII_CODE[lsb])
+                print(" \t\t\t\t* Register: {}{}: VSR2: {}.{} VSR1: {}.{}".format(hex(msb), hex(lsb)[-1],
+                      chr(vsr2[0]), chr(vsr2[1]),
+                      chr(vsr1[0]), chr(vsr1[1])))
+                time.sleep(0.25)
+
+    def module_mask(self, module):
+        return ((1 << (module -1)) | (1 << (module + 8 -1)))
+    def negative_module_mask(self, module):
+        return ~(1 << (module - 1)) | (1 << (module + 8 - 1))
+
+    enable_vsrs_mask = 0x3F
+    hvs_bit_mask = 0x3F00
+    vsr_ctrl_offset = 0x18
+    ENABLE_VSR = 0xE3
+    DISABLE_VSR = 0xE2
+
+    def enable_vsr_or_hv(self, vsr_number, bit_mask):
+        """Control a single VSR's power."""
+        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
+        # STEP 1: vsr_ctrl enable $::vsr_target_idx
+        mod_mask = self.module_mask(vsr_number)
+        cmd_mask = bit_mask
+        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value | (cmd_mask & mod_mask)
+        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
+        time.sleep(1)
+        # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
+        vsr_address = 0x89 + vsr_number
+        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
+        print("VSR {} enabled".format(vsr_number))
+
+    def enable_vsr(self, vsr_number):
+        """Control a single VSR's power."""
+        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        # STEP 1: vsr_ctrl enable $::vsr_target_idx
+        mod_mask = self.module_mask(vsr_number)
+        cmd_mask = Hexitec2x6.enable_vsrs_mask
+        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value | (cmd_mask & mod_mask)
+        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
+        time.sleep(1)
+        # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
+        vsr_address = 0x89 + vsr_number
+        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
+        print("VSR {} enabled".format(vsr_number))
+
+    def disable_vsr(self, vsr_number):
+        """Control a single VSR's power."""
+        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        # STEP 1: vsr_ctrl disable $::vsr_target_idx
+        mod_mask = self.negative_module_mask(vsr_number) #1)
+        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        # print("read_value: {}".format(read_value))
+        # print("mod_mask: {}".format(mod_mask))
+        masked_value = read_value & mod_mask
+        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
+        time.sleep(1)
+        # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
+        vsr_address = 0x89 + vsr_number
+        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.DISABLE_VSR])
+        print("VSR {} disabled".format(vsr_number))
+
+    def enable_all_vsrs(self):
+        """Switch all VSRs on."""
+        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value | 0x3F # Switching all six VSRs on, i.e. set 6 bits on
+        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs on")
+        time.sleep(1)
+        vsr_address = 0xFF
+        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
+        print("All VSRs enabled")
+
+    def enable_all_hv(self):
+        """Switch all HVs on."""
+        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value | Hexitec2x6.hvs_bit_mask # Switching all six HVs on
+        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all HVs on")
+        time.sleep(1)
+        vsr_address = 0xFF
+        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
+        print("All HVs on")
+
+    def enable_hv(self, hv_number):
+        """Switch on a single VSR's power."""
+        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        # STEP 1: vsr_ctrl enable $::vsr_target_idx
+        mod_mask = self.module_mask(hv_number)
+        cmd_mask = Hexitec2x6.hvs_bit_mask
+        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value | (cmd_mask & mod_mask)
+        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
+        time.sleep(1)
+        # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
+        vsr_address = 0x89 + hv_number
+        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
+        print("HV {} on".format(hv_number))
+
+#
+    def disable_all_hv(self):
+        """Switch all HVs off."""
+        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value & 0x3F # Switching all six HVs off
+        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all HVs off")
+        time.sleep(1)
+        vsr_address = 0xFF
+        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.DISABLE_VSR])
+        print("All HVs off")
+
+    def disable_all_vsrs(self):
+        """Switch all VSRs off."""
+        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value & Hexitec2x6.hvs_bit_mask # Switching all six VSRs off
+        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs off")
+        time.sleep(1)
+        vsr_address = 0xFF
+        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.DISABLE_VSR])
+        print("All VSRs disabled")
+
+    def power_status(self):
+        """Reads out the status register to check what is switched on and off."""
+        read_value = self.x10g_rdma.read(Hexitec2x6.vsr_ctrl_offset, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        print(" *** Register status: 0x{0:08X}".format(read_value))
+
+    def set_vsr_row_s1_clock(self, vsr_address):
+        """Set row s1 clock."""
+        self.send_cmd([vsr_address, self.SEND_REG_BURST, 0x30, 0x32, 0x30, 0x32])
+        read_sensors = self.read_response()
+        print("Reg 0x02, Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+        self.send_cmd([vsr_address, self.SEND_REG_BURST, 0x30, 0x33, 0x30, 0x34])
+        read_sensors = self.read_response()
+        print("Reg 0x03, Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+
+    def get_vsr_row_s1_clock(self, vsr_number):
+        """Get row s1 clock."""
+        self.send_cmd([vsr_number, self.READ_REG_VALUE, 0x30, 0x32])
+        read_sensors = self.read_response()
+        print("Reg 0x02, Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+        self.send_cmd([vsr_number, self.READ_REG_VALUE, 0x30, 0x33])
+        read_sensors = self.read_response()
+        print("Reg 0x03, Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
 
 if __name__ == '__main__':  # pragma: no cover
     if (len(sys.argv) != 4):
@@ -151,15 +374,44 @@ if __name__ == '__main__':  # pragma: no cover
     # hxt.read_scratch_registers()
 
     try:
-        # WHOIS COMMAND #
+        vsr_number = 0x90
+        hxt.set_vsr_row_s1_clock(vsr_number)
+        hxt.get_vsr_row_s1_clock(vsr_number)
 
-        # as_uart_tx 0xFF 0xF7 "" 0x0  0
-        print("Calling uart_tx(0xFF, 0xF7)")
-        hxt.x10g_rdma.uart_tx([0xFF, 0xF7])
-        # hxt.await_uart_ready()    # Why doesn't it work with whois?
-        time.sleep(0.25)
-        read_sensors = hxt.x10g_rdma.uart_rx(0x0)
-        print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+        # # Enable VSR(s)..
+        # hxt.enable_vsr_or_hv(1, Hexitec2x6.enable_vsrs_mask)  # Switches a single VSR on
+        # hxt.enable_vsr_or_hv(1, Hexitec2x6.hvs_bit_mask)  # Switches a single HV on
+        # hxt.enable_vsr_or_hv(2, Hexitec2x6.enable_vsrs_mask)
+
+        # # hxt.disable_all_hv()    # Working
+        # hxt.disable_all_vsrs()  # Working
+        # # hxt.disable_all_hv()
+        # hxt.power_status()
+        # hxt.enable_vsr(1)  # Switches a single VSR on
+        # hxt.enable_vsr(2)
+        # hxt.power_status()
+        # hxt.power_status()
+        # hxt.disable_vsr(1)
+        # # hxt.enable_all_hv()
+        # hxt.enable_hv(1)
+        # hxt.power_status()
+        # hxt.power_status()
+        # hxt.enable_vsr(2)
+        # hxt.power_status()
+
+
+        # hxt.x10g_rdma.uart_tx([0x92, 0xE3])
+        # print("third VSR enabled")
+        # hxt.dump_all_registers()
+        # # WHOIS COMMAND #
+
+        # # as_uart_tx 0xFF 0xF7 "" 0x0  0
+        # print("Calling uart_tx(0xFF, 0xF7)")
+        # hxt.x10g_rdma.uart_tx([0xFF, 0xF7])
+        # # hxt.await_uart_ready()    # Why doesn't it work with whois?
+        # time.sleep(0.25)
+        # read_sensors = hxt.x10g_rdma.uart_rx(0x0)
+        # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
 
         # SCRATCH REGISTER #
 
