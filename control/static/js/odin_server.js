@@ -376,6 +376,38 @@ function poll_fem()
             document.querySelector('#vsr2_hv').innerHTML = fem["vsr2_sensors"]["hv"].toFixed(3);
             document.querySelector('#vsr2_sync').innerHTML = fem["vsr2_sync"];
 
+            document.querySelector('#vsr3_humidity').innerHTML = fem["vsr3_sensors"]["humidity"].toFixed(2);
+            document.querySelector('#vsr3_ambient').innerHTML = fem["vsr3_sensors"]["ambient"].toFixed(2);
+            document.querySelector('#vsr3_asic1').innerHTML = fem["vsr3_sensors"]["asic1"].toFixed(2);
+            document.querySelector('#vsr3_asic2').innerHTML = fem["vsr3_sensors"]["asic2"].toFixed(2);
+            document.querySelector('#vsr3_adc').innerHTML = fem["vsr3_sensors"]["adc"].toFixed(2);
+            document.querySelector('#vsr3_hv').innerHTML = fem["vsr3_sensors"]["hv"].toFixed(3);
+            // document.querySelector('#vsr3_sync').innerHTML = fem["vsr3_sync"];
+
+            document.querySelector('#vsr4_humidity').innerHTML = fem["vsr4_sensors"]["humidity"].toFixed(2);
+            document.querySelector('#vsr4_ambient').innerHTML = fem["vsr4_sensors"]["ambient"].toFixed(2);
+            document.querySelector('#vsr4_asic1').innerHTML = fem["vsr4_sensors"]["asic1"].toFixed(2);
+            document.querySelector('#vsr4_asic2').innerHTML = fem["vsr4_sensors"]["asic2"].toFixed(2);
+            document.querySelector('#vsr4_adc').innerHTML = fem["vsr4_sensors"]["adc"].toFixed(2);
+            document.querySelector('#vsr4_hv').innerHTML = fem["vsr4_sensors"]["hv"].toFixed(3);
+            // document.querySelector('#vsr4_sync').innerHTML = fem["vsr4_sync"];
+
+            document.querySelector('#vsr5_humidity').innerHTML = fem["vsr5_sensors"]["humidity"].toFixed(2);
+            document.querySelector('#vsr5_ambient').innerHTML = fem["vsr5_sensors"]["ambient"].toFixed(2);
+            document.querySelector('#vsr5_asic1').innerHTML = fem["vsr5_sensors"]["asic1"].toFixed(2);
+            document.querySelector('#vsr5_asic2').innerHTML = fem["vsr5_sensors"]["asic2"].toFixed(2);
+            document.querySelector('#vsr5_adc').innerHTML = fem["vsr5_sensors"]["adc"].toFixed(2);
+            document.querySelector('#vsr5_hv').innerHTML = fem["vsr5_sensors"]["hv"].toFixed(3);
+            // document.querySelector('#vsr5_sync').innerHTML = fem["vsr5_sync"];
+
+            document.querySelector('#vsr6_humidity').innerHTML = fem["vsr6_sensors"]["humidity"].toFixed(2);
+            document.querySelector('#vsr6_ambient').innerHTML = fem["vsr6_sensors"]["ambient"].toFixed(2);
+            document.querySelector('#vsr6_asic1').innerHTML = fem["vsr6_sensors"]["asic1"].toFixed(2);
+            document.querySelector('#vsr6_asic2').innerHTML = fem["vsr6_sensors"]["asic2"].toFixed(2);
+            document.querySelector('#vsr6_adc').innerHTML = fem["vsr6_sensors"]["adc"].toFixed(2);
+            document.querySelector('#vsr6_hv').innerHTML = fem["vsr6_sensors"]["hv"].toFixed(3);
+            // document.querySelector('#vsr6_sync').innerHTML = fem["vsr6_sync"];
+
             /// To be implemented: system_health - true=fem OK, false=fem bad
 
             // Traffic "light" green/red to indicate system good/bad

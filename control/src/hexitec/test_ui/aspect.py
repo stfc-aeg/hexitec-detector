@@ -81,7 +81,7 @@ class Hexitec2x6():
 
     def send_cmd(self, cmd):
         """Send a command string to the microcontroller."""
-        print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in cmd)))
+        # print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in cmd)))
         self.x10g_rdma.uart_tx(cmd)
 
     def read_response(self):
@@ -95,7 +95,7 @@ class Hexitec2x6():
                 break
         response = self.x10g_rdma.uart_rx(0x0)
         # print("R: {}. {}".format(response, counter))
-        print("... receiving: {} ({})".format(' '.join("0x{0:02X}".format(x) for x in response), counter))
+        # print("... receiving: {} ({})".format(' '.join("0x{0:02X}".format(x) for x in response), counter))
         return response
         # return self.x10g_rdma.uart_rx(0x0)
 
@@ -155,7 +155,7 @@ class Hexitec2x6():
         resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
         reply = resp[2:-1]                                      # Omit start char, vsr address and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
-        print(" RR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
+        # print(" RR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
         return resp, resp
 
     def write_and_response(self, vsr, address_h, address_l, value_h, value_l, masked=True):
@@ -170,7 +170,7 @@ class Hexitec2x6():
         resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
         reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
-        print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
+        # print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
         return resp, resp
 
     def block_write_and_response(self, vsr, number_registers, address_h, address_l, value_h, value_l):
@@ -268,30 +268,9 @@ class Hexitec2x6():
     #     print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
     #     return resp, resp
 
-
-if __name__ == '__main__':  # pragma: no cover
-    if (len(sys.argv) != 4):
-        print("Correct usage: ")
-        print("python Hexitec2x6.py <esdg_lab> <debug> <unique_cmd_no>")
-        print(" i.e. to not use esdg_lab addresses but enable debugging, and unique headers:")
-        print("python Hexitec2x6.py False True True")
-        sys.exit(-1)
-
-    esdg_lab = literal_eval(sys.argv[1])
-    debug = literal_eval(sys.argv[2])
-    unique_cmd_no = literal_eval(sys.argv[3])
-    hxt = Hexitec2x6(esdg_lab=esdg_lab, debug=debug, unique_cmd_no=unique_cmd_no)
-    hxt.connect()
-    try:
-        vsr = 0x95
-        """ Revisit trying to substitute 0x43 command word i.e. clear_register_bit later """
-#         hxt.toggle_state_machine(vsr, 0x30, 0x31, 0x30, 0x30, True)
-# # 90	43	01	01	;Enable SM  # CLR BIT
-# # 90	42	01	01	;Disable SM # SET BIT
-
-        # raise socket.error("hello")
-
-        # Execute equivalent of VSR1_Configure.txt:
+    def initialise_vsr(self, vsr):
+        """Initialise a vsr."""
+        # Specified in VSR1_Configure.txt
         """
         90	42	01	10	;Select external Clock
         90	42	07	03	;Enable PLLs
@@ -367,18 +346,50 @@ if __name__ == '__main__':  # pragma: no cover
         hxt.read_response()
         hxt.write_and_response(vsr, 0x32, 0x34,	0x32, 0x30)	# Disable Vcal
 
-        reg07 = []
-        for vsr in range(0x90, 0x96):
-            listed, valued = hxt.read_register07(vsr)
-            reg07.append( valued )
-        print(" All vsrs, reg07: {}".format(reg07))
+        """MR's tcl script also also set these two:"""
+        # set queue_1 { { 0x40 0x01 0x30                                              "Disable_Training" } \
+        #             { 0x40 0x0A 0x01                                              "Enable_Triggered_SM_Start" }
+        # }
 
+
+if __name__ == '__main__':  # pragma: no cover
+    if (len(sys.argv) != 4):
+        print("Correct usage: ")
+        print("python Hexitec2x6.py <esdg_lab> <debug> <unique_cmd_no>")
+        print(" i.e. to not use esdg_lab addresses but enable debugging, and unique headers:")
+        print("python Hexitec2x6.py False True True")
+        sys.exit(-1)
+
+    esdg_lab = literal_eval(sys.argv[1])
+    debug = literal_eval(sys.argv[2])
+    unique_cmd_no = literal_eval(sys.argv[3])
+    hxt = Hexitec2x6(esdg_lab=esdg_lab, debug=debug, unique_cmd_no=unique_cmd_no)
+    hxt.connect()
+    beginning = time.time()
+    try:
+        vsr = 0x95
+        """ Revisit trying to substitute 0x43 command word i.e. clear_register_bit later """
+#         hxt.toggle_state_machine(vsr, 0x30, 0x31, 0x30, 0x30, True)
+# # 90	43	01	01	;Enable SM  # CLR BIT
+# # 90	42	01	01	;Disable SM # SET BIT
+
+        # raise socket.error("hello")
+
+        # Execute equivalent of VSR1_Configure.txt:
+        for vsr in range(0x90, 0x92):   # 0x96):
+            print(" --- Initialising VSR 0{0:X} ---".format(vsr))
+            hxt.initialise_vsr(vsr)
+        ending = time.time()
+        print("That took: {}".format(ending - beginning))
+        reg07 = []
         reg89 = []
         for vsr in range(0x90, 0x96):
-            listed, valued = hxt.read_register89(vsr)
-            reg89.append( valued )
-        print(" All vsrs, reg89: {}".format(reg89))
-
+            r7_list, r7_value = hxt.read_register07(vsr)
+            reg07.append( r7_value )
+            r89_list, r89_value = hxt.read_register89(vsr)
+            reg89.append( r89_value )
+        print(" All vsrs, reg07: {}".format(reg07))
+        print("           reg89: {}".format(reg89))
     except (socket.error, struct.error) as e:
         print(" *** Caught Exception: {} ***".format(e))
 

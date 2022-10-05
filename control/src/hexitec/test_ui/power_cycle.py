@@ -262,10 +262,23 @@ if __name__ == '__main__':  # pragma: no cover
 
         # hxt.disable_all_hv()    # Working
         hxt.disable_all_vsrs()  # Working
+        time.sleep(1)
         # hxt.disable_all_hv()
         hxt.power_status()
-        hxt.enable_vsr(1)  # Switches a single VSR on
-        hxt.enable_vsr(2)
+        # time.sleep(1)
+        hxt.enable_all_vsrs()
+        # hxt.enable_vsr(1)  # Switches a single VSR on
+        # time.sleep(1)
+        # hxt.enable_vsr(2)
+        # time.sleep(1)
+        # hxt.enable_vsr(3)  # Switches a single VSR on
+        # time.sleep(1)
+        # hxt.enable_vsr(4)  # Switches a single VSR on
+        # time.sleep(1)
+        # hxt.enable_vsr(5)  # Switches a single VSR on
+        # time.sleep(1)
+        # hxt.enable_vsr(6)  # Switches a single VSR on
+        # time.sleep(1)
         hxt.power_status()
         # hxt.power_status()
         # hxt.disable_vsr(1)

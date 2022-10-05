@@ -259,7 +259,10 @@ class RdmaUDP(object):
         """Transmit command to the UART."""
         debug = False   # True
         uart_tx_ctrl_addr = uart_tx_ctrl_offset
-
+        if vsr_start_char in cmd:
+            raise Exception("Extra start (0x23) char detected!")
+        if vsr_end_char in cmd:
+            raise Exception("Extra end (0x0D) char detected!")
         vsr_seq = [vsr_start_char]
         for d in cmd:
             vsr_seq.append(d)
