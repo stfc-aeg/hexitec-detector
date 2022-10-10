@@ -53,11 +53,11 @@ class HexitecFem():
         "2x2"
     ]
 
-    VSR_ADDRESS = [
-        0x90,
-        0x91
-    ]
-    # VSR_ADDRESS = range(0x90, 0x96, 1)
+    # VSR_ADDRESS = [
+    #     0x90,
+    #     0x91
+    # ]
+    VSR_ADDRESS = range(0x90, 0x96, 1)
 
     SENSORS_READOUT_OK = 7
 
@@ -619,8 +619,8 @@ class HexitecFem():
         logging.debug("Connecting camera")
         try:
             self.connect()
-            self.send_cmd([HexitecFem.VSR_ADDRESS[0], 0xE3])
-            self.send_cmd([HexitecFem.VSR_ADDRESS[1], 0xE3])
+            for vsr in self.VSR_ADDRESS:
+                self.send_cmd([vsr, 0xE3])
             logging.debug("Camera connected")
             logging.debug("Modules Enabled")
         except socket_error as e:
@@ -631,8 +631,8 @@ class HexitecFem():
         """Send commands to disconnect camera."""
         self.hardware_connected = False
         try:
-            self.send_cmd([HexitecFem.VSR_ADDRESS[0], 0xE2])
-            self.send_cmd([HexitecFem.VSR_ADDRESS[1], 0xE2])
+            for vsr in self.VSR_ADDRESS:
+                self.send_cmd([vsr, 0xE2])
             logging.debug("Modules Disabled")
             self.disconnect()
             logging.debug("Camera is Disconnected")
@@ -643,80 +643,7 @@ class HexitecFem():
             logging.error("Unable to disconnect camera: %s" % "No active connection")
             raise HexitecFemError("%s; %s" % (e, "No active connection"))
 
-    def initialise_sensor(self):
-        """Initialise sensors attached to selected VSR."""
-        self.x10g_rdma.write(0x60000002, 0, burst_len=1, comment='Disable State Machine Trigger')
-        logging.debug("Disable State Machine Enabling signal")
-
-        if self.selected_sensor == HexitecFem.OPTIONS[0]:
-            self.x10g_rdma.write(0x60000004, 0, burst_len=1, comment='Set bit 0 to 1 to generate test pattern in FEMII, \
-                bits [2:1] select which of the 4 sensors is read - data 1_1')
-            logging.debug("Initialising sensors on board VSR_1")
-            self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
-        if self.selected_sensor == HexitecFem.OPTIONS[2]:
-            self.x10g_rdma.write(0x60000004, 4, burst_len=1, comment='Set bit 0 to 1 to generate test pattern in FEMII, \
-                bits [2:1] select which of the 4 sensors is read - data 2_1')
-            logging.debug("Initialising sensors on board VSR 2")
-            self.vsr_addr = HexitecFem.VSR_ADDRESS[1]
-
-        if self.sensors_layout == HexitecFem.READOUTMODE[0]:
-            logging.debug("Disable synchronisation SM start")
-            self.send_cmd([self.vsr_addr, HexitecFem.SEND_REG_VALUE, 0x30, 0x41,
-                           0x30, 0x30])
-            self.read_response()
-            logging.debug("Reading out single sensor")
-        elif self.sensors_layout == HexitecFem.READOUTMODE[1]:
-            logging.debug("Enable synchronisation SM start via trigger 1")
-            self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x41,
-                           0x30, 0x31])
-            self.read_response()
-            logging.debug("Reading out 2x2 sensors")
-
-        logging.debug("Communicating with - %s" % self.vsr_addr)
-        # Set Frame Gen Mux Frame Gate
-        self.x10g_rdma.write(0x60000001, 2, burst_len=1, comment='Set Frame Gen Mux Frame Gate - works set to 2')
-
-        logging.debug("Enable Test Pattern in my VSR design")
-        # Use Sync clock from DAQ board
-        logging.debug("Use Sync clock from DAQ board")
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x31, 0x30])
-        self.read_response()
-
-        logging.debug("Enable LVDS outputs")
-        set_register_vsr1_command = [HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT,
-                                     0x30, 0x31, 0x32, 0x30]
-        set_register_vsr2_command = [HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT,
-                                     0x30, 0x31, 0x32, 0x30]
-        self.send_cmd(set_register_vsr1_command)
-        self.read_response()
-        self.send_cmd(set_register_vsr2_command)
-        self.read_response()
-        logging.debug("LVDS outputs enabled")
-
-        # TODO: Did James mean "0x45" rather than "0x4E"..?
-        #       The register is called "Serial Training Pattern" in documentation
-        logging.debug("Read LO IDLE")
-        self.send_cmd([self.vsr_addr, HexitecFem.SEND_REG_VALUE,
-                       0x46, 0x45, 0x41, 0x41])
-        self.read_response()
-        logging.debug("Read HI IDLE")
-        self.send_cmd([self.vsr_addr, HexitecFem.SEND_REG_VALUE,
-                       0x46, 0x46, 0x4E, 0x41])
-        self.read_response()
-
-        # This sets up test pattern on LVDS outputs
-        logging.debug("Set up LVDS test pattern")
-        self.send_cmd([self.vsr_addr, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x43, 0x30])
-        self.read_response()
-        # Use default test pattern of 1000000000000000
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x38, 0x30])
-        self.read_response()
-
-        full_empty = self.x10g_rdma.read(0x60000011, burst_len=1, comment='Check EMPTY Signals')
-        logging.debug("Check EMPTY Signals: %s" % full_empty)
-        full_empty = self.x10g_rdma.read(0x60000012, burst_len=1, comment='Check FULL Signals')
-        logging.debug("Check FULL Signals: %s" % full_empty)
-
+    # TODO: 2x2 Legacy code, to be removed
     def calibrate_sensor(self):  # noqa: C901
         """Calibrate sensors attached to targeted VSR."""
         if self.sensors_layout == HexitecFem.READOUTMODE[0]:
@@ -806,30 +733,8 @@ class HexitecFem():
 
         if self.debug:
             logging.debug("Poll register 0x89")
-        # bPolling = True
-        # time_taken = 0
-        # while bPolling:
-        #     self.send_cmd([self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x38, 0x39])
-        #     reply = self.read_response()
-        #     print("  reply: ({}) {}".format(type(reply), reply))
-        #     reply = reply[1:]   # Omit the start of sequence character
-        #     reply = self.convert_list_to_string(reply)   # Turn list of integers into ASCII string
-        #     reply = reply.strip()
-        #     Bit1 = int(reply[-1], 16)
-        #     if self.debug:
-        #         logging.debug("Register 0x89, Bit1: %s" % Bit1)
-        #     # Is PLL locked? (Bit1 high)
-        #     if Bit1 & 2:
-        #         bPolling = False
-        #     else:
-        #         time.sleep(0.1)
-        #         time_taken += 0.1
-        #     if time_taken > 3.0:
-        #         raise HexitecFemError("Timed out polling register 0x89; PLL remains disabled")
-        # if self.debug:
-        #     logging.debug("Bit 1 should be 1")
-        #     logging.debug(reply)
-        #     logging.debug("Read reg 1")
+        # removed
+
         self.send_cmd([self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x30, 0x31])
         self.read_response()
 
@@ -854,6 +759,7 @@ class HexitecFem():
             print("   Register 0x8{}, VSR2: {} VSR1: {}".format(index, vsr2, vsr1))
         print("__________________________________________________________")
 
+    # TODO: 2x2 Legacy code, to be reconstructed
     @run_on_executor(executor='thread_executor')
     def acquire_data(self):  # noqa: C901
         """Acquire data, poll fem for completion and read out fem monitors."""
@@ -946,6 +852,7 @@ class HexitecFem():
         if self.first_initialisation:
             self.first_initialisation_done_update_gui()
 
+    # TODO: 2x2 Legacy code, to be reconstructed
     def acquire_data_completed(self):
         """Reset variables and read out Firmware monitors post data transfer."""
         self.acquire_stop_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
@@ -958,8 +865,8 @@ class HexitecFem():
 
         if self.stop_acquisition:
             logging.info("Cancelling Acquisition..")
-            self.send_cmd([HexitecFem.VSR_ADDRESS[0], 0xE2])
-            self.send_cmd([HexitecFem.VSR_ADDRESS[1], 0xE2])
+            for vsr in self.VSR_ADDRESS:
+                self.send_cmd([vsr, 0xE2])
             logging.info("Acquisition cancelled")
             # Reset variables
             self.stop_acquisition = False
@@ -1091,6 +998,7 @@ class HexitecFem():
         # print("\n\tfem.1st_initialisation_done_update_GUI(), updating parent's frames {}\n".format(self.number_frames))
         self.parent.number_frames = self.number_frames
 
+    # TODO: 2x2 Legacy code, to be removed - checked
     def set_up_state_machine(self):
         """Set up state machine, optionally with values from hexitec ini file."""
         logging.debug("Setting up state machine")
@@ -1182,10 +1090,6 @@ class HexitecFem():
         # print("  SPH_S2, ", SPH_S2)
         # print("\n")
 
-        # # TODO: Where should the PLLs be toggled?
-        # self.toggle_register_007()
-
-        # TODO: What should default value be? (not set by JE previously!)
         gain = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Gain', bit_range=1)
         if gain > -1:
             value_006 = self.convert_to_aspect_format(gain)
@@ -1258,12 +1162,7 @@ class HexitecFem():
 
         logging.debug("Finished Setting up state machine")
 
-    def check_register89(self, label):
-        """Debugging function."""
-        self.send_cmd([self.vsr_addr, self.READ_REG_VALUE, 0x38, 0x39])
-        reg89 = self.read_response()
-        logging.debug(" *{}*  Reg 0x89: {}".format(label, ' '.join("0x{0:02X}".format(x) for x in reg89)))
-
+    # TODO: 2x2 Legacy code, to be modified
     @run_on_executor(executor='thread_executor')
     def collect_offsets(self):
         """Run collect offsets sequence.
@@ -1390,6 +1289,7 @@ class HexitecFem():
             self._set_status_error("Uncaught Exception; Failed to collect offsets: %s" % str(e))
             logging.error("%s" % str(e))
 
+    # TODO: 2x2 Legacy code, to be Incorporated
     def load_pwr_cal_read_enables(self):  # noqa: C901
         """Load power, calibration and read enables - optionally from hexitec file."""
         # The default values are either 20 times 0 (0x30), or 20 times F (0x46)
@@ -1717,11 +1617,388 @@ class HexitecFem():
         self.send_cmd(enable_sm)
         self.read_response()
 
-    def write_dac_values(self):
+    def make_list_hexadecimal(self, value):  # pragma: no cover
+        """Debug function: Turn decimal list into hexadecimal list."""
+        value_hexadecimal = []
+        for val in value:
+            value_hexadecimal.append("0x%x" % val)
+        return value_hexadecimal
+
+    def get_vsr_register_value(self, vsr_number, address_high, address_low):
+        """Read the VSR register At address_high, address_low."""
+        self.send_cmd([vsr_number, self.READ_REG_VALUE, address_high, address_low])
+        resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
+        reply = resp[2:-1]                                      # Omit start char, vsr & register addresses, and end char
+        reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
+        # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_high-0x30, address_low-0x30, len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
+        return resp, reply
+
+    def read_register89(self, vsr_number):
+        """Read out register 89."""
+        # time.sleep(0.25)
+        (address_high, address_low) = (0x38, 0x39)
+        # print("Read Register 0x{0}{1}".format(address_high-0x30, address_low-0x30))
+        return self.get_vsr_register_value(vsr_number, address_high, address_low)
+
+    def read_register07(self, vsr_number):
+        """Read out register 07."""
+        # time.sleep(0.25)
+        (address_high, address_low) = (0x30, 0x37)
+        # print("Read Register 0x{0}{1}".format(address_high-0x30, address_low-0x30))
+        return self.get_vsr_register_value(vsr_number, address_high, address_low)
+
+    @run_on_executor(executor='thread_executor')
+    def initialise_system(self):
+        """Configure in full VSR2, then VSR1.
+
+        Initialise, load enables, set up state machine, write to DAC and enable ADCs.
+        """
+        try:
+            beginning = time.time()
+            for vsr in self.VSR_ADDRESS:
+                self.vsr_addr = vsr # Largely redundant, only enable_adc(vsr)  ..
+                logging.debug(" --- Initialising VSR: 0x{0:X} ---".format(vsr))
+                self._set_status_message("Initialising VSR{}".format(vsr-143))
+                self.initialise_vsr(vsr)
+                # Check PLLs locked
+                bPolling = True
+                time_taken = 0
+                while bPolling:
+                    r89_list, r89_value = self.read_register89(vsr)
+                    LSB = ord(r89_value[1])
+                    # Is PLL locked? (bit1 high)
+                    if LSB & 2:
+                        bPolling = False
+                    else:
+                        print(" R.89: {} {}".format(r89_value, r89_value[1], ord(r89_value[1])))
+                        time.sleep(0.2)
+                        time_taken += 0.2
+                    if time_taken > 3.0:
+                        raise HexitecFemError("Timed out polling register 0x89; PLL remains disabled")
+
+            # enable_sm_vsr1 = [HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT,
+            #                   0x30, 0x31, 0x30, 0x31]
+            # enable_sm_vsr2 = [HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT,
+            #                   0x30, 0x31, 0x30, 0x31]
+            # disable_sm_vsr1 = [HexitecFem.VSR_ADDRESS[0], HexitecFem.CLR_REG_BIT,
+            #                    0x30, 0x31, 0x30, 0x31]
+            # disable_sm_vsr2 = [HexitecFem.VSR_ADDRESS[1], HexitecFem.CLR_REG_BIT,
+            #                    0x30, 0x31, 0x30, 0x31]
+
+            # # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
+            # self.send_cmd([HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE,
+            #               0x38, 0x46])
+            # self.read_response()
+            # self.send_cmd([HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT,
+            #               0x38, 0x46, 0x30, 0x31])
+            # self.read_response()
+
+            # # Repeat with other VSR board
+            # self.send_cmd([HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE,
+            #               0x38, 0x46])
+            # self.read_response()
+            # self.send_cmd([HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT,
+            #               0x38, 0x46, 0x30, 0x31])
+            # self.read_response()
+
+            # # Stop the state machine
+
+            # self.send_cmd(disable_sm_vsr1)
+            # self.read_response()
+            # self.send_cmd(disable_sm_vsr2)
+            # self.read_response()
+
+            # # Re-Start the state machine
+
+            # self.send_cmd(enable_sm_vsr1)
+            # self.read_response()
+            # self.send_cmd(enable_sm_vsr2)
+            # self.read_response()
+
+            # ###
+
+            # self._set_status_message("Configuring VSR2")
+            # self.selected_sensor = HexitecFem.OPTIONS[2]
+
+            # self.initialise_sensor()
+            # self._set_status_message("VSR2: Sensors initialised.")
+
+            # self.set_up_state_machine()
+            # self._set_status_message("VSR2: State Machine setup")
+
+            # self.write_dac_values()
+            # self._set_status_message("VSR2: DAC values written")
+
+            # self.enable_adc()
+            # self._set_status_message("VSR2: ADC enabled")
+
+            # self.load_pwr_cal_read_enables()
+            # self._set_status_message("VSR2: Loaded Power, Calibrate, Read Enables")
+
+            # synced_status = self.calibrate_sensor()
+            # logging.debug("Calibrated sensor returned synchronised status: %s" % synced_status)
+
+            # self._set_status_message("Configuring VSR1")
+            # self.selected_sensor = HexitecFem.OPTIONS[0]
+
+            # self.initialise_sensor()
+            # self._set_status_message("VSR1: Sensors initialised")
+
+            # self.set_up_state_machine()
+            # self._set_status_message("VSR1: State Machine setup")
+
+            # self.write_dac_values()
+            # self._set_status_message("VSR1: DAC values written")
+
+            # self.enable_adc()
+            # self._set_status_message("VSR1: ADC enabled")
+
+            # self.load_pwr_cal_read_enables()
+            # self._set_status_message("VSR1: Loaded Power, Calibrate, Read Enables")
+
+            # synced_status = self.calibrate_sensor()
+            # logging.debug("Calibrated sensor returned synchronised status: %s" % synced_status)
+
+            self._set_status_message("Initialisation completed. VSRs configured.")
+            print(" -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=- ")
+            ending = time.time()
+            print("     initialisation took: {}".format(ending-beginning))
+
+            # DEBUGGING Info:
+            reg07 = []
+            reg89 = []
+            # print("VSR Row S1: (High, Low). S1Sph  SphS2:  adc clk delay: . FVAL/LVAL:  VCAL2, (H, L) ")
+            print("VSR Row S1: (H, L). S1Sph  SphS2:  adc clk dly: . FVAL/LVAL:  VCAL2, (H, L) Gain")
+            for vsr in range(0x90, 0x96):
+                r7_list, r7_value = self.read_register07(vsr)
+                reg07.append(r7_value)
+                r89_list, r89_value = self.read_register89(vsr)
+                reg89.append(r89_value)
+
+                s1_high_resp, s1_high_reply = self.read_and_response(vsr, 0x30, 0x33)
+                s1_low_resp, s1_low_reply = self.read_and_response(vsr, 0x30, 0x32)
+                sph_resp, sph_reply = self.read_and_response(vsr, 0x30, 0x34)
+                s2_resp, s2_reply = self.read_and_response(vsr, 0x30, 0x35)
+                adc_clock_resp, adc_clock_reply = self.read_and_response(vsr, 0x30, 0x39)  # ADC Clock Delay
+                vals_delay_resp, vals_delay_reply = self.read_and_response(vsr, 0x30, 0x45)  # FVAL/LVAL Delay
+                vcal_high_resp, vcal_high_reply = self.read_and_response(vsr, 0x31, 0x39)  # VCAL2 -> VCAL1 high byte
+                vcal_low_resp, vcal_low_reply = self.read_and_response(vsr, 0x31, 0x38)  # VCAL2 -> VCAL1 low byte
+                gain_resp, gain_reply = self.read_and_response(vsr, 0x30, 0x36)  # Gain
+                print(" {}        {}  {}     {}     {}          {}             {}             {} {}  {}".format(
+                        vsr-143,
+                        s1_high_reply, s1_low_reply,
+                        sph_reply,
+                        s2_reply,
+                        adc_clock_reply,
+                        vals_delay_reply,
+                        vcal_high_reply, vcal_low_reply,
+                        gain_reply))
+            print(" All vsrs, reg07: {}".format(reg07))
+            print("           reg89: {}".format(reg89))
+        except HexitecFemError as e:
+            self._set_status_error("Failed to initialise camera: %s" % str(e))
+            logging.error("%s" % str(e))
+        except Exception as e:
+            self._set_status_error("Uncaught Exception; Camera initialisation failed: %s" % str(e))
+            logging.error("%s" % str(e))
+        self.hardware_busy = False
+
+    def initialise_vsr(self, vsr):
+        """Initialise a VSR."""
+        value_002 = 0x30, 0x31  # RowS1 Low Byte value: 1 = maximum frame rate
+        value_003 = 0x30, 0x30  # RowS1 High Byte value : 0 = ditto
+        value_004 = 0x30, 0x31  # S1 -> Sph, 6 bits : 1 = ... Yes, what?
+        value_005 = 0x30, 0x36  # SphS2, 6 bits : 6 = ... Yes, what?
+        value_006 = 0x30, 0x31  # Gain, 1 bit : 0 = High Gain; 1 = Low Gain
+        value_009 = 0x30, 0x32  # ADC1 Delay, 5 bits : 2 = 2 clock cycles
+        value_00E = 0x30, 0x41
+        value_018 = 0x30, 0x31  # VCAL2 -> VCAL1 Low Byte, 8 bits: 1 = 1 clock cycle
+        value_019 = 0x30, 0x30  # VCAL2 -> VCAL1 High Byte, 7 bits
+
+        if self.row_s1 > -1:
+            # Valid value, within range
+            self.row_s1_low = self.row_s1 & 0xFF
+            self.row_s1_high = self.row_s1 >> 8
+            value_002 = self.convert_to_aspect_format(self.row_s1_low)
+            value_003 = self.convert_to_aspect_format(self.row_s1_high)
+        if self.s1_sph > -1:
+            value_004 = self.convert_to_aspect_format(self.s1_sph)
+        if self.sph_s2 > -1:
+            value_005 = self.convert_to_aspect_format(self.sph_s2)
+        gain = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Gain', bit_range=1)
+        if gain > -1:
+            value_006 = self.convert_to_aspect_format(gain)
+        adc1_delay = self._extract_integer(self.hexitec_parameters, 'Control-Settings/ADC1 Delay',
+                                           bit_range=2)
+        if adc1_delay > -1:
+            value_009 = self.convert_to_aspect_format(adc1_delay)
+        delay_sync_signals = self._extract_integer(self.hexitec_parameters,
+                                                   'Control-Settings/delay sync signals',
+                                                   bit_range=8)
+        if delay_sync_signals > -1:
+            value_00E = self.convert_to_aspect_format(delay_sync_signals)
+        vcal2_vcal1 = self._extract_integer(self.hexitec_parameters,
+                                            'Control-Settings/VCAL2 -> VCAL1', bit_range=15)
+        if vcal2_vcal1 > -1:
+            vcal2_vcal1_low = vcal2_vcal1 & 0xFF
+            vcal2_vcal1_high = vcal2_vcal1 >> 8
+            value_018 = self.convert_to_aspect_format(vcal2_vcal1_low)
+            value_019 = self.convert_to_aspect_format(vcal2_vcal1_high)
+        """
+        90	42	01	10	;Select external Clock
+        90	42	07	03	;Enable PLLs
+        90	42	02	01	;LowByte Row S1
+        """
+        self.write_and_response(vsr, 0x30, 0x31, 0x31, 0x30) # Select external Clock
+        self.write_and_response(vsr, 0x30, 0x37, 0x30, 0x33) # Enable PLLs; 1 = Enable PLL; 2 = Enable ADC PLL
+        self.write_and_response(vsr, 0x30, 0x32, value_002[0], value_002[1], delay=True)    # LowByte Row S1
+        self.write_and_response(vsr, 0x30, 0x33, value_003[0], value_003[1], delay=True)    # HighByte Row S1
+        """
+        90	42	04	01	;S1Sph
+        90	42	05	06	;SphS2
+        90	42	09	02	;ADC Clock Delay
+        90	42	0E	0A	;FVAL/LVAL Delay
+        90	42	1B	08	;SM wait Clock Row
+        90	42	14	01	;Start SM on falling edge
+        90	42	01	20	;Enable LVDS Interface
+        """
+        self.write_and_response(vsr, 0x30, 0x34, value_004[0], value_004[1], delay=True) # S1Sph
+        self.write_and_response(vsr, 0x30, 0x35, value_005[0], value_005[1], delay=True) # SphS2
+        # TODO: ADDITIONALLY ADDED, IS THIS NEEDED OR NOT: ??
+        self.write_and_response(vsr, 0x30, 0x36, value_006[0], value_006[1], delay=True) # Gain
+        self.write_and_response(vsr, 0x30, 0x39, value_009[0], value_009[1], delay=True) # ADC Clock Delay
+        self.write_and_response(vsr, 0x30, 0x45, value_00E[0], value_00E[1], delay=True) # FVAL/LVAL Delay
+        self.write_and_response(vsr, 0x31, 0x42, 0x30, 0x38) # SM wait Low Row, 8 bits
+        self.write_and_response(vsr, 0x31, 0x34, 0x30, 0x31) # Start SM on falling edge ('0' = rising edge) of ADC-CLK
+        self.write_and_response(vsr, 0x30, 0x31, 0x32, 0x30) # Enable LVDS Interface
+        """
+        90	44	61	FF	FF	FF	FF	FF	FF	FF	FF	FF	FF	;Column Read En
+        90	44	4D	FF	FF	FF	FF	FF	FF	FF	FF	FF	FF	;Column PWR En
+        90	44	57	00	00	00	00	00	00	00	00	00	00	;Column Cal En
+        90	44	43	FF	FF	FF	FF	FF	FF	FF	FF	FF	FF	;Row Read En
+        90	44	2F	FF	FF	FF	FF	FF	FF	FF	FF	FF	FF	;Row PWR En
+        90	44	39	00	00	00	00	00	00	00	00	00	00	;Row Cal En
+        90	54	01	FF	0F	FF	05	55	00	00	08	E8	;Write DAC
+        """
+        number_registers = 10
+        logging.debug("Column Read Enable")
+        self.block_write_and_response(vsr, number_registers, 0x36, 0x31, 0x46, 0x46)  # 61; Column Read En
+        logging.debug("Column POWER Enable")
+        self.block_write_and_response(vsr, number_registers, 0x34, 0x44, 0x46, 0x46)  # 4D; Column PWR En
+        logging.debug("Column calibrate Enable")
+        self.block_write_and_response(vsr, number_registers, 0x35, 0x37, 0x30, 0x30)  # 57; Column Cal En
+        logging.debug("Row Read Enable")
+        self.block_write_and_response(vsr, number_registers, 0x34, 0x33, 0x46, 0x46)  # 43; Row Read En
+        logging.debug("Row POWER Enable")
+        self.block_write_and_response(vsr, number_registers, 0x32, 0x46, 0x46, 0x46)  # 2F; Row PWR En
+        logging.debug("Row calibrate Enable")
+        self.block_write_and_response(vsr, number_registers, 0x33, 0x39, 0x30, 0x30)  # 39; Row Cal En
+        self.write_dac_values(vsr)
+        """
+        90	55	02	;Disable ADC/Enable DAC
+        90	43	01	01	;Enable SM
+        90	42	01	01	;Disable SM
+        90	55	03	;Enable ADC/Enable DAC
+        90	53	16	09	;Write ADC Register
+        """
+        self.enable_adc(vsr)
+        """
+        90	40	24	22	;Disable Vcal/Capture Avg Picture
+        90	40	24	28	;Disable Vcal/En DC spectroscopic mode
+        90	42	01	80	;Enable Training
+        90	42	18	01	;Low Byte SM Vcal Clock
+        90	43	24	20	;Enable Vcal
+        90	42	24	20	;Disable Vcal
+        """
+        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x32) # Disable Vcal/Capture Avg Picture
+        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x38) # Disable Vcal/En DC spectroscopic mode
+        self.write_and_response(vsr, 0x30, 0x31, 0x38, 0x30) # Enable Training
+        # self.write_and_response(vsr, 0x31, 0x38, 0x30, 0x31) # Low Byte SM Vcal Clock
+        # TODO: Inserting VCal setting here
+        # Send VCAL2 -> VCAL1 low byte to Register 0x02 (Accepts 8 bits)
+        self.write_and_response(vsr, 0x31, 0x38, value_018[0], value_018[1], delay=True)
+        # Send VCAL2 -> VCAL1 high byte to Register 0x03 (Accepts 7 bits)
+        self.write_and_response(vsr, 0x31, 0x39, value_019[0], value_019[1], delay=True)
+        # self.write_and_response(vsr, 0x32, 0x34,	0x32, 0x30) # Enable Vcal
+        logging.debug("Enable Vcal")  # 90	43	24	20	;Enable Vcal
+        self.send_cmd([vsr, 0x43, 0x32, 0x34, 0x32, 0x30])
+        self.read_response()
+        self.write_and_response(vsr, 0x32, 0x34,	0x32, 0x30)	# Disable Vcal
+
+        """MR's tcl script also also set these two:"""
+        # set queue_1 { { 0x40 0x01 0x30                                              "Disable_Training" } \
+        #             { 0x40 0x0A 0x01                                              "Enable_Triggered_SM_Start" }
+        # }
+
+    def read_and_response(self, vsr, address_h, address_l):
+        """Send a read and read the reply."""
+        self.send_cmd([vsr, 0x41, address_h, address_l])
+        resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
+        reply = resp[2:-1]                                      # Omit start char, vsr address and end char
+        reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
+        # print(" RR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
+        return resp, reply
+
+    def write_and_response(self, vsr, address_h, address_l, value_h, value_l, masked=True, delay=False):
+        """Write value_h, value_l to address_h, address_l of vsr, if not masked then register value overwritten."""
+        resp, reply = self.read_and_response(vsr, address_h, address_l)
+        resp = resp[2:-1]   # Extract payload
+        if masked:
+            value_h = value_h | resp[0]     # Mask existing value with new value
+            value_l = value_l | resp[1]     # Mask existing value with new value
+        # print("   WaR Write: {} {} {} {} {}".format(vsr, address_h, address_l, value_h, value_l))
+        self.send_cmd([vsr, 0x40, address_h, address_l, value_h, value_l])
+        if delay:
+            time.sleep(0.2)
+        resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
+        if delay:
+            time.sleep(0.2)
+        reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
+        reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
+        # print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
+        return resp, reply
+
+    def block_write_and_response(self, vsr, number_registers, address_h, address_l, value_h, value_l):
+        """Write value_h, value_l to address_h, address_l of vsr, spanning number_registers."""
+        most_significant, least_significant = self.expand_addresses(number_registers, address_h, address_l)
+        for index in range(number_registers):
+            # print("   BWaR Write: {} {} {} {} {}".format(vsr, most_significant[index], least_significant[index], value_h, value_l))
+            self.write_and_response(vsr, most_significant[index], least_significant[index], value_h, value_l, False)
+
+    def expand_addresses(self, number_registers, address_h, address_l):
+        """Expand addresses by the number_registers specified.
+
+        ie If (number_registers, address_h, address_l) = (10, 0x36, 0x31)
+        would produce 10 addresses of:
+        (0x36 0x31) (0x36 0x32) (0x36 0x33) (0x36 0x34) (0x36 0x35)
+        (0x36 0x36) (0x36 0x37) (0x36 0x38) (0x36 0x39) (0x36 0x41)
+        """
+        most_significant = []
+        least_significant = []
+        for index in range(address_l, address_l+number_registers):
+            most_significant.append(address_h)
+            least_significant.append(address_l)
+            address_l += 1
+            if address_l == 0x3A:
+                address_l = 0x41
+            if address_l == 0x47:
+                address_h += 1
+                if address_h == 0x3A:
+                    address_h = 0x41
+                address_l = 0x30
+        return most_significant, least_significant
+
+    def block_read_and_response(self, vsr, number_registers, address_h, address_l):
+        """Read from address_h, address_l of vsr, covering number_registers registers."""
+        most_significant, least_significant = self.expand_addresses(number_registers, address_h, address_l)
+        for index in range(number_registers):
+            self.read_and_response(vsr, most_significant[index], least_significant[index])
+
+    def write_dac_values(self, vsr_address):
         """Write values to DAC, optionally provided by hexitec file."""
         logging.debug("Writing DAC values")
-        vcal = [0x30, 0x32, 0x41, 0x41]
-        umid = [0x30, 0x35, 0x35, 0x35]
+        vcal = [0x30, 0x31, 0x46, 0x46]     # [0x30, 0x32, 0x41, 0x41]
+        umid = [0x30, 0x46, 0x46, 0x46]     # [0x30, 0x35, 0x35, 0x35]
         hv = [0x30, 0x35, 0x35, 0x35]
         dctrl = [0x30, 0x30, 0x30, 0x30]
         rsrv2 = [0x30, 0x38, 0x45, 0x38]
@@ -1743,148 +2020,40 @@ class HexitecFem():
             vcal[0], vcal[1] = self.convert_to_aspect_format(vcal_high)
             vcal[2], vcal[3] = self.convert_to_aspect_format(vcal_low)
 
-        self.send_cmd([self.vsr_addr, HexitecFem.WRITE_DAC_VAL,
-                       vcal[0], vcal[1], vcal[2], vcal[3],      # Vcal, e.g. 0x0111 =: 0.2V
-                       umid[0], umid[1], umid[2], umid[3],      # Umid, e.g. 0x0555 =: 1.0V
-                       hv[0], hv[1], hv[2], hv[3],              # reserve1, 0x0555 =: 1V (HV ~-250V)
-                       dctrl[0], dctrl[1], dctrl[2], dctrl[3],  # DET ctrl, 0x000
-                       rsrv2[0], rsrv2[1], rsrv2[2], rsrv2[3]   # reserve2, 0x08E8 =: 1.67V
-                       ])
+        # print(" *** umid_value: {} vcal_value: {}".format(umid_value, vcal_value))
+        self.send_cmd([#self.
+                       vsr_address, 0x54,
+                       vcal[0], vcal[1], vcal[2], vcal[3],          # Vcal, e.g. 0x0111 =: 0.2V
+                       umid[0], umid[1], umid[2], umid[3],          # Umid, e.g. 0x0555 =: 1.0V
+                       hv[0], hv[1], hv[2], hv[3],                  # reserve1, 0x0555 =: 1V (HV ~-250V)
+                       dctrl[0], dctrl[1], dctrl[2], dctrl[3],      # DET ctrl, 0x000
+                       rsrv2[0], rsrv2[1], rsrv2[2], rsrv2[3]])     # reserve2, 0x08E8 =: 1.67V
         self.read_response()
         logging.debug("DAC values set")
 
-    def make_list_hexadecimal(self, value):  # pragma: no cover
-        """Debug function: Turn decimal list into hexadecimal list."""
-        value_hexadecimal = []
-        for val in value:
-            value_hexadecimal.append("0x%x" % val)
-        return value_hexadecimal
-
-    def enable_adc(self):
+    def enable_adc(self, vsr_address):
         """Enable the ADCs."""
-        logging.debug("Enabling ADC")
-        adc_disable = [self.vsr_addr, HexitecFem.CTRL_ADC_DAC, 0x30, 0x32]
-        enable_sm = [self.vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31]
-        adc_enable = [self.vsr_addr, HexitecFem.CTRL_ADC_DAC, 0x30, 0x33]
-        adc_set = [self.vsr_addr, HexitecFem.WRITE_REG_VAL, 0x31, 0x36, 0x30, 0x39]
-
-        self.send_cmd(adc_disable)
-        self.read_response()
-        logging.debug("Enable SM")
-        self.send_cmd(enable_sm)
-        self.read_response()
-        self.send_cmd(adc_enable)
+        self.vsr_addr = vsr_address
+        logging.debug("Disable ADC/Enable DAC")     # 90 55 02 ;Disable ADC/Enable DAC
+        self.send_cmd([self.vsr_addr, 0x55, 0x30, 0x32])
         self.read_response()
 
-        self.send_cmd(adc_set)
+        logging.debug("Enable SM")      # 90 43 01 01 ;Enable SM
+        self.send_cmd([self.vsr_addr, 0x43, 0x30, 0x31, 0x30, 0x31])
         self.read_response()
 
-        # Disable ADC test testmode
-        self.send_cmd([self.vsr_addr, HexitecFem.WRITE_REG_VAL, 0x30, 0x44, 0x30, 0x30])
+        logging.debug("Disable SM")     # 90 42 01 01 #Disable SM
+        self.send_cmd([self.vsr_addr, 0x42, 0x30, 0x31, 0x30, 0x31])
         self.read_response()
 
-    @run_on_executor(executor='thread_executor')
-    def initialise_system(self):
-        """Configure in full VSR2, then VSR1.
+        logging.debug("Enable ADC/Enable DAC")  # 90 55 03  ;Enable ADC/Enable DAC
+        self.send_cmd([self.vsr_addr, 0x55, 0x30, 0x33])
+        self.read_response()
 
-        Initialise, load enables, set up state machine, write to DAC and enable ADCs.
-        """
-        try:
-            beginning = time.time()
-            enable_sm_vsr1 = [HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT,
-                              0x30, 0x31, 0x30, 0x31]
-            enable_sm_vsr2 = [HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT,
-                              0x30, 0x31, 0x30, 0x31]
-            disable_sm_vsr1 = [HexitecFem.VSR_ADDRESS[0], HexitecFem.CLR_REG_BIT,
-                               0x30, 0x31, 0x30, 0x31]
-            disable_sm_vsr2 = [HexitecFem.VSR_ADDRESS[1], HexitecFem.CLR_REG_BIT,
-                               0x30, 0x31, 0x30, 0x31]
-
-            # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
-            self.send_cmd([HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE,
-                          0x38, 0x46])
-            self.read_response()
-            self.send_cmd([HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT,
-                          0x38, 0x46, 0x30, 0x31])
-            self.read_response()
-
-            # Repeat with other VSR board
-            self.send_cmd([HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE,
-                          0x38, 0x46])
-            self.read_response()
-            self.send_cmd([HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT,
-                          0x38, 0x46, 0x30, 0x31])
-            self.read_response()
-
-            # Stop the state machine
-
-            self.send_cmd(disable_sm_vsr1)
-            self.read_response()
-            self.send_cmd(disable_sm_vsr2)
-            self.read_response()
-
-            # Re-Start the state machine
-
-            self.send_cmd(enable_sm_vsr1)
-            self.read_response()
-            self.send_cmd(enable_sm_vsr2)
-            self.read_response()
-
-            ###
-
-            self._set_status_message("Configuring VSR2")
-            self.selected_sensor = HexitecFem.OPTIONS[2]
-
-            self.initialise_sensor()
-            self._set_status_message("VSR2: Sensors initialised.")
-
-            self.set_up_state_machine()
-            self._set_status_message("VSR2: State Machine setup")
-
-            self.write_dac_values()
-            self._set_status_message("VSR2: DAC values written")
-
-            self.enable_adc()
-            self._set_status_message("VSR2: ADC enabled")
-
-            self.load_pwr_cal_read_enables()
-            self._set_status_message("VSR2: Loaded Power, Calibrate, Read Enables")
-
-            synced_status = self.calibrate_sensor()
-            logging.debug("Calibrated sensor returned synchronised status: %s" % synced_status)
-
-            self._set_status_message("Configuring VSR1")
-            self.selected_sensor = HexitecFem.OPTIONS[0]
-
-            self.initialise_sensor()
-            self._set_status_message("VSR1: Sensors initialised")
-
-            self.set_up_state_machine()
-            self._set_status_message("VSR1: State Machine setup")
-
-            self.write_dac_values()
-            self._set_status_message("VSR1: DAC values written")
-
-            self.enable_adc()
-            self._set_status_message("VSR1: ADC enabled")
-
-            self.load_pwr_cal_read_enables()
-            self._set_status_message("VSR1: Loaded Power, Calibrate, Read Enables")
-
-            synced_status = self.calibrate_sensor()
-            logging.debug("Calibrated sensor returned synchronised status: %s" % synced_status)
-
-            self._set_status_message("Initialisation completed. VSR2 and VSR1 configured.")
-            print(" -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=- ")
-            ending = time.time()
-            print("     initialisation took: {}".format(ending-beginning))
-        except HexitecFemError as e:
-            self._set_status_error("Failed to initialise camera: %s" % str(e))
-            logging.error("%s" % str(e))
-        except Exception as e:
-            self._set_status_error("Uncaught Exception; Camera initialisation failed: %s" % str(e))
-            logging.error("%s" % str(e))
-        self.hardware_busy = False
+        logging.debug("Write ADC register")     # 90 53 16 09   ;Write ADC Register
+        # self.send_cmd([self.vsr_addr, 0x53, 0x31, 0x36, 0x30, 0x39])  # Avoided
+        # self.read_response()
+        self.write_and_response(self.vsr_addr, 0x31, 0x36, 0x30, 0x39)
 
     def calculate_frame_rate(self):
         """Calculate variables to determine frame rate (See ASICTimingRateDefault.xlsx)."""
@@ -1916,33 +2085,6 @@ class HexitecFem():
             # With duration enabled, recalculate number of frames in case clocks changed
             self.set_duration(self.duration)
             self.parent.set_number_frames(self.number_frames)
-
-    def toggle_register_007(self):
-        """Helper function to toggle PLL in register 007 off and on."""
-        value_007 = 0x30, 0x33  # UNNAMED, 2 bits : 1 = Enable PLL; 2 = Enable ADC PLL (3 = both)
-        register_007 = 0x30, 0x37
-        logging.debug("CLEARING PLL")
-        # self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT, register_007[0], register_007[1], 0x30, 0x30])
-        self.send_cmd([self.vsr_addr, 0x40, register_007[0], register_007[1], 0x30, 0x30])
-        time.sleep(0.25)
-        self.read_response()
-        time.sleep(0.25)
-
-        self.send_cmd([self.vsr_addr, self.READ_REG_VALUE, 0x38, 0x39])
-        reg89 = self.read_response()
-        logging.debug("clrd, Reg 0x89: {}".format(' '.join("0x{0:02X}".format(x) for x in reg89)))
-
-        logging.debug("ENABLING PLL")
-        # self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT,
-        self.send_cmd([self.vsr_addr, 0x40,
-                      register_007[0], register_007[1], value_007[0], value_007[1]])
-        time.sleep(0.25)
-        self.read_response()
-        time.sleep(0.25)
-
-        self.send_cmd([self.vsr_addr, self.READ_REG_VALUE, 0x38, 0x39])
-        reg89 = self.read_response()
-        logging.debug("Toggled complete, Reg 0x89: {}".format(' '.join("0x{0:02X}".format(x) for x in reg89)))
 
     # TODO: To be tested using new 2x6 system hardware
     def print_vcal_registers(self, vsr_addr):  # pragma: no cover
@@ -2418,6 +2560,8 @@ class HexitecFem():
 
     def debug_register(self, msb, lsb):  # pragma: no cover
         """Debug function: Display contents of register."""
+        # TODO: Scale with num of VSR..
+        # for vsr in self.VSR_ADDRESS:
         self.send_cmd([self.VSR_ADDRESS[1], self.READ_REG_VALUE,
                        msb, lsb])
         vsr2 = self.read_response()

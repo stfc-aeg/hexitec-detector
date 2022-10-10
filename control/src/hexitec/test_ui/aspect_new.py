@@ -152,14 +152,16 @@ class Hexitec2x6():
 
     def read_and_response(self, vsr, address_h, address_l):
         """Send a read and read the reply."""
+        # time.sleep(0.2)
         self.send_cmd([vsr, 0x41, address_h, address_l])
+        # time.sleep(0.2)
         resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
         reply = resp[2:-1]                                      # Omit start char, vsr address and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
         # print(" RR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
         return resp, reply
 
-    def write_and_response(self, vsr, address_h, address_l, value_h, value_l, masked=True, debug=False):
+    def write_and_response(self, vsr, address_h, address_l, value_h, value_l, masked=True, delay=False):
         """Write value_h, value_l to address_h, address_l of vsr, if not masked then register value overwritten."""
         resp, reply = self.read_and_response(vsr, address_h, address_l)
         resp = resp[2:-1]   # Extract payload
@@ -168,15 +170,15 @@ class Hexitec2x6():
             value_l = value_l | resp[1]     # Mask existing value with new value
         # print("   WaR Write: {} {} {} {} {}".format(vsr, address_h, address_l, value_h, value_l))
         self.send_cmd([vsr, 0x40, address_h, address_l, value_h, value_l])
-        if debug:
+        if delay:
             time.sleep(0.2)
         resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
-        if debug:
+        if delay:
             time.sleep(0.2)
         reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
         # print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
-        return resp, resp
+        return resp, reply
 
     def block_write_and_response(self, vsr, number_registers, address_h, address_l, value_h, value_l):
         """Write value_h, value_l to address_h, address_l of vsr, spanning number_registers."""
@@ -270,7 +272,7 @@ class Hexitec2x6():
     #     reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
     #     reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
     #     print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
-    #     return resp, resp
+    #     return resp, reply
 
     def initialise_vsr(self, vsr):
         """Initialise a vsr."""
@@ -282,7 +284,7 @@ class Hexitec2x6():
         """
         hxt.write_and_response(vsr, 0x30, 0x31, 0x31, 0x30)     # Select external Clock
         hxt.write_and_response(vsr, 0x30, 0x37, 0x30, 0x33)     # Enable PLLs
-        hxt.write_and_response(vsr, 0x30, 0x32, 0x30, 0x31, debug=True)     # LowByte Row S1
+        hxt.write_and_response(vsr, 0x30, 0x32, 0x30, 0x38, delay=False)     # LowByte Row S1
         """
         90	42	04	01	;S1Sph
         90	42	05	06	;SphS2
@@ -292,8 +294,8 @@ class Hexitec2x6():
         90	42	14	01	;Start SM on falling edge
         90	42	01	20	;Enable LVDS Interface
         """
-        hxt.write_and_response(vsr, 0x30, 0x34, 0x30, 0x31, debug=True)     # S1Sph
-        hxt.write_and_response(vsr, 0x30, 0x35, 0x30, 0x31, debug=True)     # SphS2
+        hxt.write_and_response(vsr, 0x30, 0x34, 0x30, 0x35, delay=False)     # S1Sph
+        hxt.write_and_response(vsr, 0x30, 0x35, 0x31, 0x32, delay=False)     # SphS2
         hxt.write_and_response(vsr, 0x30, 0x39, 0x30, 0x32)     # ADC Clock Delay
         hxt.write_and_response(vsr, 0x30, 0x45, 0x30, 0x41)     # FVAL/LVAL Delay
         hxt.write_and_response(vsr, 0x31, 0x42, 0x30, 0x38)     # SM wait Low Row
@@ -379,40 +381,60 @@ if __name__ == '__main__':  # pragma: no cover
 
         # raise socket.error("hello")
 
-        # # Execute equivalent of VSR1_Configure.txt:
-        for vsr in range(0x90, 0x96):
-            print(" --- Initialising VSR 0{0:X} ---".format(vsr))
-            hxt.initialise_vsr(vsr)
-            # Check PLLs locked
-            bPolling = True
-            time_taken = 0
-            while bPolling:
-                r89_list, r89_value = hxt.read_register89(vsr)
-                LSB = ord(r89_value[1])
-                # Is PLL locked? (bit1 high)
-                if LSB & 2:
-                    bPolling = False
-                else:
-                    print(" R.89: {} {}".format(r89_value, r89_value[1], ord(r89_value[1])))
-                    time.sleep(0.2)
-                    time_taken += 0.2
-                if time_taken > 3.0:
-                    raise HexitecFemError("Timed out polling register 0x89; PLL remains disabled")
-        ending = time.time()
-        print("That took: {}".format(ending - beginning))
+        # # # Execute equivalent of VSR1_Configure.txt:
+        # for vsr in range(0x90, 0x96):
+        #     print(" --- Initialising VSR 0{0:X} ---".format(vsr))
+        #     hxt.initialise_vsr(vsr)
+        #     # Check PLLs locked
+        #     bPolling = True
+        #     time_taken = 0
+        #     while bPolling:
+        #         r89_list, r89_value = hxt.read_register89(vsr)
+        #         LSB = ord(r89_value[1])
+        #         # Is PLL locked? (bit1 high)
+        #         if LSB & 2:
+        #             bPolling = False
+        #         else:
+        #             print(" R.89: {} {}".format(r89_value, r89_value[1], ord(r89_value[1])))
+        #             time.sleep(0.2)
+        #             time_taken += 0.2
+        #         if time_taken > 3.0:
+        #             raise HexitecFemError("Timed out polling register 0x89; PLL remains disabled")
+        # ending = time.time()
+        # print("That took: {}".format(ending - beginning))
         reg07 = []
         reg89 = []
+        # print("VSR Row S1: (High, Low). S1Sph  SphS2:  adc clk delay: . FVAL/LVAL:  VCAL2, (H, L) ")
+        print("VSR Row S1: (H, L). S1Sph  SphS2:  adc clk dly: . FVAL/LVAL:  VCAL2, (H, L) Gain")
         for vsr in range(0x90, 0x96):
             r7_list, r7_value = hxt.read_register07(vsr)
             reg07.append(r7_value)
             r89_list, r89_value = hxt.read_register89(vsr)
             reg89.append(r89_value)
-            s1_resp, s1_reply = hxt.read_and_response(vsr, 0x30, 0x32)
+            
+            s1_high_resp, s1_high_reply = hxt.read_and_response(vsr, 0x30, 0x33)
+            s1_low_resp, s1_low_reply = hxt.read_and_response(vsr, 0x30, 0x32)
             sph_resp, sph_reply = hxt.read_and_response(vsr, 0x30, 0x34)
             s2_resp, s2_reply = hxt.read_and_response(vsr, 0x30, 0x35)
-            print("VSR{} Row S1: {}. S1Sph : {}. SphS2 : {}".format(vsr-143, s1_reply, sph_reply, s2_reply))
-            # print("VSR{} ".format(vsr-143))
-            # print("VSR{} ".format(vsr-143))
+            adc_clock_resp, adc_clock_reply = hxt.read_and_response(vsr, 0x30, 0x39)  # ADC Clock Delay
+            vals_delay_resp, vals_delay_reply = hxt.read_and_response(vsr, 0x30, 0x45)  # FVAL/LVAL Delay
+            vcal_high_resp, vcal_high_reply = hxt.read_and_response(vsr, 0x31, 0x39)  # VCAL2 -> VCAL1 high byte
+            vcal_low_resp, vcal_low_reply = hxt.read_and_response(vsr, 0x31, 0x38)  # VCAL2 -> VCAL1 low byte
+#
+            gain_resp, gain_reply = hxt.read_and_response(vsr, 0x30, 0x36)  # Gain
+            # print("VSR{} Row S1: {} (S1 High: {}). S1Sph : {}. SphS2 : {}".format(vsr-143, s1_low_reply, s1_high_reply, sph_reply, s2_reply))
+            # print("VSR Row S1: (High, Low). S1Sph  SphS2:  adc clk delay: . FVAL/LVAL:  VCAL2, (H, L) ")
+            # print("VSR Row S1: (H, L). S1Sph  SphS2:  adc clk dly: . FVAL/LVAL:  VCAL2, (H, L) Gain")
+            print(" {}        {}  {}     {}     {}          {}             {}             {} {}  {}".format(
+            # print(" {}            {}  {}      {}     {}          {}               {}            {} {}".format(
+                    vsr-143,
+                    s1_high_reply, s1_low_reply,
+                    sph_reply,
+                    s2_reply,
+                    adc_clock_reply,
+                    vals_delay_reply,
+                    vcal_high_reply, vcal_low_reply,
+                    gain_reply))
 
         print(" All vsrs, reg07: {}".format(reg07))
         print("           reg89: {}".format(reg89))
