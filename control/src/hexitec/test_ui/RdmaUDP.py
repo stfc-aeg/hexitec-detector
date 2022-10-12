@@ -148,6 +148,7 @@ class RdmaUDP(object):
         return data
 
     def debug_var(self, variable):
+        """Debug function that will print, type of argument."""
         return ("{} : {}".format(variable, type(variable)))
 
     def write(self, address, data, burst_len=1, comment=''):
@@ -317,3 +318,70 @@ class RdmaUDP(object):
         except Exception as e:
             print(" *** read_uart_status error: {} ***".format(e))
         return uart_status, is_tx_buff_full, is_tx_buff_empty, is_rx_buff_full, is_rx_buff_empty, is_rx_pkt_done
+
+    def toggle_training(self, delay=0):
+        """Test access of the FPGA registers mentioned in the "Enable_Procedure.xlsx" spreadsheet."""
+        # clk_ctrl_addr, vsr_ctrl_addr not touched by MR's tickle script
+        # clk_ctrl_addr = 0x00000008  # Flags of interest: clk_en, clk_rst
+        # vsr_ctrl_addr = 0x00000018  # Flags of interest: vsr_en
+
+        vsr_data_ctrl_addr = 0x00000020  # Flags of interest: training_en
+        vsr_status_addr = 0x000003E8  # Flags of interest: locked, +4 to get to the next VSR, et cetera for all VSRs
+
+        # clk_ctrl = self.read(clk_ctrl_addr, burst_len=1, comment="Read clk_ctrl")
+        # clk_ctrl = clk_ctrl[0]
+        # print("clk_ctrl      @ 0x{0:08X} = 0x{1:08X}".format(clk_ctrl_addr, clk_ctrl))
+        # clk_enable = clk_ctrl & 0x1
+        # clk_reset = clk_ctrl & 0x2
+        # print("     clk_enable: 0x{0:X}".format(clk_enable))
+        # print("     clk_reset:  0x{0:X}".format(clk_reset))
+
+        # vsr_ctrl = self.read(vsr_ctrl_addr, burst_len=1, comment="Read vsr_ctrl")
+        # vsr_ctrl = vsr_ctrl[0]
+        # print("vsr_ctrl      @ 0x{0:08X} = 0x{1:08X}".format(vsr_ctrl_addr, vsr_ctrl))
+        # # TODO: See power_cycle.py, usage of: enable_vsrs_mask
+        # # vsr_enable = clk_ctrl & 0x1
+        # # print("     vsr_enable: {}".format(vsr_enable))
+
+        print("Training before we start..")
+        training_en_mask = 0x10
+
+        vsr_data_ctrl = self.read(vsr_data_ctrl_addr, burst_len=1, comment="Read vsr_data_ctrl")
+        vsr_data_ctrl = vsr_data_ctrl[0]
+        # print("vsr_data_ctrl @ 0x{0:08X} = 0x{1:08X}".format(vsr_data_ctrl_addr, vsr_data_ctrl))
+        training_enable = vsr_data_ctrl & 0x10
+        print("     training_enable: 0x{0:X}".format(training_enable))
+        time.sleep(delay)
+        enabling_training = vsr_data_ctrl | training_en_mask
+        self.write(vsr_data_ctrl_addr, enabling_training, burst_len=1, comment="Enabling training")
+        time.sleep(delay)
+
+        print("Training now on?")
+        vsr_data_ctrl = self.read(vsr_data_ctrl_addr, burst_len=1, comment="Read vsr_data_ctrl")
+        vsr_data_ctrl = vsr_data_ctrl[0]
+        # print("vsr_data_ctrl @ 0x{0:08X} = 0x{1:08X}".format(vsr_data_ctrl_addr, vsr_data_ctrl))
+        training_enable = vsr_data_ctrl & 0x10
+        print("     training_enable: 0x{0:X}".format(training_enable))
+        time.sleep(delay)
+        training_delay = 0.1
+
+        print("Training for {} seconds".format(training_delay))
+        time.sleep(training_delay)
+        disabling_training = vsr_data_ctrl & ~training_en_mask
+        self.write(vsr_data_ctrl_addr, disabling_training, burst_len=1, comment="Enabling training")
+        time.sleep(delay)
+
+        print("Training now off?")
+        vsr_data_ctrl = self.read(vsr_data_ctrl_addr, burst_len=1, comment="Read vsr_data_ctrl")
+        vsr_data_ctrl = vsr_data_ctrl[0]
+        # print("vsr_data_ctrl @ 0x{0:08X} = 0x{1:08X}".format(vsr_data_ctrl_addr, vsr_data_ctrl))
+        training_enable = vsr_data_ctrl & 0x10
+        print("     training_enable: 0x{0:X}".format(training_enable))
+        time.sleep(delay)
+        for index in range(6):
+            vsr_status = self.read(vsr_status_addr, burst_len=1, comment="Read vsr{}_status".format(index))
+            vsr_status = vsr_status[0]
+            locked = vsr_status & 0xFF
+            print("vsr{0}_status   @ 0x{1:08X} = 0x{2:08X}. Locked? 0x{3:X}".format(index, vsr_status_addr, vsr_status, locked))
+            vsr_status_addr += 4
+            time.sleep(delay)
