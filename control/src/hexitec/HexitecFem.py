@@ -53,11 +53,11 @@ class HexitecFem():
         "2x2"
     ]
 
-    # VSR_ADDRESS = [
-    #     0x90,
-    #     0x91
-    # ]
-    VSR_ADDRESS = range(0x90, 0x96, 1)
+    VSR_ADDRESS = [
+        0x90#,
+        # 0x91
+    ]
+    # VSR_ADDRESS = range(0x90, 0x96, 1)
 
     SENSORS_READOUT_OK = 7
 
@@ -604,6 +604,7 @@ class HexitecFem():
             #     print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
             #         counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
             if counter == 15001:
+                logging.error("\n\t read_response() timed out waiting for uart!\n")
                 break
         # print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
         #     counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
@@ -1166,7 +1167,6 @@ class HexitecFem():
         reply = []
         for VSR in self.VSR_ADDRESS:
             self.send_cmd([VSR, op_command, register_h, register_l])
-                        # HexitecFem.READ_REG_VALUE, 0x32, 0x34])
             resp = self.read_response()
             resp = resp[2:-1]
             resp = self.convert_list_to_string(resp)
@@ -1281,333 +1281,163 @@ class HexitecFem():
             logging.error("%s" % str(e))
         self.hardware_busy = False
 
-    # TODO: 2x2 Legacy code, to be Incorporated
+    def load_enables_settings(self, number_registers, address_h, address_l, enables_settings, enables_defaults):
+        """Load 20 bytes into registers starting from address_h, address_l.
+
+        address_h, address_l is the VSR register to target.
+        number_registers determining how many registers to target, always 10 for loading enables.
+        enables_settings contain values read from ini file, otherwise enables_default utilised.
+        """
+        # print(" *** load_enables_settings(), number_registers: {0} address: {1:X} {2:X} \nenables: {3}".format(
+        #     number_registers, address_h, address_l, enables_settings))
+        # print("   VSR: {}".format(self.vsr_addr))
+        # Check list of (-1, -1) tuples wasn't returned
+        if enables_settings[0][0] > 0:
+            asic1_command = []
+            for msb, lsb in enables_settings:
+                asic1_command.append(msb)
+                asic1_command.append(lsb)
+            # Column Read Enable, for ASIC1 (Reg 0x61)
+            register_values = asic1_command
+            print("  ... producing register_values: {}  ".format(' '.join("0x{0:02X}".format(x) for x in register_values)))
+            print("   i.e.:  {}".format(register_values))
+            # self.block_write_custom_length(self.vsr_addr, number_registers, address_h, address_l, register_values)
+            self.enables_write_and_read_verify(self.vsr_addr, address_h, address_l, register_values)
+        else:
+            print("  EMPTY INI FILE ... defaults: {}  ".format(' '.join("0x{0:02X}".format(x) for x in enables_defaults)))
+            # No ini file loaded, use default values
+            # self.block_write_custom_length(self.vsr_addr, number_registers, address_h, address_l, enables_defaults)
+            self.enables_write_and_read_verify(self.vsr_addr, address_h, address_l, enables_defaults)
+
+    def enables_write_and_read_verify(self, vsr, address_h, address_l, write_list):
+        """."""
+        number_registers = 10
+        # resp_list, reply_list = hxt.block_read_and_response(vsr, number_registers, address_h, address_l)
+        # print(" PRIOR, Column Read Enable A2: {}".format(reply_list))
+        # print(" PRIOR, Column Read Enable A2: {}".format(resp_list))
+        # #write_list: 0x34 0x38 0x32 0x43 0x46 0x41 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46
+        # write_list = [52, 56, 50, 67, 70, 65, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70]
+        self.block_write_custom_length(vsr, number_registers, address_h, address_l, write_list)
+
+        resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
+        # print(" AFTER, Column Read Enable A2: {}".format(reply_list))
+        read_list = []
+        for a, b in resp_list:
+            read_list.append(a)
+            read_list.append(b)
+        # print(" 10.AFTER, Column Read Enable A2: {}".format(write_list))# resp_list))
+        # # print(" 11.AFTER, Column Read Enable A2: {}".format(write_list2))# resp_list))
+        # print(" 2.AFTER, Column Read Enable A2: {}".format(read_list))
+        if not (write_list == read_list):
+            logging.error(" Register 0x{0}{1}: ERROR".format(chr(address_h), chr(address_l)))
+            logging.error("     Wrote: {}".format(write_list))
+            logging.error("     Read : {}".format(read_list))
+        else:
+            print(" Register 0x{0}{1} -- ALL FINE".format(chr(address_h), chr(address_l)))
+
     def load_pwr_cal_read_enables(self):  # noqa: C901
         """Load power, calibration and read enables - optionally from hexitec file."""
-        # The default values are either 20 times 0 (0x30), or 20 times F (0x46)
-        #   Make a list for each of these scenarios: (and use where needed)
-        list_of_46s = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-                       0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        list_of_30s = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
-                       0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        enable_sm = [self.vsr_addr, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31]
-        disable_sm = [self.vsr_addr, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x31]
-
         if self.vsr_addr not in HexitecFem.VSR_ADDRESS:
             raise HexitecFemError("Unknown VSR address! (%s)" % self.vsr_addr)
         # Address 0x90 = vsr1, 0x91 = vsr2, .. , 0x95 = vsr6. Therefore:
         vsr = self.vsr_addr - 143
-
-        register_061 = [0x36, 0x31]   # Column Read Enable ASIC1
-        register_0C2 = [0x43, 0x32]   # Column Read Enable ASIC2
-        value_061 = list_of_46s
-        value_0C2 = list_of_46s
-
-        asic1_read_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnEn_",
-                                                  vsr, 1, "Channel")
-        # Check list of (-1, -1) tuples wasn't returned
-        if asic1_read_enable[0][0] > 0:
-            asic1_command = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                             register_061[0], register_061[1]]
-            for msb, lsb in asic1_read_enable:
-                asic1_command.append(msb)
-                asic1_command.append(lsb)
-            # Column Read Enable, for ASIC1 (Reg 0x61)
-            col_read_enable1 = asic1_command
-        else:
-            # No ini file loaded, use default values
-            col_read_enable1 = [self.vsr_addr, HexitecFem.SEND_REG_BURST, register_061[0],
-                                register_061[1], value_061[0], value_061[1], value_061[2],
-                                value_061[3], value_061[4], value_061[5], value_061[6],
-                                value_061[7], value_061[8], value_061[9], value_061[10],
-                                value_061[11], value_061[12], value_061[13], value_061[14],
-                                value_061[15], value_061[16], value_061[17], value_061[18],
-                                value_061[19]]
-
-        asic2_read_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnEn_",
-                                                  vsr, 2, "Channel")
-        if asic2_read_enable[0][0] > 0:
-            asic2_command = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                             register_0C2[0], register_0C2[1]]
-            for msb, lsb in asic2_read_enable:
-                asic2_command.append(msb)
-                asic2_command.append(lsb)
-            col_read_enable2 = asic2_command
-        else:
-            # Column Read Enable, for ASIC2 (Reg 0xC2)
-            col_read_enable2 = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                                register_0C2[0], register_0C2[1], value_0C2[0], value_0C2[1],
-                                value_0C2[2], value_0C2[3], value_0C2[4], value_0C2[5],
-                                value_0C2[6], value_0C2[7], value_0C2[8], value_0C2[9],
-                                value_0C2[10], value_0C2[11], value_0C2[12], value_0C2[13],
-                                value_0C2[14], value_0C2[15], value_0C2[16], value_0C2[17],
-                                value_0C2[18], value_0C2[19]]
-
-        # Column Power Enable
-
-        register_04D = [0x34, 0x44]   # Column Power Enable ASIC1 (Reg 0x4D)
-        register_0AE = [0x41, 0x45]   # Column Power Enable ASIC2 (Reg 0xAE)
-        value_04D = list_of_46s
-        value_0AE = list_of_46s
-
-        asic1_power_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnPwr",
-                                                   vsr, 1, "Channel")
-        if asic1_power_enable[0][0] > 0:
-            asic1_command = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                             register_04D[0], register_04D[1]]
-            for msb, lsb in asic1_power_enable:
-                asic1_command.append(msb)
-                asic1_command.append(lsb)
-            col_power_enable1 = asic1_command
-        else:
-            # Column Power Enable, for ASIC1 (Reg 0x4D)
-            col_power_enable1 = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                                 register_04D[0], register_04D[1], value_04D[0], value_04D[1],
-                                 value_04D[2], value_04D[3], value_04D[4], value_04D[5],
-                                 value_04D[6], value_04D[7], value_04D[8], value_04D[9],
-                                 value_04D[10], value_04D[11], value_04D[12], value_04D[13],
-                                 value_04D[14], value_04D[15], value_04D[16], value_04D[17],
-                                 value_04D[18], value_04D[19]]
-
-        asic2_power_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnPwr",
-                                                   vsr, 2, "Channel")
-        if asic2_power_enable[0][0] > 0:
-            asic2_command = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                             register_0AE[0], register_0AE[1]]
-            for msb, lsb in asic2_power_enable:
-                asic2_command.append(msb)
-                asic2_command.append(lsb)
-            col_power_enable2 = asic2_command
-        else:
-            # Column Power Enable, for ASIC2 (Reg 0xAE)
-            col_power_enable2 = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                                 register_0AE[0], register_0AE[1], value_0AE[0], value_0AE[1],
-                                 value_0AE[2], value_0AE[3], value_0AE[4], value_0AE[5],
-                                 value_0AE[6], value_0AE[7], value_0AE[8], value_0AE[9],
-                                 value_0AE[10], value_0AE[11], value_0AE[12], value_0AE[13],
-                                 value_0AE[14], value_0AE[15], value_0AE[16], value_0AE[17],
-                                 value_0AE[18], value_0AE[19]]
-
-        # Column Calibration Enable
-
-        register_057 = [0x35, 0x37]   # Column Calibrate Enable ASIC1 (Reg 0x57)
-        register_0B8 = [0x42, 0x38]   # Column Calibrate Enable ASIC2 (Reg 0xB8)
-        value_057 = list_of_30s
-        value_0B8 = list_of_30s
-
-        asic1_cal_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnCal",
-                                                 vsr, 1, "Channel")
-        if asic1_cal_enable[0][0] > 0:
-            asic1_command = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                             register_057[0], register_057[1]]
-            for msb, lsb in asic1_cal_enable:
-                asic1_command.append(msb)
-                asic1_command.append(lsb)
-            col_cal_enable1 = asic1_command
-        else:
-            # Column Calibrate Enable, for ASIC1 (Reg 0x57)
-            col_cal_enable1 = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                               register_057[0], register_057[1], value_057[0], value_057[1],
-                               value_057[2], value_057[3], value_057[4], value_057[5],
-                               value_057[6], value_057[7], value_057[8], value_057[9],
-                               value_057[10], value_057[11], value_057[12], value_057[13],
-                               value_057[14], value_057[15], value_057[16], value_057[17],
-                               value_057[18], value_057[19]]
-
-        asic2_cal_enable = self._extract_80_bits(self.hexitec_parameters, "ColumnCal",
-                                                 vsr, 2, "Channel")
-        if asic2_cal_enable[0][0] > 0:
-            asic2_command = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                             register_0B8[0], register_0B8[1]]
-            for msb, lsb in asic2_cal_enable:
-                asic2_command.append(msb)
-                asic2_command.append(lsb)
-            col_cal_enable2 = asic2_command
-        else:
-            # Column Calibrate Enable, for ASIC2 (Reg 0xB8)
-            col_cal_enable2 = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                               register_0B8[0], register_0B8[1], value_0B8[0], value_0B8[1],
-                               value_0B8[2], value_0B8[3], value_0B8[4], value_0B8[5],
-                               value_0B8[6], value_0B8[7], value_0B8[8], value_0B8[9],
-                               value_0B8[10], value_0B8[11], value_0B8[12], value_0B8[13],
-                               value_0B8[14], value_0B8[15], value_0B8[16], value_0B8[17],
-                               value_0B8[18], value_0B8[19]]
-
-        # Row Read Enable
-
-        register_043 = [0x34, 0x33]   # Row Read Enable ASIC1
-        register_0A4 = [0x41, 0x34]   # Row Read Enable ASIC2
-        value_043 = list_of_46s
-        value_0A4 = list_of_46s
-
-        asic1_cal_enable = self._extract_80_bits(self.hexitec_parameters, "RowEn_",
-                                                 vsr, 1, "Block")
-        if asic1_cal_enable[0][0] > 0:
-            asic1_command = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                             register_043[0], register_043[1]]
-            for msb, lsb in asic1_cal_enable:
-                asic1_command.append(msb)
-                asic1_command.append(lsb)
-            row_read_enable1 = asic1_command
-        else:
-            # Row Read Enable, for ASIC1 (Reg 0x43)
-            row_read_enable1 = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                                register_043[0], register_043[1], value_043[0], value_043[1],
-                                value_043[2], value_043[3], value_043[4], value_043[5],
-                                value_043[6], value_043[7], value_043[8], value_043[9],
-                                value_043[10], value_043[11], value_043[12], value_043[13],
-                                value_043[14], value_043[15], value_043[16], value_043[17],
-                                value_043[18], value_043[19]]
-
-        asic2_cal_enable = self._extract_80_bits(self.hexitec_parameters, "RowEn_", vsr, 2, "Block")
-        if asic2_cal_enable[0][0] > 0:
-            asic2_command = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                             register_0A4[0], register_0A4[1]]
-            for msb, lsb in asic2_cal_enable:
-                asic2_command.append(msb)
-                asic2_command.append(lsb)
-            row_read_enable2 = asic2_command
-        else:
-            # Row Read Enable, for ASIC2 (Reg 0xA4)
-            row_read_enable2 = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                                register_0A4[0], register_0A4[1], value_0A4[0], value_0A4[1],
-                                value_0A4[2], value_0A4[3], value_0A4[4], value_0A4[5],
-                                value_0A4[6], value_0A4[7], value_0A4[8], value_0A4[9],
-                                value_0A4[10], value_0A4[11], value_0A4[12], value_0A4[13],
-                                value_0A4[14], value_0A4[15], value_0A4[16], value_0A4[17],
-                                value_0A4[18], value_0A4[19]]
-
-        # Row Power Enable
-
-        register_02F = [0x32, 0x46]   # Row Power Enable ASIC1 (Reg 0x2F)
-        register_090 = [0x39, 0x30]   # Row Power Enable ASIC2 (Reg 0x90)
-        value_02F = list_of_46s
-        value_090 = list_of_46s
-
-        asic1_pwr_enable = self._extract_80_bits(self.hexitec_parameters, "RowPwr", vsr, 1, "Block")
-        if asic1_pwr_enable[0][0] > 0:
-            asic1_command = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                             register_02F[0], register_02F[1]]
-            for msb, lsb in asic1_pwr_enable:
-                asic1_command.append(msb)
-                asic1_command.append(lsb)
-            row_power_enable1 = asic1_command
-        else:
-            # Row Power Enable, for ASIC1 (Reg 0x2F)
-            row_power_enable1 = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                                 register_02F[0], register_02F[1], value_02F[0], value_02F[1],
-                                 value_02F[2], value_02F[3], value_02F[4], value_02F[5],
-                                 value_02F[6], value_02F[7], value_02F[8], value_02F[9],
-                                 value_02F[10], value_02F[1], value_02F[2], value_02F[3],
-                                 value_02F[14], value_02F[15], value_02F[16], value_02F[17],
-                                 value_02F[18], value_02F[19]]
-
-        asic2_pwr_enable = self._extract_80_bits(self.hexitec_parameters, "RowPwr", vsr, 2, "Block")
-        if asic2_pwr_enable[0][0] > 0:
-            asic2_command = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                             register_090[0], register_090[1]]
-            for msb, lsb in asic2_pwr_enable:
-                asic2_command.append(msb)
-                asic2_command.append(lsb)
-            row_power_enable2 = asic2_command
-        else:
-            # Row Power Enable, for ASIC2 (Reg 0x90)
-            row_power_enable2 = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                                 register_090[0], register_090[1], value_090[0], value_090[1],
-                                 value_090[2], value_090[3], value_090[4], value_090[5],
-                                 value_090[6], value_090[7], value_090[8], value_090[9],
-                                 value_090[10], value_090[11], value_090[12], value_090[13],
-                                 value_090[14], value_090[15], value_090[16], value_090[17],
-                                 value_090[18], value_090[19]]
-
-        # Row Calibration Enable
-
-        register_039 = [0x33, 0x39]   # Row Calibrate Enable ASIC1 (Reg 0x39)
-        register_09A = [0x39, 0x41]   # Row Calibrate Enable ASIC2 (Reg 0x9A)
-        value_039 = list_of_30s
-        value_09A = list_of_30s
-
-        asic1_cal_enable = self._extract_80_bits(self.hexitec_parameters, "RowCal", vsr, 1, "Block")
-        if asic1_cal_enable[0][0] > 0:
-            asic1_command = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                             register_039[0], register_039[1]]
-            for msb, lsb in asic1_cal_enable:
-                asic1_command.append(msb)
-                asic1_command.append(lsb)
-            row_cal_enable1 = asic1_command
-        else:
-            # Row Calibrate Enable, for ASIC1 (Reg 0x39)
-            row_cal_enable1 = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                               register_039[0], register_039[1], value_039[0], value_039[1],
-                               value_039[2], value_039[3], value_039[4], value_039[5],
-                               value_039[6], value_039[7], value_039[8], value_039[9],
-                               value_039[10], value_039[11], value_039[12], value_039[13],
-                               value_039[14], value_039[15], value_039[16], value_039[17],
-                               value_039[18], value_039[19]]
-
-        asic2_cal_enable = self._extract_80_bits(self.hexitec_parameters, "RowCal", vsr, 2, "Block")
-        if asic2_cal_enable[0][0] > 0:
-            asic2_command = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                             register_09A[0], register_09A[1]]
-            for msb, lsb in asic2_cal_enable:
-                asic2_command.append(msb)
-                asic2_command.append(lsb)
-            row_cal_enable2 = asic2_command
-        else:
-            # Row Calibrate Enable, for ASIC2 (Reg 0x9A)
-            row_cal_enable2 = [self.vsr_addr, HexitecFem.SEND_REG_BURST,
-                               register_09A[0], register_09A[1], value_09A[0], value_09A[1],
-                               value_09A[2], value_09A[3], value_09A[4], value_09A[5],
-                               value_09A[6], value_09A[7], value_09A[8], value_09A[9],
-                               value_09A[10], value_09A[11], value_09A[12], value_09A[13],
-                               value_09A[14], value_09A[15], value_09A[16], value_09A[17],
-                               value_09A[18], value_09A[19]]
-
-        self.send_cmd(disable_sm)
-        self.read_response()
+        number_registers = 10
 
         logging.debug("Loading Power, Cal and Read Enables")
-        logging.debug("Column power enable")
-        self.send_cmd(col_power_enable1)    # 0x4D
-        self.read_response()
-        self.send_cmd(col_power_enable2)
-        self.read_response()
+        # logging.debug("Column Read Enable")
 
-        logging.debug("Row power enable")
-        self.send_cmd(row_power_enable1)    # 0x2F
-        self.read_response()
-        self.send_cmd(row_power_enable2)
-        self.read_response()
+        # Column Read Enable ASIC1 (Reg 0x61)
+        asic1_col_read_enable = self._extract_80_bits("ColumnEn_", vsr, 1, "Channel")
+        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        self.load_enables_settings(number_registers, 0x36, 0x31, asic1_col_read_enable, enables_defaults)
 
-        # Default selection
-        logging.debug("Column cal enable D")
-        self.send_cmd(col_cal_enable1)      # 0x57
-        self.read_response()
-        self.send_cmd(col_cal_enable2)
-        self.read_response()
+        # Column Read Enable ASIC2 (Reg 0xC2)
+        asic2_col_read_enable = self._extract_80_bits("ColumnEn_", vsr, 2, "Channel")
+        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        self.load_enables_settings(number_registers, 0x43, 0x32, asic2_col_read_enable, enables_defaults)
 
-        logging.debug("Row cal enable D")
-        self.send_cmd(row_cal_enable1)      # 0x39
-        self.read_response()
-        self.send_cmd(row_cal_enable2)
-        self.read_response()
+        logging.debug("Column Power Enable")
 
-        logging.debug("Column read enable")
-        self.send_cmd(col_read_enable1)     # 0x61
-        self.read_response()
-        self.send_cmd(col_read_enable2)
-        self.read_response()
+        # Column Power Enable ASIC1 (Reg 0x4D)
+        asic1_col_power_enable = self._extract_80_bits("ColumnPwr", vsr, 1, "Channel")
+        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        self.load_enables_settings(number_registers, 0x34, 0x44, asic1_col_power_enable, enables_defaults)
 
-        logging.debug("Row read enable")
-        self.send_cmd(row_read_enable1)     # 0x43
-        self.read_response()
-        self.send_cmd(row_read_enable2)
-        self.read_response()
+        # Column Power Enable ASIC2 (Reg 0xAE)
+        asic2_col_power_enable = self._extract_80_bits("ColumnPwr", vsr, 2, "Channel")
+        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        self.load_enables_settings(number_registers, 0x41, 0x45, asic2_col_power_enable, enables_defaults)
+
+        logging.debug("Column Calibration Enable")
+
+        # Column Calibrate Enable ASIC1 (Reg 0x57)
+        asic1_col_cal_enable = self._extract_80_bits("ColumnCal", vsr, 1, "Channel")
+        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+                            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+        self.load_enables_settings(number_registers, 0x35, 0x37, asic1_col_cal_enable, enables_defaults)
+
+        # Column Calibrate Enable ASIC2 (Reg 0xB8)
+        asic2_col_cal_enable = self._extract_80_bits("ColumnCal", vsr, 2, "Channel")
+        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+                            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+        self.load_enables_settings(number_registers, 0x42, 0x38, asic2_col_cal_enable, enables_defaults)
+
+        logging.debug("Row Read Enable")
+
+        # Row Read Enable ASIC1 (Reg 0x43)
+        asic1_row_enable = self._extract_80_bits("RowEn_", vsr, 1, "Block")
+        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        self.load_enables_settings(number_registers, 0x34, 0x33, asic1_row_enable, enables_defaults)
+
+        # Row Read Enable ASIC2 (Reg 0xA4)
+        asic2_row_enable = self._extract_80_bits("RowEn_", vsr, 2, "Block")
+        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        self.load_enables_settings(number_registers, 0x41, 0x34, asic2_row_enable, enables_defaults)
+
+        logging.debug("Row Power Enable")
+
+        # Row Power Enable ASIC1 (Reg 0x2F)
+        asic1_row_power_enable = self._extract_80_bits("RowPwr", vsr, 1, "Block")
+        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        self.load_enables_settings(number_registers, 0x32, 0x46, asic1_row_power_enable, enables_defaults)
+
+        # Row Power Enable ASIC2 (Reg 0x90)
+        asic2_row_power_enable = self._extract_80_bits("RowPwr", vsr, 2, "Block")
+        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        self.load_enables_settings(number_registers, 0x39, 0x30, asic2_row_power_enable, enables_defaults)
+
+        logging.debug("Row Calibration Enable")
+
+        # Row Calibrate Enable ASIC1 (Reg 0x39)
+        asic1_row_cal_enable = self._extract_80_bits("RowCal", vsr, 1, "Block")
+        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+                            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+        self.load_enables_settings(number_registers, 0x33, 0x39, asic1_row_cal_enable, enables_defaults)
+
+        # Row Calibrate Enable ASIC2 (Reg 0x9A)
+        asic2_row_cal_enable = self._extract_80_bits("RowCal", vsr, 2, "Block")
+        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+                            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+        self.load_enables_settings(number_registers, 0x39, 0x41, asic2_row_cal_enable, enables_defaults)
 
         logging.debug("Power, Cal and Read Enables have been loaded")
 
-        self.send_cmd(enable_sm)
-        self.read_response()
+    def readout_vsr_register(self, vsr, description, address_h, address_l):
+        """Helper function: readout VSR register.
+
+        Example: (vsr, description, address_h, address_l) = 1, "Column Read Enable ASIC2", 0x43, 0x32
+        """
+        number_registers = 10
+        resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
+        print(" {0} (0x{1}{2}): {3}".format(description, chr(address_h), chr(address_l), reply_list))
 
     def make_list_hexadecimal(self, value):  # pragma: no cover
         """Debug function: Turn decimal list into hexadecimal list."""
@@ -1616,28 +1446,28 @@ class HexitecFem():
             value_hexadecimal.append("0x%x" % val)
         return value_hexadecimal
 
-    def get_vsr_register_value(self, vsr_number, address_high, address_low):
-        """Read the VSR register At address_high, address_low."""
-        self.send_cmd([vsr_number, self.READ_REG_VALUE, address_high, address_low])
+    def get_vsr_register_value(self, vsr_number, address_h, address_l):
+        """Read the VSR register At address_h, address_l."""
+        self.send_cmd([vsr_number, self.READ_REG_VALUE, address_h, address_l])
         resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
         reply = resp[2:-1]                                      # Omit start char, vsr & register addresses, and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
-        # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_high-0x30, address_low-0x30, len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
+        # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_h-0x30, address_l-0x30, len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
         return resp, reply
 
     def read_register89(self, vsr_number):
         """Read out register 89."""
         # time.sleep(0.25)
-        (address_high, address_low) = (0x38, 0x39)
-        # print("Read Register 0x{0}{1}".format(address_high-0x30, address_low-0x30))
-        return self.get_vsr_register_value(vsr_number, address_high, address_low)
+        (address_h, address_l) = (0x38, 0x39)
+        # print("Read Register 0x{0}{1}".format(address_h-0x30, address_l-0x30))
+        return self.get_vsr_register_value(vsr_number, address_h, address_l)
 
     def read_register07(self, vsr_number):
         """Read out register 07."""
         # time.sleep(0.25)
-        (address_high, address_low) = (0x30, 0x37)
-        # print("Read Register 0x{0}{1}".format(address_high-0x30, address_low-0x30))
-        return self.get_vsr_register_value(vsr_number, address_high, address_low)
+        (address_h, address_l) = (0x30, 0x37)
+        # print("Read Register 0x{0}{1}".format(address_h-0x30, address_l-0x30))
+        return self.get_vsr_register_value(vsr_number, address_h, address_l)
 
     @run_on_executor(executor='thread_executor')
     def initialise_system(self):
@@ -1872,20 +1702,21 @@ class HexitecFem():
         90	44	39	00	00	00	00	00	00	00	00	00	00	;Row Cal En
         90	54	01	FF	0F	FF	05	55	00	00	08	E8	;Write DAC
         """
-        number_registers = 10
-        logging.debug("Column Read Enable")
-        self.block_write_and_response(vsr, number_registers, 0x36, 0x31, 0x46, 0x46)  # 61; Column Read En
-        logging.debug("Column POWER Enable")
-        self.block_write_and_response(vsr, number_registers, 0x34, 0x44, 0x46, 0x46)  # 4D; Column PWR En
-        logging.debug("Column calibrate Enable")
-        self.block_write_and_response(vsr, number_registers, 0x35, 0x37, 0x30, 0x30)  # 57; Column Cal En
-        logging.debug("Row Read Enable")
-        self.block_write_and_response(vsr, number_registers, 0x34, 0x33, 0x46, 0x46)  # 43; Row Read En
-        logging.debug("Row POWER Enable")
-        self.block_write_and_response(vsr, number_registers, 0x32, 0x46, 0x46, 0x46)  # 2F; Row PWR En
-        logging.debug("Row calibrate Enable")
-        self.block_write_and_response(vsr, number_registers, 0x33, 0x39, 0x30, 0x30)  # 39; Row Cal En
-        self.write_dac_values(vsr)
+        self.load_pwr_cal_read_enables()
+        # number_registers = 10
+        # logging.debug("Column Read Enable")
+        # self.block_write_and_response(vsr, number_registers, 0x36, 0x31, 0x46, 0x46)  # 61; Column Read En
+        # logging.debug("Column POWER Enable")
+        # self.block_write_and_response(vsr, number_registers, 0x34, 0x44, 0x46, 0x46)  # 4D; Column PWR En
+        # logging.debug("Column calibrate Enable")
+        # self.block_write_and_response(vsr, number_registers, 0x35, 0x37, 0x30, 0x30)  # 57; Column Cal En
+        # logging.debug("Row Read Enable")
+        # self.block_write_and_response(vsr, number_registers, 0x34, 0x33, 0x46, 0x46)  # 43; Row Read En
+        # logging.debug("Row POWER Enable")
+        # self.block_write_and_response(vsr, number_registers, 0x32, 0x46, 0x46, 0x46)  # 2F; Row PWR En
+        # logging.debug("Row calibrate Enable")
+        # self.block_write_and_response(vsr, number_registers, 0x33, 0x39, 0x30, 0x30)  # 39; Row Cal En
+        # self.write_dac_values(vsr)
         """
         90	55	02	;Disable ADC/Enable DAC
         90	43	01	01	;Enable SM
@@ -1957,6 +1788,19 @@ class HexitecFem():
             # print("   BWaR Write: {} {} {} {} {}".format(vsr, most_significant[index], least_significant[index], value_h, value_l))
             self.write_and_response(vsr, most_significant[index], least_significant[index], value_h, value_l, False)
 
+    def block_write_custom_length(self, vsr, number_registers, address_h, address_l, write_values):
+        """Write write_values starting with address_h, address_l of vsr, spanning number_registers."""
+        if (number_registers * 2) != len(write_values):
+            print("Mismatch! number_registers ({}) isn't half of write_values ({}).".format(number_registers, len(write_values)))
+            return -1
+        values_list = write_values.copy()
+        most_significant, least_significant = self.expand_addresses(number_registers, address_h, address_l)
+        for index in range(number_registers):
+            value_h = values_list.pop(0)
+            value_l = values_list.pop(0)
+            # print("   BWCL Write: {0:X} {1:X} {2:X} {3:X} {4:X}".format(vsr, most_significant[index], least_significant[index], value_h, value_l))
+            self.write_and_response(vsr, most_significant[index], least_significant[index], value_h, value_l, False)
+
     def expand_addresses(self, number_registers, address_h, address_l):
         """Expand addresses by the number_registers specified.
 
@@ -1983,8 +1827,14 @@ class HexitecFem():
     def block_read_and_response(self, vsr, number_registers, address_h, address_l):
         """Read from address_h, address_l of vsr, covering number_registers registers."""
         most_significant, least_significant = self.expand_addresses(number_registers, address_h, address_l)
+        resp_list = []
+        reply_list = []
         for index in range(number_registers):
-            self.read_and_response(vsr, most_significant[index], least_significant[index])
+            resp, reply = self.read_and_response(vsr, most_significant[index], least_significant[index])
+            # print(" BRaR: {} and {}".format(resp, reply))
+            resp_list.append(resp[2:-1])
+            reply_list.append(reply)
+        return resp_list, reply_list
 
     def write_dac_values(self, vsr_address):
         """Write values to DAC, optionally provided by hexitec file."""
@@ -2445,11 +2295,11 @@ class HexitecFem():
             setting = -1
         return setting
 
-    def _extract_80_bits(self, parameter_dict, param, vsr, asic, channel_or_block):  # noqa: C901
+    def _extract_80_bits(self, param, vsr, asic, channel_or_block):  # noqa: C901
         """Extract 80 bits from four (20 bit) channels, assembling one ASIC's row/column."""
-        # key = "ColumnEn_"
         # vsr = 1
         # asic = 1
+        # param = "ColumnEn_"
         # channel_or_block = "Channel"
         # Example Column variable: 'Sensor-Config_V1_S1/ColumnEn_1stChannel'
         # Examples Row variable:   'Sensor-Config_V1_S1/RowPwr4thBlock'
@@ -2464,28 +2314,28 @@ class HexitecFem():
 
         key = 'Sensor-Config_V%s_S%s/%s1st%s' % (vsr, asic, param, channel_or_block)
         try:
-            first_channel = self.extract_channel_data(parameter_dict, key)
+            first_channel = self.extract_channel_data(self.hexitec_parameters, key)
         except KeyError:
             logging.debug("WARNING: Missing key %s - was .ini file loaded?" % key)
             return aspect_list
 
         key = 'Sensor-Config_V%s_S%s/%s2nd%s' % (vsr, asic, param, channel_or_block)
         try:
-            second_channel = self.extract_channel_data(parameter_dict, key)
+            second_channel = self.extract_channel_data(self.hexitec_parameters, key)
         except KeyError:
             logging.debug("WARNING: Missing key %s - was .ini file loaded?" % key)
             return aspect_list
 
         key = 'Sensor-Config_V%s_S%s/%s3rd%s' % (vsr, asic, param, channel_or_block)
         try:
-            third_channel = self.extract_channel_data(parameter_dict, key)
+            third_channel = self.extract_channel_data(self.hexitec_parameters, key)
         except KeyError:
             logging.debug("WARNING: Missing key %s - was .ini file loaded?" % key)
             return aspect_list
 
         key = 'Sensor-Config_V%s_S%s/%s4th%s' % (vsr, asic, param, channel_or_block)
         try:
-            fourth_channel = self.extract_channel_data(parameter_dict, key)
+            fourth_channel = self.extract_channel_data(self.hexitec_parameters, key)
         except KeyError:
             logging.debug("WARNING: Missing key %s - was .ini file loaded?" % key)
             return aspect_list
