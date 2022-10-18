@@ -303,23 +303,7 @@ class Hexitec2x6():
         self.read_response()
         # Discrepancy from DS' script, not doing this:
         # hxt.write_and_response(vsr, 0x30, 0x31, 0x38, 0x30, delay=this_delay)     # Enable Training
-# #
-#     for { set vsr 0 } { $vsr < 6 } { incr vsr } {
-#         set addr [ expr { $vsr_addr + $vsr } ]
-#         puts "Initialising VSR: 0x[ format %02X $addr ]"
-#         step "select external clock. Is this from Kintex or SMB. From User Manual this is Use Sync Clk from DAQ Board."
-#         vsr_fpga_reg_set_bit $addr 0x01 0x10
-#         step "enable LVDS interface"
-#         vsr_fpga_reg_set_bit $addr 0x01 0x20
-#         # this now outputs data on LVDS lines....
-#         step "enable SM"
-#         vsr_fpga_reg_set_bit $addr 0x01 0x01
-#         # continues outputting LVDS data...
-#         step "disable SM"
-#         vsr_fpga_reg_clr_bit $addr 0x01 0x01
-#         # continues outputting LVDS data...
-#     }
-#  #
+
     def initialise_vsr(self, vsr):
         """Initialise a vsr."""
         # Specified in VSR1_Configure.txt
@@ -615,7 +599,52 @@ if __name__ == '__main__':  # pragma: no cover
         # hxt.enable_all_vsrs()
 
         VSR_ADDRESS = range(0x90, 0x96, 1)
-        
+
+        # # hxt.enable_vsr(1)  # Switches a single VSR on
+        # hxt.enable_all_vsrs()   # Switches on all VSR
+        # time.sleep(1)
+        # hxt.power_status()
+        # this_delay = 9
+        # print("1st VSR enabled; Waiting {} seconds".format(this_delay))
+        # time.sleep(this_delay)
+
+        # print("Init modules (Send 0x56..)")
+        # hxt.x10g_rdma.uart_tx([0xFF, 0x56])
+        # print("Wait 5 sec")
+        # time.sleep(5)
+
+        # for vsr in VSR_ADDRESS:
+        #     print(" --- (DS) Training VSR 0{0:X} ---".format(vsr))
+        #     hxt.training_preparation(vsr)
+
+        # vsr_data_ctrl_addr = 0x00000020  # Flags of interest: training_en
+        # vsr_status_addr = 0x000003E8  # Flags of interest: locked, +4 to get to the next VSR, et cetera for all VSRs
+
+        # print("set re_EN_TRAINING '1'")
+        # training_en_mask = 0x10
+        # hxt.x10g_rdma.write(vsr_data_ctrl_addr, training_en_mask, burst_len=1, comment="Enabling training")
+
+        # for vsr in VSR_ADDRESS:
+        #     print("Enabling training on VSR: 0x{0:X}".format(vsr));time.sleep(1)
+        #     hxt.send_cmd([vsr, 0x42, 0x30, 0x31, 0x30, 0x38])
+
+        # print("set re_EN_TRAINING '0'")
+        # training_en_mask = 0x00
+        # hxt.x10g_rdma.write(vsr_data_ctrl_addr, training_en_mask, burst_len=1, comment="Enabling training")
+
+        # for vsr in VSR_ADDRESS:
+        #     print("Disabling training on VSR: 0x{0:X}".format(vsr))
+        #     print("Disabled training");time.sleep(1)
+        #     hxt.send_cmd([vsr, 0x43, 0x30, 0x31, 0x30, 0x38])
+        #     print("Enable triggered SM start");time.sleep(1)
+        #     hxt.send_cmd([vsr, 0x40, 0x30, 0x41, 0x30, 0x31])
+
+        # print("Set re_EN_SM '1'")
+        # hxt.x10g_rdma.write(0x1C, 0x1, burst_len=1, comment="Set re_EN_SM '1'")
+        # print("Set re_EN_DATA '1'")
+        # hxt.x10g_rdma.write(0x20, 0x1, burst_len=1, comment="Set re_EN_DATA '1'")
+
+###
         # hxt.enable_vsr(1)  # Switches a single VSR on
         hxt.enable_all_vsrs()   # Switches on all VSR
         time.sleep(1)
@@ -630,29 +659,37 @@ if __name__ == '__main__':  # pragma: no cover
         time.sleep(5)
 
         for vsr in VSR_ADDRESS:
-            print(" --- (DS) Training VSR 0{0:X} ---".format(vsr))
-            hxt.training_preparation(vsr)
-
-        vsr_data_ctrl_addr = 0x00000020  # Flags of interest: training_en
-        vsr_status_addr = 0x000003E8  # Flags of interest: locked, +4 to get to the next VSR, et cetera for all VSRs
+            print("Initialising VSR: 0x{0:02X}".format(vsr))
+            print("Select external clock.")
+            hxt.send_cmd([vsr, 0x42, 0x30, 0x31, 0x31, 0x30])
+            hxt.read_response()
+            print("Enable LVDS interface")
+            hxt.send_cmd([vsr, 0x42, 0x30, 0x31, 0x32, 0x30])
+            hxt.read_response()
+            print("Enable SM")
+            hxt.send_cmd([vsr, 0x42, 0x30, 0x31, 0x30, 0x31])
+            hxt.read_response()
+            print("Disable SM")
+            hxt.send_cmd([vsr, 0x43, 0x30, 0x31, 0x30, 0x31])
+            hxt.read_response()
 
         print("set re_EN_TRAINING '1'")
         training_en_mask = 0x10
-        hxt.x10g_rdma.write(vsr_data_ctrl_addr, training_en_mask, burst_len=1, comment="Enabling training")
+        hxt.x10g_rdma.write(0x00000020, 0x10, burst_len=1, comment="Enabling training")
 
         for vsr in VSR_ADDRESS:
-            print("Enabling training on VSR: 0x{0:X}".format(vsr));time.sleep(1)
+            print("Enabling training on VSR: 0x{0:X}".format(vsr))
             hxt.send_cmd([vsr, 0x42, 0x30, 0x31, 0x30, 0x38])
 
         print("set re_EN_TRAINING '0'")
         training_en_mask = 0x00
-        hxt.x10g_rdma.write(vsr_data_ctrl_addr, training_en_mask, burst_len=1, comment="Enabling training")
+        hxt.x10g_rdma.write(0x00000020, 0x00, burst_len=1, comment="Enabling training")
 
         for vsr in VSR_ADDRESS:
             print("Disabling training on VSR: 0x{0:X}".format(vsr))
-            print("Disabled training");time.sleep(1)
+            print("Disabled training")
             hxt.send_cmd([vsr, 0x43, 0x30, 0x31, 0x30, 0x38])
-            print("Enable triggered SM start");time.sleep(1)
+            print("Enable triggered SM start")
             hxt.send_cmd([vsr, 0x40, 0x30, 0x41, 0x30, 0x31])
 
         print("Set re_EN_SM '1'")
@@ -660,34 +697,14 @@ if __name__ == '__main__':  # pragma: no cover
         print("Set re_EN_DATA '1'")
         hxt.x10g_rdma.write(0x20, 0x1, burst_len=1, comment="Set re_EN_DATA '1'")
 
+        vsr_status_addr = 0x000003E8  # Flags of interest: locked, +4 to get to the next VSR, et cetera for all VSRs
         for index in range(6):
             vsr_status = hxt.x10g_rdma.read(vsr_status_addr, burst_len=1, comment="Read vsr{}_status".format(index))
             vsr_status = vsr_status[0]
             locked = vsr_status & 0xFF
-            print("vsr{0}_status   @ 0x{1:08X} = 0x{2:08X}. Locked? 0x{3:X}".format(index, vsr_status_addr, vsr_status, locked))
+            print("vsr{0}_status 0x{1:08X} = 0x{2:08X}. Locked? 0x{3:X}".format(index, vsr_status_addr, vsr_status, locked))
             vsr_status_addr += 4
-            time.sleep(1)
-
-
-# # Ref:
-# hxt.write_and_response(vsr, 0x30, 0x31, 0x31, 0x30, delay=this_delay)     # Select external Clock
-
-
-# #         # hxt.write_and_response(vsr, 0x30, 0x31, 0x43, 0x31)     # Write 'C1' to R.01
-# #         # hxt.write_and_response(vsr, 0x30, 0x31, 0x39, 0x31)     # Write '91' to R.01
-# #         # hxt.write_and_response(vsr, 0x30, 0x31, 0x44, 0x31)     # Write 'D1' to R.01
-# #         # hxt.write_and_response(vsr, 0x32, 0x30, 0x31, 0x30) # Write '10' to R.01
-# #         # hxt.write_and_response(vsr, 0x30, 0x31, 0x30, 0x31, masked=False)     # Force '01' to R.01
-# #         # hxt.write_and_response(vsr, 0x30, 0x31, 0x30, 0x30, masked=False)     # Force '00' to R.01
-# #         # time.sleep(1)
-#         # hxt.write_and_response(vsr, 0x30, 0x31, 0x39, 0x31, masked=False)     # Force '91' to R.01
-
-
-#         # regFE_resp, regFE_reply = hxt.read_and_response(vsr, 0x46, 0x45)
-#         # print(" R.FE,  after: {}".format(regFE_reply))
-#         # regFF_resp, regFF_reply = hxt.read_and_response(vsr, 0x46, 0x46)
-#         # print(" R.FF,  after: {}".format(regFF_reply))
-
+            time.sleep(0.5)
 
     except (socket.error, struct.error) as e:
         print(" *** Caught Exception: {} ***".format(e))
