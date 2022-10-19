@@ -211,8 +211,14 @@ class Hexitec2x6():
     def block_read_and_response(self, vsr, number_registers, address_h, address_l):
         """Read from address_h, address_l of vsr, covering number_registers registers."""
         most_significant, least_significant = self.expand_addresses(number_registers, address_h, address_l)
+        resp_list = []
+        reply_list = []
         for index in range(number_registers):
-            self.read_and_response(vsr, most_significant[index], least_significant[index])
+            resp, reply = self.read_and_response(vsr, most_significant[index], least_significant[index])
+            # print(" BRaR: {} and {}".format(resp, reply))
+            resp_list.append(resp[2:-1])
+            reply_list.append(reply)
+        return resp_list, reply_list
 
     def write_dac_values(self, vsr_address):
         """Write values to DAC, optionally provided by hexitec file."""
@@ -255,7 +261,7 @@ class Hexitec2x6():
         print("Write ADC register")     # 90 53 16 09   ;Write ADC Register
         # self.send_cmd([self.vsr_addr, 0x53, 0x31, 0x36, 0x30, 0x39])  # Avoided
         # self.read_response()
-        hxt.write_and_response(self.vsr_addr, 0x31, 0x36, 0x30, 0x39)
+        self.write_and_response(self.vsr_addr, 0x31, 0x36, 0x30, 0x39)
 
     # # TODO: WILL BE REQUIRED LATER ON OR NOT??? - Incomplete
     # def toggle_state_machine(self, vsr, address_h, address_l, value_h, value_l, enable):
@@ -280,9 +286,9 @@ class Hexitec2x6():
         90	42	07	03	;Enable PLLs
         90	42	02	01	;LowByte Row S1
         """
-        hxt.write_and_response(vsr, 0x30, 0x31, 0x31, 0x30)     # Select external Clock
-        hxt.write_and_response(vsr, 0x30, 0x37, 0x30, 0x33)     # Enable PLLs
-        hxt.write_and_response(vsr, 0x30, 0x32, 0x30, 0x31, debug=True)     # LowByte Row S1
+        self.write_and_response(vsr, 0x30, 0x31, 0x31, 0x30)     # Select external Clock
+        self.write_and_response(vsr, 0x30, 0x37, 0x30, 0x33)     # Enable PLLs
+        self.write_and_response(vsr, 0x30, 0x32, 0x30, 0x31, debug=True)     # LowByte Row S1
         """
         90	42	04	01	;S1Sph
         90	42	05	06	;SphS2
@@ -292,13 +298,13 @@ class Hexitec2x6():
         90	42	14	01	;Start SM on falling edge
         90	42	01	20	;Enable LVDS Interface
         """
-        hxt.write_and_response(vsr, 0x30, 0x34, 0x30, 0x31, debug=True)     # S1Sph
-        hxt.write_and_response(vsr, 0x30, 0x35, 0x30, 0x31, debug=True)     # SphS2
-        hxt.write_and_response(vsr, 0x30, 0x39, 0x30, 0x32)     # ADC Clock Delay
-        hxt.write_and_response(vsr, 0x30, 0x45, 0x30, 0x41)     # FVAL/LVAL Delay
-        hxt.write_and_response(vsr, 0x31, 0x42, 0x30, 0x38)     # SM wait Low Row
-        hxt.write_and_response(vsr, 0x31, 0x34, 0x30, 0x31)     # Start SM on falling edge
-        hxt.write_and_response(vsr, 0x30, 0x31, 0x32, 0x30)     # Enable LVDS Interface
+        self.write_and_response(vsr, 0x30, 0x34, 0x30, 0x31, debug=True)     # S1Sph
+        self.write_and_response(vsr, 0x30, 0x35, 0x30, 0x31, debug=True)     # SphS2
+        self.write_and_response(vsr, 0x30, 0x39, 0x30, 0x32)     # ADC Clock Delay
+        self.write_and_response(vsr, 0x30, 0x45, 0x30, 0x41)     # FVAL/LVAL Delay
+        self.write_and_response(vsr, 0x31, 0x42, 0x30, 0x38)     # SM wait Low Row
+        self.write_and_response(vsr, 0x31, 0x34, 0x30, 0x31)     # Start SM on falling edge
+        self.write_and_response(vsr, 0x30, 0x31, 0x32, 0x30)     # Enable LVDS Interface
         """
         90	44	61	FF	FF	FF	FF	FF	FF	FF	FF	FF	FF	;Column Read En
         90	44	4D	FF	FF	FF	FF	FF	FF	FF	FF	FF	FF	;Column PWR En
@@ -310,18 +316,18 @@ class Hexitec2x6():
         """
         number_registers = 10
         print("Column Read Enable")
-        hxt.block_write_and_response(vsr, number_registers, 0x36, 0x31, 0x46, 0x46)  # 61; Column Read En
+        self.block_write_and_response(vsr, number_registers, 0x36, 0x31, 0x46, 0x46)  # 61; Column Read En
         print("Column POWER Enable")
-        hxt.block_write_and_response(vsr, number_registers, 0x34, 0x44, 0x46, 0x46)  # 4D; Column PWR En
+        self.block_write_and_response(vsr, number_registers, 0x34, 0x44, 0x46, 0x46)  # 4D; Column PWR En
         print("Column calibrate Enable")
-        hxt.block_write_and_response(vsr, number_registers, 0x35, 0x37, 0x30, 0x30)  # 57; Column Cal En
+        self.block_write_and_response(vsr, number_registers, 0x35, 0x37, 0x30, 0x30)  # 57; Column Cal En
         print("Row Read Enable")
-        hxt.block_write_and_response(vsr, number_registers, 0x34, 0x33, 0x46, 0x46)  # 43; Row Read En
+        self.block_write_and_response(vsr, number_registers, 0x34, 0x33, 0x46, 0x46)  # 43; Row Read En
         print("Row POWER Enable")
-        hxt.block_write_and_response(vsr, number_registers, 0x32, 0x46, 0x46, 0x46)  # 2F; Row PWR En
+        self.block_write_and_response(vsr, number_registers, 0x32, 0x46, 0x46, 0x46)  # 2F; Row PWR En
         print("Row calibrate Enable")
-        hxt.block_write_and_response(vsr, number_registers, 0x33, 0x39, 0x30, 0x30)  # 39; Row Cal En
-        hxt.write_dac_values(vsr)
+        self.block_write_and_response(vsr, number_registers, 0x33, 0x39, 0x30, 0x30)  # 39; Row Cal En
+        self.write_dac_values(vsr)
         """
         90	55	02	;Disable ADC/Enable DAC
         90	43	01	01	;Enable SM
@@ -329,7 +335,7 @@ class Hexitec2x6():
         90	55	03	;Enable ADC/Enable DAC
         90	53	16	09	;Write ADC Register
         """
-        hxt.enable_adc(vsr)
+        self.enable_adc(vsr)
         """
         90	40	24	22	;Disable Vcal/Capture Avg Picture
         90	40	24	28	;Disable Vcal/En DC spectroscopic mode
@@ -339,21 +345,30 @@ class Hexitec2x6():
         90	43	24	20	;Enable Vcal
         90	42	24	20	;Disable Vcal
         """
-        hxt.write_and_response(vsr, 0x32, 0x34, 0x32, 0x32)     # Disable Vcal/Capture Avg Picture
-        hxt.write_and_response(vsr, 0x32, 0x34, 0x32, 0x38)     # Disable Vcal/En DC spectroscopic mode
-        hxt.write_and_response(vsr, 0x30, 0x31, 0x38, 0x30)     # Enable Training
-        hxt.write_and_response(vsr, 0x31, 0x38, 0x30, 0x31)     # Low Byte SM Vcal Clock
-        # hxt.write_and_response(vsr, 0x30, 0x32, 0x31, 0x34)     # Low Byte Row S1
-        # hxt.write_and_response(vsr, 0x32, 0x34,	0x32, 0x30) # Enable Vcal
+        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x32)     # Disable Vcal/Capture Avg Picture
+        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x38)     # Disable Vcal/En DC spectroscopic mode
+        self.write_and_response(vsr, 0x30, 0x31, 0x38, 0x30)     # Enable Training
+        self.write_and_response(vsr, 0x31, 0x38, 0x30, 0x31)     # Low Byte SM Vcal Clock
+        # self.write_and_response(vsr, 0x30, 0x32, 0x31, 0x34)     # Low Byte Row S1
+        # self.write_and_response(vsr, 0x32, 0x34,	0x32, 0x30) # Enable Vcal
         print("Enable Vcal")  # 90	43	24	20	;Enable Vcal
-        hxt.send_cmd([vsr, 0x43, 0x32, 0x34, 0x32, 0x30])
-        hxt.read_response()
-        hxt.write_and_response(vsr, 0x32, 0x34, 0x32, 0x30)     # Disable Vcal
+        self.send_cmd([vsr, 0x43, 0x32, 0x34, 0x32, 0x30])
+        self.read_response()
+        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x30)     # Disable Vcal
 
         """MR's tcl script also also set these two:"""
         # set queue_1 { { 0x40 0x01 0x30                                              "Disable_Training" } \
         #             { 0x40 0x0A 0x01                                              "Enable_Triggered_SM_Start" }
         # }
+
+    def readout_vsr_register(self, vsr, description, address_h, address_l):
+        """Helper function: readout VSR register.
+
+        Example: (vsr, description, address_h, address_l) = 1, "Column Read Enable ASIC2", 0x43, 0x32
+        """
+        number_registers = 10
+        resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
+        print(" {0} (0x{1}{2}): {3}".format(description, chr(address_h), chr(address_l), reply_list))
 
 
 if __name__ == '__main__':  # pragma: no cover
@@ -380,24 +395,38 @@ if __name__ == '__main__':  # pragma: no cover
         # raise socket.error("hello")
 
         # # Execute equivalent of VSR1_Configure.txt:
-        for vsr in range(0x90, 0x96):
-            print(" --- Initialising VSR 0{0:X} ---".format(vsr))
-            hxt.initialise_vsr(vsr)
-            # Check PLLs locked
-            bPolling = True
-            time_taken = 0
-            while bPolling:
-                r89_list, r89_value = hxt.read_register89(vsr)
-                LSB = ord(r89_value[1])
-                # Is PLL locked? (bit1 high)
-                if LSB & 2:
-                    bPolling = False
-                else:
-                    print(" R.89: {} {}".format(r89_value, r89_value[1], ord(r89_value[1])))
-                    time.sleep(0.2)
-                    time_taken += 0.2
-                if time_taken > 3.0:
-                    raise HexitecFemError("Timed out polling register 0x89; PLL remains disabled")
+        for vsr in [0x90]:  # range(0x90, 0x96):
+            # print(" --- Initialising VSR 0{0:X} ---".format(vsr))
+            # hxt.initialise_vsr(vsr)
+            # # Check PLLs locked
+            # bPolling = True
+            # time_taken = 0
+            # while bPolling:
+            #     r89_list, r89_value = hxt.read_register89(vsr)
+            #     LSB = ord(r89_value[1])
+            #     # Is PLL locked? (bit1 high)
+            #     if LSB & 2:
+            #         bPolling = False
+            #     else:
+            #         print(" R.89: {} {}".format(r89_value, r89_value[1], ord(r89_value[1])))
+            #         time.sleep(0.2)
+            #         time_taken += 0.2
+            #     if time_taken > 3.0:
+            #         raise HexitecFemError("Timed out polling register 0x89; PLL remains disabled")
+            number_registers = 10
+            hxt.readout_vsr_register(vsr, "Column Read  Enable ASIC1", 0x36, 0x31)
+            hxt.readout_vsr_register(vsr, "Column Read  Enable ASIC2", 0x43, 0x32)
+            hxt.readout_vsr_register(vsr, "Column Power Enable ASIC1", 0x34, 0x44)
+            hxt.readout_vsr_register(vsr, "Column Power Enable ASIC2", 0x41, 0x45)
+            hxt.readout_vsr_register(vsr, "Column Calib Enable ASIC1", 0x35, 0x37)
+            hxt.readout_vsr_register(vsr, "Column Calib Enable ASIC2", 0x42, 0x38)
+
+            hxt.readout_vsr_register(vsr, "Row    Read  Enable ASIC1", 0x34, 0x33)
+            hxt.readout_vsr_register(vsr, "Row    Read  Enable ASIC2", 0x41, 0x34)
+            hxt.readout_vsr_register(vsr, "Row    Power Enable ASIC1", 0x32, 0x46)
+            hxt.readout_vsr_register(vsr, "Row    Power Enable ASIC2", 0x39, 0x30)
+            hxt.readout_vsr_register(vsr, "Row    Calib Enable ASIC1", 0x33, 0x39)
+            hxt.readout_vsr_register(vsr, "Row    Calib Enable ASIC2", 0x39, 0x41)
         ending = time.time()
         print("That took: {}".format(ending - beginning))
         reg07 = []
@@ -416,9 +445,6 @@ if __name__ == '__main__':  # pragma: no cover
 
         print(" All vsrs, reg07: {}".format(reg07))
         print("           reg89: {}".format(reg89))
-
-        # Test accessing FPGA registers
-        # hxt.x10g_rdma.read_fpga_registers(0.2)
 
     except (socket.error, struct.error) as e:
         print(" *** Caught Exception: {} ***".format(e))

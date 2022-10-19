@@ -483,14 +483,16 @@ class HexitecFem():
         #     # print(" * poll_sensors() not reading sensors *")
         # IOLoop.instance().call_later(3.0, self.poll_sensors)
 
+    @run_on_executor(executor='thread_executor')
     def connect_hardware(self, msg=None):
-        """Connect with hardware, wait 10 seconds for the VSRs' FPGAs to initialise."""
+        """Establish Hardware connection."""
         try:
             if self.hardware_connected:
                 raise HexitecFemError("Connection already established")
             else:
                 self._set_status_error("")
-            self.cam_connect()
+            self.hardware_busy = True
+            self.power_and_enable_modules()
             self._set_status_message("Camera connected.")
         except HexitecFemError as e:
             self._set_status_error("Failed to connect with camera: %s" % str(e))
@@ -501,10 +503,45 @@ class HexitecFem():
             self._set_status_error(error)
             logging.error("Camera connection: %s" % str(e))
             # Cannot raise error beyond current thread
+        self.hardware_busy = False
 
         # Start polling thread (connect successfully set up)
         if len(self.status_error) == 0:
             self._start_polling()
+
+    def power_and_enable_modules(self):
+        """Power up and enable VSRs."""
+        self.hardware_connected = True
+        logging.debug("Connecting camera")
+        try:
+            self.connect()
+            logging.debug("UDP connection established")
+
+            # self.x10g_rdma.disable_all_vsrs()  # Working
+            # read_value = self.x10g_rdma.power_status()
+            # if (read_value == 0x0):
+            #     print(" OK Power: 0x{0:08X}".format(read_value))
+            # else:
+            #     print(" !! Power: 0x{0:08X}".format(read_value))
+            #     raise Exception("Power cycling(?) VSRs failed!")
+
+            # self.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
+            self.x10g_rdma.enable_all_vsrs()
+            expected_value = 0x3F   # 0x1
+            read_value = self.x10g_rdma.power_status()
+            if (read_value == expected_value):
+                print(" OK Power: 0x{0:08X}".format(read_value))
+            else:
+                logging.error(" !! Power: 0x{0:08X}".format(read_value))
+                raise Exception("Powering up VSRs failed!")
+            powering_delay = 10
+            print("    VSR(s) enabled; Waiting {} seconds".format(powering_delay))
+            self._set_status_message("Waiting {} seconds (VSRs booting)".format(powering_delay))
+            time.sleep(powering_delay)
+            self.cam_connect()
+        except socket_error as e:
+            self.hardware_connected = False
+            raise HexitecFemError(e)
 
     def initialise_hardware(self, msg=None):
         """Initialise sensors, load enables, etc to initialise both VSR boards."""
@@ -616,11 +653,11 @@ class HexitecFem():
     def cam_connect(self):
         """Send commands to connect camera."""
         self.hardware_connected = True
-        logging.debug("Connecting camera")
         try:
-            self.connect()
-            for vsr in self.VSR_ADDRESS:
-                self.send_cmd([vsr, 0xE3])
+            # for vsr in self.VSR_ADDRESS:
+            self.x10g_rdma.uart_tx([0xFF, 0xE3]);print("\nInit modules (Send 0xE3..)\n")
+            self._set_status_message("Waiting 5 seconds (VSRs initialising)")
+            time.sleep(5)
             logging.debug("Camera connected")
             logging.debug("Modules Enabled")
         except socket_error as e:
@@ -1312,7 +1349,7 @@ class HexitecFem():
     def enables_write_and_read_verify(self, vsr, address_h, address_l, write_list):
         """."""
         number_registers = 10
-        # resp_list, reply_list = hxt.block_read_and_response(vsr, number_registers, address_h, address_l)
+        # resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
         # print(" PRIOR, Column Read Enable A2: {}".format(reply_list))
         # print(" PRIOR, Column Read Enable A2: {}".format(resp_list))
         # #write_list: 0x34 0x38 0x32 0x43 0x46 0x41 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46
@@ -1477,6 +1514,7 @@ class HexitecFem():
         """
         try:
             beginning = time.time()
+            self.hardware_busy = True
             for vsr in self.VSR_ADDRESS:
                 self.vsr_addr = vsr     # Largely redundant, only enable_adc(vsr)  ..
                 logging.debug(" --- Initialising VSR: 0x{0:X} ---".format(vsr))
@@ -1753,9 +1791,13 @@ class HexitecFem():
         #             { 0x40 0x0A 0x01                                              "Enable_Triggered_SM_Start" }
         # }
 
-    def read_and_response(self, vsr, address_h, address_l):
+    def read_and_response(self, vsr, address_h, address_l, delay=False):
         """Send a read and read the reply."""
+        if delay:
+            time.sleep(0.1)
         self.send_cmd([vsr, 0x41, address_h, address_l])
+        if delay:
+            time.sleep(0.1)
         resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
         reply = resp[2:-1]                                      # Omit start char, vsr address and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
@@ -1770,12 +1812,14 @@ class HexitecFem():
             value_h = value_h | resp[0]     # Mask existing value with new value
             value_l = value_l | resp[1]     # Mask existing value with new value
         # print("   WaR Write: {} {} {} {} {}".format(vsr, address_h, address_l, value_h, value_l))
+        if delay:
+            time.sleep(0.1)
         self.send_cmd([vsr, 0x40, address_h, address_l, value_h, value_l])
         if delay:
-            time.sleep(0.2)
+            time.sleep(0.1)
         resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
         if delay:
-            time.sleep(0.2)
+            time.sleep(0.1)
         reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
         # print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
