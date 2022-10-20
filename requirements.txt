@@ -15,7 +15,7 @@ pluggy==0.13.1
 ply==3.11
 posix-ipc==1.0.4
 psutil==5.8.0
-py==1.10.0
+py>=1.11.0
 pyasn1==0.4.8
 pycryptodomex==3.10.1
 pygelf==0.4.0

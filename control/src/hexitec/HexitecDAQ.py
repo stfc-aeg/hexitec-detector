@@ -591,7 +591,10 @@ class HexitecDAQ():
         return configured
 
     def get_adapter_status(self, adapter):
-        """Get status from adapter. - To replace get_od_status()?"""
+        """Get status from adapter.
+
+        To replace get_od_status()?
+        """
         if not self.is_initialised:
             return [{"Error": "Adapter {} not initialised with references yet".format(adapter)}]
         try:

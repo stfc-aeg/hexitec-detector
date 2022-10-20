@@ -77,14 +77,6 @@ class Hexitec2x6():
         print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
             counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
 
-###
-    def convert_list_to_string(self, int_list):
-        """Convert list of integer into ASCII string.
-
-        I.e. integer_list = [42, 144, 70, 70, 13], returns '*\x90FF\r'
-        """
-        return "{}".format(''.join([chr(x) for x in int_list]))
-
     def send_cmd(self, cmd):
         """Send a command string to the microcontroller."""
         print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in cmd)))
@@ -100,14 +92,16 @@ class Hexitec2x6():
             if counter == 15001:
                 break
         response = self.x10g_rdma.uart_rx(0x0)
-        # print("R: {}. {}".format(response, counter))
         print("... receiving: {} ({})".format(' '.join("0x{0:02X}".format(x) for x in response), counter))
         return response
         # return self.x10g_rdma.uart_rx(0x0)
 
     def module_mask(self, module):
-        return ((1 << (module -1)) | (1 << (module + 8 -1)))
+        """Bit manipulation for VSR/HV control functions."""
+        return ((1 << (module - 1)) | (1 << (module + 8 - 1)))
+
     def negative_module_mask(self, module):
+        """Bit manipulation for VSR/HV control functions."""
         return ~(1 << (module - 1)) | (1 << (module + 8 - 1))
 
     enable_vsrs_mask = 0x3F
@@ -134,7 +128,7 @@ class Hexitec2x6():
 
     def enable_vsr(self, vsr_number):
         """Control a single VSR's power."""
-        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
         # STEP 1: vsr_ctrl enable $::vsr_target_idx
         mod_mask = self.module_mask(vsr_number)
         cmd_mask = Hexitec2x6.enable_vsrs_mask
@@ -150,9 +144,9 @@ class Hexitec2x6():
 
     def disable_vsr(self, vsr_number):
         """Control a single VSR's power."""
-        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
         # STEP 1: vsr_ctrl disable $::vsr_target_idx
-        mod_mask = self.negative_module_mask(vsr_number) #1)
+        mod_mask = self.negative_module_mask(vsr_number)
         read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
         # print("read_value: {}".format(read_value))
@@ -167,10 +161,10 @@ class Hexitec2x6():
 
     def enable_all_vsrs(self):
         """Switch all VSRs on."""
-        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
         read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
-        masked_value = read_value | 0x3F # Switching all six VSRs on, i.e. set 6 bits on
+        masked_value = read_value | 0x3F    # Switching all six VSRs on, i.e. set 6 bits on
         self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs on")
         time.sleep(1)
         vsr_address = 0xFF
@@ -179,10 +173,10 @@ class Hexitec2x6():
 
     def enable_all_hv(self):
         """Switch all HVs on."""
-        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
         read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
-        masked_value = read_value | Hexitec2x6.hvs_bit_mask # Switching all six HVs on
+        masked_value = read_value | Hexitec2x6.hvs_bit_mask     # Switching all six HVs on
         self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all HVs on")
         time.sleep(1)
         vsr_address = 0xFF
@@ -191,7 +185,7 @@ class Hexitec2x6():
 
     def enable_hv(self, hv_number):
         """Switch on a single VSR's power."""
-        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
         # STEP 1: vsr_ctrl enable $::vsr_target_idx
         mod_mask = self.module_mask(hv_number)
         cmd_mask = Hexitec2x6.hvs_bit_mask
@@ -205,13 +199,12 @@ class Hexitec2x6():
         self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
         print("HV {} on".format(hv_number))
 
-#
     def disable_all_hv(self):
         """Switch all HVs off."""
-        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
         read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
-        masked_value = read_value & 0x3F # Switching all six HVs off
+        masked_value = read_value & 0x3F    # Switching all six HVs off
         self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all HVs off")
         time.sleep(1)
         vsr_address = 0xFF
@@ -220,10 +213,10 @@ class Hexitec2x6():
 
     def disable_all_vsrs(self):
         """Switch all VSRs off."""
-        vsr_ctrl_addr =  Hexitec2x6.vsr_ctrl_offset
+        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
         read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
-        masked_value = read_value & Hexitec2x6.hvs_bit_mask # Switching all six VSRs off
+        masked_value = read_value & Hexitec2x6.hvs_bit_mask  # Switching all six VSRs off
         self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs off")
         time.sleep(1)
         vsr_address = 0xFF
@@ -231,11 +224,10 @@ class Hexitec2x6():
         print("All VSRs disabled")
 
     def power_status(self):
-        """Reads out the status register to check what is switched on and off."""
+        """Read out the status register to check what is switched on and off."""
         read_value = self.x10g_rdma.read(Hexitec2x6.vsr_ctrl_offset, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
         print(" *** Register status: 0x{0:08X}".format(read_value))
-
 
 
 if __name__ == '__main__':  # pragma: no cover
@@ -289,9 +281,7 @@ if __name__ == '__main__':  # pragma: no cover
         # hxt.enable_vsr(2)
         # hxt.power_status()
 
-
     except (socket.error, struct.error) as e:
         print(" *** Scratch register error: {} ***".format(e))
-
 
     hxt.disconnect()

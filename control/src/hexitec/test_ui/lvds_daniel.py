@@ -72,13 +72,6 @@ class Hexitec2x6():
         """."""
         self.x10g_rdma.close()
 
-    def convert_list_to_string(self, int_list):
-        """Convert list of integer into ASCII string.
-
-        I.e. integer_list = [42, 144, 70, 70, 13], returns '*\x90FF\r'
-        """
-        return "{}".format(''.join([chr(x) for x in int_list]))
-
     def send_cmd(self, cmd):
         """Send a command string to the microcontroller."""
         # print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in cmd)))
@@ -106,7 +99,8 @@ class Hexitec2x6():
         resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
         reply = resp[2:-1]                                      # Omit start char, vsr & register addresses, and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
-        # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_high-0x30, address_low-0x30, len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
+        # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_high-0x30, address_low-0x30,
+        #       len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
         return resp, reply
 
     def read_register89(self, vsr_number):
@@ -411,10 +405,10 @@ class Hexitec2x6():
         masked_value = read_value | (cmd_mask & mod_mask)
         self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
         time.sleep(1)
-        # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
-        vsr_address = 0x89 + vsr_number
-        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
-        print("VSR {} enabled".format(vsr_number))
+        # # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
+        # vsr_address = 0x89 + vsr_number
+        # self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
+        # print("VSR {} enabled".format(vsr_number))
 
     def disable_vsr(self, vsr_number):
         """Control a single VSR's power."""
@@ -550,18 +544,19 @@ if __name__ == '__main__':  # pragma: no cover
         # time.sleep(1)
         # hxt.enable_all_vsrs()
 
-        VSR_ADDRESS = [0x90]    # range(0x90, 0x96, 1)
-
+        # VSR_ADDRESS = [0x90]
+        VSR_ADDRESS = range(0x90, 0x96, 1)
         # hxt.enable_vsr(1)  # Switches a single VSR on
         hxt.enable_all_vsrs()   # Switches on all VSR
-        # time.sleep(1)
+
         hxt.power_status()
         this_delay = 10
-        print("1st VSR enabled; Waiting {} seconds".format(this_delay))
+        print("VSR(s) enabled; Waiting {} seconds".format(this_delay))
         time.sleep(this_delay)
 
         print("Init modules (Send 0xE3..)")
         hxt.x10g_rdma.uart_tx([0xFF, 0xE3])
+        # hxt.x10g_rdma.uart_tx([0x90, 0xE3])
         print("Wait 5 sec")
         time.sleep(5)
 

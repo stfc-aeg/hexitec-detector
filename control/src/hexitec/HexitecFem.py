@@ -15,7 +15,8 @@ import logging
 import configparser
 import os
 
-from hexitec.test_ui.RdmaUDP import RdmaUDP
+# from hexitec.test_ui.RdmaUDP import RdmaUDP
+from hexitec.RdmaUDP import RdmaUDP     # Satisfy tox
 
 from socket import error as socket_error
 from odin.adapters.parameter_tree import ParameterTree
@@ -53,11 +54,8 @@ class HexitecFem():
         "2x2"
     ]
 
-    VSR_ADDRESS = [
-        0x90#,
-        # 0x91
-    ]
-    # VSR_ADDRESS = range(0x90, 0x96, 1)
+    # VSR_ADDRESS = [0x90]
+    VSR_ADDRESS = range(0x90, 0x96, 1)
 
     SENSORS_READOUT_OK = 7
 
@@ -655,7 +653,8 @@ class HexitecFem():
         self.hardware_connected = True
         try:
             # for vsr in self.VSR_ADDRESS:
-            self.x10g_rdma.uart_tx([0xFF, 0xE3]);print("\nInit modules (Send 0xE3..)\n")
+            self.x10g_rdma.uart_tx([0xFF, 0xE3])
+            print("\nInit modules (Send 0xE3..)\n")
             self._set_status_message("Waiting 5 seconds (VSRs initialising)")
             time.sleep(5)
             logging.debug("Camera connected")
@@ -1468,7 +1467,7 @@ class HexitecFem():
         logging.debug("Power, Cal and Read Enables have been loaded")
 
     def readout_vsr_register(self, vsr, description, address_h, address_l):
-        """Helper function: readout VSR register.
+        """Read out VSR register.
 
         Example: (vsr, description, address_h, address_l) = 1, "Column Read Enable ASIC2", 0x43, 0x32
         """
@@ -1489,7 +1488,8 @@ class HexitecFem():
         resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
         reply = resp[2:-1]                                      # Omit start char, vsr & register addresses, and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
-        # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_h-0x30, address_l-0x30, len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
+        # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_h-0x30, address_l-0x30,
+        #       len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
         return resp, reply
 
     def read_register89(self, vsr_number):

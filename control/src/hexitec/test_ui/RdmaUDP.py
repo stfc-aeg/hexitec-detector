@@ -345,7 +345,7 @@ class RdmaUDP(object):
 
     def enable_vsr(self, vsr_number):
         """Control a single VSR's power."""
-        vsr_ctrl_addr =  RdmaUDP.vsr_ctrl_offset
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
         # STEP 1: vsr_ctrl enable $::vsr_target_idx
         mod_mask = self.module_mask(vsr_number)
         cmd_mask = RdmaUDP.enable_vsrs_mask
@@ -361,9 +361,9 @@ class RdmaUDP(object):
 
     def disable_vsr(self, vsr_number):
         """Control a single VSR's power."""
-        vsr_ctrl_addr =  RdmaUDP.vsr_ctrl_offset
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
         # STEP 1: vsr_ctrl disable $::vsr_target_idx
-        mod_mask = self.negative_module_mask(vsr_number) #1)
+        mod_mask = self.negative_module_mask(vsr_number)
         read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
         # print("read_value: {}".format(read_value))
@@ -378,10 +378,10 @@ class RdmaUDP(object):
 
     def enable_all_vsrs(self):
         """Switch all VSRs on."""
-        vsr_ctrl_addr =  RdmaUDP.vsr_ctrl_offset
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
         read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
-        masked_value = read_value | 0x3F # Switching all six VSRs on, i.e. set 6 bits on
+        masked_value = read_value | 0x3F    # Switching all six VSRs on, i.e. set 6 bits on
         self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs on")
         time.sleep(1)
         vsr_address = 0xFF
@@ -390,10 +390,10 @@ class RdmaUDP(object):
 
     def enable_all_hv(self):
         """Switch all HVs on."""
-        vsr_ctrl_addr =  RdmaUDP.vsr_ctrl_offset
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
         read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
-        masked_value = read_value | RdmaUDP.hvs_bit_mask # Switching all six HVs on
+        masked_value = read_value | RdmaUDP.hvs_bit_mask    # Switching all six HVs on
         self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all HVs on")
         time.sleep(1)
         vsr_address = 0xFF
@@ -402,7 +402,7 @@ class RdmaUDP(object):
 
     def enable_hv(self, hv_number):
         """Switch on a single VSR's power."""
-        vsr_ctrl_addr =  RdmaUDP.vsr_ctrl_offset
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
         # STEP 1: vsr_ctrl enable $::vsr_target_idx
         mod_mask = self.module_mask(hv_number)
         cmd_mask = RdmaUDP.hvs_bit_mask
@@ -418,10 +418,10 @@ class RdmaUDP(object):
 
     def disable_all_hv(self):
         """Switch all HVs off."""
-        vsr_ctrl_addr =  RdmaUDP.vsr_ctrl_offset
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
         read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
-        masked_value = read_value & 0x3F # Switching all six HVs off
+        masked_value = read_value & 0x3F    # Switching all six HVs off
         self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all HVs off")
         time.sleep(1)
         vsr_address = 0xFF
@@ -430,10 +430,10 @@ class RdmaUDP(object):
 
     def disable_all_vsrs(self):
         """Switch all VSRs off."""
-        vsr_ctrl_addr =  RdmaUDP.vsr_ctrl_offset
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
         read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
-        masked_value = read_value & RdmaUDP.hvs_bit_mask # Switching all six VSRs off
+        masked_value = read_value & RdmaUDP.hvs_bit_mask    # Switching all six VSRs off
         self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs off")
         time.sleep(1)
         vsr_address = 0xFF
@@ -441,14 +441,16 @@ class RdmaUDP(object):
         print("All VSRs disabled")
 
     def power_status(self):
-        """Reads out the status register to check what is switched on and off."""
+        """Read out the status register to check what is switched on and off."""
         read_value = self.read(RdmaUDP.vsr_ctrl_offset, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
         # print(" *** Register status: 0x{0:08X}".format(read_value))
         return read_value
 
     def module_mask(self, module):
-        return ((1 << (module -1)) | (1 << (module + 8 -1)))
+        """Bit manipulation for VSR/HV control functions."""
+        return ((1 << (module - 1)) | (1 << (module + 8 - 1)))
 
     def negative_module_mask(self, module):
+        """Bit manipulation for VSR/HV control functions."""
         return ~(1 << (module - 1)) | (1 << (module + 8 - 1))

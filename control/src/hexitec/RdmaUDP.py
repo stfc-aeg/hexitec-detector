@@ -34,12 +34,15 @@ rx_buff_strb_mask = 0x2
 rx_buff_level_mask = 0xFF00
 rx_buff_data_mask = 0xFF0000
 
-# TODO: This global variable to be removed post debugging
-SLEEP_DELAY = 0.000   # 2
-
 
 class RdmaUDP(object):
     """Class for handling RDMA UDP transactions."""
+
+    enable_vsrs_mask = 0x3F
+    hvs_bit_mask = 0x3F00
+    vsr_ctrl_offset = 0x18
+    ENABLE_VSR = 0xE3
+    DISABLE_VSR = 0xE2
 
     def __init__(self, local_ip='192.168.0.1', local_port=65535,
                  rdma_ip='192.168.0.2', rdma_port=65536,
@@ -148,10 +151,10 @@ class RdmaUDP(object):
         except struct.error as e:
             print(" *** Read Ack Error: {} ***".format(e))
             raise struct.error(e)
-        time.sleep(SLEEP_DELAY)
         return data
 
     def debug_var(self, variable):
+        """Debug function that will print, type of argument."""
         return ("{} : {}".format(variable, type(variable)))
 
     def write(self, address, data, burst_len=1, comment=''):
@@ -203,7 +206,6 @@ class RdmaUDP(object):
             raise socket.error(e)
         except struct.error as e:
             print(" *** Write Ack Error: {} ***".format(e))
-        time.sleep(SLEEP_DELAY)
 
     def convert_to_list(self, data, burst_len):
         """
@@ -264,7 +266,10 @@ class RdmaUDP(object):
         """Transmit command to the UART."""
         debug = False   # True
         uart_tx_ctrl_addr = uart_tx_ctrl_offset
-
+        if vsr_start_char in cmd:
+            raise Exception("Extra start (0x23) char detected!")
+        if vsr_end_char in cmd:
+            raise Exception("Extra end (0x0D) char detected!")
         vsr_seq = [vsr_start_char]
         for d in cmd:
             vsr_seq.append(d)
@@ -306,7 +311,7 @@ class RdmaUDP(object):
         is_rx_buff_full = 0
         is_rx_buff_empty = 0
         is_rx_pkt_done = 0
-        uart_status =(0, )
+        uart_status = (0, )
         try:
             # self.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Write TX Deassert All")
             uart_status = self.read(uart_status_offset, burst_len=1, comment="Read UART Status")
@@ -319,3 +324,133 @@ class RdmaUDP(object):
         except Exception as e:
             print(" *** read_uart_status error: {} ***".format(e))
         return uart_status, is_tx_buff_full, is_tx_buff_empty, is_rx_buff_full, is_rx_buff_empty, is_rx_pkt_done
+
+#
+
+    def enable_vsr_or_hv(self, vsr_number, bit_mask):
+        """Control a single VSR's power."""
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
+        # STEP 1: vsr_ctrl enable $::vsr_target_idx
+        mod_mask = self.module_mask(vsr_number)
+        cmd_mask = bit_mask
+        read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value | (cmd_mask & mod_mask)
+        self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
+        time.sleep(1)
+        # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
+        vsr_address = 0x89 + vsr_number
+        self.uart_tx([vsr_address, RdmaUDP.ENABLE_VSR])
+        print("VSR {} enabled".format(vsr_number))
+
+    def enable_vsr(self, vsr_number):
+        """Control a single VSR's power."""
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
+        # STEP 1: vsr_ctrl enable $::vsr_target_idx
+        mod_mask = self.module_mask(vsr_number)
+        cmd_mask = RdmaUDP.enable_vsrs_mask
+        read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value | (cmd_mask & mod_mask)
+        self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
+        time.sleep(1)
+        # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
+        vsr_address = 0x89 + vsr_number
+        self.uart_tx([vsr_address, RdmaUDP.ENABLE_VSR])
+        print("VSR {} enabled".format(vsr_number))
+
+    def disable_vsr(self, vsr_number):
+        """Control a single VSR's power."""
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
+        # STEP 1: vsr_ctrl disable $::vsr_target_idx
+        mod_mask = self.negative_module_mask(vsr_number)
+        read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        # print("read_value: {}".format(read_value))
+        # print("mod_mask: {}".format(mod_mask))
+        masked_value = read_value & mod_mask
+        self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
+        time.sleep(1)
+        # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
+        vsr_address = 0x89 + vsr_number
+        self.uart_tx([vsr_address, RdmaUDP.DISABLE_VSR])
+        print("VSR {} disabled".format(vsr_number))
+
+    def enable_all_vsrs(self):
+        """Switch all VSRs on."""
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
+        read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value | 0x3F    # Switching all six VSRs on, i.e. set 6 bits on
+        self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs on")
+        time.sleep(1)
+        vsr_address = 0xFF
+        self.uart_tx([vsr_address, RdmaUDP.ENABLE_VSR])
+        print("All VSRs enabled")
+
+    def enable_all_hv(self):
+        """Switch all HVs on."""
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
+        read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value | RdmaUDP.hvs_bit_mask    # Switching all six HVs on
+        self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all HVs on")
+        time.sleep(1)
+        vsr_address = 0xFF
+        self.uart_tx([vsr_address, RdmaUDP.ENABLE_VSR])
+        print("All HVs on")
+
+    def enable_hv(self, hv_number):
+        """Switch on a single VSR's power."""
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
+        # STEP 1: vsr_ctrl enable $::vsr_target_idx
+        mod_mask = self.module_mask(hv_number)
+        cmd_mask = RdmaUDP.hvs_bit_mask
+        read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value | (cmd_mask & mod_mask)
+        self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
+        time.sleep(1)
+        # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
+        vsr_address = 0x89 + hv_number
+        self.uart_tx([vsr_address, RdmaUDP.ENABLE_VSR])
+        print("HV {} on".format(hv_number))
+
+    def disable_all_hv(self):
+        """Switch all HVs off."""
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
+        read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value & 0x3F    # Switching all six HVs off
+        self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all HVs off")
+        time.sleep(1)
+        vsr_address = 0xFF
+        self.uart_tx([vsr_address, RdmaUDP.DISABLE_VSR])
+        print("All HVs off")
+
+    def disable_all_vsrs(self):
+        """Switch all VSRs off."""
+        vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
+        read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        masked_value = read_value & RdmaUDP.hvs_bit_mask    # Switching all six VSRs off
+        self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs off")
+        time.sleep(1)
+        vsr_address = 0xFF
+        self.uart_tx([vsr_address, RdmaUDP.DISABLE_VSR])
+        print("All VSRs disabled")
+
+    def power_status(self):
+        """Read out the status register to check what is switched on and off."""
+        read_value = self.read(RdmaUDP.vsr_ctrl_offset, burst_len=1, comment='Read vsr_ctrl_addr current value')
+        read_value = read_value[0]
+        # print(" *** Register status: 0x{0:08X}".format(read_value))
+        return read_value
+
+    def module_mask(self, module):
+        """Bit manipulation for VSR/HV control functions."""
+        return ((1 << (module - 1)) | (1 << (module + 8 - 1)))
+
+    def negative_module_mask(self, module):
+        """Bit manipulation for VSR/HV control functions."""
+        return ~(1 << (module - 1)) | (1 << (module + 8 - 1))
