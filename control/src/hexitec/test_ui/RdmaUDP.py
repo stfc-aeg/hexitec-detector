@@ -233,6 +233,15 @@ class RdmaUDP(object):
     def uart_rx(self, uart_address):
         """Receive all data available in the UART."""
         debug = False    # True
+# #
+#         uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
+
+#         # Check that UART buffer is empty (1 = empty, 0 = has data)
+#         is_tx_buff_empty, is_rx_buff_empty = self.check_tx_rx_buffs_empty()
+#         print(" uart_tx, rx_buff_empty: {} is_tx_buff_empty: {}, is_rx_buff_empty: {}".format(rx_buff_empty, is_tx_buff_empty, is_rx_buff_empty))
+#         if is_rx_buff_empty == 0:
+#             raise Exception("uart_rx: RX Buffer NOT empty!")
+# #
         uart_status_addr = uart_address + uart_status_offset
         uart_rx_ctrl_addr = uart_address + uart_rx_ctrl_offset
         read_value = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer Status (0)')
@@ -266,6 +275,12 @@ class RdmaUDP(object):
         """Transmit command to the UART."""
         debug = False   # True
         uart_tx_ctrl_addr = uart_tx_ctrl_offset
+        # Check that UART buffer is empty (1 = empty, 0 = has data)
+        is_tx_buff_empty, is_rx_buff_empty = self.check_tx_rx_buffs_empty()
+        # print(" uart_tx, is_tx_buff_empty: {} , is_rx_buff_empty: {}".format(is_tx_buff_empty, is_rx_buff_empty))
+        if is_tx_buff_empty == 0:
+            raise Exception("uart_tx: TX Buffer NOT empty!")
+
         if vsr_start_char in cmd:
             raise Exception("Extra start (0x23) char detected!")
         if vsr_end_char in cmd:
@@ -325,6 +340,22 @@ class RdmaUDP(object):
             print(" *** read_uart_status error: {} ***".format(e))
         return uart_status, is_tx_buff_full, is_tx_buff_empty, is_rx_buff_full, is_rx_buff_empty, is_rx_pkt_done
 
+    def check_tx_rx_buffs_empty(self):
+        """Check whether tx, rx buffers empty.
+
+        Returns tx, rx status - 1 = Empty, 0 = Has data.
+        """
+        is_tx_buff_empty = 0
+        is_rx_buff_empty = 0
+        uart_status = (0, )
+        try:
+            uart_status = self.read(uart_status_offset, burst_len=1, comment="Read UART Status")
+            uart_status = uart_status[0]
+            is_tx_buff_empty = (uart_status & tx_buff_empty_mask) >> 1
+            is_rx_buff_empty = (uart_status & rx_buff_empty_mask) >> 3
+        except Exception as e:
+            print(" *** check_tx_buff_empty error: {} ***".format(e))
+        return is_tx_buff_empty, is_rx_buff_empty
 #
 
     def enable_vsr_or_hv(self, vsr_number, bit_mask):

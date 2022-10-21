@@ -1335,8 +1335,8 @@ class HexitecFem():
                 asic1_command.append(lsb)
             # Column Read Enable, for ASIC1 (Reg 0x61)
             register_values = asic1_command
-            print("  ... producing register_values: {}  ".format(' '.join("0x{0:02X}".format(x) for x in register_values)))
-            print("   i.e.:  {}".format(register_values))
+            # print("  ... producing register_values: {}  ".format(' '.join("0x{0:02X}".format(x) for x in register_values)))
+            # print("   i.e.:  {}".format(register_values))
             # self.block_write_custom_length(self.vsr_addr, number_registers, address_h, address_l, register_values)
             self.enables_write_and_read_verify(self.vsr_addr, address_h, address_l, register_values)
         else:
@@ -1368,8 +1368,8 @@ class HexitecFem():
             logging.error(" Register 0x{0}{1}: ERROR".format(chr(address_h), chr(address_l)))
             logging.error("     Wrote: {}".format(write_list))
             logging.error("     Read : {}".format(read_list))
-        else:
-            print(" Register 0x{0}{1} -- ALL FINE".format(chr(address_h), chr(address_l)))
+        # else:
+        #     print(" Register 0x{0}{1} -- ALL FINE".format(chr(address_h), chr(address_l)))
 
     def load_pwr_cal_read_enables(self):  # noqa: C901
         """Load power, calibration and read enables - optionally from hexitec file."""
