@@ -130,11 +130,12 @@ class Hexitec2x6():
     def write_and_response(self, vsr, address_h, address_l, value_h, value_l, masked=True, delay=False):
         """Write value_h, value_l to address_h, address_l of vsr, if not masked then register value overwritten."""
         resp, reply = self.read_and_response(vsr, address_h, address_l)
+        # print("   WaR. RD1 reply: {} (resp: {})".format(reply, resp))
         resp = resp[2:-1]   # Extract payload
         if masked:
             value_h = value_h | resp[0]     # Mask existing value with new value
             value_l = value_l | resp[1]     # Mask existing value with new value
-        # print("   WaR Write: {} {} {} {} {}".format(vsr, address_h, address_l, value_h, value_l))
+        # print("   WaR Write: {0:X} {1:X} {2:X} {3:X} {4:X}".format(vsr, address_h, address_l, value_h, value_l))
         self.send_cmd([vsr, 0x40, address_h, address_l, value_h, value_l])
         if delay:
             time.sleep(0.2)
@@ -143,7 +144,7 @@ class Hexitec2x6():
             time.sleep(0.2)
         reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
-        # print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
+        # print("   WR. RD2 reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
         return resp, reply
 
     def initialise_vsr(self, vsr):
@@ -153,26 +154,16 @@ class Hexitec2x6():
         90	42	01	10	;Select external Clock
         90	42	07	03	;Enable PLLs
         """
-        # self.write_and_response(vsr, 0x30, 0x31, 0x31, 0x30)     # Select external Clock
-        self.send_cmd([vsr, 0x42, 0x30, 0x31, 0x31, 0x30])
-        self.read_response()
-        # Toggle PLLs?
-        resp, reply = self.read_register89(vsr)
-        print("PLL (R89) after selecting external clock: {} - Not touching PLLs".format(reply))
-        # print("DS: Clear bit 0 in register 07")
-        # # self.write_and_response(vsr, 0x30, 0x37, 0x30, 0x31)     # Enable PLLs
-        # self.send_cmd([vsr, 0x43, 0x30, 0x37, 0x30, 0x31])
-        # self.read_response()
-        # print("DS: Set bit 0 in register 07")
-        # self.send_cmd([vsr, 0x42, 0x30, 0x37, 0x30, 0x31])
+        self.write_and_response(vsr, 0x30, 0x31, 0x31, 0x30)     # Select external Clock
+        # self.send_cmd([vsr, 0x42, 0x30, 0x31, 0x31, 0x30])
         # self.read_response()
         """
         90	42	01	20	;Enable LVDS Interface
         """
-        # self.write_and_response(vsr, 0x30, 0x31, 0x32, 0x30)     # Enable LVDS Interface
         print("Enable LVDS Interface")
-        self.send_cmd([vsr, 0x42, 0x30, 0x31, 0x32, 0x30])
-        self.read_response()
+        self.write_and_response(vsr, 0x30, 0x31, 0x32, 0x30)     # Enable LVDS Interface
+        # self.send_cmd([vsr, 0x42, 0x30, 0x31, 0x32, 0x30])
+        # self.read_response()
         """
         90	43	01	01	;Disable SM
         90	42	01	01	;Enable SM
@@ -220,10 +211,6 @@ class Hexitec2x6():
         masked_value = read_value | (cmd_mask & mod_mask)
         self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
         time.sleep(1)
-        # # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
-        # vsr_address = 0x89 + vsr_number
-        # self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
-        # print("VSR {} enabled".format(vsr_number))
 
     def enable_all_vsrs(self):
         """Switch all VSRs on."""
@@ -267,10 +254,9 @@ if __name__ == '__main__':  # pragma: no cover
     hxt.connect()
     beginning = time.time()
     try:
-
         VSR_ADDRESS = [0x90]
-        # VSR_ADDRESS = range(0x90, 0x96, 1)
         hxt.enable_vsr(1)  # Switches a single VSR on
+        # VSR_ADDRESS = range(0x90, 0x96, 1)
         # hxt.enable_all_vsrs()   # Switches on all VSR
 
         hxt.power_status()
@@ -293,28 +279,12 @@ if __name__ == '__main__':  # pragma: no cover
 
         print("Waiting 0.2 seconds..")
         time.sleep(0.2)
-        # for vsr in VSR_ADDRESS:
-        #     print("Enabling training on VSR: 0x{0:X}".format(vsr))
-        #     hxt.send_cmd([vsr, 0x42, 0x30, 0x31, 0x30, 0x38])
 
         print("set re_EN_TRAINING '0'")
         training_en_mask = 0x00
         hxt.x10g_rdma.write(0x00000020, 0x00, burst_len=1, comment="Enabling training")
 
-        # for vsr in VSR_ADDRESS:
-        #     print("Disabling training on VSR: 0x{0:X}".format(vsr))
-        #     print("Disabled training")
-        #     hxt.send_cmd([vsr, 0x43, 0x30, 0x31, 0x30, 0x38])
-        #     print("Enable triggered SM start")
-        #     hxt.send_cmd([vsr, 0x40, 0x30, 0x41, 0x30, 0x31])
-
-        # print("Set re_EN_SM '1'")
-        # hxt.x10g_rdma.write(0x1C, 0x1, burst_len=1, comment="Set re_EN_SM '1'")
-        # print("Set re_EN_DATA '1'")
-        # hxt.x10g_rdma.write(0x20, 0x1, burst_len=1, comment="Set re_EN_DATA '1'")
-
         vsr_status_addr = 0x000003E8  # Flags of interest: locked, +4 to get to the next VSR, et cetera for all VSRs
-        # for index in range(6):
         for vsr in VSR_ADDRESS:
             index = vsr - 144
             vsr_status = hxt.x10g_rdma.read(vsr_status_addr, burst_len=1, comment="Read vsr{}_status".format(index))
@@ -322,7 +292,7 @@ if __name__ == '__main__':  # pragma: no cover
             locked = vsr_status & 0xFF
             print("vsr{0}_status 0x{1:08X} = 0x{2:08X}. Locked? 0x{3:X}".format(index, vsr_status_addr, vsr_status, locked))
             vsr_status_addr += 4
-            time.sleep(0.5)
+            # time.sleep(0.5)
 
     except (socket.error, struct.error) as e:
         print(" *** Caught Exception: {} ***".format(e))

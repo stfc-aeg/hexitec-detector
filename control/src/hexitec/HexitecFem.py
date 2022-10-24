@@ -481,7 +481,7 @@ class HexitecFem():
         #     # print(" * poll_sensors() not reading sensors *")
         # IOLoop.instance().call_later(3.0, self.poll_sensors)
 
-    @run_on_executor(executor='thread_executor')
+    # @run_on_executor(executor='thread_executor')
     def connect_hardware(self, msg=None):
         """Establish Hardware connection."""
         try:
@@ -490,10 +490,9 @@ class HexitecFem():
             else:
                 self._set_status_error("")
             self.hardware_busy = True
-            self.power_and_enable_modules()
-            self._set_status_message("Camera connected.")
+            self.power_up_modules()
         except HexitecFemError as e:
-            self._set_status_error("Failed to connect with camera: %s" % str(e))
+            self._set_status_error("%s" % str(e))
             self._set_status_message("Is the camera powered?")
             logging.error("%s" % str(e))
         except Exception as e:
@@ -501,44 +500,31 @@ class HexitecFem():
             self._set_status_error(error)
             logging.error("Camera connection: %s" % str(e))
             # Cannot raise error beyond current thread
-        self.hardware_busy = False
 
-        # Start polling thread (connect successfully set up)
-        if len(self.status_error) == 0:
-            self._start_polling()
-
-    def power_and_enable_modules(self):
+    def power_up_modules(self):
         """Power up and enable VSRs."""
-        self.hardware_connected = True
-        logging.debug("Connecting camera")
         try:
             self.connect()
+            self.hardware_connected = True
+            self._set_status_message("Camera connected.")
             logging.debug("UDP connection established")
 
-            # self.x10g_rdma.disable_all_vsrs()  # Working
-            # read_value = self.x10g_rdma.power_status()
-            # if (read_value == 0x0):
-            #     print(" OK Power: 0x{0:08X}".format(read_value))
-            # else:
-            #     print(" !! Power: 0x{0:08X}".format(read_value))
-            #     raise Exception("Power cycling(?) VSRs failed!")
-
-            # self.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
             self.x10g_rdma.enable_all_vsrs()
             expected_value = 0x3F   # 0x1
             read_value = self.x10g_rdma.power_status()
             if (read_value == expected_value):
                 print(" OK Power: 0x{0:08X}".format(read_value))
             else:
-                logging.error(" !! Power: 0x{0:08X}".format(read_value))
-                raise Exception("Powering up VSRs failed!")
+                message = "Expected 0x{0:02X} not 0x{1:02X}".format(expected_value, read_value)
+                logging.error("Not all VSRs powered up, {}".format(message))
+                raise HexitecFemError("Powering VSRs Error, {}".format(message))
             powering_delay = 10
             print("    VSR(s) enabled; Waiting {} seconds".format(powering_delay))
             self._set_status_message("Waiting {} seconds (VSRs booting)".format(powering_delay))
-            time.sleep(powering_delay)
-            self.cam_connect()
+            IOLoop.instance().call_later(powering_delay, self.cam_connect)    # self.powering_modules_completed)
         except socket_error as e:
             self.hardware_connected = False
+            self.hardware_busy = False
             raise HexitecFemError(e)
 
     def initialise_hardware(self, msg=None):
@@ -649,19 +635,32 @@ class HexitecFem():
         return response
 
     def cam_connect(self):
-        """Send commands to connect camera."""
-        self.hardware_connected = True
+        """Send init command(s) to VSRs."""
         try:
             # for vsr in self.VSR_ADDRESS:
             self.x10g_rdma.uart_tx([0xFF, 0xE3])
-            print("\nInit modules (Send 0xE3..)\n")
+            print("\nInit modules (Sent 0xE3..)\n")
             self._set_status_message("Waiting 5 seconds (VSRs initialising)")
-            time.sleep(5)
-            logging.debug("Camera connected")
+            IOLoop.instance().call_later(5, self.cam_connect_completed)
+        except socket_error as e:
+            self.hardware_connected = False
+            self.hardware_busy = False
+            raise HexitecFemError(e)
+
+    def cam_connect_completed(self):
+        """The VSRs are initialised."""
+        try:
+            self._set_status_message("VSRs initialised")
+            print("\n\t INITIALISED\n")
             logging.debug("Modules Enabled")
         except socket_error as e:
             self.hardware_connected = False
             raise HexitecFemError(e)
+        self.hardware_busy = False
+
+        # Start polling thread (connect successfully set up)
+        if len(self.status_error) == 0:
+            self._start_polling()
 
     def cam_disconnect(self):
         """Send commands to disconnect camera."""
@@ -1536,88 +1535,30 @@ class HexitecFem():
                     if time_taken > 3.0:
                         raise HexitecFemError("Timed out polling register 0x89; PLL remains disabled")
 
-            # enable_sm_vsr1 = [HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT,
-            #                   0x30, 0x31, 0x30, 0x31]
-            # enable_sm_vsr2 = [HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT,
-            #                   0x30, 0x31, 0x30, 0x31]
-            # disable_sm_vsr1 = [HexitecFem.VSR_ADDRESS[0], HexitecFem.CLR_REG_BIT,
-            #                    0x30, 0x31, 0x30, 0x31]
-            # disable_sm_vsr2 = [HexitecFem.VSR_ADDRESS[1], HexitecFem.CLR_REG_BIT,
-            #                    0x30, 0x31, 0x30, 0x31]
+            print("set re_EN_TRAINING '1'")
+            training_en_mask = 0x10
+            self.x10g_rdma.write(0x00000020, 0x10, burst_len=1, comment="Enabling training")
 
-            # # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
-            # self.send_cmd([HexitecFem.VSR_ADDRESS[1], HexitecFem.READ_REG_VALUE,
-            #               0x38, 0x46])
-            # self.read_response()
-            # self.send_cmd([HexitecFem.VSR_ADDRESS[1], HexitecFem.SET_REG_BIT,
-            #               0x38, 0x46, 0x30, 0x31])
-            # self.read_response()
+            print("Waiting 0.2 seconds..")
+            time.sleep(0.2)
 
-            # # Repeat with other VSR board
-            # self.send_cmd([HexitecFem.VSR_ADDRESS[0], HexitecFem.READ_REG_VALUE,
-            #               0x38, 0x46])
-            # self.read_response()
-            # self.send_cmd([HexitecFem.VSR_ADDRESS[0], HexitecFem.SET_REG_BIT,
-            #               0x38, 0x46, 0x30, 0x31])
-            # self.read_response()
+            print("set re_EN_TRAINING '0'")
+            training_en_mask = 0x00
+            self.x10g_rdma.write(0x00000020, 0x00, burst_len=1, comment="Enabling training")
 
-            # # Stop the state machine
-
-            # self.send_cmd(disable_sm_vsr1)
-            # self.read_response()
-            # self.send_cmd(disable_sm_vsr2)
-            # self.read_response()
-
-            # # Re-Start the state machine
-
-            # self.send_cmd(enable_sm_vsr1)
-            # self.read_response()
-            # self.send_cmd(enable_sm_vsr2)
-            # self.read_response()
-
-            # ###
-
-            # self._set_status_message("Configuring VSR2")
-            # self.selected_sensor = HexitecFem.OPTIONS[2]
-
-            # self.initialise_sensor()
-            # self._set_status_message("VSR2: Sensors initialised.")
-
-            # self.set_up_state_machine()
-            # self._set_status_message("VSR2: State Machine setup")
-
-            # self.write_dac_values()
-            # self._set_status_message("VSR2: DAC values written")
-
-            # self.enable_adc()
-            # self._set_status_message("VSR2: ADC enabled")
-
-            # self.load_pwr_cal_read_enables()
-            # self._set_status_message("VSR2: Loaded Power, Calibrate, Read Enables")
-
-            # synced_status = self.calibrate_sensor()
-            # logging.debug("Calibrated sensor returned synchronised status: %s" % synced_status)
-
-            # self._set_status_message("Configuring VSR1")
-            # self.selected_sensor = HexitecFem.OPTIONS[0]
-
-            # self.initialise_sensor()
-            # self._set_status_message("VSR1: Sensors initialised")
-
-            # self.set_up_state_machine()
-            # self._set_status_message("VSR1: State Machine setup")
-
-            # self.write_dac_values()
-            # self._set_status_message("VSR1: DAC values written")
-
-            # self.enable_adc()
-            # self._set_status_message("VSR1: ADC enabled")
-
-            # self.load_pwr_cal_read_enables()
-            # self._set_status_message("VSR1: Loaded Power, Calibrate, Read Enables")
-
-            # synced_status = self.calibrate_sensor()
-            # logging.debug("Calibrated sensor returned synchronised status: %s" % synced_status)
+            vsr_status_addr = 0x000003E8  # Flags of interest: locked, +4 to get to the next VSR, et cetera for all VSRs
+            for vsr in self.VSR_ADDRESS:
+                index = vsr - 144
+                vsr_status = self.x10g_rdma.read(vsr_status_addr, burst_len=1, comment="Read vsr{}_status".format(index))
+                vsr_status = vsr_status[0]
+                locked = vsr_status & 0xFF
+                # print("vsr{0}_status 0x{1:08X} = 0x{2:08X}. Locked? 0x{3:X}".format(index, vsr_status_addr, vsr_status, locked))
+                if (locked == 0xFF):
+                    logging.debug("VSR{0} Locked (0x{1:X})".format(vsr-143, locked))
+                else:
+                    logging.error("VSR{0} incomplete lock! (0x{1:X})".format(vsr-143, locked))
+                    raise HexitecFemError("VSR{0} failed to lock! (0x{1:X})".format(vsr-143, locked))
+                vsr_status_addr += 4
 
             self._set_status_message("Initialisation completed. VSRs configured.")
             print(" -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=- ")
@@ -1773,7 +1714,10 @@ class HexitecFem():
         """
         self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x32)    # Disable Vcal/Capture Avg Picture
         self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x38)    # Disable Vcal/En DC spectroscopic mode
-        self.write_and_response(vsr, 0x30, 0x31, 0x38, 0x30)    # Enable Training
+        # self.write_and_response(vsr, 0x30, 0x31, 0x38, 0x30)    # Enable Training
+        self.send_cmd([vsr, 0x42, 0x30, 0x31, 0x38, 0x30])
+        self.read_response()
+
         # self.write_and_response(vsr, 0x31, 0x38, 0x30, 0x31) # Low Byte SM Vcal Clock
         # TODO: Inserting VCal setting here
         # Send VCAL2 -> VCAL1 low byte to Register 0x02 (Accepts 8 bits)
