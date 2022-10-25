@@ -96,139 +96,6 @@ class Hexitec2x6():
         return response
         # return self.x10g_rdma.uart_rx(0x0)
 
-    def module_mask(self, module):
-        """Bit manipulation for VSR/HV control functions."""
-        return ((1 << (module - 1)) | (1 << (module + 8 - 1)))
-
-    def negative_module_mask(self, module):
-        """Bit manipulation for VSR/HV control functions."""
-        return ~(1 << (module - 1)) | (1 << (module + 8 - 1))
-
-    enable_vsrs_mask = 0x3F
-    hvs_bit_mask = 0x3F00
-    vsr_ctrl_offset = 0x18
-    ENABLE_VSR = 0xE3
-    DISABLE_VSR = 0xE2
-
-    def enable_vsr_or_hv(self, vsr_number, bit_mask):
-        """Control a single VSR's power."""
-        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
-        # STEP 1: vsr_ctrl enable $::vsr_target_idx
-        mod_mask = self.module_mask(vsr_number)
-        cmd_mask = bit_mask
-        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
-        read_value = read_value[0]
-        masked_value = read_value | (cmd_mask & mod_mask)
-        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
-        time.sleep(1)
-        # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
-        vsr_address = 0x89 + vsr_number
-        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
-        print("VSR {} enabled".format(vsr_number))
-
-    def enable_vsr(self, vsr_number):
-        """Control a single VSR's power."""
-        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
-        # STEP 1: vsr_ctrl enable $::vsr_target_idx
-        mod_mask = self.module_mask(vsr_number)
-        cmd_mask = Hexitec2x6.enable_vsrs_mask
-        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
-        read_value = read_value[0]
-        masked_value = read_value | (cmd_mask & mod_mask)
-        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
-        time.sleep(1)
-        # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
-        vsr_address = 0x89 + vsr_number
-        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
-        print("VSR {} enabled".format(vsr_number))
-
-    def disable_vsr(self, vsr_number):
-        """Control a single VSR's power."""
-        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
-        # STEP 1: vsr_ctrl disable $::vsr_target_idx
-        mod_mask = self.negative_module_mask(vsr_number)
-        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
-        read_value = read_value[0]
-        # print("read_value: {}".format(read_value))
-        # print("mod_mask: {}".format(mod_mask))
-        masked_value = read_value & mod_mask
-        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
-        time.sleep(1)
-        # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
-        vsr_address = 0x89 + vsr_number
-        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.DISABLE_VSR])
-        print("VSR {} disabled".format(vsr_number))
-
-    def enable_all_vsrs(self):
-        """Switch all VSRs on."""
-        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
-        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
-        read_value = read_value[0]
-        masked_value = read_value | 0x3F    # Switching all six VSRs on, i.e. set 6 bits on
-        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs on")
-        time.sleep(1)
-        vsr_address = 0xFF
-        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
-        print("All VSRs enabled")
-
-    def enable_all_hv(self):
-        """Switch all HVs on."""
-        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
-        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
-        read_value = read_value[0]
-        masked_value = read_value | Hexitec2x6.hvs_bit_mask     # Switching all six HVs on
-        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all HVs on")
-        time.sleep(1)
-        vsr_address = 0xFF
-        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
-        print("All HVs on")
-
-    def enable_hv(self, hv_number):
-        """Switch on a single VSR's power."""
-        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
-        # STEP 1: vsr_ctrl enable $::vsr_target_idx
-        mod_mask = self.module_mask(hv_number)
-        cmd_mask = Hexitec2x6.hvs_bit_mask
-        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
-        read_value = read_value[0]
-        masked_value = read_value | (cmd_mask & mod_mask)
-        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
-        time.sleep(1)
-        # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
-        vsr_address = 0x89 + hv_number
-        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
-        print("HV {} on".format(hv_number))
-
-    def disable_all_hv(self):
-        """Switch all HVs off."""
-        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
-        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
-        read_value = read_value[0]
-        masked_value = read_value & 0x3F    # Switching all six HVs off
-        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all HVs off")
-        time.sleep(1)
-        vsr_address = 0xFF
-        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.DISABLE_VSR])
-        print("All HVs off")
-
-    def disable_all_vsrs(self):
-        """Switch all VSRs off."""
-        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
-        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
-        read_value = read_value[0]
-        masked_value = read_value & Hexitec2x6.hvs_bit_mask  # Switching all six VSRs off
-        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs off")
-        time.sleep(1)
-        vsr_address = 0xFF
-        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.DISABLE_VSR])
-        print("All VSRs disabled")
-
-    def power_status(self):
-        """Read out the status register to check what is switched on and off."""
-        read_value = self.x10g_rdma.read(Hexitec2x6.vsr_ctrl_offset, burst_len=1, comment='Read vsr_ctrl_addr current value')
-        read_value = read_value[0]
-        print(" *** Register status: 0x{0:08X}".format(read_value))
-
 
 if __name__ == '__main__':  # pragma: no cover
     if (len(sys.argv) != 4):
@@ -248,38 +115,38 @@ if __name__ == '__main__':  # pragma: no cover
         vsr_number = 0x90
 
         # # Enable VSR(s)..
-        # hxt.enable_vsr_or_hv(1, Hexitec2x6.enable_vsrs_mask)  # Switches a single VSR on
-        # hxt.enable_vsr_or_hv(1, Hexitec2x6.hvs_bit_mask)  # Switches a single HV on
-        # hxt.enable_vsr_or_hv(2, Hexitec2x6.enable_vsrs_mask)
+        # hxt.x10g_rdma.enable_vsr_or_hv(1, Hexitec2x6.enable_vsrs_mask)  # Switches a single VSR on
+        # hxt.x10g_rdma.enable_vsr_or_hv(1, Hexitec2x6.hvs_bit_mask)  # Switches a single HV on
+        # hxt.x10g_rdma.enable_vsr_or_hv(2, Hexitec2x6.enable_vsrs_mask)
 
-        # hxt.disable_all_hv()    # Working
-        hxt.disable_all_vsrs()  # Working
+        # hxt.x10g_rdma.disable_all_hv()    # Working
+        hxt.x10g_rdma.disable_all_vsrs()  # Working
         time.sleep(1)
-        # hxt.disable_all_hv()
-        hxt.power_status()
+        # hxt.x10g_rdma.disable_all_hv()
+        print(" power status: {0:x}".format(hxt.x10g_rdma.power_status()))
         # time.sleep(1)
-        hxt.enable_all_vsrs()
-        # hxt.enable_vsr(1)  # Switches a single VSR on
+        hxt.x10g_rdma.enable_all_vsrs()
+        # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
         # time.sleep(1)
-        # hxt.enable_vsr(2)
+        # hxt.x10g_rdma.enable_vsr(2)
         # time.sleep(1)
-        # hxt.enable_vsr(3)  # Switches a single VSR on
+        # hxt.x10g_rdma.enable_vsr(3)  # Switches a single VSR on
         # time.sleep(1)
-        # hxt.enable_vsr(4)  # Switches a single VSR on
+        # hxt.x10g_rdma.enable_vsr(4)  # Switches a single VSR on
         # time.sleep(1)
-        # hxt.enable_vsr(5)  # Switches a single VSR on
+        # hxt.x10g_rdma.enable_vsr(5)  # Switches a single VSR on
         # time.sleep(1)
-        # hxt.enable_vsr(6)  # Switches a single VSR on
+        # hxt.x10g_rdma.enable_vsr(6)  # Switches a single VSR on
         # time.sleep(1)
-        hxt.power_status()
-        # hxt.power_status()
-        # hxt.disable_vsr(1)
-        # # hxt.enable_all_hv()
-        # hxt.enable_hv(1)
-        # hxt.power_status()
-        # hxt.power_status()
-        # hxt.enable_vsr(2)
-        # hxt.power_status()
+        print(" power status: {0:x}".format(hxt.x10g_rdma.power_status()))
+        # print(" power status: {0:x}".format(hxt.x10g_rdma.power_status()))
+        # hxt.x10g_rdma.disable_vsr(1)
+        # # hxt.x10g_rdma.enable_all_hv()
+        # hxt.x10g_rdma.enable_hv(1)
+        # print(" power status: {0:x}".format(hxt.x10g_rdma.power_status()))
+        # print(" power status: {0:x}".format(hxt.x10g_rdma.power_status()))
+        # hxt.x10g_rdma.enable_vsr(2)
+        # print(" power status: {0:x}".format(hxt.x10g_rdma.power_status()))
 
     except (socket.error, struct.error) as e:
         print(" *** Scratch register error: {} ***".format(e))

@@ -159,6 +159,8 @@ class Hexitec2x6():
     def write_and_response(self, vsr, address_h, address_l, value_h, value_l, masked=True, delay=False):
         """Write value_h, value_l to address_h, address_l of vsr, if not masked then register value overwritten."""
         resp, reply = self.read_and_response(vsr, address_h, address_l)
+        # if delay:
+        #     print("   WaR Rd1: resp: {} reply: {} ".format(resp, reply))
         resp = resp[2:-1]   # Extract payload
         if masked:
             value_h = value_h | resp[0]     # Mask existing value with new value
@@ -169,6 +171,7 @@ class Hexitec2x6():
             time.sleep(0.2)
         resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
         if delay:
+            # print("   WaR Rd2: resp: {} reply: {} ".format(resp, reply))
             time.sleep(0.2)
         reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
@@ -205,7 +208,7 @@ class Hexitec2x6():
             value_h = values_list.pop(0)
             value_l = values_list.pop(0)
             # print("   BWCL Write: {0:X} {1:X} {2:X} {3:X} {4:X}".format(vsr, most_significant[index], least_significant[index], value_h, value_l))
-            self.write_and_response(vsr, most_significant[index], least_significant[index], value_h, value_l, False)
+            self.write_and_response(vsr, most_significant[index], least_significant[index], value_h, value_l, False, False)
 
     def burst_write(self, vsr, number_registers, address_h, address_l, write_values):
         """Write bytes to multiple registers."""
@@ -296,21 +299,6 @@ class Hexitec2x6():
         # self.send_cmd([self.vsr_addr, 0x53, 0x31, 0x36, 0x30, 0x39])  # Avoided
         # self.read_response()
         self.write_and_response(self.vsr_addr, 0x31, 0x36, 0x30, 0x39)
-
-    # # TODO: WILL BE REQUIRED LATER ON OR NOT??? - Incomplete
-    # def toggle_state_machine(self, vsr, address_h, address_l, value_h, value_l, enable):
-    #     """Substitute for using CLR_REG_BIT = 0x43."""
-    #     resp, reply = self.read_and_response(vsr, address_h, address_l)
-    #     resp = resp[2:-1]   # Extract payload
-    #     value_h = value_h | resp[0] # Mask existing value with new value
-    #     value_l = value_l | resp[1] # Mask existing value with new value
-    #     print("   WaR Write: {} {} {} {} {}".format(vsr, address_h, address_l, value_h, value_l))
-    #     self.send_cmd([vsr, 0x40, address_h, address_l, value_h, value_l])
-    #     resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
-    #     reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
-    #     reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
-    #     print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
-    #     return resp, reply
 
     def training_preparation(self, vsr):
         """Following Daniel's instructions, minimal requirements initialising a vsr for (LVDS) training."""
@@ -445,8 +433,8 @@ class Hexitec2x6():
     def enables_write_and_read_verify(self, vsr, address_h, address_l, write_list):
         """Write and read to verify correct bytes written to register."""
         number_registers = 10
-        # self.block_write_custom_length(vsr, number_registers, address_h, address_l, write_list)
-        self.burst_write(vsr, number_registers, address_h, address_l, write_list)
+        self.block_write_custom_length(vsr, number_registers, address_h, address_l, write_list)
+        # self.burst_write(vsr, number_registers, address_h, address_l, write_list)
 
         resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
         # resp, reply = self.burst_read(vsr, address_h, address_l)
@@ -475,64 +463,65 @@ class Hexitec2x6():
 
     def program_enables(self, vsr):
         """Write enables to some of the registers."""
-        address_h, address_l = 0x36, 0x31   # Register 0x61
+        address_h, address_l = 0x36, 0x31   # Register 0x61 - Column Read Enable ASIC
         # #write_list: 0x46 0x39 0x33 0x46 0x33 0x45 0x46 0x46 0x46 0x31 0x45 0x37 0x38 0x46 0x46 0x46 0x37 0x43 0x46 0x43
         write_list = [70, 57, 51, 70, 51, 69, 70, 70, 70, 49, 69, 55, 56, 70, 70, 70, 55, 67, 70, 67]
         self.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
 
-        address_h, address_l = 0x43, 0x32   # Register 0xC2
+        address_h, address_l = 0x43, 0x32   # Register 0xC2 - Column Read Enable ASIC2
         # #write_list: 0x34 0x38 0x32 0x43 0x46 0x41 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46
         write_list = [52, 56, 50, 67, 70, 65, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70]
         self.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
 
-        address_h, address_l = 0x34, 0x44   # Register 0x4D
-        # [D 221014 09:34:39 HexitecFem:1336] Column Power Enable
+        address_h, address_l = 0x34, 0x44   # Register 0x4D - Column Power Enable ASIC1
         # write_list: 0x39 0x31 0x44 0x35 0x46 0x33 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46
         write_list = [57, 49, 68, 53, 70, 51, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70]
         self.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
 
-        address_h, address_l = 0x41, 0x45   # Register 0xAE
-        # Column Power Enable ASIC2
+        address_h, address_l = 0x41, 0x45   # Register 0xAE - Column Power Enable ASIC2
         # write_list: 0x37 0x33 0x30 0x46 0x46 0x42 0x46 0x43 0x46 0x46 0x33 0x46 0x33 0x46 0x43 0x46 0x41 0x43 0x31 0x38
         write_list = [55, 51, 48, 70, 70, 66, 70, 67, 70, 70, 51, 70, 51, 70, 67, 70, 65, 67, 49, 56]
         self.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
 
-        address_h, address_l = 0x35, 0x37   # Register 0x57
-        # [D 221014 09:34:39 HexitecFem:1336] Column Power Enable
+        address_h, address_l = 0x35, 0x37   # Register 0x57 - Column Calibration Enable ASIC1
         # write_list: 0x38 0x39 0x38 0x38 0x41 0x38 0x38 0x38 0x37 0x31 0x38 0x43 0x38 0x38 0x38 0x45 0x38 0x39 0x46 0x39
         write_list = [56, 57, 56, 56, 65, 56, 56, 56, 55, 49, 56, 67, 56, 56, 56, 69, 56, 57, 70, 57]
         self.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
 
-        """
-[D 221018 14:46:48 HexitecFem:1417] Column Calibration Enable
-  ... producing register_values: 0x38 0x39 0x38 0x38 0x41 0x38 0x38 0x38 0x37 0x31 0x38 0x43 0x38 0x38 0x38 0x45 0x38 0x39 0x46 0x39
-   i.e.:  [56, 57, 56, 56, 65, 56, 56, 56, 55, 49, 56, 67, 56, 56, 56, 69, 56, 57, 70, 57]
- Register 0x57 -- ALL FINE
-  ... producing register_values: 0x38 0x38 0x38 0x38 0x38 0x38 0x38 0x38 0x33 0x31 0x38 0x38 0x38 0x38 0x33 0x38 0x31 0x45 0x45 0x42
-   i.e.:  [56, 56, 56, 56, 56, 56, 56, 56, 51, 49, 56, 56, 56, 56, 51, 56, 49, 69, 69, 66]
- Register 0xB8 -- ALL FINE
-[D 221018 14:46:49 HexitecFem:1431] Row Read Enable
-  ... producing register_values: 0x37 0x38 0x39 0x45 0x31 0x35 0x33 0x46 0x44 0x46 0x45 0x33 0x42 0x31 0x37 0x45 0x42 0x43 0x43 0x42
-   i.e.:  [55, 56, 57, 69, 49, 53, 51, 70, 68, 70, 69, 51, 66, 49, 55, 69, 66, 67, 67, 66]
- Register 0x43 -- ALL FINE
-  ... producing register_values: 0x31 0x46 0x46 0x46 0x46 0x38 0x33 0x37 0x43 0x37 0x37 0x46 0x33 0x45 0x44 0x45 0x46 0x38 0x46 0x31
-   i.e.:  [49, 70, 70, 70, 70, 56, 51, 55, 67, 55, 55, 70, 51, 69, 68, 69, 70, 56, 70, 49]
- Register 0xA4 -- ALL FINE
-[D 221018 14:46:49 HexitecFem:1445] Row Power Enable
-  ... producing register_values: 0x33 0x35 0x44 0x42 0x42 0x38 0x46 0x45 0x46 0x46 0x41 0x46 0x38 0x44 0x39 0x39 0x36 0x35 0x43 0x33
-   i.e.:  [51, 53, 68, 66, 66, 56, 70, 69, 70, 70, 65, 70, 56, 68, 57, 57, 54, 53, 67, 51]
- Register 0x2F -- ALL FINE
-  ... producing register_values: 0x46 0x33 0x46 0x46 0x46 0x46 0x46 0x43 0x37 0x34 0x33 0x46 0x33 0x46 0x33 0x45 0x43 0x46 0x43 0x46
-   i.e.:  [70, 51, 70, 70, 70, 70, 70, 67, 55, 52, 51, 70, 51, 70, 51, 69, 67, 70, 67, 70]
- Register 0x90 -- ALL FINE
-[D 221018 14:46:50 HexitecFem:1459] Row Calibration Enable
-  ... producing register_values: 0x38 0x38 0x38 0x38 0x38 0x38 0x38 0x38 0x31 0x38 0x38 0x38 0x38 0x38 0x43 0x38 0x41 0x43 0x31 0x38
-   i.e.:  [56, 56, 56, 56, 56, 56, 56, 56, 49, 56, 56, 56, 56, 56, 67, 56, 65, 67, 49, 56]
- Register 0x39 -- ALL FINE
-  ... producing register_values: 0x38 0x38 0x38 0x38 0x38 0x38 0x38 0x38 0x31 0x38 0x38 0x38 0x38 0x38 0x44 0x38 0x43 0x43 0x41 0x36
-   i.e.:  [56, 56, 56, 56, 56, 56, 56, 56, 49, 56, 56, 56, 56, 56, 68, 56, 67, 67, 65, 54]
- Register 0x9A -- ALL FINE
-"""
+        address_h, address_l = 0x42, 0x38    # Register 0xB8 - Column Calibration Enable ASIC2
+        # write_list: 0x38 0x38 0x38 0x38 0x38 0x38 0x38 0x38 0x33 0x31 0x38 0x38 0x38 0x38 0x33 0x38 0x31 0x45 0x45 0x42
+        write_list = [56, 56, 56, 56, 56, 56, 56, 56, 51, 49, 56, 56, 56, 56, 51, 56, 49, 69, 69, 66]
+        self.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
+
+        address_h, address_l = 0x34, 0x33    # Register 0x43 - Row Read Enable ASIC1
+        # write_list: 0x37 0x38 0x39 0x45 0x31 0x35 0x33 0x46 0x44 0x46 0x45 0x33 0x42 0x31 0x37 0x45 0x42 0x43 0x43 0x42
+        write_list = [55, 56, 57, 69, 49, 53, 51, 70, 68, 70, 69, 51, 66, 49, 55, 69, 66, 67, 67, 66]
+        self.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
+
+        address_h, address_l = 0x41, 0x34    # Register 0xA4 - Row Read Enable ASIC2
+        # write_list: 0x31 0x46 0x46 0x46 0x46 0x38 0x33 0x37 0x43 0x37 0x37 0x46 0x33 0x45 0x44 0x45 0x46 0x38 0x46 0x31
+        write_list = [49, 70, 70, 70, 70, 56, 51, 55, 67, 55, 55, 70, 51, 69, 68, 69, 70, 56, 70, 49]
+        self.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
+
+        address_h, address_l = 0x32, 0x46    # Register 0x2F - Row Power Enable ASIC1
+        # write_list: 0x33 0x35 0x44 0x42 0x42 0x38 0x46 0x45 0x46 0x46 0x41 0x46 0x38 0x44 0x39 0x39 0x36 0x35 0x43 0x33
+        write_list = [51, 53, 68, 66, 66, 56, 70, 69, 70, 70, 65, 70, 56, 68, 57, 57, 54, 53, 67, 51]
+        self.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
+
+        address_h, address_l = 0x39, 0x30    # Register 0x90 - Row Power Enable ASIC2
+        # write_list: 0x46 0x33 0x46 0x46 0x46 0x46 0x46 0x43 0x37 0x34 0x33 0x46 0x33 0x46 0x33 0x45 0x43 0x46 0x43 0x46
+        write_list = [70, 51, 70, 70, 70, 70, 70, 67, 55, 52, 51, 70, 51, 70, 51, 69, 67, 70, 67, 70]
+        self.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
+
+        address_h, address_l = 0x33, 0x39    # Register 0x39 - Row Calibration Enable ASIC1
+        # write_list: 0x38 0x38 0x38 0x38 0x38 0x38 0x38 0x38 0x31 0x38 0x38 0x38 0x38 0x38 0x43 0x38 0x41 0x43 0x31 0x38
+        write_list = [56, 56, 56, 56, 56, 56, 56, 56, 49, 56, 56, 56, 56, 56, 67, 56, 65, 67, 49, 56]
+        self.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
+
+        address_h, address_l = 0x39, 0x41    # Register 0x9A - Row Calibration Enable ASIC2
+        # write_list: 0x38 0x38 0x38 0x38 0x38 0x38 0x38 0x38 0x31 0x38 0x38 0x38 0x38 0x38 0x44 0x38 0x43 0x43 0x41 0x36
+        write_list = [56, 56, 56, 56, 56, 56, 56, 56, 49, 56, 56, 56, 56, 56, 68, 56, 67, 67, 65, 54]
+        self.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
 
     def readout_vsr_register(self, vsr, description, address_h, address_l):
         """Read out VSR register.
@@ -565,30 +554,17 @@ if __name__ == '__main__':  # noqa: C901
     hxt.connect()
     beginning = time.time()
     try:
-
-        # hxt.x10g_rdma.uart_tx([0x90, 0xF7])
-        # response = hxt.read_response()
-        # print("WHOIS resp: {}".format(' '.join("0x{0:02X}".format(x) for x in response)))
-
         VSR_ADDRESS = range(0x90, 0x96)
+        hxt.x10g_rdma.enable_all_vsrs()     # Switches all VSRs on
+        # VSR_ADDRESS = [0x90]
+        # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
 
-        # hxt.x10g_rdma.disable_all_vsrs()  # Working
-        # # hxt.x10g_rdma.disable_all_hv()
         # read_value = hxt.x10g_rdma.power_status()
-        # if (read_value == 0x0):
+        # expected_value = 0x3F   # 0x1
+        # if (read_value == expected_value):
         #     print(" OK Power: 0x{0:08X}".format(read_value))
         # else:
         #     print(" !! Power: 0x{0:08X}".format(read_value))
-        # time.sleep(1)
-        hxt.x10g_rdma.enable_all_vsrs()     # Switches all VSRs on
-        # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
-        time.sleep(0.5)
-        read_value = hxt.x10g_rdma.power_status()
-        expected_value = 0x3F   # 0x1
-        if (read_value == expected_value):
-            print(" OK Power: 0x{0:08X}".format(read_value))
-        else:
-            print(" !! Power: 0x{0:08X}".format(read_value))
         this_delay = 10
         print("VSR(s) powered; Waiting {} seconds".format(this_delay))
         time.sleep(this_delay)
@@ -599,28 +575,6 @@ if __name__ == '__main__':  # noqa: C901
         hxt.x10g_rdma.uart_tx([0xFF, 0xE3])
         print("Wait 5 sec")
         time.sleep(5)
-
-#         if 1:
-#             (address_high, address_low) = (0x38, 0x39)
-#             print("uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done")
-#             uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
-#             print(" 0   {0:08X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X}".format(uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
-#             hxt.send_cmd([0x90, hxt.READ_REG_VALUE, address_high, address_low])
-#             uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
-#             print(" 1   {0:08X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X}".format(uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
-# # #
-# #             hxt.send_cmd([0x90, hxt.READ_REG_VALUE, address_high, address_low])
-# #             uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
-# #             print(" 11  {0:08X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X}".format(uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
-# # #
-#             resp = hxt.read_response()                             # ie resp = [42, 144, 48, 49, 13]
-#             uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
-#             print(" 2   {0:08X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X}".format(uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
-#             time.sleep(2)
-#             uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
-#             print(" Z   {0:08X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X}".format(uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
-
-#             sys.exit(0)
 
         # Execute equivalent of VSR1_Configure.txt:
         for vsr in VSR_ADDRESS:

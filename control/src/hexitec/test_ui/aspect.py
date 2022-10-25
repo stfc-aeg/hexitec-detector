@@ -72,13 +72,6 @@ class Hexitec2x6():
         """."""
         self.x10g_rdma.close()
 
-    def convert_list_to_string(self, int_list):
-        """Convert list of integer into ASCII string.
-
-        I.e. integer_list = [42, 144, 70, 70, 13], returns '*\x90FF\r'
-        """
-        return "{}".format(''.join([chr(x) for x in int_list]))
-
     def send_cmd(self, cmd):
         """Send a command string to the microcontroller."""
         # print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in cmd)))
@@ -88,8 +81,10 @@ class Hexitec2x6():
         """Read a VSR's microcontroller response, passed on by the FEM."""
         counter = 0
         rx_pkt_done = 0
+        # print("uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done")
         while not rx_pkt_done:
             uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = self.x10g_rdma.read_uart_status()
+            # print("     {0:X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X}".format(uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
             counter += 1
             if counter == 15001:
                 break
@@ -133,7 +128,8 @@ class Hexitec2x6():
         resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
         reply = resp[2:-1]                                      # Omit start char, vsr & register addresses, and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
-        # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_high-0x30, address_low-0x30, len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
+        # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_high-0x30, address_low-0x30,
+        #       len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
         return resp, reply
 
     def read_register89(self, vsr_number):
@@ -229,8 +225,7 @@ class Hexitec2x6():
         dctrl = [0x30, 0x30, 0x30, 0x30]
         rsrv2 = [0x30, 0x38, 0x45, 0x38]
 
-        self.send_cmd([#self.
-                       vsr_address, 0x54,
+        self.send_cmd([vsr_address, 0x54,
                        vcal[0], vcal[1], vcal[2], vcal[3],          # Vcal, e.g. 0x0111 =: 0.2V
                        umid[0], umid[1], umid[2], umid[3],          # Umid, e.g. 0x0555 =: 1.0V
                        hv[0], hv[1], hv[2], hv[3],                  # reserve1, 0x0555 =: 1V (HV ~-250V)
@@ -362,7 +357,7 @@ class Hexitec2x6():
         # }
 
     def readout_vsr_register(self, vsr, description, address_h, address_l):
-        """Helper function: readout VSR register.
+        """Read out VSR register.
 
         Example: (vsr, description, address_h, address_l) = 1, "Column Read Enable ASIC2", 0x43, 0x32
         """
@@ -386,16 +381,28 @@ if __name__ == '__main__':  # pragma: no cover
     hxt.connect()
     beginning = time.time()
     try:
-        # vsr = 0x95
-        # """ Revisit trying to substitute 0x43 command word i.e. clear_register_bit later """
-#         hxt.toggle_state_machine(vsr, 0x30, 0x31, 0x30, 0x30, True)
-# # 90	43	01	01	;Enable SM  # CLR BIT
-# # 90	42	01	01	;Disable SM # SET BIT
+        # VSR_ADDRESS = [0x90]
+        # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
+        VSR_ADDRESS = range(0x90, 0x96, 1)
+        hxt.x10g_rdma.enable_all_vsrs()   # Switches on all VSR
 
-        # raise socket.error("hello")
+        print(" Power status: {0:X}".format(hxt.x10g_rdma.power_status()))
+        this_delay = 10
+        print("VSR(s) enabled; Waiting {} seconds".format(this_delay))
+        time.sleep(this_delay)
 
-        # # Execute equivalent of VSR1_Configure.txt:
-        for vsr in [0x90]:  # range(0x90, 0x96):
+        print("Init modules (Send 0xE3..)")
+        hxt.x10g_rdma.uart_tx([0xFF, 0xE3])
+        # hxt.x10g_rdma.uart_tx([0x90, 0xE3])
+        print("Wait 5 sec")
+        time.sleep(5)
+
+        # print("uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done")
+        # Execute equivalent of VSR1_Configure.txt:
+        for vsr in VSR_ADDRESS:
+
+            # r89_list, r89_value = hxt.read_register89(vsr)
+            # sys.exit(0)
             # print(" --- Initialising VSR 0{0:X} ---".format(vsr))
             # hxt.initialise_vsr(vsr)
             # # Check PLLs locked

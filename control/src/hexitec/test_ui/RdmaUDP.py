@@ -414,10 +414,7 @@ class RdmaUDP(object):
         read_value = read_value[0]
         masked_value = read_value | 0x3F    # Switching all six VSRs on, i.e. set 6 bits on
         self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs on")
-        time.sleep(1)
-        vsr_address = 0xFF
-        self.uart_tx([vsr_address, RdmaUDP.ENABLE_VSR])
-        print("All VSRs enabled")
+        # time.sleep(1)
 
     def enable_all_hv(self):
         """Switch all HVs on."""

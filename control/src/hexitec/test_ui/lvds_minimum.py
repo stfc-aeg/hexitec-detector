@@ -194,51 +194,6 @@ class Hexitec2x6():
         # self.x10g_rdma.write(0x00000020, 0x00, burst_len=1, comment="Enabling training")
 
 
-    enable_vsrs_mask = 0x3F
-    hvs_bit_mask = 0x3F00
-    vsr_ctrl_offset = 0x18
-    ENABLE_VSR = 0xE3
-    DISABLE_VSR = 0xE2
-
-    def enable_vsr(self, vsr_number):
-        """Control a single VSR's power."""
-        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
-        # STEP 1: vsr_ctrl enable $::vsr_target_idx
-        mod_mask = self.module_mask(vsr_number)
-        cmd_mask = Hexitec2x6.enable_vsrs_mask
-        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
-        read_value = read_value[0]
-        masked_value = read_value | (cmd_mask & mod_mask)
-        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch selected VSR on")
-        time.sleep(1)
-
-    def enable_all_vsrs(self):
-        """Switch all VSRs on."""
-        vsr_ctrl_addr = Hexitec2x6.vsr_ctrl_offset
-        read_value = self.x10g_rdma.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
-        read_value = read_value[0]
-        masked_value = read_value | 0x3F    # Switching all six VSRs on, i.e. set 6 bits on
-        self.x10g_rdma.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs on")
-        time.sleep(1)
-        vsr_address = 0xFF
-        self.x10g_rdma.uart_tx([vsr_address, Hexitec2x6.ENABLE_VSR])
-        print("All VSRs enabled")
-
-    def power_status(self):
-        """Read out the status register to check what is switched on and off."""
-        read_value = self.x10g_rdma.read(Hexitec2x6.vsr_ctrl_offset, burst_len=1, comment='Read vsr_ctrl_addr current value')
-        read_value = read_value[0]
-        print(" *** Register status: 0x{0:08X}".format(read_value))
-
-    def module_mask(self, module):
-        """."""
-        return ((1 << (module - 1)) | (1 << (module + 8 - 1)))
-
-    def negative_module_mask(self, module):
-        """."""
-        return ~(1 << (module - 1)) | (1 << (module + 8 - 1))
-
-
 if __name__ == '__main__':  # pragma: no cover
     if (len(sys.argv) != 4):
         print("Correct usage: ")
@@ -254,12 +209,12 @@ if __name__ == '__main__':  # pragma: no cover
     hxt.connect()
     beginning = time.time()
     try:
-        VSR_ADDRESS = [0x90]
-        hxt.enable_vsr(1)  # Switches a single VSR on
-        # VSR_ADDRESS = range(0x90, 0x96, 1)
-        # hxt.enable_all_vsrs()   # Switches on all VSR
+        # VSR_ADDRESS = [0x90]
+        # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
+        VSR_ADDRESS = range(0x90, 0x96, 1)
+        hxt.x10g_rdma.enable_all_vsrs()   # Switches on all VSR
 
-        hxt.power_status()
+        print(" Power status: {0:X}".format(hxt.x10g_rdma.power_status()))
         this_delay = 10
         print("VSR(s) enabled; Waiting {} seconds".format(this_delay))
         time.sleep(this_delay)
