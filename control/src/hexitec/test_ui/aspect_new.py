@@ -600,6 +600,28 @@ if __name__ == '__main__':  # noqa: C901
         print("Wait 5 sec")
         time.sleep(5)
 
+#         if 1:
+#             (address_high, address_low) = (0x38, 0x39)
+#             print("uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done")
+#             uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
+#             print(" 0   {0:08X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X}".format(uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
+#             hxt.send_cmd([0x90, hxt.READ_REG_VALUE, address_high, address_low])
+#             uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
+#             print(" 1   {0:08X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X}".format(uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
+# # #
+# #             hxt.send_cmd([0x90, hxt.READ_REG_VALUE, address_high, address_low])
+# #             uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
+# #             print(" 11  {0:08X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X}".format(uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
+# # #
+#             resp = hxt.read_response()                             # ie resp = [42, 144, 48, 49, 13]
+#             uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
+#             print(" 2   {0:08X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X}".format(uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
+#             time.sleep(2)
+#             uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
+#             print(" Z   {0:08X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X}".format(uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
+
+#             sys.exit(0)
+
         # Execute equivalent of VSR1_Configure.txt:
         for vsr in VSR_ADDRESS:
             print(" --- Initialising VSR 0{0:X} ---".format(vsr))
@@ -618,7 +640,9 @@ if __name__ == '__main__':  # noqa: C901
                     time.sleep(0.2)
                     time_taken += 0.2
                 if time_taken > 3.0:
-                    raise HexitecFemError("Timed out polling VSR{} register 0x89; PLL remains disabled".format(vsr-144))
+                    print("VSR{} PLL still disabled!".format(vsr-144))
+                    bPolling = False
+                    # raise HexitecFemError("Timed out polling VSR{} register 0x89; PLL remains disabled".format(vsr-144))
         ending = time.time()
         print("That took: {}".format(ending - beginning))
 
