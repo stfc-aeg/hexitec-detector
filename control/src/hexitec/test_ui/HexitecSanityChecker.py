@@ -1,5 +1,5 @@
 """
-Hexitec2x6: Exercises UDP control plane.
+HexitecSanityChecker: Tests the 2x6 System Firmware.
 
 Christian Angelsen, STFC Detector Systems Software Group, 2022.
 """
@@ -12,7 +12,7 @@ import struct
 import time  # DEBUGGING only
 
 
-class Hexitec2x6():
+class HexitecSanityChecker():
     """
     Hexitec 2x6 class.
 
@@ -22,9 +22,6 @@ class Hexitec2x6():
     READ_REG_VALUE = 0x41
     SET_REG_BIT = 0x42
     SEND_REG_BURST = 0x44
-    # WRITE_REG_VAL = 0x53
-    # WRITE_DAC_VAL = 0x54
-    # CTRL_ADC_DAC = 0x55
 
     VSR_ADDRESS = [
         0x90,
@@ -150,13 +147,6 @@ class Hexitec2x6():
         print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
             counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
 
-    def convert_list_to_string(self, int_list):
-        """Convert list of integer into ASCII string.
-
-        I.e. integer_list = [42, 144, 70, 70, 13], returns '*\x90FF\r'
-        """
-        return "{}".format(''.join([chr(x) for x in int_list]))
-
     def send_cmd(self, cmd):
         """Send a command string to the microcontroller."""
         # print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in cmd)))
@@ -181,22 +171,12 @@ class Hexitec2x6():
         self.send_cmd([0x23, self.VSR_ADDRESS[1], self.READ_REG_VALUE,
                        msb, lsb, 0x0D])
         vsr2 = self.read_response()
-        # reply = self.convert_list_to_string(self.read_response()[1:])
-        # print(" VSR2,reply: {}".format(reply))
-        # vsr2 = reply.strip("\r")[1:]
         time.sleep(0.25)
         self.send_cmd([0x23, self.VSR_ADDRESS[0], self.READ_REG_VALUE,
                        msb, lsb, 0x0D])
-        # reply = self.convert_list_to_string(self.read_response()[1:])
-        # vsr1 = reply.strip("\r")[1:]
         vsr1 = self.read_response()
-        # return (vsr2, vsr1)
-        # print("vsr2: {}".format(vsr2))
-        # print("vsr1: {}".format(vsr1))
         vsr2 = vsr2[2:-1]
         vsr1 = vsr1[2:-1]
-        # print("vsr2: {}".format(vsr2))
-        # print("vsr1: {}".format(vsr1))
         return (vsr2, vsr1)
 
     def dump_all_registers(self):  # pragma: no cover
@@ -213,23 +193,6 @@ class Hexitec2x6():
                       chr(vsr2[0]), chr(vsr2[1]),
                       chr(vsr1[0]), chr(vsr1[1])))
                 time.sleep(0.25)
-
-    def module_mask(self, module):
-        """Bit manipulation for VSR/HV control functions."""
-        return ((1 << (module - 1)) | (1 << (module + 8 - 1)))
-
-    def negative_module_mask(self, module):
-        """Bit manipulation for VSR/HV control functions."""
-        return ~(1 << (module - 1)) | (1 << (module + 8 - 1))
-
-    def get_vsr_row_s1_clock(self, vsr_number):
-        """Get row s1 clock."""
-        self.send_cmd([vsr_number, self.READ_REG_VALUE, 0x30, 0x32])
-        read_sensors = self.read_response()
-        print(" *** Reg 0x02, Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
-        self.send_cmd([vsr_number, self.READ_REG_VALUE, 0x30, 0x33])
-        read_sensors = self.read_response()
-        print(" *** Reg 0x03, Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
 
     def get_vsr_register_value(self, vsr_number, address_high, address_low):
         """Read the VSR register At address_high, address_low."""
@@ -248,28 +211,6 @@ class Hexitec2x6():
         print(" *** (W) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(
               address_high-0x30, address_low-0x30, len(read_sensors),
               ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
-
-    def read_register89(self):
-        """Write to reg89."""
-        time.sleep(0.25)
-        (address_high, address_low) = (0x38, 0x39)
-        print("Read Register 0x{0}{1}".format(address_high-0x30, address_low-0x30))
-        self.get_vsr_register_value(vsr_number, address_high, address_low)
-
-    def write_register07(self, value_high, value_low):
-        """Write to reg07."""
-        time.sleep(0.25)
-        (address_high, address_low) = (0x30, 0x37)
-        # (value_high, value_low) = (0x30, 0x33)
-        print("Write Register 0x{2}{3}, values: {0:X}, {1:X}".format(value_high, value_low, address_high-0x30, address_low-0x30))
-        self.set_vsr_register_value(vsr_number, address_high, address_low, value_high, value_low)
-
-    def read_register07(self):
-        """Read register 07."""
-        time.sleep(0.25)
-        (address_high, address_low) = (0x30, 0x37)
-        print("Read Register 0x{0}{1}".format(address_high-0x30, address_low-0x30))
-        self.get_vsr_register_value(vsr_number, address_high, address_low)
 
     def uart_reset(self):
         """Test if we can reset the UART."""
@@ -291,59 +232,147 @@ class Hexitec2x6():
         # Allow reset to propagate through UART logic
         time.sleep(0.2)
 
+    def compare(self, description, value_a, value_b):
+        """Determine whether value_ae and value_b are same or different."""
+        if value_a == value_b:
+            print("   {0} : PASSED.".format(description, value_a, value_b))
+            # print("   {0} : PASSED. {1:X} == {2:X}".format(description, value_a, value_b))
+        else:
+            print(" ! {0} : FAILED, Read: {1:X} != Expected: {2:X}".format(description, value_a, value_b))
+
+    def examine_whois_reply(self, response):
+        """Examine WHOIS response from UART.
+
+        Typically, all 6 VSRs combined response should be:
+        0x90 0x34 0x91 0x34 0x92 0x34 0x93 0x34 0x94 0x34 0x95 0x34 0xC0 0x31
+        """
+        # response = [144, 52, 145, 52, 146, 52, 147, 52, 148, 52, 149, 52, 192, 49]
+        if len(response) != 14:
+            print(" WHOIS: Expected 14 bytes response, but got {}".format(len(response)))
+            return -1
+        ending_character = 0x31
+        # Check ending characters there
+        if (response[-1] != ending_character):
+            print(" WHOIS: Response missing ending 0x{0:X} character".format(ending_character))
+            return -1
+        # Check 0xC0 also present
+        if (response[-2] != 0xC0):
+            print(" WHOIS: Response missing 0x{0:X} character".format(0xC0))
+            return -1
+        response = response[:-2]      # Omit final two Bytes
+        # Separate out VSRs, responses
+        for index in range(len(response)//2):
+            vsr = response.pop(0)
+            reply = response.pop(0)
+            if (reply == 0x34):
+                print("   WHOIS VSR 0x{0:X} : PASSED.".format(vsr))
+            else:
+                print(" ! WHOIS VSR 0x{0:X} : FAILED, replied 0x{1:X}".format(vsr, reply))
+
 
 if __name__ == '__main__':  # pragma: no cover
     if (len(sys.argv) != 4):
         print("Correct usage: ")
-        print("python Hexitec2x6.py <esdg_lab> <debug> <unique_cmd_no>")
+        print("python HexitecSanityChecker.py <esdg_lab> <debug> <unique_cmd_no>")
         print(" i.e. to not use esdg_lab addresses but enable debugging, and unique headers:")
-        print("python Hexitec2x6.py False True True")
+        print("python HexitecSanityChecker.py False True True")
         sys.exit(-1)
 
     esdg_lab = literal_eval(sys.argv[1])
     debug = literal_eval(sys.argv[2])
     unique_cmd_no = literal_eval(sys.argv[3])
-    hxt = Hexitec2x6(esdg_lab=esdg_lab, debug=debug, unique_cmd_no=unique_cmd_no)
+    hxt = HexitecSanityChecker(esdg_lab=esdg_lab, debug=debug, unique_cmd_no=unique_cmd_no)
     hxt.connect()
-    # hxt.read_scratch_registers()
+
+    try:
+        print(" * Reload bitstream before executing * ")
+        print(" ------ Running Sanity Checker ------")
+        expected_value = 0x0   # 0x1
+        read_value = hxt.x10g_rdma.power_status()
+        if (read_value == expected_value):
+            print("   VSRs Power Status: 0x{0:08X} - All unpowered.".format(read_value))
+        else:
+            print(" ! VSR(s) already powered. Expected 0x{0:02X} not 0x{1:02X}".format(expected_value, read_value))
+    except socket.error as e:
+        print(" Failed to establish connection with Hardware: {} ".format(e))
+        sys.exit(-1)
+
     try:
         # VSR_ADDRESS = [0x90]
         # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
+        print("Switch on VSRs..")
         VSR_ADDRESS = range(0x90, 0x96, 1)
         hxt.x10g_rdma.enable_all_vsrs()   # Switches on all VSR
 
-        print(" Power status: {0:X}".format(hxt.x10g_rdma.power_status()))
+        expected_value = 0x3F
+        read_value = hxt.x10g_rdma.power_status()
+        if (read_value == expected_value):
+            print("   VSRs Power Status: 0x{0:08X} - All VSRs powered.".format(read_value))
+        else:
+            print(" ! VSR Power Issue(s). Expected 0x{0:02X} not 0x{1:02X}".format(expected_value, read_value))
+
         this_delay = 10
-        print("VSR(s) enabled; Waiting {} seconds".format(this_delay))
+        print("VSR(s) enabled; Waiting {} seconds..".format(this_delay))
         time.sleep(this_delay)
 
         print("Init modules (Send 0xE3..)")
         hxt.x10g_rdma.uart_tx([0xFF, 0xE3])
-        # hxt.x10g_rdma.uart_tx([0x90, 0xE3])
-        print("Wait 5 sec")
+        print("Wait 5 sec..")
         time.sleep(5)
 
+        print("Sending WHOIS Command..")
+        print(" ------ WHOIS Reply ------")
+        hxt.x10g_rdma.uart_tx([0xFF, 0xF7])
+        time.sleep(1)
+        read_sensors = hxt.x10g_rdma.uart_rx(0x0)
+        # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+        # print(" unmolested: {}".format(read_sensors))
+        hxt.examine_whois_reply(read_sensors)
+
+        # sys.exit(1)
         vsr_number = 0x91
 
         # hxt.uart_reset()  # Didn't work
 
-        # READ/WRITE individual register(s)
-        # What are the initial values of the 2 registers?
-        print(" ----- Initial Values ------")
-        hxt.read_register07()
-        hxt.read_register89()
-        print(" ----- Clear register 07 ------")
-        # Clear register 07
-        hxt.write_register07(0x30, 0x30)
-        print(" ----- Check register 89 ------")
-        # What's the value of register 89 now?
-        hxt.read_register89()
-        print(" ----- Update register 07 (Set both PLL) ------")
-        # Write 3 to register 07
-        hxt.write_register07(0x30, 0x33)
-        print(" ----- Check register 89 ------")
-        # What's the value of register 89 now?
-        hxt.read_register89()
+        print(" ------ Scratch Registers ------")
+
+        scratch1 = hxt.x10g_rdma.read(0x00008030, comment='Read Scratch Register 1')
+        hxt.compare("Read Scratch Register 1", scratch1[0], 0x11111111)
+
+        scratch2 = hxt.x10g_rdma.read(0x00008034, burst_len=1, comment='Read Scratch Register 2')
+        hxt.compare("Read Scratch Register 2", scratch2[0], 0x22222222)
+
+        scratch3 = hxt.x10g_rdma.read(0x00008038, burst_len=1, comment='Read Scratch Register 3')
+        hxt.compare("Read Scratch Register 3", scratch3[0], 0x33333333)
+
+        scratch4 = hxt.x10g_rdma.read(0x0000803C, burst_len=1, comment='Read Scratch Register 4')
+        hxt.compare("Read Scratch Register 4", scratch4[0], 0x44444444)
+
+        new_value = 0x87654321
+        hxt.x10g_rdma.write(0x8030, new_value, burst_len=2, comment="Set Scratch Reg12 value")
+        scratch1 = hxt.x10g_rdma.read(0x00008030, burst_len=1, comment='Read Scratch Register 2')
+        hxt.compare("Write Scratch Register 1", scratch1[0], new_value)
+
+        new_value = 0x4000003320000011
+        hxt.x10g_rdma.write(0x8030, new_value, burst_len=2, comment="Set Scratch Reg12 value")
+        scratch12 = hxt.x10g_rdma.read(0x00008030, burst_len=2, comment='Read Scratch Register 1 2')
+        int_value = (scratch12[1] << 32) + scratch12[0]
+        hxt.compare("Write Scratch Registers 1&2", int_value, new_value)
+
+        new_value = 0x600005554000033322200001
+        hxt.x10g_rdma.write(0x8030, new_value, burst_len=3, comment="Set Scratch Reg123 value")
+        scratch123 = hxt.x10g_rdma.read(0x00008030, burst_len=3, comment='Read Scratch Register 1 2 3')
+        int_value = (scratch123[2] << 64) + (scratch123[1] << 32) + scratch123[0]
+        hxt.compare("Write Scratch Registers 1-3", int_value, new_value)
+
+        new_value = 0x81657777666600054444000322220001
+        hxt.x10g_rdma.write(0x8030, new_value, burst_len=4, comment="Set Scratch Reg1234 value")
+        scratch1234 = hxt.x10g_rdma.read(0x00008030, burst_len=4, comment='Read Scratch Register 1 2 3 4')
+        int_value = (scratch1234[3] << 96) + (scratch1234[2] << 64) + (scratch1234[1] << 32) + scratch1234[0]
+        hxt.compare("Write Scratch Registers 1-4", int_value, new_value)
+
+    except (socket.error, struct.error) as e:
+        print(" *** Unexpected exception: {} ***".format(e))
 
         # (address_high, address_low) = (0x30, 0x32)
         # (value_high, value_low) = (0x30, 0x34)
@@ -379,46 +408,6 @@ if __name__ == '__main__':  # pragma: no cover
         # print("Readout SPH_S2 (register 005)")
         # (address_high, address_low) = (0x30, 0x35)
         # hxt.get_vsr_register_value(vsr_number, address_high, address_low)
-
-        # hxt.x10g_rdma.disable_all_vsrs()  # Working
-        # print(hxt.x10g_rdma.power_status())
-        # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
-        # print(hxt.x10g_rdma.power_status())
-
-        # hxt.x10g_rdma.uart_tx([0x92, 0xE3])
-        # print("third VSR enabled")
-        # hxt.dump_all_registers()
-        # # WHOIS COMMAND #
-
-        # # as_uart_tx 0xFF 0xF7 "" 0x0  0
-        # print("Calling uart_tx(0xFF, 0xF7)")
-        # hxt.x10g_rdma.uart_tx([0xFF, 0xF7])
-        # # hxt.await_uart_ready()    # Why doesn't it work with whois?
-        # time.sleep(0.25)
-        # read_sensors = hxt.x10g_rdma.uart_rx(0x0)
-        # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
-
-        # SCRATCH REGISTER #
-
-        # # Scratch Registers; Writing, Reading
-        # hxt.x10g_rdma.write(0x8030, 0x10203040, burst_len=1, comment="Set Scratch Reg1 value")
-        # scratch0 = hxt.x10g_rdma.read(0x00008030, comment='Read Scratch Register 1')
-        # print("Reg   1: {0:08X}".format(scratch0[0]))
-
-        # hxt.x10g_rdma.write(0x8030, 0x4000003320000011, burst_len=2, comment="Set Scratch Reg12 value")
-        # scratch12 = hxt.x10g_rdma.read(0x00008030, burst_len=2, comment='Read Scratch Register 1 2')
-        # print("Reg  12: {}".format(', '.join("{0:8X}".format(x) for x in scratch12)))
-
-        # hxt.x10g_rdma.write(0x8030, 0x600005554000033322200001, burst_len=3, comment="Set Scratch Reg123 value")
-        # scratch123 = hxt.x10g_rdma.read(0x00008030, burst_len=3, comment='Read Scratch Register 1 2 3')
-        # print("Reg 123: {}".format(', '.join("{0:8X}".format(x) for x in scratch123)))
-
-        # hxt.x10g_rdma.write(0x8030, 0x81657777666600054444000322220001, burst_len=4, comment="Set Scratch Reg1234 value")
-        # scratch1234 = hxt.x10g_rdma.read(0x00008030, burst_len=4, comment='Read Scratch Register 1 2 3 4')
-        # print("Reg1234: {}".format(', '.join("{0:8X}".format(x) for x in scratch1234)))
-        pass
-    except (socket.error, struct.error) as e:
-        print(" *** Scratch register error: {} ***".format(e))
 
     # uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
     # print("      UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
