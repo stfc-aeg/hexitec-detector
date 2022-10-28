@@ -123,12 +123,13 @@ class HexitecSanityChecker():
             print("Error converting ADC temperature: %s" % e)
             return -100
 
-    def displ_envs(self, read_sensors):
+    def display_environs(self, read_sensors):
         """Display environmental data in human readable format."""
         read_sensors = read_sensors[1:]  # Omit start of sequence character, matching existing 2x2 source code formatting
         sensors_values = "{}".format(''.join([chr(x) for x in read_sensors]))   # Turn list of integers into ASCII string
         # print(" ASCII string: {}".format(sensors_values))
-        print(" ambient: ({0}) {1:3.3f} C. humidity: ({2}) {3:3.3f} %. asic1: ({4}) {5:3.3f} C. asic2: ({6}) {7:3.3f} C. adc: ({8}) {9:3.3f} C.".format(
+        # print(" ambient:           humidity:          asic1:             asic2:          adc: ")
+        print(" ({0}) {1:3.3f} C.  ({2}) {3:3.3f} %.  ({4}) {5:3.3f} C.  ({6}) {7:3.3f}  ({8}) {9:3.3f} C.".format(
             sensors_values[1:5], hxt.get_ambient_temperature(sensors_values[1:5]),
             sensors_values[5:9], hxt.get_humidity(sensors_values[5:9]),
             sensors_values[9:13], hxt.get_asic_temperature(sensors_values[9:13]),
@@ -144,8 +145,8 @@ class HexitecSanityChecker():
             counter += 1
             if counter > 15000:
                 raise Exception("Timed out waiting for UART data")
-        print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
-            counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
+        # print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
+        #     counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
 
     def send_cmd(self, cmd):
         """Send a command string to the microcontroller."""
@@ -197,9 +198,12 @@ class HexitecSanityChecker():
     def get_vsr_register_value(self, vsr_number, address_high, address_low):
         """Read the VSR register At address_high, address_low."""
         self.send_cmd([vsr_number, self.READ_REG_VALUE, address_high, address_low])
-        read_sensors = self.read_response()
-        print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_high-0x30, address_low-0x30,
-              len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+        resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
+        reply = resp[2:-1]                                      # Omit start char, and end char
+        reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
+        # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_high-0x30, address_low-0x30,
+        #       len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
+        return resp, reply
 
     def set_vsr_register_value(self, vsr_number, address_high, address_low, value_high, value_low):
         """Write the VSR register At address_high, address_low."""
@@ -207,10 +211,13 @@ class HexitecSanityChecker():
         # self.send_cmd([vsr_number, self.SEND_REG_BURST, address_high, address_low, value_high, value_low])
         self.send_cmd([vsr_number, 0x40, address_high, address_low, value_high, value_low])
         time.sleep(0.25)
-        read_sensors = self.read_response()
-        print(" *** (W) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(
-              address_high-0x30, address_low-0x30, len(read_sensors),
-              ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+        resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
+        reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
+        reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
+        # print(" *** (W) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(
+        #       address_high-0x30, address_low-0x30, len(read_sensors),
+        #       ' '.join("0x{0:02X}".format(x) for x in resp)))
+        return resp, reply
 
     def uart_reset(self):
         """Test if we can reset the UART."""
@@ -233,7 +240,7 @@ class HexitecSanityChecker():
         time.sleep(0.2)
 
     def compare(self, description, value_a, value_b):
-        """Determine whether value_ae and value_b are same or different."""
+        """Determine whether value_a and value_b are same or different."""
         if value_a == value_b:
             print("   {0} : PASSED.".format(description, value_a, value_b))
             # print("   {0} : PASSED. {1:X} == {2:X}".format(description, value_a, value_b))
@@ -268,6 +275,35 @@ class HexitecSanityChecker():
                 print("   WHOIS VSR 0x{0:X} : PASSED.".format(vsr))
             else:
                 print(" ! WHOIS VSR 0x{0:X} : FAILED, replied 0x{1:X}".format(vsr, reply))
+
+    def hammer_register(self):
+        """Write, readback incremental values ensuring VSR register handle each new value."""
+        vsr_number = 0x90
+        # Readout S1 (Low) (register 002)
+        # print("Readout S1 (Low) (register 002)")
+        (address_high, address_low) = (0x30, 0x32)
+        (value_high, value_low) = (0x30, 0x31)
+        print("Writing Register 0x{0}{1}, values: {2:X}, {3:X}".format(
+            address_high-0x30, address_low-0x30, value_high, value_low))
+        for index in range(8):
+            print("Write S1 (Low) (Reg 002), values: {0:X}, {1:X}".format(value_high, value_low))
+            resp, reply = hxt.set_vsr_register_value(vsr_number, address_high, address_low, value_high, value_low)
+            # print("   W.resp: {}. reply: {}".format(resp, reply))
+            # print("   H: {} v {}, L: {} v {}".format(value_high, resp[4], value_low, resp[5]))
+            # print("   W.H? {}, L? {}".format(value_high == resp[4], value_low == resp[5]))
+            if (value_high != resp[4]) or (value_low != resp[5]):
+                print(" ! W Reg 0x{0}{1} FAILED, wrote: {2:X}, {3:X} but returned: {4:X} {5:X}".format(
+                    address_high-0x30, address_low-0x30, value_high, value_low, resp[4], resp[5]))
+
+            resp, reply = hxt.get_vsr_register_value(vsr_number, address_high, address_low)
+            # print("   R.resp: {}. reply: {}".format(resp, reply))
+            # print("H: {} v {} L: {} v {}".format(resp[2], )
+            # print("   R. H: {} v {}, L: {} v {}".format(value_high, resp[2], value_low, resp[3]))
+            # print("   R. H? {} L? {}".format(value_high == resp[2], value_low == resp[3]))
+            if (value_high != resp[2]) or (value_low != resp[3]):
+                print(" ! R Reg 0x{0}{1} FAILED, expected: {2:X}, {3:X} but read: {4:X} {5:X}".format(
+                    address_high-0x30, address_low-0x30, value_high, value_low, resp[2], resp[3]))
+            value_low += 1
 
 
 if __name__ == '__main__':  # pragma: no cover
@@ -312,12 +348,12 @@ if __name__ == '__main__':  # pragma: no cover
             print(" ! VSR Power Issue(s). Expected 0x{0:02X} not 0x{1:02X}".format(expected_value, read_value))
 
         this_delay = 10
-        print("VSR(s) enabled; Waiting {} seconds..".format(this_delay))
+        print("Waiting {} seconds.. (VSRs booting)".format(this_delay))
         time.sleep(this_delay)
 
-        print("Init modules (Send 0xE3..)")
+        # print("Init modules (Send 0xE3..)")
         hxt.x10g_rdma.uart_tx([0xFF, 0xE3])
-        print("Wait 5 sec..")
+        print("Waiting 5 sec.. (VSRs initialising")
         time.sleep(5)
 
         print("Sending WHOIS Command..")
@@ -371,14 +407,28 @@ if __name__ == '__main__':  # pragma: no cover
         int_value = (scratch1234[3] << 96) + (scratch1234[2] << 64) + (scratch1234[1] << 32) + scratch1234[0]
         hxt.compare("Write Scratch Registers 1-4", int_value, new_value)
 
+        print(" ------ Environmental Data ------")
+        # Request and receive environmental data #
+        the_start = time.time()
+        print(" ambient:          humidity:         asic1:             asic2:          adc: ")
+        for index in range(0x90, 0x96):
+            # print("Calling uart_tx([0x{0:X}, 0x52])".format(index), flush=True)
+            hxt.x10g_rdma.uart_tx([index, 0x52])
+            hxt.await_uart_ready()
+            read_sensors = hxt.x10g_rdma.uart_rx(0x0)
+            # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)), flush=True)
+            # Display the environmentals values
+            hxt.display_environs(read_sensors)
+
+        the_end = time.time()
+        print("Entire loop took: {}".format(the_end - the_start))
+
+        # Test writing and reading repeatedly to same register with incremental values
+        hxt.hammer_register()
+
     except (socket.error, struct.error) as e:
         print(" *** Unexpected exception: {} ***".format(e))
 
-        # (address_high, address_low) = (0x30, 0x32)
-        # (value_high, value_low) = (0x30, 0x34)
-        # print("Write S1 (Low) (register 002), values: {0:X}, {1:X}".format(value_high, value_low))
-        # hxt.set_vsr_register_value(vsr_number, address_high, address_low, value_high, value_low)
-        # time.sleep(0.25)
 
         # # (address_high, address_low) = (0x30, 0x33)
         # # (value_high, value_low) = (0x30, 0x31)
@@ -386,10 +436,6 @@ if __name__ == '__main__':  # pragma: no cover
         # # hxt.set_vsr_register_value(vsr_number, address_high, address_low, value_high, value_low)
         # # time.sleep(0.25)
 
-        # # Readout S1 (Low) (register 002)
-        # print("Readout S1 (Low) (register 002)")
-        # (address_high, address_low) = (0x30, 0x32)
-        # hxt.get_vsr_register_value(vsr_number, address_high, address_low)
 
         # # Readout S1 (High) (register 003)
         # vsr_number = 0x90
@@ -412,45 +458,6 @@ if __name__ == '__main__':  # pragma: no cover
     # uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
     # print("      UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
     #     0, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
-
-    # # Request and receive environmental data #
-    # print("Calling uart_tx(0x90, 0x52, \"\", 0x0)")
-    # hxt.x10g_rdma.uart_tx([0x90, 0x52])
-    # hxt.await_uart_ready()
-    # read_sensors = hxt.x10g_rdma.uart_rx(0x0)
-    # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
-    # # Display the environmentals values
-    # read_sensors = read_sensors[1:]     # Omit start of sequence character, matching existing 2x2 source code formatting
-    # sensors_values = "{}".format(''.join([chr(x) for x in read_sensors]))   # Turn list of integers into ASCII string
-    # print(" ASCII string: {}".format(sensors_values))
-    # ambient_hex = sensors_values[1:5]
-    # humidity_hex = sensors_values[5:9]
-    # asic1_hex = sensors_values[9:13]
-    # asic2_hex = sensors_values[13:17]
-    # adc_hex = sensors_values[17:21]
-    # print(" * ambient_hex:  {} -> {} Celsius".format(sensors_values[1:5], hxt.get_ambient_temperature(sensors_values[1:5])))
-    # print(" * humidity_hex: {} -> {}".format(sensors_values[5:9], hxt.get_humidity(sensors_values[5:9])))
-    # print(" * asic1_hex:    {} -> {} Celsius".format(sensors_values[9:13], hxt.get_asic_temperature(sensors_values[9:13])))
-    # print(" * asic2_hex:    {} -> {} Celsius".format(sensors_values[13:17], hxt.get_asic_temperature(sensors_values[13:17])))
-    # print(" * adc_hex:      {} -> {} Celsius".format(sensors_values[17:21], hxt.get_adc_temperature(sensors_values[17:21])))
-
-    # try:
-    #     # Request and receive environmental data #
-    #     the_start = time.time()
-    #     for index in range(0x90, 0x96):
-    #         # print("Calling uart_tx([0x{0:X}, 0x52])".format(index), flush=True)
-    #         hxt.x10g_rdma.uart_tx([index, 0x52])
-    #         hxt.await_uart_ready()
-    #         read_sensors = hxt.x10g_rdma.uart_rx(0x0)
-    #         # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)), flush=True)
-    #         # Display the environmentals values
-    #         hxt.displ_envs(read_sensors)
-
-    #     the_end = time.time()
-    #     print("Entire loop took: {}".format(the_end - the_start))
-    #     pass
-    # except (socket.error, struct.error) as e:
-    #     print(" *** Environmental data error: {} ***".format(e))
 
     # SCRATCH REGISTERS #
 
