@@ -133,8 +133,7 @@ class Hexitec2x6():
         resp, reply = self.read_and_response(vsr, address_h, address_l)
         resp = resp[2:-1]   # Extract payload
         if masked:
-            value_h = value_h | resp[0]     # Mask existing value with new value
-            value_l = value_l | resp[1]     # Mask existing value with new value
+            value_h, value_l = self.mask_aspect_encoding(value_h, value_l, resp)
         # print("   WaR Write: {} {} {} {} {}".format(vsr, address_h, address_l, value_h, value_l))
         self.send_cmd([vsr, 0x40, address_h, address_l, value_h, value_l])
         if delay:
@@ -146,6 +145,23 @@ class Hexitec2x6():
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
         # print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
         return resp, reply
+
+    def mask_aspect_encoding(self, value_h, value_l, resp):
+        """Mask values honouring aspect encoding.
+
+        Aspect: 0x30 = 1, 0x31 = 1, .., 0x39 = 9, 0x41 = A, 0x42 = B, .., 0x46 = F.
+        Therefore increase values between 0x39 and 0x41 by 7 to match aspect's legal range.
+        I.e. 0x39 | 0x32 = 0x3B, + 7 = 0x42.
+        """
+        masked_h = value_h | resp[0]
+        masked_l = value_l | resp[1]
+        if (masked_h > 0x39) and (masked_h < 0x41):
+            masked_h = masked_h + 7
+        if (masked_l > 0x39) and (masked_l < 0x41):
+            masked_l = masked_l + 7
+        # print("h: {0:X} r: {1:X} = {2:X} masked: {3:X}".format(value_h, resp[0], value_h | resp[0], masked_h))
+        # print("l: {0:X} r: {1:X} = {2:X} masked: {3:X}".format(value_l, resp[1], value_l | resp[1], masked_l))
+        return masked_h, masked_l
 
     def block_write_and_response(self, vsr, number_registers, address_h, address_l, value_h, value_l):
         """Write value_h, value_l to address_h, address_l of vsr, spanning number_registers."""

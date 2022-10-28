@@ -64,7 +64,7 @@ class Hexitec2x6():
 
     def send_cmd(self, cmd):
         """Send a command string to the microcontroller."""
-        # print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in cmd)))
+        # print("Send to UART: {}  ({})".format(' '.join("0x{0:02X}".format(x) for x in cmd), cmd))
         self.x10g_rdma.uart_tx(cmd)
 
     def read_response(self):
@@ -78,8 +78,7 @@ class Hexitec2x6():
                 print("\n\t read_response() timed out waiting for uart!\n")
                 break
         response = self.x10g_rdma.uart_rx(0x0)
-        # print("... receiving: {}. {}".format(response, counter))
-        # print("... receiving: {} ({})".format(' '.join("0x{0:02X}".format(x) for x in response), counter))
+        # print("R: {}.  ({}). {}".format(' '.join("0x{0:02X}".format(x) for x in response), response, counter))
         return response
 
     def read_and_response(self, vsr, address_h, address_l):
@@ -94,6 +93,7 @@ class Hexitec2x6():
         return resp, reply
 
     def delaying(self):
+        """Debug function."""
         # time.sleep(0.2)
         pass
 
@@ -105,8 +105,7 @@ class Hexitec2x6():
         #     print("   WaR Rd1: resp: {} reply: {} ".format(resp, reply))
         resp = resp[2:-1]   # Extract payload
         if masked:
-            value_h = value_h | resp[0]     # Mask existing value with new value
-            value_l = value_l | resp[1]     # Mask existing value with new value
+            value_h, value_l = self.mask_aspect_encoding(value_h, value_l, resp)
         # print("   WaR Write: {} {} {} {} {}".format(vsr, address_h, address_l, value_h, value_l))
         self.delaying()
         self.send_cmd([vsr, 0x40, address_h, address_l, value_h, value_l])
@@ -127,6 +126,23 @@ class Hexitec2x6():
             raise HexitecFemError("Readback value did not match written!")
         return resp, reply
 
+    def mask_aspect_encoding(self, value_h, value_l, resp):
+        """Mask values honouring aspect encoding.
+
+        Aspect: 0x30 = 1, 0x31 = 1, .., 0x39 = 9, 0x41 = A, 0x42 = B, .., 0x46 = F.
+        Therefore increase values between 0x39 and 0x41 by 7 to match aspect's legal range.
+        I.e. 0x39 | 0x32 = 0x3B, + 7 = 0x42.
+        """
+        masked_h = value_h | resp[0]
+        masked_l = value_l | resp[1]
+        if (masked_h > 0x39) and (masked_h < 0x41):
+            masked_h = masked_h + 7
+        if (masked_l > 0x39) and (masked_l < 0x41):
+            masked_l = masked_l + 7
+        # print("h: {0:X} r: {1:X} = {2:X} masked: {3:X}".format(value_h, resp[0], value_h | resp[0], masked_h))
+        # print("l: {0:X} r: {1:X} = {2:X} masked: {3:X}".format(value_l, resp[1], value_l | resp[1], masked_l))
+        return masked_h, masked_l
+
     def block_write_custom_length(self, vsr, number_registers, address_h, address_l, write_values):
         """Write write_values starting with address_h, address_l of vsr, spanning number_registers."""
         if (number_registers * 2) != len(write_values):
@@ -143,14 +159,55 @@ class Hexitec2x6():
     def burst_write(self, vsr, number_registers, address_h, address_l, write_values):
         """Write bytes to multiple registers."""
         command = [vsr, 0x44, address_h, address_l]
+        values_written = 0
         for entry in write_values:
             command.append(entry)
+            values_written += 1
+            # Write 2 values (one byte) per register
+            if values_written == (number_registers*2):
+                break
         self.send_cmd(command)
+        time.sleep(0.2)
         resp = self.read_response()
+        time.sleep(0.2)
+        # print(" S.sent:     {}".format(command))
+        # print(" R.received: {}".format(resp))
         reply = resp[4:-1]
         reply = "{}".format(''.join([chr(x) for x in reply]))
         # print(" BR. reply: {} (resp: {})".format(reply, resp))
-        return resp, reply
+        # Time to compare each register and values versus what was written
+        # Note down the VSR registers:
+        resp_original = resp
+        resp = resp[2:]     # Remove Start Character, VSR address
+        ms, ls = self.expand_addresses(number_registers, address_h, address_l)
+        # print("First written register: {0:X} {1:X} vs {2:X} {3:X} echoed register".format(ms[0], ls[0], resp[0], resp[1]))
+        # print("  1st values register: {0:X} {1:X} vs {2:X} {3:X} echoed register".format(write_list[0], write_list[1], resp[2], resp[3]))
+        # print("  2nd written register: {0:X} {1:X} vs {2:X} {3:X} echoed register".format(ms[1], ls[1], resp[4], resp[5]))
+        # print("  2nd values register: {0:X} {1:X} vs {2:X} {3:X} echoed register".format(write_list[2], write_list[3], resp[6], resp[7]))
+        # print("  3rd written register: {0:X} {1:X} vs {2:X} {3:X} echoed register".format(ms[2], ls[2], resp[8], resp[9]))
+        # print("  3rd values register: {0:X} {1:X} vs {2:X} {3:X} echoed register".format(write_list[2], write_list[3], resp[10], resp[11]))
+        try:
+            for iter in range(len(ms)):
+                index = (4*iter)
+                if iter == 0:
+                    print("lengths, ms {}, ls {} cmd: {} resp: {} | iter: {} index: {}".format(len(ms), len(ls), len(command), len(resp), iter, index))
+                if len(resp) < index:
+                    print("resp too short! {} vs {} Contains:\n {}".format(len(resp), index, resp))
+                    break
+                # Compare register addresses matches:
+                if (ms[iter] != resp[index]) or (ls[iter] != resp[1+index]):
+                    print(" I: {0:02} Address W/R: {1:X}.{2:X} != {3:X}.{4:X}".format(
+                        iter, ms[iter], ls[iter], resp[index], resp[1+index]))
+                # Compare register values matches:
+                if (write_list[iter*2] != resp[2+index]) or (write_list[iter*2+1] != resp[3+index]):
+                    print(" I: {0:02} Value W/R: {1:X}.{2:X} != {3:X}.{4:X}".format(
+                        iter, write_list[iter*2], write_list[iter*2+1], resp[2+index], resp[3+index]))
+        except IndexError:
+            print("BANG!")
+            print(" *** lengths, ms {}, ls {} cmd: {} resp: {} | iter: {} index: {}".format(len(ms), len(ls), len(command), len(resp), iter, index))
+            print(" command: {}".format(command))
+            print(" resp:    {}".format(resp))
+        return resp_original, reply
 
     def expand_addresses(self, number_registers, address_h, address_l):
         """Expand addresses by the number_registers specified.
@@ -188,43 +245,38 @@ class Hexitec2x6():
         # raise Exception("Premature!")
         return resp_list, reply_list
 
-    def enables_write_and_read_verify(self, vsr, address_h, address_l, write_list):
+    def enables_write_and_read_verify(self, vsr, address_h, address_l, write_list, number_registers=10):
         """Write and read to verify correct bytes written to register."""
-        number_registers = 10
+        # number_registers = 10
         self.block_write_custom_length(vsr, number_registers, address_h, address_l, write_list)
+        # Using 0x44 command is unreliable (fills up UART?)
         # self.burst_write(vsr, number_registers, address_h, address_l, write_list)
 
-        resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
-        read_list = []
-        for a, b in resp_list:
-            read_list.append(a)
-            read_list.append(b)
-        # print("read_list : {}".format(read_list))
-        if not (write_list == read_list):
-            print(" Register 0x{0}{1}: Error".format(chr(address_h), chr(address_l)))
-            print("     Wrote: {}".format(write_list))
-            print("     Read : {}".format(read_list))
-            # raise HexitecFemError("Exiting upon inaccurate read back")
-            # self.error_list.append(" VSR {2:X} Register 0x{0}{1}: ERROR".format(chr(address_h), chr(address_l), vsr))
-            # self.error_list.append("     Wrote: {}".format(write_list))
-            # self.error_list.append("     Read : {}".format(read_list))
-            # self.error_count += 1
-            # Check again:
-            resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
-            read_list = []
-            for a, b in resp_list:
-                read_list.append(a)
-                read_list.append(b)
-            if not (write_list == read_list):
-                print(" ** Readback value still inaccurate:")
-                print(" **    Wrote: {}".format(write_list))
-                print(" **    Read : {}".format(read_list))
-                self.error_list.append(" VSR {2:X} Register 0x{0}{1}: ERROR".format(chr(address_h), chr(address_l), vsr))
-                self.error_list.append("     Wrote: {}".format(write_list))
-                self.error_list.append("     Read : {}".format(read_list))
-                self.error_count += 1
-            else:
-                print("Error NOT repeated in second readback(!)")
+        # resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
+        # read_list = []
+        # for a, b in resp_list:
+        #     read_list.append(a)
+        #     read_list.append(b)
+        # if not (write_list == read_list):
+        #     print(" Register 0x{0}{1}: values mismatch".format(chr(address_h), chr(address_l)))
+        #     print("     Wrote: {}".format(write_list))
+        #     print("     Read : {}".format(read_list))
+        #     # Check again:
+        #     resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
+        #     read_list = []
+        #     for a, b in resp_list:
+        #         read_list.append(a)
+        #         read_list.append(b)
+        #     if not (write_list == read_list):
+        #         print(" ** Readback value(s) still inaccurate:")
+        #         print(" **    Wrote: {}".format(write_list))
+        #         print(" **    Read : {}".format(read_list))
+        #         self.error_list.append(" VSR {2:X} Register 0x{0}{1}: ERROR".format(chr(address_h), chr(address_l), vsr))
+        #         self.error_list.append("     Wrote: {}".format(write_list))
+        #         self.error_list.append("     Read : {}".format(read_list))
+        #         self.error_count += 1
+        #     else:
+        #         print("Error NOT repeated in second readback(!)")
 
 
 class HexitecFemError(Exception):
@@ -270,7 +322,7 @@ if __name__ == '__main__':  # noqa: C901
                 if index % 10 == 0:
                     print(index)
                 write_list = [70, 57, 51, 70, 52, 69, 70, 70, 68, 49, 69, 55, 56, 70, 67, 65, 55, 67, 70, 66]
-                hxt.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
+                hxt.enables_write_and_read_verify(vsr, address_h, address_l, write_list)    # , 2)
                 write_list = [56, 56, 55, 57, 65, 56, 56, 48, 55, 50, 56, 67, 53, 56, 56, 69, 52, 57, 66, 48]
                 hxt.enables_write_and_read_verify(vsr, address_h, address_l, write_list)
 

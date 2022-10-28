@@ -307,6 +307,9 @@ class HexitecFem():
         self.waited = 0.0
 
         self.param_tree = ParameterTree(param_tree_dict)
+        # Track any readback inaccurate value(s)
+        self.error_list = []
+        self.error_count = 0
 
     def __del__(self):
         """Ensure rdma connection closed."""
@@ -611,7 +614,7 @@ class HexitecFem():
 
     def send_cmd(self, cmd):
         """Send a command string to the microcontroller."""
-        # print("Send to UART: {}".format(' '.join("0x{0:02X}".format(x) for x in cmd)))
+        # print("Send to UART: {}  ({})".format(' '.join("0x{0:02X}".format(x) for x in cmd), cmd))
         self.x10g_rdma.uart_tx(cmd)
 
     def read_response(self):
@@ -631,7 +634,7 @@ class HexitecFem():
         #     counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
 
         response = self.x10g_rdma.uart_rx(0x0)
-        # print("R: {}. {}".format(response, counter))
+        # print("R: {}.  ({}). {}".format(' '.join("0x{0:02X}".format(x) for x in response), response, counter))
         return response
 
     def cam_connect(self):
@@ -648,7 +651,7 @@ class HexitecFem():
             raise HexitecFemError(e)
 
     def cam_connect_completed(self):
-        """The VSRs are initialised."""
+        """Complete VSRs initialisation."""
         try:
             self._set_status_message("VSRs initialised")
             print("\n\t INITIALISED\n")
@@ -1323,16 +1326,12 @@ class HexitecFem():
         number_registers determining how many registers to target, always 10 for loading enables.
         enables_settings contain values read from ini file, otherwise enables_default utilised.
         """
-        # print(" *** load_enables_settings(), number_registers: {0} address: {1:X} {2:X} \nenables: {3}".format(
-        #     number_registers, address_h, address_l, enables_settings))
-        # print("   VSR: {}".format(self.vsr_addr))
         # Check list of (-1, -1) tuples wasn't returned
         if enables_settings[0][0] > 0:
             asic1_command = []
             for msb, lsb in enables_settings:
                 asic1_command.append(msb)
                 asic1_command.append(lsb)
-            # Column Read Enable, for ASIC1 (Reg 0x61)
             register_values = asic1_command
             # print("  ... producing register_values: {}  ".format(' '.join("0x{0:02X}".format(x) for x in register_values)))
             # print("   i.e.:  {}".format(register_values))
@@ -1347,26 +1346,27 @@ class HexitecFem():
     def enables_write_and_read_verify(self, vsr, address_h, address_l, write_list):
         """."""
         number_registers = 10
-        # resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
-        # print(" PRIOR, Column Read Enable A2: {}".format(reply_list))
-        # print(" PRIOR, Column Read Enable A2: {}".format(resp_list))
-        # #write_list: 0x34 0x38 0x32 0x43 0x46 0x41 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46 0x46
-        # write_list = [52, 56, 50, 67, 70, 65, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70]
         self.block_write_custom_length(vsr, number_registers, address_h, address_l, write_list)
 
         resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
-        # print(" AFTER, Column Read Enable A2: {}".format(reply_list))
         read_list = []
         for a, b in resp_list:
             read_list.append(a)
             read_list.append(b)
-        # print(" 10.AFTER, Column Read Enable A2: {}".format(write_list))# resp_list))
-        # # print(" 11.AFTER, Column Read Enable A2: {}".format(write_list2))# resp_list))
-        # print(" 2.AFTER, Column Read Enable A2: {}".format(read_list))
         if not (write_list == read_list):
-            logging.error(" Register 0x{0}{1}: ERROR".format(chr(address_h), chr(address_l)))
-            logging.error("     Wrote: {}".format(write_list))
-            logging.error("     Read : {}".format(read_list))
+            # Check again:
+            resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
+            read_list = []
+            for a, b in resp_list:
+                read_list.append(a)
+                read_list.append(b)
+            if not (write_list == read_list):
+                logging.error(" ** Readback value(s) still inaccurate:")
+                logging.error(" **    Wrote: {}".format(write_list))
+                logging.error(" **    Read : {}".format(read_list))
+                self.error_list.append(" VSR {2:X} Register 0x{0}{1}: ERROR".format(chr(address_h), chr(address_l), vsr))
+                self.error_list.append("     Wrote: {}".format(write_list))
+                self.error_list.append("     Read : {}".format(read_list))
         # else:
         #     print(" Register 0x{0}{1} -- ALL FINE".format(chr(address_h), chr(address_l)))
 
@@ -1535,15 +1535,15 @@ class HexitecFem():
                     if time_taken > 3.0:
                         raise HexitecFemError("Timed out polling register 0x89; PLL remains disabled")
 
-            print("set re_EN_TRAINING '1'")
-            training_en_mask = 0x10
+            logging.debug("set re_EN_TRAINING '1'")
+            # training_en_mask = 0x10
             self.x10g_rdma.write(0x00000020, 0x10, burst_len=1, comment="Enabling training")
 
-            print("Waiting 0.2 seconds..")
+            logging.debug("Waiting 0.2 seconds..")
             time.sleep(0.2)
 
-            print("set re_EN_TRAINING '0'")
-            training_en_mask = 0x00
+            logging.debug("set re_EN_TRAINING '0'")
+            # training_en_mask = 0x00
             self.x10g_rdma.write(0x00000020, 0x00, burst_len=1, comment="Enabling training")
 
             vsr_status_addr = 0x000003E8  # Flags of interest: locked, +4 to get to the next VSR, et cetera for all VSRs
@@ -1651,7 +1651,9 @@ class HexitecFem():
         """
         delayed = False     # Debugging: Extra 0.2 second delay between read, write?
         self.write_and_response(vsr, 0x30, 0x31, 0x31, 0x30)    # Select external Clock
-        self.write_and_response(vsr, 0x30, 0x37, 0x30, 0x33)    # Enable PLLs; 1 = Enable PLL; 2 = Enable ADC PLL
+        # self.write_and_response(vsr, 0x30, 0x37, 0x30, 0x33)    # Enable PLLs; 1 = Enable PLL; 2 = Enable ADC PLL
+        self.send_cmd([vsr, 0x42, 0x30, 0x37, 0x30, 0x33])  # Enable PLLs; 1 = Enable PLL; 2 = Enable ADC PLL
+        self.read_response()
         self.write_and_response(vsr, 0x30, 0x32, value_002[0], value_002[1], delay=delayed)     # LowByte Row S1
         self.write_and_response(vsr, 0x30, 0x33, value_003[0], value_003[1], delay=delayed)    # HighByte Row S1
         """
@@ -1667,10 +1669,18 @@ class HexitecFem():
         self.write_and_response(vsr, 0x30, 0x35, value_005[0], value_005[1], delay=delayed)     # SphS2
         # TODO: ADDITIONALLY ADDED, IS THIS NEEDED OR NOT: ??
         self.write_and_response(vsr, 0x30, 0x36, value_006[0], value_006[1], delay=delayed)     # Gain
-        self.write_and_response(vsr, 0x30, 0x39, value_009[0], value_009[1], delay=delayed)     # ADC Clock Delay
-        self.write_and_response(vsr, 0x30, 0x45, value_00E[0], value_00E[1], delay=delayed)     # FVAL/LVAL Delay
-        self.write_and_response(vsr, 0x31, 0x42, 0x30, 0x38)    # SM wait Low Row, 8 bits
-        self.write_and_response(vsr, 0x31, 0x34, 0x30, 0x31)    # Start SM on falling edge ('0' = rising edge) of ADC-CLK
+        # self.write_and_response(vsr, 0x30, 0x39, value_009[0], value_009[1], delay=delayed)     # ADC Clock Delay
+        self.send_cmd([vsr, 0x42, 0x30, 0x39, value_009[0], value_009[1]])
+        self.read_response()
+        # self.write_and_response(vsr, 0x30, 0x45, value_00E[0], value_00E[1], delay=delayed)     # FVAL/LVAL Delay
+        self.send_cmd([vsr, 0x42, 0x30, 0x45, value_00E[0], value_00E[1]])
+        self.read_response()
+        # self.write_and_response(vsr, 0x31, 0x42, 0x30, 0x38)    # SM wait Low Row, 8 bits
+        self.send_cmd([vsr, 0x42, 0x31, 0x42, 0x30, 0x38])
+        self.read_response()
+        # self.write_and_response(vsr, 0x31, 0x34, 0x30, 0x31)    # Start SM on falling edge ('0' = rising edge) of ADC-CLK
+        self.send_cmd([vsr, 0x42, 0x31, 0x34, 0x30, 0x31])
+        self.read_response()
         self.write_and_response(vsr, 0x30, 0x31, 0x32, 0x30)    # Enable LVDS Interface
         """
         90	44	61	FF	FF	FF	FF	FF	FF	FF	FF	FF	FF	;Column Read En
@@ -1712,18 +1722,20 @@ class HexitecFem():
         90	43	24	20	;Enable Vcal
         90	42	24	20	;Disable Vcal
         """
-        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x32)    # Disable Vcal/Capture Avg Picture
-        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x38)    # Disable Vcal/En DC spectroscopic mode
-        # self.write_and_response(vsr, 0x30, 0x31, 0x38, 0x30)    # Enable Training
-        self.send_cmd([vsr, 0x42, 0x30, 0x31, 0x38, 0x30])
-        self.read_response()
+        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x32, False)    # Disable Vcal/Capture Avg Picture (False=don't mask)
+        # print("Disable Vcal/En DC spectroscopic mode")
+        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x38, False)    # Disable Vcal/En DC spectroscopic mode (False=don't mask)
+        logging.debug("Enable Training")
+        self.write_and_response(vsr, 0x30, 0x31, 0x38, 0x30)    # Enable Training
+        # self.send_cmd([vsr, 0x42, 0x30, 0x31, 0x38, 0x30])
+        # self.read_response()
 
         # self.write_and_response(vsr, 0x31, 0x38, 0x30, 0x31) # Low Byte SM Vcal Clock
         # TODO: Inserting VCal setting here
         # Send VCAL2 -> VCAL1 low byte to Register 0x02 (Accepts 8 bits)
-        self.write_and_response(vsr, 0x31, 0x38, value_018[0], value_018[1], delay=delayed)
+        self.write_and_response(vsr, 0x31, 0x38, value_018[0], value_018[1], False)
         # Send VCAL2 -> VCAL1 high byte to Register 0x03 (Accepts 7 bits)
-        self.write_and_response(vsr, 0x31, 0x39, value_019[0], value_019[1], delay=delayed)
+        self.write_and_response(vsr, 0x31, 0x39, value_019[0], value_019[1], False)
         # self.write_and_response(vsr, 0x32, 0x34,	0x32, 0x30) # Enable Vcal
         logging.debug("Enable Vcal")  # 90	43	24	20	;Enable Vcal
         self.send_cmd([vsr, 0x43, 0x32, 0x34, 0x32, 0x30])
@@ -1753,8 +1765,7 @@ class HexitecFem():
         resp, reply = self.read_and_response(vsr, address_h, address_l)
         resp = resp[2:-1]   # Extract payload
         if masked:
-            value_h = value_h | resp[0]     # Mask existing value with new value
-            value_l = value_l | resp[1]     # Mask existing value with new value
+            value_h, value_l = self.mask_aspect_encoding(value_h, value_l, resp)
         # print("   WaR Write: {} {} {} {} {}".format(vsr, address_h, address_l, value_h, value_l))
         if delay:
             time.sleep(0.1)
@@ -1767,6 +1778,11 @@ class HexitecFem():
         reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
         # print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
+        if ((resp[4] != value_h) or (resp[5] != value_l)):
+            print("H? {} L? {}".format(resp[4] == value_h, resp[5] == value_l))
+            print("WaR. reply: {} (resp: {}) VERSUS value_h: {} value_l: {}".format(reply, resp, value_h, value_l))
+            print("WaR. (resp: {} {}) VERSUS value_h: {} value_l: {}".format(resp[4], resp[5], value_h, value_l))
+            raise HexitecFemError("Readback value did not match written!")
         return resp, reply
 
     def block_write_and_response(self, vsr, number_registers, address_h, address_l, value_h, value_l):
@@ -2397,6 +2413,23 @@ class HexitecFem():
                     print("   " + section + "/" + key + " => " + value.strip("\""))
         if debug:  # pragma: no cover
             print("---------------------------------------------------------------------")
+
+    def mask_aspect_encoding(self, value_h, value_l, resp):
+        """Mask values honouring aspect encoding.
+
+        Aspect: 0x30 = 1, 0x31 = 1, .., 0x39 = 9, 0x41 = A, 0x42 = B, .., 0x46 = F.
+        Therefore increase values between 0x39 and 0x41 by 7 to match aspect's legal range.
+        I.e. 0x39 | 0x32 = 0x3B, + 7 = 0x42.
+        """
+        masked_h = value_h | resp[0]
+        masked_l = value_l | resp[1]
+        if (masked_h > 0x39) and (masked_h < 0x41):
+            masked_h = masked_h + 7
+        if (masked_l > 0x39) and (masked_l < 0x41):
+            masked_l = masked_l + 7
+        # print("h: {0:X} r: {1:X} = {2:X} masked: {3:X}".format(value_h, resp[0], value_h | resp[0], masked_h))
+        # print("l: {0:X} r: {1:X} = {2:X} masked: {3:X}".format(value_l, resp[1], value_l | resp[1], masked_l))
+        return masked_h, masked_l
 
     def debug_register(self, msb, lsb):  # pragma: no cover
         """Debug function: Display contents of register."""

@@ -53,6 +53,7 @@ class Hexitec2x6():
         self.rdma_port = 61648
         self.x10g_rdma = None
         self.vsr_addr = 0x90
+        self.error_list = []
 
     def __del__(self):
         """."""
@@ -163,8 +164,7 @@ class Hexitec2x6():
         #     print("   WaR Rd1: resp: {} reply: {} ".format(resp, reply))
         resp = resp[2:-1]   # Extract payload
         if masked:
-            value_h = value_h | resp[0]     # Mask existing value with new value
-            value_l = value_l | resp[1]     # Mask existing value with new value
+            value_h, value_l = self.mask_aspect_encoding(value_h, value_l, resp)
         # print("   WaR Write: {} {} {} {} {}".format(vsr, address_h, address_l, value_h, value_l))
         self.send_cmd([vsr, 0x40, address_h, address_l, value_h, value_l])
         if delay:
@@ -176,7 +176,29 @@ class Hexitec2x6():
         reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
         # print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
+        if ((resp[4] != value_h) or (resp[5] != value_l)):
+            print("H? {} L? {}".format(resp[4] == value_h, resp[5] == value_l))
+            print("WaR. reply: {} (resp: {}) VERSUS value_h: {} value_l: {}".format(reply, resp, value_h, value_l))
+            print("WaR. (resp: {} {}) VERSUS value_h: {} value_l: {}".format(resp[4], resp[5], value_h, value_l))
+            raise HexitecFemError("Readback value did not match written!")
         return resp, reply
+
+    def mask_aspect_encoding(self, value_h, value_l, resp):
+        """Mask values honouring aspect encoding.
+
+        Aspect: 0x30 = 1, 0x31 = 1, .., 0x39 = 9, 0x41 = A, 0x42 = B, .., 0x46 = F.
+        Therefore increase values between 0x39 and 0x41 by 7 to match aspect's legal range.
+        I.e. 0x39 | 0x32 = 0x3B, + 7 = 0x42.
+        """
+        masked_h = value_h | resp[0]
+        masked_l = value_l | resp[1]
+        if (masked_h > 0x39) and (masked_h < 0x41):
+            masked_h = masked_h + 7
+        if (masked_l > 0x39) and (masked_l < 0x41):
+            masked_l = masked_l + 7
+        # print("h: {0:X} r: {1:X} = {2:X} masked: {3:X}".format(value_h, resp[0], value_h | resp[0], masked_h))
+        # print("l: {0:X} r: {1:X} = {2:X} masked: {3:X}".format(value_l, resp[1], value_l | resp[1], masked_l))
+        return masked_h, masked_l
 
     def block_write_and_response(self, vsr, number_registers, address_h, address_l, value_h, value_l):
         """Write value_h, value_l to address_h, address_l of vsr, spanning number_registers."""
@@ -414,10 +436,10 @@ class Hexitec2x6():
         90	43	24	20	;Enable Vcal
         90	42	24	20	;Disable Vcal
         """
-        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x32)     # Disable Vcal/Capture Avg Picture
-        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x38)     # Disable Vcal/En DC spectroscopic mode
+        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x32, False)     # Disable Vcal/Capture Avg Picture
+        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x38, False)     # Disable Vcal/En DC spectroscopic mode
         self.write_and_response(vsr, 0x30, 0x31, 0x38, 0x30)     # Enable Training
-        self.write_and_response(vsr, 0x31, 0x38, 0x30, 0x31)     # Low Byte SM Vcal Clock
+        self.write_and_response(vsr, 0x31, 0x38, 0x30, 0x31, False)     # Low Byte SM Vcal Clock
         # self.write_and_response(vsr, 0x30, 0x32, 0x31, 0x34)     # Low Byte Row S1
         # self.write_and_response(vsr, 0x32, 0x34,	0x32, 0x30) # Enable Vcal
         print("Enable Vcal")  # 90	43	24	20	;Enable Vcal
@@ -435,22 +457,6 @@ class Hexitec2x6():
         number_registers = 10
         self.block_write_custom_length(vsr, number_registers, address_h, address_l, write_list)
         # self.burst_write(vsr, number_registers, address_h, address_l, write_list)
-
-        resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
-        # resp, reply = self.burst_read(vsr, address_h, address_l)
-        # print("write_list: {}".format(write_list))
-        read_list = []
-        for a, b in resp_list:
-            read_list.append(a)
-            read_list.append(b)
-        # print("read_list : {}".format(read_list))
-        if not (write_list == read_list):
-            print(" Register 0x{0}{1}: ERROR".format(chr(address_h), chr(address_l)))
-            print("     Wrote: {}".format(write_list))
-            print("     Read : {}".format(read_list))
-        # else:
-        #     print(" Register 0x{0}{1} -- ALL FINE".format(chr(address_h), chr(address_l)))
-        # raise Exception("EXIT!")
 
     def burst_read(self, vsr, address_h, address_l):
         """Read from address_h, address_l of vsr, covering number_registers registers."""
@@ -599,6 +605,31 @@ if __name__ == '__main__':  # noqa: C901
                     # raise HexitecFemError("Timed out polling VSR{} register 0x89; PLL remains disabled".format(vsr-144))
         ending = time.time()
         print("That took: {}".format(ending - beginning))
+
+        print("set re_EN_TRAINING '1'")
+        # training_en_mask = 0x10
+        hxt.x10g_rdma.write(0x00000020, 0x10, burst_len=1, comment="Enabling training")
+
+        print("Waiting 0.2 seconds..")
+        time.sleep(0.2)
+
+        print("set re_EN_TRAINING '0'")
+        # training_en_mask = 0x00
+        hxt.x10g_rdma.write(0x00000020, 0x00, burst_len=1, comment="Enabling training")
+
+        vsr_status_addr = 0x000003E8  # Flags of interest: locked, +4 to get to the next VSR, et cetera for all VSRs
+        for vsr in VSR_ADDRESS:
+            index = vsr - 144
+            vsr_status = hxt.x10g_rdma.read(vsr_status_addr, burst_len=1, comment="Read vsr{}_status".format(index))
+            vsr_status = vsr_status[0]
+            locked = vsr_status & 0xFF
+            # print("vsr{0}_status 0x{1:08X} = 0x{2:08X}. Locked? 0x{3:X}".format(index, vsr_status_addr, vsr_status, locked))
+            if (locked == 0xFF):
+                print("VSR{0} Locked (0x{1:X})".format(vsr-143, locked))
+            else:
+                print("VSR{0} incomplete lock! (0x{1:X})".format(vsr-143, locked))
+                raise HexitecFemError("VSR{0} failed to lock! (0x{1:X})".format(vsr-143, locked))
+            vsr_status_addr += 4
 
         reg07 = []
         reg89 = []

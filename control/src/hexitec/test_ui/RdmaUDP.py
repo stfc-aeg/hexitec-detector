@@ -268,7 +268,7 @@ class RdmaUDP(object):
             rx_data.append(rx_d)
             read_value = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (3)')
             rx_has_data_flag = not (read_value[0] & rx_buff_empty_mask)
-        # print("(RdmaUDP) UART RX'd: {}".format(' '.join("0x{0:02X}".format(x) for x in rx_data)))
+        # print("  UART RX'd: {}".format(' '.join("0x{0:02X}".format(x) for x in rx_data)))
         return rx_data
 
     def uart_tx(self, cmd):
