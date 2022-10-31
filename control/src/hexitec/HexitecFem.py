@@ -119,7 +119,6 @@ class HexitecFem():
         self.number_frames = 10
         self.number_frames_backed_up = 0
 
-        self.first_initialisation = True
         self.hardware_connected = False
         self.hardware_busy = False
         self.ignore_busy = False
@@ -365,43 +364,6 @@ class HexitecFem():
         """Cleanup connection."""
         self.disconnect()
 
-    def set_image_size(self, x_size, y_size, p_size, f_size):
-        """Set image size, function inherited from JE/RH."""
-        # set image size globals
-        self.image_size_x = x_size
-        self.image_size_y = y_size
-        self.image_size_p = p_size
-        self.image_size_f = f_size
-        # check parameters againts ethernet packet and local link frame size compatibility
-        pixel_count_max = x_size * y_size
-        number_bytes = pixel_count_max * 2
-        number_bytes_r4 = pixel_count_max % 4
-        number_bytes_r8 = number_bytes % 8
-        first_packets = number_bytes // self.strm_mtu
-        last_packet_size = number_bytes % self.strm_mtu
-        lp_number_bytes_r8 = last_packet_size % 8
-        lp_number_bytes_r32 = last_packet_size % 32
-        size_status = number_bytes_r4 + number_bytes_r8 + lp_number_bytes_r8 + lp_number_bytes_r32
-        # calculate pixel packing settings
-        if p_size >= 11 and p_size <= 14 and f_size == 16:
-            pixel_count_max = pixel_count_max // 2
-        elif p_size == 8 and f_size == 8:
-            pixel_count_max = pixel_count_max // 4  # pragma: no cover
-        else:
-            size_status = size_status + 1
-
-        # Set up registers if no size errors
-        if size_status != 0:
-            logging.error("%-32s %8i %8i %8i %8i %8i %8i" %
-                          ('Size error', number_bytes, number_bytes_r4, number_bytes_r8,
-                           first_packets, lp_number_bytes_r8, lp_number_bytes_r32))
-        else:
-            address = self.rdma_addr["receiver"] | 0x01
-            data = (pixel_count_max & 0x1FFFF) - 1
-            self.x10g_rdma.write(address, data, burst_len=1, comment='pixel count max')
-            self.x10g_rdma.write(self.rdma_addr["receiver"] + 4, 0x3, burst_len=1, comment='pixel bit size => 16 bit')
-        return
-
     def frame_gate_trigger(self):
         """Reset monitors, pulse frame gate."""
         # the reset of monitors suggested by Rob:
@@ -553,9 +515,6 @@ class HexitecFem():
         if self.parent.daq.in_error:
             # Reset variables
             self.hardware_busy = False
-            if self.first_initialisation:
-                self.ignore_busy = False
-                self.first_initialisation_done_update_gui()
         elif not self.parent.daq.in_progress:
             IOLoop.instance().call_later(0.5, self.check_all_processes_ready)
         else:
@@ -681,109 +640,6 @@ class HexitecFem():
             logging.error("Unable to disconnect camera: %s" % "No active connection")
             raise HexitecFemError("%s; %s" % (e, "No active connection"))
 
-    # TODO: 2x2 Legacy code, to be removed
-    def calibrate_sensor(self):  # noqa: C901
-        """Calibrate sensors attached to targeted VSR."""
-        if self.sensors_layout == HexitecFem.READOUTMODE[0]:
-            logging.debug("Reading out single sensor")
-            self.set_image_size(80, 80, 14, 16)
-        elif self.sensors_layout == HexitecFem.READOUTMODE[1]:
-            self.set_image_size(160, 160, 14, 16)
-            logging.debug("Reading out 2x2 sensors")
-
-        logging.debug("Clear bit 5")
-        # Clear bit; Register 0x24, bit5: disable VCAL (i.e. VCAL is here ENABLED)
-        self.send_cmd([self.vsr_addr, HexitecFem.CLR_REG_BIT, 0x32, 0x34, 0x32, 0x30])
-        self.read_response()
-
-        logging.debug("Set bit 6")
-        # Clear bit; Register 0x24, bit6: test mode
-        self.send_cmd([self.vsr_addr, HexitecFem.CLR_REG_BIT, 0x32, 0x34, 0x34, 0x30])
-        self.read_response()
-        self.send_cmd([self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x30, 0x31])
-        self.read_response()
-
-        # Set bit; Register 0x24, bit5 (disable VCAL), bit1 (capture average picture)
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34, 0x32, 0x32])
-        self.read_response()
-
-        if self.selected_sensor == HexitecFem.OPTIONS[0]:
-            self.x10g_rdma.write(0x60000002, 1, burst_len=1, comment='Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
-        if self.selected_sensor == HexitecFem.OPTIONS[2]:
-            self.x10g_rdma.write(0x60000002, 2, burst_len=1, comment='Trigger Cal process : Bit1 - VSR2, Bit 0 - VSR1 ')
-        logging.debug("CALIBRATING VSR_{}".format(self.vsr_addr-143))
-
-        # Send command on CMD channel to FEMII
-        self.x10g_rdma.write(0x60000002, 0, burst_len=1, comment='Un-Trigger Cal process')
-
-        # Reading back Sync register
-        synced = self.x10g_rdma.read(0x60000010, burst_len=1, comment='Check LVDS has synced')
-        logging.debug("Sync Register value")
-
-        full_empty = self.x10g_rdma.read(0x60000011, burst_len=1, comment='Check FULL EMPTY Signals')
-        logging.debug("Check EMPTY Signals: %s" % full_empty)
-
-        full_empty = self.x10g_rdma.read(0x60000012, burst_len=1, comment='Check FULL FULL Signals')
-        logging.debug("Check FULL Signals: %s" % full_empty)
-
-        # Check whether the currently selected VSR has synchronised or not
-        if synced == 15:  # pragma: no cover
-            logging.debug("All Links on VSR's 1 and 2 synchronised")
-            logging.debug("Starting State Machine in VSR's")
-        elif synced == 12:  # pragma: no cover
-            logging.debug("Both Links on VSR 2 synchronised")
-        elif synced == 3:  # pragma: no cover
-            logging.debug("Both Links on VSR 1 synchronised")
-        else:
-            logging.debug(synced)
-
-        if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
-            self.vsr1_sync = synced
-        elif (self.vsr_addr == HexitecFem.VSR_ADDRESS[1]):
-            self.vsr2_sync = synced
-
-        # Clear training enable
-        self.send_cmd([self.vsr_addr, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x43, 0x30])
-        self.read_response()
-
-        logging.debug("Clear bit 5 - VCAL ENABLED")
-        # Clear bit; Register 0x24, bit5: disable VCAL (i.e. VCAL is here ENABLED)
-        self.send_cmd([self.vsr_addr, HexitecFem.CLR_REG_BIT, 0x32, 0x34,
-                       0x32, 0x30])
-        self.read_response()
-
-        logging.debug("DARK CORRECTION ON")
-        # Set bit; Register 0x24, bit3: enable DC spectroscopic mode
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT, 0x32, 0x34,
-                       0x30, 0x38])
-        self.read_response()
-
-        # Read Reg24
-        self.send_cmd([self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x32, 0x34])
-        if self.debug:
-            logging.debug("Reading Register 0x24")
-            logging.debug(self.read_response())
-        else:
-            self.read_response()
-
-        self.send_cmd([self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x38, 0x39])
-        self.read_response()
-
-        if self.debug:
-            logging.debug("Poll register 0x89")
-        # removed
-
-        self.send_cmd([self.vsr_addr, HexitecFem.READ_REG_VALUE, 0x30, 0x31])
-        self.read_response()
-
-        full_empty = self.x10g_rdma.read(0x60000011, burst_len=1, comment='Check FULL EMPTY Signals')
-        logging.debug("Check EMPTY Signals: %s" % full_empty)
-
-        full_empty = self.x10g_rdma.read(0x60000012, burst_len=1, comment='Check FULL FULL Signals')
-        logging.debug("Check FULL Signals: %s" % full_empty)
-
-        return synced
-
     def print_firmware_info(self):  # pragma: no cover
         """Print info on loaded firmware.
 
@@ -804,9 +660,6 @@ class HexitecFem():
         # If called as part of cold initialisation, only need one frame so
         #   temporarily overwrite UI's number of frames for this call only
         self.number_frames_backed_up = self.number_frames
-        if self.first_initialisation:
-            # Don't set to 1, as rdma write subtracts 1 (and 0 = continuous readout!)
-            self.number_frames = 2
 
         self.x10g_rdma.write(0xD0000001, self.number_frames - 1, burst_len=1, comment='Frame Gate set to \
             self.number_frames')
@@ -887,8 +740,6 @@ class HexitecFem():
 
         # Acquisition interrupted
         self.acquisition_completed = True
-        if self.first_initialisation:
-            self.first_initialisation_done_update_gui()
 
     # TODO: 2x2 Legacy code, to be reconstructed
     def acquire_data_completed(self):
@@ -910,8 +761,6 @@ class HexitecFem():
             self.stop_acquisition = False
             self.hardware_busy = False
             self.acquisition_completed = True
-            if self.first_initialisation:
-                self.first_initialisation_done_update_gui()
             self._set_status_message("User cancelled collection")
             return
         else:
@@ -1024,17 +873,6 @@ class HexitecFem():
 
         # Acquisition completed, note completion
         self.acquisition_completed = True
-        if self.first_initialisation:
-            self.first_initialisation_done_update_gui()
-            self._set_status_message("Initialisation from cold completed")
-
-    def first_initialisation_done_update_gui(self):
-        """Reset related variables."""
-        self.first_initialisation = False
-        self.number_frames = self.number_frames_backed_up
-        # TODO: Part of cold initialisation (to be removed)
-        # print("\n\tfem.1st_initialisation_done_update_GUI(), updating parent's frames {}\n".format(self.number_frames))
-        self.parent.number_frames = self.number_frames
 
     # TODO: 2x2 Legacy code, to be removed - checked
     def set_up_state_machine(self):
@@ -2394,6 +2232,7 @@ class HexitecFem():
         low_int = int(low_string, 16)
         high_encoded = self.HEX_ASCII_CODE[high_int]
         low_encoded = self.HEX_ASCII_CODE[low_int]
+        # print(" *** convert_to_aspect_format({}) -> {}, {}".format(value, high_encoded, low_encoded))
         return high_encoded, low_encoded
 
     def read_ini_file(self, filename, parameter_dict, debug=False):
@@ -2414,6 +2253,16 @@ class HexitecFem():
         if debug:  # pragma: no cover
             print("---------------------------------------------------------------------")
 
+    def translate_to_normal_hex(self, value):
+        """Translate Aspect encoding into 0-F equivalent scale."""
+        if value not in self.HEX_ASCII_CODE:
+            raise HexitecFemError("Invalid Hexadecimal value {0:X}".format(value))
+        if value < 0x3A:
+            value -= 0x30
+        else:
+            value -= 0x37
+        return value
+
     def mask_aspect_encoding(self, value_h, value_l, resp):
         """Mask values honouring aspect encoding.
 
@@ -2421,15 +2270,17 @@ class HexitecFem():
         Therefore increase values between 0x39 and 0x41 by 7 to match aspect's legal range.
         I.e. 0x39 | 0x32 = 0x3B, + 7 = 0x42.
         """
+        value_h = self.translate_to_normal_hex(value_h)
+        value_l = self.translate_to_normal_hex(value_l)
+        resp[0] = self.translate_to_normal_hex(resp[0])
+        resp[1] = self.translate_to_normal_hex(resp[1])
         masked_h = value_h | resp[0]
         masked_l = value_l | resp[1]
-        if (masked_h > 0x39) and (masked_h < 0x41):
-            masked_h = masked_h + 7
-        if (masked_l > 0x39) and (masked_l < 0x41):
-            masked_l = masked_l + 7
-        # print("h: {0:X} r: {1:X} = {2:X} masked: {3:X}".format(value_h, resp[0], value_h | resp[0], masked_h))
-        # print("l: {0:X} r: {1:X} = {2:X} masked: {3:X}".format(value_l, resp[1], value_l | resp[1], masked_l))
-        return masked_h, masked_l
+        # print("h: {0:X} r: {1:X} = {2:X} masked: {3:X} I.e. {4:X}".format(
+        #     value_h, resp[0], value_h | resp[0], masked_h, self.HEX_ASCII_CODE[masked_h]))
+        # print("l: {0:X} r: {1:X} = {2:X} masked: {3:X} I.e. {4:X}".format(
+        #     value_l, resp[1], value_l | resp[1], masked_l, self.HEX_ASCII_CODE[masked_l]))
+        return self.HEX_ASCII_CODE[masked_h], self.HEX_ASCII_CODE[masked_l]
 
     def debug_register(self, msb, lsb):  # pragma: no cover
         """Debug function: Display contents of register."""

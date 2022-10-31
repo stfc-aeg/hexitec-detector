@@ -236,8 +236,6 @@ class Hexitec():
 
         # Tracks whether first acquisition of multiple, bias-window(s), collection
         self.initial_acquisition = True
-        # Tracks whether 2 frame fudge collection: (during cold initialisation)
-        self.first_initialisation = False   # True
 
         self.acquisition_in_progress = False
 
@@ -335,15 +333,8 @@ class Hexitec():
         """Poll FEM for acquisition and health status."""
         if self.fem.acquisition_completed:
             frames_processed = self.get_frames_processed()
-            # Either cold initialisation (first_initialisation is True, therefore only 2 frames
-            # expected) or, ordinary collection (self.number_frames frames expected)
-            if ((self.first_initialisation and (frames_processed == 2))
-                    or (frames_processed == self.number_frames)):  # noqa: W503
-
-                if self.first_initialisation:
-                    self.first_initialisation = False
-                    self.number_frames = self.backed_up_number_frames  # TODO: redundant
-
+            # Check all frames finished processed
+            if (frames_processed == self.number_frames):  # noqa: W503
                 # Reset FEM's acquisiton status ahead of future acquisitions
                 self.fem.acquisition_completed = False
         # TODO: Also check sensor values?
@@ -535,12 +526,8 @@ class Hexitec():
 
     def acquisition(self, put_data=None):
         """Instruct DAQ and FEM to acquire data."""
-        # Synchronise first_initialisation status (i.e. collect 2 fudge frames) with FEM
-        if self.first_initialisation:
-            self.first_initialisation = self.fem.first_initialisation
-        else:
-            # Clear (any previous) daq error
-            self.daq.in_error = False
+        # Clear (any previous) daq error
+        self.daq.in_error = False
 
         if self.extended_acquisition is False:
             if self.daq.in_progress:

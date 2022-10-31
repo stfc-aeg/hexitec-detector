@@ -25,6 +25,9 @@ class Hexitec2x6():
     CLR_REG_BIT = 0x43      # Not verified, tolerated twice, see enable_adc, "Enable Vcal"
     SEND_REG_BURST = 0x44   # Avoid
 
+    HEX_ASCII_CODE = [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
+                      0x41, 0x42, 0x43, 0x44, 0x45, 0x46]
+
     def __init__(self, esdg_lab=False, debug=False, unique_cmd_no=False):
         """."""
         self.debug = debug
@@ -126,6 +129,16 @@ class Hexitec2x6():
             raise HexitecFemError("Readback value did not match written!")
         return resp, reply
 
+    def translate_to_normal_hex(self, value):
+        """Translate Aspect encoding into 0-F equivalent scale."""
+        if value not in self.HEX_ASCII_CODE:
+            raise HexitecFemError("Invalid Hexadecimal value {0:X}".format(value))
+        if value < 0x3A:
+            value -= 0x30
+        else:
+            value -= 0x37
+        return value
+
     def mask_aspect_encoding(self, value_h, value_l, resp):
         """Mask values honouring aspect encoding.
 
@@ -133,15 +146,17 @@ class Hexitec2x6():
         Therefore increase values between 0x39 and 0x41 by 7 to match aspect's legal range.
         I.e. 0x39 | 0x32 = 0x3B, + 7 = 0x42.
         """
+        value_h = self.translate_to_normal_hex(value_h)
+        value_l = self.translate_to_normal_hex(value_l)
+        resp[0] = self.translate_to_normal_hex(resp[0])
+        resp[1] = self.translate_to_normal_hex(resp[1])
         masked_h = value_h | resp[0]
         masked_l = value_l | resp[1]
-        if (masked_h > 0x39) and (masked_h < 0x41):
-            masked_h = masked_h + 7
-        if (masked_l > 0x39) and (masked_l < 0x41):
-            masked_l = masked_l + 7
-        # print("h: {0:X} r: {1:X} = {2:X} masked: {3:X}".format(value_h, resp[0], value_h | resp[0], masked_h))
-        # print("l: {0:X} r: {1:X} = {2:X} masked: {3:X}".format(value_l, resp[1], value_l | resp[1], masked_l))
-        return masked_h, masked_l
+        # print("h: {0:X} r: {1:X} = {2:X} masked: {3:X} I.e. {4:X}".format(
+        #     value_h, resp[0], value_h | resp[0], masked_h, self.HEX_ASCII_CODE[masked_h]))
+        # print("l: {0:X} r: {1:X} = {2:X} masked: {3:X} I.e. {4:X}".format(
+        #     value_l, resp[1], value_l | resp[1], masked_l, self.HEX_ASCII_CODE[masked_l]))
+        return self.HEX_ASCII_CODE[masked_h], self.HEX_ASCII_CODE[masked_l]
 
     def block_write_custom_length(self, vsr, number_registers, address_h, address_l, write_values):
         """Write write_values starting with address_h, address_l of vsr, spanning number_registers."""
