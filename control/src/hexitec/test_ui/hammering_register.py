@@ -1,5 +1,5 @@
 """
-Hexitec2x6: Exercises UDP control plane.
+hammering_register.py: Repeatedly writes & readback unique values of targeted register.
 
 Christian Angelsen, STFC Detector Systems Software Group, 2022.
 """

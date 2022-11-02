@@ -1,5 +1,5 @@
 """
-Hexitec2x6: Exercises UDP control plane.
+aspect_new.py: Configures, trains (LVDS) all 6 VSRs.
 
 Christian Angelsen, STFC Detector Systems Software Group, 2022.
 """
@@ -390,6 +390,7 @@ class Hexitec2x6():
         90	44	39	00	00	00	00	00	00	00	00	00	00	;Row Cal En
         90	54	01	FF	0F	FF	05	55	00	00	08	E8	;Write DAC
         """
+        # number_registers = 10
         # # 61; Column Read En, using unique values not just repeating the same value over and over:
         # # resp_list, reply_list = self.block_read_and_response(vsr, number_registers, 0x36, 0x31)
         # # print(" AFTER, Column Read Enable: {}".format(reply_list))
@@ -398,7 +399,6 @@ class Hexitec2x6():
         #                                 #  0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46])
         #                                 [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
         #                                  0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x30, 0x31, 0x32, 0x33])
-        # number_registers = 10
         # # As it was:
         # print("Column Read Enable")
         # self.block_write_and_response(vsr, number_registers, 0x36, 0x31, 0x46, 0x46)  # 61; Column Read En
@@ -648,20 +648,19 @@ if __name__ == '__main__':  # noqa: C901
         # print("VSR Row S1: (High, Low). S1Sph  SphS2:  adc clk delay: . FVAL/LVAL:  VCAL2, (H, L) ")
         # print("VSR Row S1: (H, L). S1Sph  SphS2:  adc clk dly: . FVAL/LVAL:  VCAL2, (H, L) Gain")
         for vsr in VSR_ADDRESS:
-            number_registers = 10
-        #     hxt.readout_vsr_register(vsr, "Column Read  Enable ASIC1", 0x36, 0x31)
-        #     hxt.readout_vsr_register(vsr, "Column Read  Enable ASIC2", 0x43, 0x32)
-        #     hxt.readout_vsr_register(vsr, "Column Power Enable ASIC1", 0x34, 0x44)
-        #     hxt.readout_vsr_register(vsr, "Column Power Enable ASIC2", 0x41, 0x45)
-        #     hxt.readout_vsr_register(vsr, "Column Calib Enable ASIC1", 0x35, 0x37)
-        #     hxt.readout_vsr_register(vsr, "Column Calib Enable ASIC2", 0x42, 0x38)
+            # hxt.readout_vsr_register(vsr, "Column Read  Enable ASIC1", 0x36, 0x31)
+            # hxt.readout_vsr_register(vsr, "Column Read  Enable ASIC2", 0x43, 0x32)
+            # hxt.readout_vsr_register(vsr, "Column Power Enable ASIC1", 0x34, 0x44)
+            # hxt.readout_vsr_register(vsr, "Column Power Enable ASIC2", 0x41, 0x45)
+            # hxt.readout_vsr_register(vsr, "Column Calib Enable ASIC1", 0x35, 0x37)
+            # hxt.readout_vsr_register(vsr, "Column Calib Enable ASIC2", 0x42, 0x38)
 
-        #     hxt.readout_vsr_register(vsr, "Row    Read  Enable ASIC1", 0x34, 0x33)
-        #     hxt.readout_vsr_register(vsr, "Row    Read  Enable ASIC2", 0x41, 0x34)
-        #     hxt.readout_vsr_register(vsr, "Row    Power Enable ASIC1", 0x32, 0x46)
-        #     hxt.readout_vsr_register(vsr, "Row    Power Enable ASIC2", 0x39, 0x30)
-        #     hxt.readout_vsr_register(vsr, "Row    Calib Enable ASIC1", 0x33, 0x39)
-        #     hxt.readout_vsr_register(vsr, "Row    Calib Enable ASIC2", 0x39, 0x41)
+            # hxt.readout_vsr_register(vsr, "Row    Read  Enable ASIC1", 0x34, 0x33)
+            # hxt.readout_vsr_register(vsr, "Row    Read  Enable ASIC2", 0x41, 0x34)
+            # hxt.readout_vsr_register(vsr, "Row    Power Enable ASIC1", 0x32, 0x46)
+            # hxt.readout_vsr_register(vsr, "Row    Power Enable ASIC2", 0x39, 0x30)
+            # hxt.readout_vsr_register(vsr, "Row    Calib Enable ASIC1", 0x33, 0x39)
+            # hxt.readout_vsr_register(vsr, "Row    Calib Enable ASIC2", 0x39, 0x41)
 
             r7_list, r7_value = hxt.read_register07(vsr)
             reg07.append(r7_value)

@@ -1,5 +1,5 @@
 """
-Hexitec2x6: Exercises UDP control plane.
+aspect.py: Reads out statuses of: enables, clocks and registers 7 & 89.
 
 Christian Angelsen, STFC Detector Systems Software Group, 2022.
 """
