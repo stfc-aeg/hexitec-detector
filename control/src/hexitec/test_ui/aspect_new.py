@@ -330,9 +330,9 @@ class Hexitec2x6():
         self.read_response()
 
         print("Write ADC register")     # 90 53 16 09   ;Write ADC Register
-        # self.send_cmd([self.vsr_addr, 0x53, 0x31, 0x36, 0x30, 0x39])  # Avoided
-        # self.read_response()
-        self.write_and_response(self.vsr_addr, 0x31, 0x36, 0x30, 0x39)
+        self.send_cmd([self.vsr_addr, 0x53, 0x31, 0x36, 0x30, 0x39])  # Works as well as the one below
+        self.read_response()
+        # self.write_and_response(self.vsr_addr, 0x31, 0x36, 0x30, 0x39)
 
     def training_preparation(self, vsr):
         """Following Daniel's instructions, minimal requirements initialising a vsr for (LVDS) training."""
@@ -612,7 +612,7 @@ if __name__ == '__main__':  # noqa: C901
                     time.sleep(0.2)
                     time_taken += 0.2
                 if time_taken > 3.0:
-                    print("VSR{} PLL still disabled!".format(vsr-144))
+                    print(" *** VSR{} PLL still disabled! ***".format(vsr-144))
                     bPolling = False
                     # raise HexitecFemError("Timed out polling VSR{} register 0x89; PLL remains disabled".format(vsr-144))
         ending = time.time()

@@ -441,10 +441,10 @@ class HexitecFem():
 
     def poll_sensors(self):
         """Poll hardware while connected but not busy initialising, collecting offsets, etc."""
-        # if self.hardware_connected and (self.hardware_busy is False):
-        #     self.read_sensors()
-        #     # print(" * poll_sensors() not reading sensors *")
-        # IOLoop.instance().call_later(3.0, self.poll_sensors)
+        if self.hardware_connected and (self.hardware_busy is False):
+            self.read_sensors()
+            # print(" * poll_sensors() not reading sensors *")
+        IOLoop.instance().call_later(3.0, self.poll_sensors)
 
     # @run_on_executor(executor='thread_executor')
     def connect_hardware(self, msg=None):
@@ -1530,20 +1530,6 @@ class HexitecFem():
         90	54	01	FF	0F	FF	05	55	00	00	08	E8	;Write DAC
         """
         self.load_pwr_cal_read_enables()
-        # number_registers = 10
-        # logging.debug("Column Read Enable")
-        # self.block_write_and_response(vsr, number_registers, 0x36, 0x31, 0x46, 0x46)  # 61; Column Read En
-        # logging.debug("Column POWER Enable")
-        # self.block_write_and_response(vsr, number_registers, 0x34, 0x44, 0x46, 0x46)  # 4D; Column PWR En
-        # logging.debug("Column calibrate Enable")
-        # self.block_write_and_response(vsr, number_registers, 0x35, 0x37, 0x30, 0x30)  # 57; Column Cal En
-        # logging.debug("Row Read Enable")
-        # self.block_write_and_response(vsr, number_registers, 0x34, 0x33, 0x46, 0x46)  # 43; Row Read En
-        # logging.debug("Row POWER Enable")
-        # self.block_write_and_response(vsr, number_registers, 0x32, 0x46, 0x46, 0x46)  # 2F; Row PWR En
-        # logging.debug("Row calibrate Enable")
-        # self.block_write_and_response(vsr, number_registers, 0x33, 0x39, 0x30, 0x30)  # 39; Row Cal En
-        # self.write_dac_values(vsr)
         """
         90	55	02	;Disable ADC/Enable DAC
         90	43	01	01	;Enable SM
@@ -1734,9 +1720,9 @@ class HexitecFem():
         self.read_response()
 
         logging.debug("Write ADC register")     # 90 53 16 09   ;Write ADC Register
-        # self.send_cmd([self.vsr_addr, 0x53, 0x31, 0x36, 0x30, 0x39])  # Avoided
-        # self.read_response()
-        self.write_and_response(self.vsr_addr, 0x31, 0x36, 0x30, 0x39)
+        self.send_cmd([self.vsr_addr, 0x53, 0x31, 0x36, 0x30, 0x39])  # Works as well as the one below
+        self.read_response()
+        # self.write_and_response(self.vsr_addr, 0x31, 0x36, 0x30, 0x39)
 
     def calculate_frame_rate(self):
         """Calculate variables to determine frame rate (See ASICTimingRateDefault.xlsx)."""
