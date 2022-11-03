@@ -68,7 +68,7 @@ class HexitecFem():
     READ_REG_VALUE = 0x41   # Verified to work with F/W UART
     SET_REG_BIT = 0x42      # Tolerated in collect_offsets
     CLR_REG_BIT = 0x43      # Not verified, tolerated in: enable_adc, "Enable Vcal", collect_offsets
-    SEND_REG_BURST = 0x44   # Avoid - 2x2 usage in load_power_..enables()
+    SEND_REG_BURST = 0x44   # Avoid - fills up UART (FIFO?)
     READ_PWR_VOLT = 0x50    # Not used
     WRITE_REG_VAL = 0x53    # Avoid
     WRITE_DAC_VAL = 0x54    # Tolerated in: write_dac_values
@@ -117,7 +117,6 @@ class HexitecFem():
         self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
 
         self.number_frames = 10
-        self.number_frames_backed_up = 0
 
         self.hardware_connected = False
         self.hardware_busy = False
@@ -331,16 +330,21 @@ class HexitecFem():
     def read_sensors(self, msg=None):
         """Read environmental sensors and updates parameter tree with results."""
         try:
-            beginning = time.time()
             # Note once, when firmware was built
-            # if self.read_firmware_version:
-            #     date = self.x10g_rdma.read(0x60000015, burst_len=1, comment='FIRMWARE DATE')
-            #     time = self.x10g_rdma.read(0x60000016, burst_len=1, comment='FIRMWARE TIME')
-            #     date = format(date, '#010x')
-            #     time = format(time, '#06x')
-            #     self.firmware_date = "{0:.2}/{1:.2}/{2:.4}".format(date[2:4], date[4:6], date[6:10])
-            #     self.firmware_time = "{0:.2}:{1:.2}".format(time[2:4], time[4:6])
-            #     self.read_firmware_version = False
+            if self.read_firmware_version:
+                fw_date = self.x10g_rdma.read(0x8008, burst_len=1, comment='FIRMWARE DATE')
+                fw_time = self.x10g_rdma.read(0x800C, burst_len=1, comment='FIRMWARE TIME')
+                fw_date = fw_date[0]
+                fw_time = fw_time[0]
+                fw_time = "{0:06X}".format(fw_time)
+                fw_date = "{0:08X}".format(fw_date)
+                year = fw_date[0:4]    # year
+                month = fw_date[4:6]    # month
+                day = fw_date[6:8]    # day
+                self.firmware_date = "{0:.2}/{1:.2}/{2:.4}".format(day, month, year)
+                self.firmware_time = "{0:.2}:{1:.2}:{2:.4}".format(fw_time[0:2], fw_time[2:4], fw_time[4:6])
+                self.read_firmware_version = False
+            beginning = time.time()
             vsr = self.vsr_addr
             for VSR in self.VSR_ADDRESS:
                 self.vsr_addr = VSR
@@ -477,6 +481,8 @@ class HexitecFem():
             self.x10g_rdma.enable_all_vsrs()
             expected_value = 0x3F   # 0x1
             read_value = self.x10g_rdma.power_status()
+            # Mask off values above 0x3F including HV status(es)
+            read_value = read_value & expected_value
             if (read_value == expected_value):
                 print(" OK Power: 0x{0:08X}".format(read_value))
             else:
@@ -599,7 +605,6 @@ class HexitecFem():
     def cam_connect(self):
         """Send init command(s) to VSRs."""
         try:
-            # for vsr in self.VSR_ADDRESS:
             self.x10g_rdma.uart_tx([0xFF, 0xE3])
             print("\nInit modules (Sent 0xE3..)\n")
             self._set_status_message("Waiting 5 seconds (VSRs initialising)")
@@ -657,10 +662,6 @@ class HexitecFem():
     @run_on_executor(executor='thread_executor')
     def acquire_data(self):  # noqa: C901
         """Acquire data, poll fem for completion and read out fem monitors."""
-        # If called as part of cold initialisation, only need one frame so
-        #   temporarily overwrite UI's number of frames for this call only
-        self.number_frames_backed_up = self.number_frames
-
         self.x10g_rdma.write(0xD0000001, self.number_frames - 1, burst_len=1, comment='Frame Gate set to \
             self.number_frames')
 
@@ -873,170 +874,6 @@ class HexitecFem():
 
         # Acquisition completed, note completion
         self.acquisition_completed = True
-
-    # TODO: 2x2 Legacy code, to be removed - checked
-    def set_up_state_machine(self):
-        """Set up state machine, optionally with values from hexitec ini file."""
-        logging.debug("Setting up state machine")
-
-        # Establish register values, default values
-        register_002 = 0x30, 0x32
-        register_003 = 0x30, 0x33
-        register_004 = 0x30, 0x34
-        register_005 = 0x30, 0x35
-        register_006 = 0x30, 0x36
-        register_007 = 0x30, 0x37
-        register_009 = 0x30, 0x39
-        register_00E = 0x30, 0x45
-        register_018 = 0x31, 0x38
-        register_019 = 0x31, 0x39
-        register_01B = 0x31, 0x42
-        register_014 = 0x31, 0x34
-
-        value_002 = 0x30, 0x31  # RowS1 Low Byte value: 1 = maximum frame rate
-        value_003 = 0x30, 0x30  # RowS1 High Byte value : 0 = ditto
-        value_004 = 0x30, 0x31  # S1 -> Sph, 6 bits : 1 = ... Yes, what?
-        value_005 = 0x30, 0x36  # SphS2, 6 bits : 6 = ... Yes, what?
-        value_006 = 0x30, 0x31  # Gain, 1 bit : 0 = High Gain; 1 = Low Gain
-        value_007 = 0x30, 0x33  # UNNAMED, 2 bits : 1 = Enable PLL; 2 = Enable ADC PLL (3 = both)
-        value_009 = 0x30, 0x32  # ADC1 Delay, 5 bits : 2 = 2 clock cycles
-        value_00E = 0x30, 0x41
-        value_018 = 0x30, 0x31  # VCAL2 -> VCAL1 Low Byte, 8 bits: 1 = 1 clock cycle
-        value_019 = 0x30, 0x30  # VCAL2 -> VCAL1 High Byte, 7 bits
-        value_01B = 0x30, 0x38  # Wait Clock Row, 8 bits
-        value_014 = 0x30, 0x31  # Start SM on '1' falling edge ('0' = rising edge) of ADC-CLK
-
-        # (Enable PPL, ADC PPL) in Register 0x07 (Accepts 2 bits)
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT,
-                      register_007[0], register_007[1], value_007[0], value_007[1]])
-        self.read_response()
-
-        # print("  {} {} {}".format(self.row_s1, self.s1_sph, self.sph_s2))
-        # print(" -------------------------- S1 -------------------------")
-        if self.row_s1 > -1:
-            # Valid value, within range
-            self.row_s1_low = self.row_s1 & 0xFF
-            self.row_s1_high = self.row_s1 >> 8
-            value_002 = self.convert_to_aspect_format(self.row_s1_low)
-            value_003 = self.convert_to_aspect_format(self.row_s1_high)
-        # Send RowS1 low byte to Register 0x02 (Accepts 8 bits)
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT,
-                       register_002[0], register_002[1], value_002[0], value_002[1]])
-        self.read_response()
-
-        # Send RowS1 high byte to Register 0x03 (Accepts 6 bits)
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT,
-                       register_003[0], register_003[1], value_003[0], value_003[1]])
-        self.read_response()
-        # print(" ----------------------- S1_SPH -----------------------")
-        if self.s1_sph > -1:
-            value_004 = self.convert_to_aspect_format(self.s1_sph)
-        # Send S1SPH to Register 0x04 (Accepts 6 bits)
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT,
-                       register_004[0], register_004[1], value_004[0], value_004[1]])
-        self.read_response()
-        # print(" ----------------------- SPH_S2 ----------------------")
-        if self.sph_s2 > -1:
-            value_005 = self.convert_to_aspect_format(self.sph_s2)
-        # Send SphS2  to Register 0x05 (Accepts 6 Bits)
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT,
-                       register_005[0], register_005[1], value_005[0], value_005[1]])
-        self.read_response()
-        # print(" ------------------------------------------------------")
-        # # Debugging
-        # print("\n")
-        # print("row_s1: {}".format(self.row_s1))
-        # print("s1_sph: {}".format(self.s1_sph))
-        # print("sph_s2: {}".format(self.sph_s2))
-        # print("  row_S1, (L)   value_002: 0x%x, 0x%x" % (value_002[0], value_002[1]))
-        # print("          (H)   value_003: 0x%x, 0x%x"  % (value_003[0], value_003[1]))
-        # print("  S1_SpH,       value_004: 0x%x, 0x%x" % (value_004[0], value_004[1]))
-        # print("  Sph_s2,       value_005: 0x%x, 0x%x\n" % (value_005[0], value_005[1]))
-
-        # sm_timing2 = [self.vsr_addr, HexitecFem.SET_REG_BIT,
-        #               register_002[0], register_002[1], value_002[0], value_002[1]]
-        # S1_SPH = self.make_list_hexadecimal([self.vsr_addr, HexitecFem.SET_REG_BIT,
-        #                                      register_004[0], register_004[1],
-        #                                      value_004[0], value_004[1]])
-        # SPH_S2 = self.make_list_hexadecimal([self.vsr_addr, HexitecFem.SET_REG_BIT,
-        #                                      register_005[0], register_005[1],
-        #                                      value_005[0], value_005[1]])
-        # print("  sm_timing2, ", self.make_list_hexadecimal(sm_timing2))
-        # print("  S1_SPH, ", S1_SPH)
-        # print("  SPH_S2, ", SPH_S2)
-        # print("\n")
-
-        gain = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Gain', bit_range=1)
-        if gain > -1:
-            value_006 = self.convert_to_aspect_format(gain)
-        # Send Gain to Register 0x06 (Accepts 1 Bit)
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT,
-                      register_006[0], register_006[1], value_006[0], value_006[1]])
-        self.read_response()
-
-        adc1_delay = self._extract_integer(self.hexitec_parameters, 'Control-Settings/ADC1 Delay',
-                                           bit_range=2)
-        if adc1_delay > -1:
-            value_009 = self.convert_to_aspect_format(adc1_delay)
-        # Send ADC1 Delay to Register 0x09 (Accepts 2 Bits)
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT,
-                      register_009[0], register_009[1], value_009[0], value_009[1]])
-        self.read_response()
-
-        delay_sync_signals = self._extract_integer(self.hexitec_parameters,
-                                                   'Control-Settings/delay sync signals',
-                                                   bit_range=8)
-        if delay_sync_signals > -1:
-            value_00E = self.convert_to_aspect_format(delay_sync_signals)
-        # Send delay sync signals to Register 0x0E (Accepts 8 Bits)
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT,
-                      register_00E[0], register_00E[1], value_00E[0], value_00E[1]])
-        self.read_response()
-
-        # # TODO: Name for this setting in .ini file ??
-        # wait_clock_row = self._extract_integer(self.hexitec_parameters,
-        #                                        'Control-Settings/???', bit_range=8)
-        # if wait_clock_row > -1:
-        #     value_01B = self.convert_to_aspect_format(wait_clock_row)
-        # Send wait clock wait to Register 01B (Accepts 8 Bits)
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT,
-                      register_01B[0], register_01B[1], value_01B[0], value_01B[1]])
-        self.read_response()
-
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT,
-                      register_014[0], register_014[1], value_014[0], value_014[1]])
-        self.read_response()
-
-        vcal2_vcal1 = self._extract_integer(self.hexitec_parameters,
-                                            'Control-Settings/VCAL2 -> VCAL1', bit_range=15)
-        if vcal2_vcal1 > -1:
-            vcal2_vcal1_low = vcal2_vcal1 & 0xFF
-            vcal2_vcal1_high = vcal2_vcal1 >> 8
-            value_018 = self.convert_to_aspect_format(vcal2_vcal1_low)
-            value_019 = self.convert_to_aspect_format(vcal2_vcal1_high)
-        # Send VCAL2 -> VCAL1 low byte to Register 0x02 (Accepts 8 bits)
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT,
-                      register_018[0], register_018[1], value_018[0], value_018[1]])
-        self.read_response()
-        # Send VCAL2 -> VCAL1 high byte to Register 0x03 (Accepts 7 bits)
-        self.send_cmd([self.vsr_addr, HexitecFem.SET_REG_BIT,
-                      register_019[0], register_019[1], value_019[0], value_019[1]])
-        self.read_response()
-
-        # # DEBUG
-        # print("");print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");print("")
-        # print(" VCAL2, L:", self.make_list_hexadecimal([self.vsr_addr,
-        #       HexitecFem.SET_REG_BIT, register_018[0], register_018[1],
-        #       value_018[0], value_018[1]]))
-        # print(" VCAL2, H:", self.make_list_hexadecimal([self.vsr_addr,
-        #       HexitecFem.SET_REG_BIT, register_019[0], register_019[1],
-        #       value_019[0], value_019[1]]))
-        # print("");print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");print("")
-
-        # Recalculate frame_rate, et cetera if new clock values provided by .ini
-        self.calculate_frame_rate()
-
-        logging.debug("Finished Setting up state machine")
 
     def read_receive_from_all(self, op_command, register_h, register_l):
         """Read and receive from all VSRs."""
@@ -1395,7 +1232,7 @@ class HexitecFem():
                     logging.debug("VSR{0} Locked (0x{1:X})".format(vsr-143, locked))
                 else:
                     logging.error("VSR{0} incomplete lock! (0x{1:X})".format(vsr-143, locked))
-                    raise HexitecFemError("VSR{0} failed to lock! (0x{1:X})".format(vsr-143, locked))
+                    # raise HexitecFemError("VSR{0} failed to lock! (0x{1:X})".format(vsr-143, locked))
                 vsr_status_addr += 4
 
             self._set_status_message("Initialisation completed. VSRs configured.")
@@ -1459,10 +1296,17 @@ class HexitecFem():
             self.row_s1_high = self.row_s1 >> 8
             value_002 = self.convert_to_aspect_format(self.row_s1_low)
             value_003 = self.convert_to_aspect_format(self.row_s1_high)
+            # print(" *** Row_s1: {0} -> high: {1} low: {2} ".format(self.row_s1, self.row_s1_high, self.row_s1_low))
+            # print("     R.02          0x{0:X} 0x{1:X}".format(value_002[0], value_002[1]))
+            # print("     R.03          0x{0:X} 0x{1:X}".format(value_003[0], value_003[1]))
         if self.s1_sph > -1:
             value_004 = self.convert_to_aspect_format(self.s1_sph)
+            # print(" *** s1_sph: {0}          ".format(self.s1_sph))
+            # print("     R.04          0x{0:X} 0x{1:X}".format(value_004[0], value_004[1]))
         if self.sph_s2 > -1:
             value_005 = self.convert_to_aspect_format(self.sph_s2)
+            # print(" *** sph_s2: {0}          ".format(self.sph_s2))
+            # print("     R.05          0x{0:X} 0x{1:X}".format(value_005[0], value_005[1]))
         gain = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Gain', bit_range=1)
         if gain > -1:
             value_006 = self.convert_to_aspect_format(gain)
@@ -1488,12 +1332,13 @@ class HexitecFem():
         90	42	02	01	;LowByte Row S1
         """
         delayed = False     # Debugging: Extra 0.2 second delay between read, write?
+        masked = False
         self.write_and_response(vsr, 0x30, 0x31, 0x31, 0x30)    # Select external Clock
         # self.write_and_response(vsr, 0x30, 0x37, 0x30, 0x33)    # Enable PLLs; 1 = Enable PLL; 2 = Enable ADC PLL
         self.send_cmd([vsr, 0x42, 0x30, 0x37, 0x30, 0x33])  # Enable PLLs; 1 = Enable PLL; 2 = Enable ADC PLL
         self.read_response()
-        self.write_and_response(vsr, 0x30, 0x32, value_002[0], value_002[1], delay=delayed)     # LowByte Row S1
-        self.write_and_response(vsr, 0x30, 0x33, value_003[0], value_003[1], delay=delayed)    # HighByte Row S1
+        self.write_and_response(vsr, 0x30, 0x32, value_002[0], value_002[1], masked=masked, delay=delayed)     # LowByte Row S1
+        self.write_and_response(vsr, 0x30, 0x33, value_003[0], value_003[1], masked=masked, delay=delayed)    # HighByte Row S1
         """
         90	42	04	01	;S1Sph
         90	42	05	06	;SphS2
@@ -1503,8 +1348,8 @@ class HexitecFem():
         90	42	14	01	;Start SM on falling edge
         90	42	01	20	;Enable LVDS Interface
         """
-        self.write_and_response(vsr, 0x30, 0x34, value_004[0], value_004[1], delay=delayed)     # S1Sph
-        self.write_and_response(vsr, 0x30, 0x35, value_005[0], value_005[1], delay=delayed)     # SphS2
+        self.write_and_response(vsr, 0x30, 0x34, value_004[0], value_004[1], masked=masked, delay=delayed)     # S1Sph
+        self.write_and_response(vsr, 0x30, 0x35, value_005[0], value_005[1], masked=masked, delay=delayed)     # SphS2
         # TODO: ADDITIONALLY ADDED, IS THIS NEEDED OR NOT: ??
         self.write_and_response(vsr, 0x30, 0x36, value_006[0], value_006[1], delay=delayed)     # Gain
         # self.write_and_response(vsr, 0x30, 0x39, value_009[0], value_009[1], delay=delayed)     # ADC Clock Delay
@@ -1530,6 +1375,8 @@ class HexitecFem():
         90	54	01	FF	0F	FF	05	55	00	00	08	E8	;Write DAC
         """
         self.load_pwr_cal_read_enables()
+
+        self.write_dac_values(vsr)
         """
         90	55	02	;Disable ADC/Enable DAC
         90	43	01	01	;Enable SM
@@ -1564,7 +1411,7 @@ class HexitecFem():
         logging.debug("Enable Vcal")  # 90	43	24	20	;Enable Vcal
         self.send_cmd([vsr, 0x43, 0x32, 0x34, 0x32, 0x30])
         self.read_response()
-        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x30)     # Disable Vcal
+        # self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x30)     # Disable Vcal
 
         """MR's tcl script also also set these two:"""
         # set queue_1 { { 0x40 0x01 0x30                                              "Disable_Training" } \
@@ -1675,12 +1522,16 @@ class HexitecFem():
 
         umid_value = self._extract_exponential(self.hexitec_parameters,
                                                'Control-Settings/Uref_mid', bit_range=12)
+        # print("\n *** umid_value: {0} \n".format(umid_value))
         if umid_value > -1:
             # Valid value, within range
             umid_high = (umid_value >> 8) & 0x0F
             umid_low = umid_value & 0xFF
             umid[0], umid[1] = self.convert_to_aspect_format(umid_high)
             umid[2], umid[3] = self.convert_to_aspect_format(umid_low)
+            # print(" *** umid: {0} -> high: {1} low: {2} ".format(umid_value, umid_high, umid_low))
+            # print("                   0x{0:X} 0x{1:X}".format(umid[0], umid[1]))
+            # print("                   0x{0:X} 0x{1:X}".format(umid[2], umid[3]))
 
         vcal_value = self._extract_float(self.hexitec_parameters, 'Control-Settings/VCAL')
         if vcal_value > -1:
@@ -1690,7 +1541,7 @@ class HexitecFem():
             vcal[0], vcal[1] = self.convert_to_aspect_format(vcal_high)
             vcal[2], vcal[3] = self.convert_to_aspect_format(vcal_low)
 
-        # print(" *** umid_value: {} vcal_value: {}".format(umid_value, vcal_value))
+        print(" *** umid_value: {} vcal_value: {}".format(umid_value, vcal_value))
         self.send_cmd([vsr_address, HexitecFem.WRITE_DAC_VAL,
                        vcal[0], vcal[1], vcal[2], vcal[3],          # Vcal, e.g. 0x0111 =: 0.2V
                        umid[0], umid[1], umid[2], umid[3],          # Umid, e.g. 0x0555 =: 1.0V

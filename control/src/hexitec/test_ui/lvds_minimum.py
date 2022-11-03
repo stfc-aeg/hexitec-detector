@@ -26,7 +26,6 @@ class Hexitec2x6():
     SEND_REG_BURST = 0x44   # Avoid
     READ_PWR_VOLT = 0x50    # Not used
     WRITE_REG_VAL = 0x53    # Avoid
-    WRITE_DAC_VAL = 0x54    # Tolerated in: write_dac_values
     CTRL_ADC_DAC = 0x55     # Tolerated twice in: enable_adc
 
     VSR_ADDRESS = [

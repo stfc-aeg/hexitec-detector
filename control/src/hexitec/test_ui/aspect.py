@@ -297,7 +297,7 @@ class Hexitec2x6():
         """
         self.write_and_response(vsr, 0x30, 0x31, 0x31, 0x30)     # Select external Clock
         self.write_and_response(vsr, 0x30, 0x37, 0x30, 0x33)     # Enable PLLs
-        self.write_and_response(vsr, 0x30, 0x32, 0x30, 0x31, debug=True)     # LowByte Row S1
+        self.write_and_response(vsr, 0x30, 0x32, 0x30, 0x31, masked=False, debug=True)     # LowByte Row S1
         """
         90	42	04	01	;S1Sph
         90	42	05	06	;SphS2
@@ -307,8 +307,8 @@ class Hexitec2x6():
         90	42	14	01	;Start SM on falling edge
         90	42	01	20	;Enable LVDS Interface
         """
-        self.write_and_response(vsr, 0x30, 0x34, 0x30, 0x31, debug=True)     # S1Sph
-        self.write_and_response(vsr, 0x30, 0x35, 0x30, 0x31, debug=True)     # SphS2
+        self.write_and_response(vsr, 0x30, 0x34, 0x30, 0x31, masked=False, debug=True)     # S1Sph
+        self.write_and_response(vsr, 0x30, 0x35, 0x30, 0x31, masked=False, debug=True)     # SphS2
         self.write_and_response(vsr, 0x30, 0x39, 0x30, 0x32)     # ADC Clock Delay
         self.write_and_response(vsr, 0x30, 0x45, 0x30, 0x41)     # FVAL/LVAL Delay
         self.write_and_response(vsr, 0x31, 0x42, 0x30, 0x38)     # SM wait Low Row
@@ -413,7 +413,6 @@ if __name__ == '__main__':  # pragma: no cover
 
         print("Init modules (Send 0xE3..)")
         hxt.x10g_rdma.uart_tx([0xFF, 0xE3])
-        # hxt.x10g_rdma.uart_tx([0x90, 0xE3])
         print("Wait 5 sec")
         time.sleep(5)
 
@@ -458,17 +457,16 @@ if __name__ == '__main__':  # pragma: no cover
         print("That took: {}".format(ending - beginning))
         reg07 = []
         reg89 = []
-        for vsr in range(0x90, 0x96):
+        for vsr in VSR_ADDRESS:
             r7_list, r7_value = hxt.read_register07(vsr)
             reg07.append(r7_value)
             r89_list, r89_value = hxt.read_register89(vsr)
             reg89.append(r89_value)
-            s1_resp, s1_reply = hxt.read_and_response(vsr, 0x30, 0x32)
+            s1_low_resp, s1_low_reply = hxt.read_and_response(vsr, 0x30, 0x32)
+            s1_high_resp, s1_high_reply = hxt.read_and_response(vsr, 0x30, 0x33)
             sph_resp, sph_reply = hxt.read_and_response(vsr, 0x30, 0x34)
             s2_resp, s2_reply = hxt.read_and_response(vsr, 0x30, 0x35)
-            print("VSR{} Row S1: {}. S1Sph : {}. SphS2 : {}".format(vsr-143, s1_reply, sph_reply, s2_reply))
-            # print("VSR{} ".format(vsr-143))
-            # print("VSR{} ".format(vsr-143))
+            print("VSR{} Row S1: 0x{}{}. S1Sph : 0x{}. SphS2 : 0x{}".format(vsr-143, s1_high_reply, s1_low_reply, sph_reply, s2_reply))
 
         print(" All vsrs, reg07: {}".format(reg07))
         print("           reg89: {}".format(reg89))

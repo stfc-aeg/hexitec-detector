@@ -364,7 +364,7 @@ class Hexitec2x6():
         """
         self.write_and_response(vsr, 0x30, 0x31, 0x31, 0x30)     # Select external Clock
         self.write_and_response(vsr, 0x30, 0x37, 0x30, 0x33)     # Enable PLLs
-        self.write_and_response(vsr, 0x30, 0x32, 0x30, 0x38, delay=False)     # LowByte Row S1
+        self.write_and_response(vsr, 0x30, 0x32, 0x30, 0x38, masked=False, delay=False)     # LowByte Row S1
         """
         90	42	04	01	;S1Sph
         90	42	05	06	;SphS2
@@ -374,8 +374,8 @@ class Hexitec2x6():
         90	42	14	01	;Start SM on falling edge
         90	42	01	20	;Enable LVDS Interface
         """
-        self.write_and_response(vsr, 0x30, 0x34, 0x30, 0x35, delay=False)     # S1Sph
-        self.write_and_response(vsr, 0x30, 0x35, 0x31, 0x32, delay=False)     # SphS2
+        self.write_and_response(vsr, 0x30, 0x34, 0x30, 0x35, masked=False, delay=False)     # S1Sph
+        self.write_and_response(vsr, 0x30, 0x35, 0x31, 0x32, masked=False, delay=False)     # SphS2
         self.write_and_response(vsr, 0x30, 0x39, 0x30, 0x32)     # ADC Clock Delay
         self.write_and_response(vsr, 0x30, 0x45, 0x30, 0x41)     # FVAL/LVAL Delay
         self.write_and_response(vsr, 0x31, 0x42, 0x30, 0x38)     # SM wait Low Row
@@ -444,7 +444,6 @@ class Hexitec2x6():
         90	40	24	28	;Disable Vcal/En DC spectroscopic mode
         90	42	01	80	;Enable Training
         90	42	18	01	;Low Byte SM Vcal Clock
-        90	42	02	14	;Low Byte Row S1
         90	43	24	20	;Enable Vcal
         90	42	24	20	;Disable Vcal
         """
