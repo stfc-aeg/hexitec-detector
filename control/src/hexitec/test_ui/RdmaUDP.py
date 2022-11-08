@@ -193,13 +193,14 @@ class RdmaUDP(object):
         try:
             # Receive acknowledgement
             response = self.socket.recv(self.UDPMTU)
+            header_str = "HBBI"   # Equivalent length: 8
+            payload_length = len(response) - self.header_size
+            payload_length = payload_length // self.bytes_per_word
+            packet_str = header_str + "I" * payload_length
+            decoded = struct.unpack(packet_str, response)
             if self.ack:
-                header_str = "HBBI"   # Equivalent length: 8
-                payload_length = len(response) - self.header_size
-                payload_length = payload_length // self.bytes_per_word
-                packet_str = header_str + "I" * payload_length
-                decoded = struct.unpack(packet_str, response)
                 print('W decoded: {0}. \"{1}\" Length: {2}'.format(' '.join("0x{0:X}".format(x) for x in decoded), comment, len(response)))
+            return decoded
         except socket.error as e:
             print(" *** Write (R) Error: {0}. burst_len: {1:0X} cmd_no: {2:X} op_code: {3:0X} address: 0x{4:X} data: {5}. Comment: \"{6}\" ***".format(e,
                   burst_len, self.cmd_no, op_code, address, ' '.join("0x{0:X}".format(x) for x in data), comment))
@@ -268,7 +269,7 @@ class RdmaUDP(object):
             rx_data.append(rx_d)
             read_value = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (3)')
             rx_has_data_flag = not (read_value[0] & rx_buff_empty_mask)
-        # print("  UART RX'd: {}".format(' '.join("0x{0:02X}".format(x) for x in rx_data)))
+        # print("(RdmaUDP) UART RX'd: {}".format(' '.join("0x{0:02X}".format(x) for x in rx_data)))
         return rx_data
 
     def uart_tx(self, cmd):
@@ -388,7 +389,7 @@ class RdmaUDP(object):
         # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
         vsr_address = 0x89 + vsr_number
         self.uart_tx([vsr_address, RdmaUDP.ENABLE_VSR])
-        print("VSR {} enabled".format(vsr_number))
+        # print("VSR {} enabled".format(vsr_number))
 
     def disable_vsr(self, vsr_number):
         """Control a single VSR's power."""
@@ -405,7 +406,7 @@ class RdmaUDP(object):
         # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
         vsr_address = 0x89 + vsr_number
         self.uart_tx([vsr_address, RdmaUDP.DISABLE_VSR])
-        print("VSR {} disabled".format(vsr_number))
+        # print("VSR {} disabled".format(vsr_number))
 
     def enable_all_vsrs(self):
         """Switch all VSRs on."""
@@ -416,17 +417,18 @@ class RdmaUDP(object):
         self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs on")
         # time.sleep(1)
 
-    def enable_all_hv(self):
+    def enable_all_hvs(self):
         """Switch all HVs on."""
         vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
         read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
         masked_value = read_value | RdmaUDP.hvs_bit_mask    # Switching all six HVs on
+        # print(" enable_all_hvs, addr: {0:X} val: {1:X}".format(vsr_ctrl_addr, masked_value))
         self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all HVs on")
-        time.sleep(1)
-        vsr_address = 0xFF
-        self.uart_tx([vsr_address, RdmaUDP.ENABLE_VSR])
-        print("All HVs on")
+        # time.sleep(1)
+        # vsr_address = 0xFF
+        # self.uart_tx([vsr_address, RdmaUDP.ENABLE_VSR])
+        # print("All HVs on")
 
     def enable_hv(self, hv_number):
         """Switch on a single VSR's power."""
@@ -442,19 +444,51 @@ class RdmaUDP(object):
         # STEP 2: as_uart_tx $vsr_addr $vsr_cmd "$vsr_data" $uart_addr $lines $hw_axi_idx
         vsr_address = 0x89 + hv_number
         self.uart_tx([vsr_address, RdmaUDP.ENABLE_VSR])
-        print("HV {} on".format(hv_number))
+        # print("HV {} on".format(hv_number))
 
-    def disable_all_hv(self):
+    def disable_all_hvs(self):
         """Switch all HVs off."""
         vsr_ctrl_addr = RdmaUDP.vsr_ctrl_offset
         read_value = self.read(vsr_ctrl_addr, burst_len=1, comment='Read vsr_ctrl_addr current value')
         read_value = read_value[0]
         masked_value = read_value & 0x3F    # Switching all six HVs off
+        # print(" disable_all_hvs, addr: {0:X} val: {1:X}".format(vsr_ctrl_addr, masked_value))
         self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all HVs off")
-        time.sleep(1)
-        vsr_address = 0xFF
-        self.uart_tx([vsr_address, RdmaUDP.DISABLE_VSR])
-        print("All HVs off")
+        # time.sleep(1)
+        # vsr_address = 0xFF
+        # self.uart_tx([vsr_address, RdmaUDP.DISABLE_VSR])
+        # print("All HVs off")
+
+    def as_power_status(self):
+        """Issue Disable command to aS_PWR_TRIG_HV board (address: 0xC0)."""
+        self.uart_tx([0xC0, 0x49])
+        # time.sleep(1.5)
+        # TODO: Listen for response !
+        counter = 0
+        rx_pkt_done = 0
+        while not rx_pkt_done:
+            uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = self.read_uart_status()
+            counter += 1
+            # if counter % 100 == 0:
+            print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
+                counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
+            if counter == 15001:
+                print(" *** as_power_status() timed out waiting for uart!")
+                break
+        # print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
+        #     counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
+        time.sleep(1.5)
+        response = self.uart_rx(0x0)
+
+    def as_enable(self):
+        """Issue Enable command to aS_PWR_TRIG_HV board (address: 0xC0)."""
+        self.uart_tx([0xC0, 0xE3])
+        # No response issued
+
+    def as_disable(self):
+        """Issue Disable command to aS_PWR_TRIG_HV board (address: 0xC0)."""
+        self.uart_tx([0xC0, 0xE2])
+        # No response issued
 
     def disable_all_vsrs(self):
         """Switch all VSRs off."""
@@ -463,10 +497,10 @@ class RdmaUDP(object):
         read_value = read_value[0]
         masked_value = read_value & RdmaUDP.hvs_bit_mask    # Switching all six VSRs off
         self.write(vsr_ctrl_addr, masked_value, burst_len=1, comment="Switch all VSRs off")
-        time.sleep(1)
-        vsr_address = 0xFF
-        self.uart_tx([vsr_address, RdmaUDP.DISABLE_VSR])
-        print("All VSRs disabled")
+        # time.sleep(1)
+        # vsr_address = 0xFF
+        # self.uart_tx([vsr_address, RdmaUDP.DISABLE_VSR])
+        # print("All VSRs disabled")
 
     def power_status(self):
         """Read out the status register to check what is switched on and off."""

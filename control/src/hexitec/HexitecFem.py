@@ -143,6 +143,8 @@ class HexitecFem():
         self.time_refresh_voltage_held = 3.0
         self.bias_voltage_settle_time = 2.0
 
+        self.bias_level = 0
+
         # Acquisition completed, note completion timestamp
         self.acquisition_completed = False
 
@@ -352,7 +354,7 @@ class HexitecFem():
                 self.read_pwr_voltages()  # pragma: no cover
             self.vsr_addr = vsr  # pragma: no cover
             ending = time.time()
-            print(" Environmental data took: {}".format(ending - beginning))
+            # print(" Environmental data took: {}".format(ending - beginning))
         except HexitecFemError as e:
             self._set_status_error("Failed to read sensors: %s" % str(e))
             logging.error("%s" % str(e))
@@ -446,8 +448,8 @@ class HexitecFem():
     def poll_sensors(self):
         """Poll hardware while connected but not busy initialising, collecting offsets, etc."""
         if self.hardware_connected and (self.hardware_busy is False):
-            self.read_sensors()
-            # print(" * poll_sensors() not reading sensors *")
+            # self.read_sensors()
+            print(" * poll_sensors() not reading sensors *")
         IOLoop.instance().call_later(3.0, self.poll_sensors)
 
     # @run_on_executor(executor='thread_executor')
@@ -477,20 +479,31 @@ class HexitecFem():
             self.hardware_connected = True
             self._set_status_message("Camera connected.")
             logging.debug("UDP connection established")
-
+            # Power up VSRs
             self.x10g_rdma.enable_all_vsrs()
-            expected_value = 0x3F   # 0x1
+            expected_value = 0x3F
             read_value = self.x10g_rdma.power_status()
             # Mask off values above 0x3F including HV status(es)
             read_value = read_value & expected_value
             if (read_value == expected_value):
-                print(" OK Power: 0x{0:08X}".format(read_value))
+                logging.debug(" Power OK: 0x{0:08X}".format(read_value))
             else:
                 message = "Expected 0x{0:02X} not 0x{1:02X}".format(expected_value, read_value)
                 logging.error("Not all VSRs powered up, {}".format(message))
                 raise HexitecFemError("Powering VSRs Error, {}".format(message))
+            # Switch HV on
+            self.x10g_rdma.enable_all_hvs()
+            expected_value = 0x3F3F
+            read_value = self.x10g_rdma.power_status()
+            read_value = read_value & expected_value
+            if (read_value == expected_value):
+                logging.debug(" HV OK: 0x{0:08X}".format(read_value))
+            else:
+                message = "Expected 0x{0:02X} not 0x{1:02X}".format(expected_value, read_value)
+                logging.error("Not all VSRs' HV on, {}".format(message))
+                raise HexitecFemError("VSR(s) HV Error, {}".format(message))
             powering_delay = 10
-            print("    VSR(s) enabled; Waiting {} seconds".format(powering_delay))
+            logging.debug("VSRs enabled; Waiting {} seconds".format(powering_delay))
             self._set_status_message("Waiting {} seconds (VSRs booting)".format(powering_delay))
             IOLoop.instance().call_later(powering_delay, self.cam_connect)    # self.powering_modules_completed)
         except socket_error as e:
@@ -594,6 +607,8 @@ class HexitecFem():
             #         counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
             if counter == 15001:
                 logging.error("\n\t read_response() timed out waiting for uart!\n")
+                # TODO: Return as listening to uart now's a bit pointless yes?
+                return -1
                 break
         # print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
         #     counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
@@ -605,8 +620,8 @@ class HexitecFem():
     def cam_connect(self):
         """Send init command(s) to VSRs."""
         try:
-            self.x10g_rdma.uart_tx([0xFF, 0xE3])
-            print("\nInit modules (Sent 0xE3..)\n")
+            self.send_cmd([0xFF, 0xE3])
+            logging.debug("Init modules (Sent 0xE3)")
             self._set_status_message("Waiting 5 seconds (VSRs initialising)")
             IOLoop.instance().call_later(5, self.cam_connect_completed)
         except socket_error as e:
@@ -618,7 +633,7 @@ class HexitecFem():
         """Complete VSRs initialisation."""
         try:
             self._set_status_message("VSRs initialised")
-            print("\n\t INITIALISED\n")
+            # print("\n\t INITIALISED\n")
             logging.debug("Modules Enabled")
         except socket_error as e:
             self.hardware_connected = False
@@ -1013,7 +1028,7 @@ class HexitecFem():
             # self.block_write_custom_length(self.vsr_addr, number_registers, address_h, address_l, register_values)
             self.enables_write_and_read_verify(self.vsr_addr, address_h, address_l, register_values)
         else:
-            print("  EMPTY INI FILE ... defaults: {}  ".format(' '.join("0x{0:02X}".format(x) for x in enables_defaults)))
+            # print("  EMPTY INI FILE ... defaults: {}  ".format(' '.join("0x{0:02X}".format(x) for x in enables_defaults)))
             # No ini file loaded, use default values
             # self.block_write_custom_length(self.vsr_addr, number_registers, address_h, address_l, enables_defaults)
             self.enables_write_and_read_verify(self.vsr_addr, address_h, address_l, enables_defaults)
@@ -1139,15 +1154,6 @@ class HexitecFem():
         self.load_enables_settings(number_registers, 0x39, 0x41, asic2_row_cal_enable, enables_defaults)
 
         logging.debug("Power, Cal and Read Enables have been loaded")
-
-    def readout_vsr_register(self, vsr, description, address_h, address_l):
-        """Read out VSR register.
-
-        Example: (vsr, description, address_h, address_l) = 1, "Column Read Enable ASIC2", 0x43, 0x32
-        """
-        number_registers = 10
-        resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
-        print(" {0} (0x{1}{2}): {3}".format(description, chr(address_h), chr(address_l), reply_list))
 
     def make_list_hexadecimal(self, value):  # pragma: no cover
         """Debug function: Turn decimal list into hexadecimal list."""
@@ -1541,7 +1547,7 @@ class HexitecFem():
             vcal[0], vcal[1] = self.convert_to_aspect_format(vcal_high)
             vcal[2], vcal[3] = self.convert_to_aspect_format(vcal_low)
 
-        print(" *** umid_value: {} vcal_value: {}".format(umid_value, vcal_value))
+        # print(" *** umid_value: {} vcal_value: {}".format(umid_value, vcal_value))
         self.send_cmd([vsr_address, HexitecFem.WRITE_DAC_VAL,
                        vcal[0], vcal[1], vcal[2], vcal[3],          # Vcal, e.g. 0x0111 =: 0.2V
                        umid[0], umid[1], umid[2], umid[3],          # Umid, e.g. 0x0555 =: 1.0V
@@ -1673,7 +1679,7 @@ class HexitecFem():
         return register_reply
 
     def convert_list_to_string(self, int_list):
-        """Convert list of integer into ASCII string.
+        r"""Convert list of integer into ASCII string.
 
         I.e. integer_list = [42, 144, 70, 70, 13], returns '*\x90FF\r'
         """
@@ -1878,9 +1884,14 @@ class HexitecFem():
                                             bit_range=6)
         self.sph_s2 = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Sph -> S2',
                                             bit_range=6)
+        self.bias_level = self._extract_integer(self.hexitec_parameters,
+                                                'Control-Settings/HV_Bias', bit_range=15)
+
         print("row_s1: {} from {}".format(self.row_s1, self._extract_integer(self.hexitec_parameters, 'Control-Settings/Row -> S1', bit_range=14)))
         print("s1_sph: {} from {}".format(self.s1_sph, self._extract_integer(self.hexitec_parameters, 'Control-Settings/S1 -> Sph', bit_range=6)))
         print("sph_s2: {} from {}".format(self.sph_s2, self._extract_integer(self.hexitec_parameters, 'Control-Settings/Sph -> S2', bit_range=6)))
+        # print("bias:   {} from {}".format(self.bias_level, self._extract_integer(self.hexitec_parameters, 'Control-Settings/HV_Bias', bit_range=15)))
+        # time.sleep(1.5)
         # print(self.hexitec_parameters)
         self.calculate_frame_rate()
 
@@ -2159,6 +2170,59 @@ class HexitecFem():
             #         time.sleep(0.25)
         except Exception as e:
             logging.error("dump_all_registers: {}".format(e))
+
+    def convert_hex_to_hv(self, hex_value):
+        """Convert hexadecimal value into HV voltage."""
+        return (hex_value / 0xFFF) * 1250
+
+    def convert_hv_to_hex(self, hv_value):
+        """Convert HV voltage into hexadecimal value."""
+        return int((hv_value / 1250) * 0xFFF)
+
+    def convert_bias_to_dac_values(self, hv):
+        """Convert bias level to DAC formatted values.
+
+        I.e. 21 V -> 0x0041 (0x30, 0x30, 0x34, 0x31)
+        """
+        hv_hex = self.convert_hv_to_hex(hv)
+        # print(" Selected hv: {0}. Converted to hex: {1:04X}".format(hv, hv_hex))
+        hv_hex_msb = hv_hex >> 8
+        hv_hex_lsb = hv_hex & 0xFF
+        hv_msb = self.convert_to_aspect_format(hv_hex_msb)
+        hv_lsb = self.convert_to_aspect_format(hv_hex_lsb)
+        # print(" Conv'd to aSp_M: {}".format(hv_msb))
+        # print(" Conv'd to aSp_L: {}".format(hv_lsb))
+        return hv_msb, hv_lsb
+
+    def hv_on(self, msg):
+        """Switch HV on."""
+        logging.debug("Enable: [0xE3]")
+        self.send_cmd([0xC0, 0xE3])
+        time.sleep(0.5)
+
+        logging.debug("Going to set HV bias to -{} volts".format(self.bias_level))
+        hv_msb, hv_lsb = self.convert_bias_to_dac_values(self.bias_level)
+
+        logging.debug("Write DAC: [0x54]")
+        self.send_cmd([0xC0, 0x54, 0x30, 0x30, 0x30, 0x30,
+                       0x30, 0x30, 0x30, 0x30,
+                       0x30, 0x30, 0x30, 0x30,
+                       hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
+                       0x30, 0x30, 0x30, 0x30,
+                       0x30, 0x30, 0x30, 0x30,
+                       0x30, 0x30, 0x30, 0x30,
+                       0x30, 0x30, 0x30, 0x30])
+        self.read_response()
+        self.hv_bias_enabled = True
+        logging.debug("HV now ON")
+
+    def hv_off(self, msg):
+        """Switch HV off."""
+        logging.debug("Disable: [0xE2]")
+        self.send_cmd([0xC0, 0xE2])
+        # logging.debug("disabled, all done!")
+        self.hv_bias_enabled = False
+        logging.debug("HV now OFF")
 
 class HexitecFemError(Exception):
     """Simple exception class for HexitecFem to wrap lower-level exceptions."""

@@ -690,17 +690,11 @@ class Hexitec():
 
     def hv_on(self, msg):
         """Switch HV on."""
-        # TODO: Complete placeholder
-        self.fem.hv_bias_enabled = True
-        # print(" *** TEMPORARY USAGE: fem.read_sensors() ***")
-        # self.fem.read_sensors()
-        # self.fem.print_vcal_registers(0x90)
-        self.fem.dump_all_registers()
+        self.fem.hv_on(msg)
 
     def hv_off(self, msg):
         """Switch HV off."""
-        # TODO: Complete placeholder
-        self.fem.hv_bias_enabled = False
+        self.fem.hv_off(msg)
 
     def get(self, path):
         """

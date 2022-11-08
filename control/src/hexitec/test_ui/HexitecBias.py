@@ -80,11 +80,11 @@ class HexitecBias():
         return response
         # return self.x10g_rdma.uart_rx(0x0)
 
-    def convert_to_hv(self, hex_value):
+    def convert_hex_to_hv(self, hex_value):
         """Convert hexadecimal value into HV voltage."""
         return (hex_value / 0xFFF) * 1250
 
-    def convert_to_hex(self, hv_value):
+    def convert_hv_to_hex(self, hv_value):
         """Convert HV voltage into hexadecimal value."""
         return int((hv_value / 1250) * 0xFFF)
 
@@ -104,7 +104,7 @@ class HexitecBias():
 
         I.e. 21 V -> 0x0041 (0x30, 0x30, 0x34, 0x31)
         """
-        hv_hex = hxt.convert_to_hex(hv)
+        hv_hex = hxt.convert_hv_to_hex(hv)
         print(" Selected hv: {0}. Converted to hex: {1:04X}".format(hv, hv_hex))
         hv_hex_msb = hv_hex >> 8
         hv_hex_lsb = hv_hex & 0xFF

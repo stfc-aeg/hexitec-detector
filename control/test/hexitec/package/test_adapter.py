@@ -736,12 +736,11 @@ class TestDetector(unittest.TestCase):
 
     def test_hv_on(self):
         """Test function switches HV on."""
-        # TODO: Complete placeholder when HV available
         self.test_adapter.detector.hv_on("")
-        assert self.test_adapter.detector.fem.hv_bias_enabled is True
+        self.test_adapter.detector.fem.hv_on.assert_called()
 
     def test_hv_off(self):
         """Test function switches HV off."""
-        # TODO: Complete placeholder when HV available
         self.test_adapter.detector.hv_off("")
-        assert self.test_adapter.detector.fem.hv_bias_enabled is False
+        self.test_adapter.detector.fem.hv_off.assert_called()
+ 

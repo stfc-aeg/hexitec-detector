@@ -119,13 +119,23 @@ if __name__ == '__main__':  # pragma: no cover
         # hxt.x10g_rdma.enable_vsr_or_hv(1, Hexitec2x6.hvs_bit_mask)  # Switches a single HV on
         # hxt.x10g_rdma.enable_vsr_or_hv(2, Hexitec2x6.enable_vsrs_mask)
 
-        # hxt.x10g_rdma.disable_all_hv()    # Working
-        hxt.x10g_rdma.disable_all_vsrs()  # Working
+        # hxt.x10g_rdma.disable_all_hvs()    # Working
+        # hxt.x10g_rdma.disable_all_vsrs()  # Working
+
         time.sleep(1)
-        # hxt.x10g_rdma.disable_all_hv()
-        print(" power status: {0:x}".format(hxt.x10g_rdma.power_status()))
+        # hxt.x10g_rdma.disable_all_hvs()
+        print(" power status: {0:08X}".format(hxt.x10g_rdma.power_status()))
         # time.sleep(1)
-        hxt.x10g_rdma.enable_all_vsrs()
+        # hxt.x10g_rdma.enable_all_vsrs()
+        print(" Switching on HVs..")
+        hxt.x10g_rdma.enable_all_hvs()
+        print(" power status: {0:08X}".format(hxt.x10g_rdma.power_status()))
+
+        print(" Switching off HVs..")
+        time.sleep(1)
+        hxt.x10g_rdma.disable_all_hvs()
+        print(" power status: {0:08X}".format(hxt.x10g_rdma.power_status()))
+
         # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
         # time.sleep(1)
         # hxt.x10g_rdma.enable_vsr(2)
@@ -138,15 +148,15 @@ if __name__ == '__main__':  # pragma: no cover
         # time.sleep(1)
         # hxt.x10g_rdma.enable_vsr(6)  # Switches a single VSR on
         # time.sleep(1)
-        print(" power status: {0:x}".format(hxt.x10g_rdma.power_status()))
-        # print(" power status: {0:x}".format(hxt.x10g_rdma.power_status()))
+        print(" power status: {0:08X}".format(hxt.x10g_rdma.power_status()))
+        # print(" power status: {0:08X}".format(hxt.x10g_rdma.power_status()))
         # hxt.x10g_rdma.disable_vsr(1)
-        # # hxt.x10g_rdma.enable_all_hv()
+        # # hxt.x10g_rdma.enable_all_hvs()
         # hxt.x10g_rdma.enable_hv(1)
-        # print(" power status: {0:x}".format(hxt.x10g_rdma.power_status()))
-        # print(" power status: {0:x}".format(hxt.x10g_rdma.power_status()))
+        # print(" power status: {0:08X}".format(hxt.x10g_rdma.power_status()))
+        # print(" power status: {0:08X}".format(hxt.x10g_rdma.power_status()))
         # hxt.x10g_rdma.enable_vsr(2)
-        # print(" power status: {0:x}".format(hxt.x10g_rdma.power_status()))
+        # print(" power status: {0:08X}".format(hxt.x10g_rdma.power_status()))
 
     except (socket.error, struct.error) as e:
         print(" *** Scratch register error: {} ***".format(e))
