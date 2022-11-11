@@ -2,7 +2,7 @@
 Takes a pcap file and transmits specified number of frames.
 
 Supports 2x2 sensors, multiple nodes, 8008/3208 packet sizes, extracting headers from PCAPNG file.
-Say five
+
 Created on April 22, 2022
 
 @author: Christian Angelsen

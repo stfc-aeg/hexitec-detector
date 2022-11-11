@@ -57,7 +57,7 @@ class HexitecDAQ():
         self.frame_start_acquisition = 0  # number of frames received at start of acq
 
         # First initialisation fudges data acquisition (but without writing to disk)
-        self.first_initialisation = True
+        self.first_initialisation = False   # True
 
         self.file_writing = False
         self.config_dir = ""

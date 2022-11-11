@@ -578,6 +578,7 @@ class Hexitec():
         # TODO: To be removed once firmware updated? FP may be slow to process frame_number reset
         time.sleep(0.5)
 
+        # First acquisition of multiple, bias-window(s), collection?
         # Reset histograms, call DAQ's prepare_daq() once per acquisition
         if self.initial_acquisition:
             # Issue reset to histogram
@@ -593,16 +594,18 @@ class Hexitec():
             self.acquisition_in_progress = True
 
         # Wait for DAQ (i.e. file writer) to be enabled before FEM told to collect data
-        # IOLoop.instance().call_later(0.1, self.await_daq_ready)
         IOLoop.instance().add_callback(self.await_daq_ready)
 
     def await_daq_ready(self):
         """Wait until DAQ has configured, enabled file writer."""
         if (self.daq.in_error):
+            print(" \n daq is in error")
             # Reset state variables
             self.reset_state_variables()
         elif (self.daq.file_writing is False):
-            IOLoop.instance().call_later(0.05, self.await_daq_ready)
+            print(" \n DAC acquisition file writing still false")
+            # IOLoop.instance().call_later(0.05, self.await_daq_ready)
+            IOLoop.instance().call_later(0.5, self.await_daq_ready)
         else:
             self.software_state = "Acquiring"
             # Add additional 8 ms delay to ensure file writer's file open before first frame arrives
@@ -610,6 +613,7 @@ class Hexitec():
 
     def trigger_fem_acquisition(self):
         """Trigger data acquisition in fem."""
+        print(" \n trigger_fem_acquisition() executing")
         # TODO: Temp hack: Prevent frames being 1 (continuous readout) by setting to 2 if it is
         self.number_frames_to_request = 2 if (self.number_frames_to_request == 1) else \
             self.number_frames_to_request
@@ -629,6 +633,7 @@ class Hexitec():
         -Normal initialisation
         -Waiting for data collection to complete, either single/multi run
         """
+        print("\n adpt.monitor_fem_progress() called")
         if (self.fem.hardware_busy):
             # Still sending data
             IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
@@ -640,7 +645,7 @@ class Hexitec():
                     # Need further bias window(s)
                     IOLoop.instance().add_callback(self.acquisition)
                     return
-
+        print("\n adpt.monitor_fem_progress() fem done")
         # Issue reset to summed_image
         command = "config/summed_image/reset_image"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
@@ -658,6 +663,7 @@ class Hexitec():
 
         Utilised by await_daq_ready(), monitor_fem_progress()
         """
+        print("\n adpt.reset_state_variables() called")
         self.initial_acquisition = True
         self.extended_acquisition = False
         self.acquisition_in_progress = False

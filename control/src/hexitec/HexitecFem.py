@@ -346,14 +346,14 @@ class HexitecFem():
                 self.firmware_date = "{0:.2}/{1:.2}/{2:.4}".format(day, month, year)
                 self.firmware_time = "{0:.2}:{1:.2}:{2:.4}".format(fw_time[0:2], fw_time[2:4], fw_time[4:6])
                 self.read_firmware_version = False
-            beginning = time.time()
+            # beginning = time.time()
             vsr = self.vsr_addr
             for VSR in self.VSR_ADDRESS:
                 self.vsr_addr = VSR
                 self.read_temperatures_humidity_values()
                 self.read_pwr_voltages()  # pragma: no cover
             self.vsr_addr = vsr  # pragma: no cover
-            ending = time.time()
+            # ending = time.time()
             # print(" Environmental data took: {}".format(ending - beginning))
         except HexitecFemError as e:
             self._set_status_error("Failed to read sensors: %s" % str(e))
@@ -386,11 +386,6 @@ class HexitecFem():
         self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 1, frame_number, burst_len=1,
                              comment='frame gate frame number')
         self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 2, frame_gap, burst_len=1, comment='frame gate frame gap')
-
-    def data_stream(self, num_images):
-        """Trigger FEM to output data."""
-        self.frame_gate_settings(num_images - 1, 0)
-        self.frame_gate_trigger()
 
     def _get_status_message(self):
         return self.status_message
@@ -529,16 +524,6 @@ class HexitecFem():
             self._set_status_error("Uncaught Exception; Camera initialisation failed: %s" % str(e))
             logging.error("%s" % str(e))
 
-    def check_all_processes_ready(self):
-        """Wait until DAQ, Odin adapters ready or in error."""
-        if self.parent.daq.in_error:
-            # Reset variables
-            self.hardware_busy = False
-        elif not self.parent.daq.in_progress:
-            IOLoop.instance().call_later(0.5, self.check_all_processes_ready)
-        else:
-            self.collect_data()
-
     def collect_data(self, msg=None):
         """Acquire data from camera."""
         try:
@@ -553,6 +538,7 @@ class HexitecFem():
                 self.ignore_busy = False
             self.hardware_busy = True
             self._set_status_message("Acquiring data..")
+            print("\n fem.collect_data()")
             self.acquire_data()
         except HexitecFemError as e:
             self._set_status_error("Failed to collect data: %s" % str(e))
@@ -674,48 +660,12 @@ class HexitecFem():
         print("__________________________________________________________")
 
     # TODO: 2x2 Legacy code, to be reconstructed
-    @run_on_executor(executor='thread_executor')
+    # @run_on_executor(executor='thread_executor')
     def acquire_data(self):  # noqa: C901
         """Acquire data, poll fem for completion and read out fem monitors."""
-        self.x10g_rdma.write(0xD0000001, self.number_frames - 1, burst_len=1, comment='Frame Gate set to \
-            self.number_frames')
-
-        full_empty = self.x10g_rdma.read(0x60000011, burst_len=1, comment='Check FULL EMPTY Signals')
-        logging.debug("Check EMPTY Signals: %s" % full_empty)
-
-        full_empty = self.x10g_rdma.read(0x60000012, burst_len=1, comment='Check FULL FULL Signals')
-        logging.debug("Check FULL Signals: %s" % full_empty)
-
-        if self.sensors_layout == HexitecFem.READOUTMODE[0]:
-            logging.debug("Reading out single sensor")
-            mux_mode = 0
-        elif self.sensors_layout == HexitecFem.READOUTMODE[1]:
-            mux_mode = 8
-            logging.debug("Reading out 2x2 sensors")
-
-        if self.selected_sensor == HexitecFem.OPTIONS[0]:
-            self.x10g_rdma.write(0x60000004, 0 + mux_mode, burst_len=1, comment='Sensor 1 1')
-            logging.debug("Sensor 1 1")
-        if self.selected_sensor == HexitecFem.OPTIONS[2]:
-            self.x10g_rdma.write(0x60000004, 4 + mux_mode, burst_len=1, comment='Sensor 2 1')
-            logging.debug("Sensor 2 1")
-
-        # Flush the input FIFO buffers
-        self.x10g_rdma.write(0x60000002, 32, burst_len=1, comment='Clear Input Buffers')
-        self.x10g_rdma.write(0x60000002, 0, burst_len=1, comment='Clear Input Buffers')
-        full_empty = self.x10g_rdma.read(0x60000011, burst_len=1, comment='Check EMPTY Signals')
-        logging.debug("Check EMPTY Signals: %s" % full_empty)
-        full_empty = self.x10g_rdma.read(0x60000012, burst_len=1, comment='Check FULL Signals')
-        logging.debug("Check FULL Signals: %s" % full_empty)
-
-        if self.sensors_layout == HexitecFem.READOUTMODE[1]:
-            self.x10g_rdma.write(0x60000002, 4, burst_len=1, comment='Enable State Machine')
-
-        if self.debug:
-            logging.debug("number of Frames := %s" % self.number_frames)
+        print(" \n fem.acquire_data()")
 
         logging.info("Initiate Data Capture")
-        self.data_stream(self.number_frames)
         self.acquire_start_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
         # How to convert datetime object to float?
         self.acquire_timestamp = time.time()    # Utilised by adapter's watchdog
@@ -725,6 +675,7 @@ class HexitecFem():
 
     def check_acquire_finished(self):
         """Check whether all data transferred, until completed or cancelled by user."""
+        print(" \n fem.acquire_data()")
         try:
             delay = 0.10
             reply = 0
@@ -734,7 +685,16 @@ class HexitecFem():
                 self.acquire_data_completed()
                 return
             else:
-                reply = self.x10g_rdma.read(0x60000014, burst_len=1, comment='Check data transfer completed?')
+                # reply = self.x10g_rdma.read(0x60000014, burst_len=1, comment='Check data transfer completed?')
+                print(" *** READY? ***")
+                time.sleep(1)
+                print("\n 1 of 3..")
+                time.sleep(1)
+                print("\n 2 of 3..")
+                time.sleep(1)
+                print("\n 3 of 3..")
+                time.sleep(1)
+                reply = 1
                 if reply > 0:
                     self.acquire_data_completed()
                     return
@@ -757,16 +717,11 @@ class HexitecFem():
         # Acquisition interrupted
         self.acquisition_completed = True
 
-    # TODO: 2x2 Legacy code, to be reconstructed
+    # TODO: To be expanded
     def acquire_data_completed(self):
         """Reset variables and read out Firmware monitors post data transfer."""
+        print("\n fem.acquire_data_completed()")
         self.acquire_stop_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
-        # Stop the state machine
-        self.x10g_rdma.write(0x60000002, 0, burst_len=1, comment='Dis-Enable State Machine')
-
-        # Clear enable signal
-        self.x10g_rdma.write(0xD0000000, 2, burst_len=1, comment='Clear enable signal')
-        self.x10g_rdma.write(0xD0000000, 0, burst_len=1, comment='Clear enable signal')
 
         if self.stop_acquisition:
             logging.info("Cancelling Acquisition..")
@@ -789,92 +744,6 @@ class HexitecFem():
 
         logging.debug("Acquisition Completed, enable signal cleared")
 
-        # Clear the Mux Mode bit
-        if self.selected_sensor == HexitecFem.OPTIONS[0]:
-            self.x10g_rdma.write(0x60000004, 0, burst_len=1, comment='Sensor 1 1')
-            logging.debug("Sensor 1 1")
-        if self.selected_sensor == HexitecFem.OPTIONS[2]:
-            self.x10g_rdma.write(0x60000004, 4, burst_len=1, comment='Sensor 2 1')
-            logging.debug("Sensor 2 1")
-        full_empty = self.x10g_rdma.read(0x60000011, burst_len=1, comment='Check EMPTY Signals')
-        logging.debug("Check EMPTY Signals: %s" % full_empty)
-        full_empty = self.x10g_rdma.read(0x60000012, burst_len=1, comment='Check FULL Signals')
-        logging.debug("Check FULL Signals: %s" % full_empty)
-        no_frames = self.x10g_rdma.read(0xD0000001, burst_len=1, comment='Check Number of Frames setting') + 1
-        logging.debug("Number of Frames: %s" % no_frames)
-
-        logging.debug("Output from Sensor")
-        m0 = self.x10g_rdma.read(0x70000010, burst_len=1, comment='frame last length')
-        logging.debug("frame last length: %s" % m0)
-        m0 = self.x10g_rdma.read(0x70000011, burst_len=1, comment='frame max length')
-        logging.debug("frame max length: %s" % m0)
-        m0 = self.x10g_rdma.read(0x70000012, burst_len=1, comment='frame min length')
-        logging.debug("frame min length: %s" % m0)
-        m0 = self.x10g_rdma.read(0x70000013, burst_len=1, comment='frame number')
-        logging.debug("frame number: %s" % m0)
-        m0 = self.x10g_rdma.read(0x70000014, burst_len=1, comment='frame last clock cycles')
-        logging.debug("frame last clock cycles: %s" % m0)
-        m0 = self.x10g_rdma.read(0x70000015, burst_len=1, comment='frame max clock cycles')
-        logging.debug("frame max clock cycles: %s" % m0)
-        m0 = self.x10g_rdma.read(0x70000016, burst_len=1, comment='frame min clock cycles')
-        logging.debug("frame min clock cycles: %s" % m0)
-        m0 = self.x10g_rdma.read(0x70000017, burst_len=1, comment='frame data total')
-        logging.debug("frame data total: %s" % m0)
-        m0 = self.x10g_rdma.read(0x70000018, burst_len=1, comment='frame data total clock cycles')
-        logging.debug("frame data total clock cycles: %s" % m0)
-        m0 = self.x10g_rdma.read(0x70000019, burst_len=1, comment='frame trigger count')
-        logging.debug("frame trigger count: %s" % m0)
-        m0 = self.x10g_rdma.read(0x7000001A, burst_len=1, comment='frame in progress flag')
-        logging.debug("frame in progress flag: %s" % m0)
-
-        logging.debug("Output from Frame Gate")
-        m0 = self.x10g_rdma.read(0x80000010, burst_len=1, comment='frame last length')
-        logging.debug("frame last length: %s" % m0)
-        m0 = self.x10g_rdma.read(0x80000011, burst_len=1, comment='frame max length')
-        logging.debug("frame max length: %s" % m0)
-        m0 = self.x10g_rdma.read(0x80000012, burst_len=1, comment='frame min length')
-        logging.debug("frame min length: %s" % m0)
-        m0 = self.x10g_rdma.read(0x80000013, burst_len=1, comment='frame number')
-        logging.debug("frame number: %s" % m0)
-        m0 = self.x10g_rdma.read(0x80000014, burst_len=1, comment='frame last clock cycles')
-        logging.debug("frame last clock cycles: %s" % m0)
-        m0 = self.x10g_rdma.read(0x80000015, burst_len=1, comment='frame max clock cycles')
-        logging.debug("frame max clock cycles: %s" % m0)
-        m0 = self.x10g_rdma.read(0x80000016, burst_len=1, comment='frame min clock cycles')
-        logging.debug("frame min clock cycles: %s" % m0)
-        m0 = self.x10g_rdma.read(0x80000017, burst_len=1, comment='frame data total')
-        logging.debug("frame data total: %s" % m0)
-        m0 = self.x10g_rdma.read(0x80000018, burst_len=1, comment='frame data total clock cycles')
-        logging.debug("frame data total clock cycles: %s" % m0)
-        m0 = self.x10g_rdma.read(0x80000019, burst_len=1, comment='frame trigger count')
-        logging.debug("frame trigger count: %s" % m0)
-        m0 = self.x10g_rdma.read(0x8000001A, burst_len=1, comment='frame in progress flag')
-        logging.debug("frame in progress flag: %s" % m0)
-
-        logging.debug("Input to XAUI")  # Conn'd to 10G core going out
-        m0 = self.x10g_rdma.read(0x90000010, burst_len=1, comment='frame last length')
-        logging.debug("frame last length: %s" % m0)
-        m0 = self.x10g_rdma.read(0x90000011, burst_len=1, comment='frame max length')
-        logging.debug("frame max length: %s" % m0)
-        m0 = self.x10g_rdma.read(0x90000012, burst_len=1, comment='frame min length')
-        logging.debug("frame min length: %s" % m0)
-        m0 = self.x10g_rdma.read(0x90000013, burst_len=1, comment='frame number')
-        logging.debug("frame number: %s" % m0)
-        m0 = self.x10g_rdma.read(0x90000014, burst_len=1, comment='frame last clock cycles')
-        logging.debug("frame last clock cycles: %s" % m0)
-        m0 = self.x10g_rdma.read(0x90000015, burst_len=1, comment='frame max clock cycles')
-        logging.debug("frame max clock cycles: %s" % m0)
-        m0 = self.x10g_rdma.read(0x90000016, burst_len=1, comment='frame min clock cycles')
-        logging.debug("frame min clock cycles: %s" % m0)
-        m0 = self.x10g_rdma.read(0x90000017, burst_len=1, comment='frame data total')
-        logging.debug("frame data total: %s" % m0)
-        m0 = self.x10g_rdma.read(0x90000018, burst_len=1, comment='frame data total clock cycles')
-        logging.debug("frame data total clock cycles: %s" % m0)
-        m0 = self.x10g_rdma.read(0x90000019, burst_len=1, comment='frame trigger count')
-        logging.debug("frame trigger count: %s" % m0)
-        m0 = self.x10g_rdma.read(0x9000001A, burst_len=1, comment='frame in progress flag')
-        logging.debug("frame in progress flag: %s" % m0)
-
         # Fem finished sending data/monitoring info, clear hardware busy
         self.hardware_busy = False
 
@@ -889,6 +758,7 @@ class HexitecFem():
 
         # Acquisition completed, note completion
         self.acquisition_completed = True
+        print("\n fem DONE")
 
     def read_receive_from_all(self, op_command, register_h, register_l):
         """Read and receive from all VSRs."""
