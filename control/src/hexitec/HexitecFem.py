@@ -616,9 +616,9 @@ class HexitecFem():
             raise HexitecFemError(e)
 
     def cam_connect_completed(self):
-        """Complete VSRs initialisation."""
+        """Complete VSRs boot up."""
         try:
-            self._set_status_message("VSRs initialised")
+            self._set_status_message("VSRs booted")
             # print("\n\t INITIALISED\n")
             logging.debug("Modules Enabled")
         except socket_error as e:

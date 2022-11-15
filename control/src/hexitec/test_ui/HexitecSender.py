@@ -1,9 +1,10 @@
 """
-Takes a pcap file and transmits specified number of frames.
+Takes data from an h5 file and transmits specified number of frames.
 
-Supports 2x2 sensors, 8008/3208 packet sizes, extracting headers from PCAPNG file.
+Reads the data contents, creates headers and packetises
+according to defined dimensions, sending to targeted host.
 
-Created on April 19, 2022
+Created on November 14, 2022
 
 @author: Christian Angelsen
 """
@@ -11,42 +12,15 @@ Created on April 19, 2022
 from __future__ import print_function
 
 import argparse
-from scapy.all import PcapReader, UDP
 import numpy as np
 import socket
+import h5py
 import time
 import sys
 import os
 
 
-class Hexitec2x2ProducerError(Exception):
-    """Customised exception class."""
-
-    def __init__(self, msg):
-        """Initialise."""
-        self.msg = msg
-
-    def __str__(self):
-        """MagicMethod."""
-        return repr(self.msg)
-
-
-class Hexitec2x2ProducerDefaults(object):
-    """Holds default values for frame producer parameters."""
-
-    def __init__(self):
-        """Initialise defaults."""
-        self.ip_addr = 'localhost'
-        self.port_list = [61651]
-        self.num_frames = 0
-        self.tx_interval = 0
-        self.drop_frac = 0
-        self.drop_list = None
-
-        self.filename = 'hexitec_triangle_100G.pcapng'
-
-
-class Hexitec2x2Producer(object):
+class HexitecSender(object):
     """Produce and transmit specified UDP frames."""
 
     def __init__(self, host, port, frames, rows,
@@ -61,11 +35,10 @@ class Hexitec2x2Producer(object):
         self.NCOLS = columns
         self.NPIXELS = self.NROWS * self.NCOLS
         self.interval = interval
-        # self.display = display
         self.quiet = quiet
         self.filename = filename
+        self.HEADER_SIZE = 8
 
-        # self.pixelsToRead = self.frames * self.NPIXELS
         bytesPerPixel = 2
         bytesToRead = self.NPIXELS * bytesPerPixel
 
@@ -74,63 +47,29 @@ class Hexitec2x2Producer(object):
         totalFrameSize = self.NPIXELS * bytesPerPixel
         self.primaryPackets = totalFrameSize // 8000
         self.trailingPacketSize = totalFrameSize % 8000
-        # print("primaryPackets: {} trailingPacketSize: {}".format(self.primaryPackets, self.trailingPacketSize))
+        self.trailingPackets = 0
+        if self.trailingPacketSize > 0:
+            self.trailingPackets = 1
+        self.totalPackets = self.primaryPackets + self.trailingPackets
+        print("primaryPackets: {} trailingPacketSize: {}".format(self.primaryPackets, self.trailingPacketSize))
+        print("totalFrameSize: {}".format(totalFrameSize))
+        print("totalPackets: {}".format(self.totalPackets))
 
         if os.access(self.filename, os.R_OK):
             print("Selected", self.frames, "frames, ", bytesToRead, "bytes.")
-            file_contents = self.decode_pcap()
+            file_contents = self.open_file()
             self.byteStream = file_contents.tobytes()
         else:
             print("Unable to open: {}. Does it exist?".format(self.filename))
             sys.exit(1)
 
-    def decode_pcap(self):
-        """Extract extended header-sized UDP data from file."""
-        HEADER_SIZE = 8
-
+    def open_file(self):
+        """Extract data from file."""
         # Initialise frame list and counters
-        frames = []
-        num_packets = 0
-        num_frames = 0
-
-        # Create a PCAP reader instance
-        packets = PcapReader(self.filename)
-        frame_data = bytes()
-        # Iterate through packets in reader
-        for packet in packets:
-            num_packets += 1
-
-            # Extract UDP packet payload
-            payload = bytes(packet[UDP].payload)
-
-            # Read frame header
-            header = np.frombuffer(payload[:HEADER_SIZE], dtype=np.uint64)
-            # print([hex(val) for val in header])
-            # assert header[0] == num_frames    # Assumes PCAPNG file begins from frame 0
-            # print(" header = {}".format(payload[:HEADER_SIZE]))
-            # If this is a start of frame packet, reset frame data
-            if int(header[0]) & self.SOF:
-                frame_data = bytes()
-
-            # Append frame payload to frame data, including header
-            frame_data += payload
-            # masked = 0x3FFFFFFF
-            # pktNum = (int(header[0]) >> 32) & masked
-            # frmNum = int(header[0]) & masked
-            # if frmNum < 3:  # Debug info
-            #     print(len(payload), len(payload[HEADER_SIZE:]), frmNum, pktNum)
-
-            # If this is an end of frame packet, convert frame data to numpy array and append to frame list
-            if int(header[0]) & self.EOF:
-                frame = np.frombuffer(frame_data, dtype=np.uint16)
-                frames.append(frame)
-                num_frames += 1
-
-        # Convert frame list to 3D numpy array
-        frames = np.array(frames)
-
-        print("Decoded {} frames from {} packets in PCAP file {}".format(num_frames, num_packets, self.filename))
-
+        frames = None
+        with h5py.File(self.filename, "r") as data_file:
+            # print("Keys: {}".format(data_file.keys()))
+            frames = np.array(data_file["raw_frames"], dtype=np.uint16)
         return frames
 
     def run(self):
@@ -161,14 +100,30 @@ class Hexitec2x2Producer(object):
             # Loop over packets within current frame
             while (packetCounter < (self.primaryPackets + 1)):
 
+                packetCounterFlags = 0
+                # If this is a start of frame packet, reset frame data and flag(s)
+                if (packetCounter % self.totalPackets) == 0:
+                    # print(" ! START")
+                    packetCounterFlags = self.SOF
+                    packetCounter = 0
+                elif (packetCounter % self.totalPackets) == (self.totalPackets-1):
+                    # print(" ! END")
+                    packetCounterFlags = self.EOF
+                # Build header matching requested data dimensions:
+                built_header = (frame) | ((packetCounter << 32) | (packetCounterFlags << (0)))
+                header = np.array([built_header], dtype=np.uint64)
+                # built_integer = int(header).to_bytes(self.HEADER_SIZE, 'little')     # Display as (bytes str, ie) same format
+
                 if (packetCounter < self.primaryPackets):
-                    bytesToSend = 8000 + 8
+                    bytesToSend = 8000
                 else:
-                    bytesToSend = self.trailingPacketSize + 8
+                    bytesToSend = self.trailingPacketSize
 
                 # Prepend header to current packet
-                packet = self.byteStream[streamPosn:streamPosn + bytesToSend]
+                packet = bytes(header) + self.byteStream[streamPosn:streamPosn + bytesToSend]
                 # print("2x2 sending {} bytes".format(len(packet)))
+                # if (frame == 0) and (packetCounter == 0):
+                #     print(" run(), first packet:        {}".format(packet[:20]))
 
                 if not self.quiet:
                     print("bytesRemaining: {0:8} Sent: {1:8}".format(bytesRemaining, bytesSent),
@@ -206,7 +161,7 @@ class Hexitec2x2Producer(object):
 
 if __name__ == '__main__':
 
-    desc = "Hexitec2x2Producer - generate UDP data stream from pcap file"
+    desc = "HexitecSender - generate UDP data stream from pcap file"
     parser = argparse.ArgumentParser(description=desc)
 
     parser.add_argument('--host', type=str, default='127.0.0.1',
@@ -225,11 +180,11 @@ if __name__ == '__main__':
                         help="Suppress detailed print during operation")
     parser.add_argument(
         'filename',
-        default="hexitec_triangle_100G.pcapng",
-        help='PCAP (Wireshark) file to load'
+        default="sample.h5",
+        help='H5 file to load'
     )
 
     args = parser.parse_args()
 
-    producer = Hexitec2x2Producer(**vars(args))
+    producer = HexitecSender(**vars(args))
     producer.run()

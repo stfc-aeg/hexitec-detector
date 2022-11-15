@@ -598,7 +598,8 @@ class TestDetector(unittest.TestCase):
         with patch("hexitec.adapter.IOLoop") as mock_loop:
             self.test_adapter.detector.daq.in_error = False
             self.test_adapter.detector.await_daq_ready()
-            mock_loop.instance().call_later.assert_called_with(0.05,
+            # mock_loop.instance().call_later.assert_called_with(0.05,
+            mock_loop.instance().call_later.assert_called_with(0.5,
                                                                self.test_adapter.detector.await_daq_ready)
 
     def test_await_daq_ready_handles_daq_error_gracefully(self):

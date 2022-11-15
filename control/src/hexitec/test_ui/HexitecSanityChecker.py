@@ -1,5 +1,5 @@
 """
-HexitecSanityChecker: Tests the 2x6 System Firmware.
+HexitecSanityChecker: Tests the 2x6 System Firmware functionalities.
 
 Christian Angelsen, STFC Detector Systems Software Group, 2022.
 """
@@ -334,6 +334,21 @@ if __name__ == '__main__':  # pragma: no cover
         sys.exit(-1)
 
     try:
+        (address_high, address_low) = (0x30, 0x32)
+        (value_high, value_low) = (0x30, 0x31)
+        print("Writing Register 0x{0}{1}, values: {2:X}, {3:X}".format(
+            address_high-0x30, address_low-0x30, value_high, value_low))
+        # print("Write S1 (Low) (Reg 002), values: {0:X}, {1:X}".format(value_high, value_low))
+        vsr_number = 0x90
+
+        hxt.send_cmd([vsr_number, 0x40, address_high, address_low, value_high, value_low])
+        time.sleep(0.25)
+        resp = hxt.read_response()                             # ie resp = [42, 144, 48, 49, 13]
+        reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
+        reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
+        print("R: {}. {}".format(resp, reply))
+        sys.exit(1)
+
         # VSR_ADDRESS = [0x90]
         # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
         print("Switch on VSRs..")
@@ -429,13 +444,11 @@ if __name__ == '__main__':  # pragma: no cover
     except (socket.error, struct.error) as e:
         print(" *** Unexpected exception: {} ***".format(e))
 
-
         # # (address_high, address_low) = (0x30, 0x33)
         # # (value_high, value_low) = (0x30, 0x31)
         # # print("Write S1 (High) (register 003), values: {0:X}, {1:X}".format(value_high, value_low))
         # # hxt.set_vsr_register_value(vsr_number, address_high, address_low, value_high, value_low)
         # # time.sleep(0.25)
-
 
         # # Readout S1 (High) (register 003)
         # vsr_number = 0x90
