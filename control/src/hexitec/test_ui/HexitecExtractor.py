@@ -114,6 +114,10 @@ class HexitecExtractor(object):
             # If this is an end of frame packet, convert frame data to numpy array and append to frame list
             if self.eof_detected(header):
                 frame = np.frombuffer(frame_data, dtype=np.uint16)
+                # # DEBUGGING: Trying to intentionally set few first pixel values to a known range of values
+                # if (num_packets < 7):
+                #     # frame[:10] = range(0, 10) # ValueError: assignment destination is read-only
+                #     print(" frame[:10] = {} ({})".format(frame[:10], len(frame)))
                 frames.append(frame)
                 num_frames += 1
             num_packets += 1

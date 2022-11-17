@@ -23,21 +23,25 @@ import os
 class HexitecSender(object):
     """Produce and transmit specified UDP frames."""
 
-    def __init__(self, host, port, frames, rows,
-                 columns, interval, quiet, filename):
+    def __init__(self, host, port, frames, rows, columns,
+                 extended_headers, interval, quiet, filename):
         """Initialise object with command line arguments."""
         self.SOF = 1 << 63
         self.EOF = 1 << 62
         self.host = host
         self.port = port
         self.frames = frames
+        self.extended_headers = extended_headers
         self.NROWS = rows
         self.NCOLS = columns
         self.NPIXELS = self.NROWS * self.NCOLS
         self.interval = interval
         self.quiet = quiet
         self.filename = filename
-        self.HEADER_SIZE = 8
+        if self.extended_headers:
+            self.HEADER_SIZE = 64
+        else:
+            self.HEADER_SIZE = 8
 
         bytesPerPixel = 2
         bytesToRead = self.NPIXELS * bytesPerPixel
@@ -53,11 +57,14 @@ class HexitecSender(object):
         self.totalPackets = self.primaryPackets + self.trailingPackets
         print("primaryPackets: {} trailingPacketSize: {}".format(self.primaryPackets, self.trailingPacketSize))
         print("totalFrameSize: {}".format(totalFrameSize))
-        print("totalPackets: {}".format(self.totalPackets))
+        # print("totalPackets: {}".format(self.totalPackets))
 
         if os.access(self.filename, os.R_OK):
             print("Selected", self.frames, "frames, ", bytesToRead, "bytes.")
             file_contents = self.open_file()
+            (images, rows, columns) = file_contents.shape
+            self.totalBytesRead = images * rows * columns * bytesPerPixel
+            print("Read {} image(s), {} rows x {} columns totalling {} Bytes.".format(images, rows, columns, self.totalBytesRead))
             self.byteStream = file_contents.tobytes()
         else:
             print("Unable to open: {}. Does it exist?".format(self.filename))
@@ -71,6 +78,17 @@ class HexitecSender(object):
             # print("Keys: {}".format(data_file.keys()))
             frames = np.array(data_file["raw_frames"], dtype=np.uint16)
         return frames
+
+    def build_header(self, frame, packetCounter, packetCounterFlags):
+        """Build selected header size."""
+        if self.extended_headers:
+            packet_flags = ((packetCounter << 0) | (packetCounterFlags))
+            header_list = [frame, packet_flags, 0, 0, 0, 0, 0, 0]
+        else:
+            packet_flags = (frame) | ((packetCounter << 32) | (packetCounterFlags << (0)))
+            header_list = [packet_flags]
+        header = np.array(header_list, dtype=np.uint64)
+        return header
 
     def run(self):
         """Transmit data to address, port."""
@@ -103,16 +121,17 @@ class HexitecSender(object):
                 packetCounterFlags = 0
                 # If this is a start of frame packet, reset frame data and flag(s)
                 if (packetCounter % self.totalPackets) == 0:
-                    # print(" ! START")
                     packetCounterFlags = self.SOF
                     packetCounter = 0
                 elif (packetCounter % self.totalPackets) == (self.totalPackets-1):
-                    # print(" ! END")
                     packetCounterFlags = self.EOF
                 # Build header matching requested data dimensions:
-                built_header = (frame) | ((packetCounter << 32) | (packetCounterFlags << (0)))
-                header = np.array([built_header], dtype=np.uint64)
-                # built_integer = int(header).to_bytes(self.HEADER_SIZE, 'little')     # Display as (bytes str, ie) same format
+                header = self.build_header(frame, packetCounter, packetCounterFlags)
+                # built_integer = int(header).to_bytes(self.HEADER_SIZE, 'little')     # Display as bytes str
+
+                # # Debug:
+                # if packetCounter < 20:
+                #     print("   header: {}".format(' '.join("0x{0:016X}".format(x) for x in header)))
 
                 if (packetCounter < self.primaryPackets):
                     bytesToSend = 8000
@@ -121,9 +140,6 @@ class HexitecSender(object):
 
                 # Prepend header to current packet
                 packet = bytes(header) + self.byteStream[streamPosn:streamPosn + bytesToSend]
-                # print("2x2 sending {} bytes".format(len(packet)))
-                # if (frame == 0) and (packetCounter == 0):
-                #     print(" run(), first packet:        {}".format(packet[:20]))
 
                 if not self.quiet:
                     print("bytesRemaining: {0:8} Sent: {1:8}".format(bytesRemaining, bytesSent),
@@ -136,6 +152,8 @@ class HexitecSender(object):
                 bytesRemaining -= bytesToSend
                 packetCounter += 1
                 streamPosn += bytesToSend
+                if streamPosn == self.totalBytesRead:
+                    streamPosn = 0
 
             if not self.quiet:
                 print("  Sent frame {} packets {} bytes {}".format(frame, packetCounter, bytesSent))
@@ -155,8 +173,8 @@ class HexitecSender(object):
         # Close socket
         sock.close()
 
-        print("%d frames completed, %d bytes (including headers) sent in %.3f secs" %
-              (self.framesSent, self.totalBytesSent, runTime))
+        print("%d frames completed (%dx%d Pixels), %d bytes (including headers) sent in %.3f secs" %
+              (self.framesSent, self.NROWS, self.NCOLS, self.totalBytesSent, runTime))
 
 
 if __name__ == '__main__':
@@ -170,6 +188,8 @@ if __name__ == '__main__':
                         help='select destination host IP port')
     parser.add_argument('--frames', '-n', type=int, default=1,
                         help='select number of frames to transmit')
+    parser.add_argument('--extended_headers', "-e", action="store_true",
+                        help="Extended headers (64 bytes, or 8 bytes)")
     parser.add_argument('--rows', '-r', type=int, default=160,
                         help='set number of rows in frame')
     parser.add_argument('--columns', '-c', type=int, default=160,

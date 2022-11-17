@@ -140,7 +140,7 @@ class HexitecDAQ():
             "diagnostics": {
                 "daq_start_time": (lambda: self.daq_start_time, None),
                 "daq_stop_time": (lambda: self.daq_stop_time, None),
-                "fem_not_busy": (lambda: self.fem_not_busy, None),
+                "fem_not_busy": (lambda: self.fem_not_busy, None)
             },
             "receiver": {
                 "connected": (partial(self._is_od_connected, adapter="fr"), None),
