@@ -103,13 +103,13 @@ class GenerateConfigFiles():
             raise KeyError("Couldn't locate summed_image setting(s)!")
         return summed_image_config
 
-    def generate_config_files(self):  # noqa: C901
+    def generate_config_files(self, id=""):  # noqa: C901
         """Generate the two configuration files.
 
         The store config file contains the actual configuration.
         The execute config file is used to execute the configuration of the store file.
         """
-        store_temp_name = "/tmp/_tmp_store.json"
+        store_temp_name = "/tmp/_tmp_store{}.json".format(id)
         self.store_temp = open(store_temp_name, mode='w+t')
 
         # Generate a unique index name
@@ -371,7 +371,7 @@ class GenerateConfigFiles():
         store_plugin_config += '''
                             "summed_images":
                             {
-                                "datatype": "uint16",
+                                "datatype": "uint32",
                                 "dims": [%s, %s],''' % (rows, columns) + '''
                                 "chunks": [1, %s, %s],%s''' % (rows, columns, blosc_settings) + '''
                             },
@@ -471,7 +471,8 @@ if __name__ == '__main__':  # pragma: no cover
                    {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'},
                    'summed_image': {
                        'threshold_lower': 120,
-                       'threshold_upper': 4800}
+                       'threshold_upper': 4800,
+                       'image_frequency': 1}
                    },
                   'processor': {'config_file': '', 'configured': False, 'connected': False}}
 
@@ -486,6 +487,6 @@ if __name__ == '__main__':  # pragma: no cover
     gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="none",
                               master_dataset=master_dataset, extra_datasets=extra_datasets,
                               selected_os=selected_os)
-    s, e, ss, se = gcf.generate_config_files()
+    s, e, ss, se = gcf.generate_config_files(0)
     # print(type(s), type(e), type(ss), type(se))
     print("GFC (os:%s) returned config files\n Store:   %s\n Execute: %s\n" % (selected_os, s, e))

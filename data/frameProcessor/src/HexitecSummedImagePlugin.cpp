@@ -31,8 +31,8 @@ namespace FrameProcessor
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
 
-    summed_image_ = (unsigned short *) calloc(image_pixels_, sizeof(unsigned short *));
-    memset(summed_image_, 0, image_pixels_ * sizeof(unsigned short));
+    summed_image_ = (uint32_t *) calloc(image_pixels_, sizeof(uint32_t *));
+    memset(summed_image_, 0, image_pixels_ * sizeof(uint32_t));
     threshold_lower_ = 0;
     threshold_upper_ = 16382;
     image_frequency_ = 1;
@@ -119,7 +119,7 @@ namespace FrameProcessor
       if (reset_image_ == 1)
       {
         // Clear all pixels to be 0
-        memset(summed_image_, 0, image_pixels_ * sizeof(unsigned short));
+        memset(summed_image_, 0, image_pixels_ * sizeof(uint32_t));
         reset_image_ = 0;
       }
     }
@@ -203,11 +203,11 @@ namespace FrameProcessor
           dims[1] = image_width_;
           summed_image_meta.set_dimensions(dims);
           summed_image_meta.set_compression_type(no_compression);
-          summed_image_meta.set_data_type(raw_16bit);
+          summed_image_meta.set_data_type(raw_32bit);
           summed_image_meta.set_frame_number(frame_number);
           summed_image_meta.set_dataset_name("summed_images");
 
-          const std::size_t summed_image_size = image_width_ * image_height_ * sizeof(unsigned short);
+          const std::size_t summed_image_size = image_width_ * image_height_ * sizeof(uint32_t);
 
           boost::shared_ptr<Frame> summed_frame;
           summed_frame = boost::shared_ptr<Frame>(new DataBlockFrame(summed_image_meta,
@@ -215,7 +215,7 @@ namespace FrameProcessor
 
           // Ensure frame is empty
           float *summed = static_cast<float *>(summed_frame->get_data_ptr());
-          memset(summed, 0, image_pixels_ * sizeof(unsigned short));
+          memset(summed, 0, image_pixels_ * sizeof(uint32_t));
 
           // Define pointer to the input image data
           void* input_ptr = static_cast<void *>(
@@ -225,7 +225,7 @@ namespace FrameProcessor
 
           // Apply algorithm
           apply_summed_image_algorithm(static_cast<float *>(input_ptr),
-                                      static_cast<unsigned short *>(output_ptr));
+                                      static_cast<uint32_t *>(output_ptr));
 
           const std::string& dataset_name = summed_image_meta.get_dataset_name();
           LOG4CXX_TRACE(logger_, "Pushing " << dataset_name << " dataset, frame number: " <<
@@ -258,7 +258,7 @@ namespace FrameProcessor
    *
    * \param[frame] frame - Pointer to a frame object.
    */
-  void HexitecSummedImagePlugin::apply_summed_image_algorithm(float *in, unsigned short *out)
+  void HexitecSummedImagePlugin::apply_summed_image_algorithm(float *in, uint32_t *out)
   {
     for (int i=0; i<image_pixels_; i++)
     {
@@ -271,7 +271,7 @@ namespace FrameProcessor
       //             << (((unsigned short)in[i] > threshold_lower_) && ((unsigned short)in[i] < threshold_upper_))
       //             << " s_i[i]: " << std::setw(4) << summed_image_[i] << " out[i]: " << std::setw(4) << out[i];
       // }
-      if (((unsigned short)in[i] > threshold_lower_) && ((unsigned short)in[i] < threshold_upper_))
+      if (((uint32_t)in[i] > threshold_lower_) && ((uint32_t)in[i] < threshold_upper_))
       {
         summed_image_[i] += 1;
       }
@@ -336,8 +336,8 @@ namespace FrameProcessor
   void HexitecSummedImagePlugin::reset_summed_image_values()
   {
     free(summed_image_);
-    summed_image_ = (unsigned short *) calloc(image_pixels_, sizeof(unsigned short));
-    memset(summed_image_, 0, image_pixels_ * sizeof(unsigned short));
+    summed_image_ = (uint32_t *) calloc(image_pixels_, sizeof(uint32_t));
+    memset(summed_image_, 0, image_pixels_ * sizeof(uint32_t));
   }
 
 } /* namespace FrameProcessor */

@@ -63,7 +63,7 @@ namespace FrameProcessor
       HexitecSensorLayoutMap sensors_layout_;
 
       void process_frame(boost::shared_ptr<Frame> frame);
-      void apply_summed_image_algorithm(float *in, unsigned short *out);
+      void apply_summed_image_algorithm(float *in, uint32_t *out);
 
       /** Pointer to logger **/
       LoggerPtr logger_;
@@ -74,7 +74,7 @@ namespace FrameProcessor
       /** Image pixel count **/
       int image_pixels_;
 
-      unsigned short *summed_image_;
+      uint32_t *summed_image_;
       int threshold_lower_;
       int threshold_upper_;
       int image_frequency_;

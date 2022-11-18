@@ -893,28 +893,29 @@ class HexitecDAQ():
             self.master_dataset = "raw_frames"
             self.extra_datasets.append(self.master_dataset)
 
-        self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
-                                       compression_type=self.compression_type,
-                                       master_dataset=self.master_dataset,
-                                       extra_datasets=self.extra_datasets,
-                                       selected_os="CentOS",
-                                       live_view_selected=True)
-        # live_view_selected=True
-        store_config, execute_config, store_string, execute_string = self.gcf.generate_config_files()
+        # self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
+        #                                compression_type=self.compression_type,
+        #                                master_dataset=self.master_dataset,
+        #                                extra_datasets=self.extra_datasets,
+        #                                selected_os="CentOS",
+        #                                live_view_selected=True)
+        # store_config, execute_config, store_string, execute_string = self.gcf.generate_config_files()
+        live_view_selected=True
 
         # print("\n\n\n  store: {}\n  exec:  {}\n\n\n".format(store_string, execute_string))
 
         # Loop over node(s)
         for index in range(self.number_nodes):
+            print("\n\tindex={}\n".format(index))
             # Reinstate when /config/config/ strings will replace /config/config_file/
-            # self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
-            #                             compression_type=self.compression_type,
-            #                             master_dataset=self.master_dataset,
-            #                             extra_datasets=self.extra_datasets,
-            #                             selected_os="CentOS",
-            #                             live_view_selected=live_view_selected)
-            # store_config, execute_config, store_string, execute_string = self.gcf.generate_config_files()
-            # # live_view_selected = False
+            self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
+                                        compression_type=self.compression_type,
+                                        master_dataset=self.master_dataset,
+                                        extra_datasets=self.extra_datasets,
+                                        selected_os="CentOS",
+                                        live_view_selected=live_view_selected)
+            store_config, execute_config, store_string, execute_string = self.gcf.generate_config_files(index)
+            live_view_selected = False
 
             # command = "config/config/" #+ str(index)      # string
             command = "config/config_file/" + str(index)   # file
