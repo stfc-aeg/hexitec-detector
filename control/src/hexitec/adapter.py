@@ -599,11 +599,11 @@ class Hexitec():
     def await_daq_ready(self):
         """Wait until DAQ has configured, enabled file writer."""
         if (self.daq.in_error):
-            print(" \n daq is in error")
+            # print(" \n daq is in error")
             # Reset state variables
             self.reset_state_variables()
         elif (self.daq.file_writing is False):
-            print(" \n DAC acquisition file writing still false")
+            # print(" \n DAC acquisition file writing still false")
             # IOLoop.instance().call_later(0.05, self.await_daq_ready)
             IOLoop.instance().call_later(0.5, self.await_daq_ready)
         else:
@@ -613,7 +613,7 @@ class Hexitec():
 
     def trigger_fem_acquisition(self):
         """Trigger data acquisition in fem."""
-        print(" \n trigger_fem_acquisition() executing")
+        # print(" \n trigger_fem_acquisition() executing")
         # TODO: Temp hack: Prevent frames being 1 (continuous readout) by setting to 2 if it is
         self.number_frames_to_request = 2 if (self.number_frames_to_request == 1) else \
             self.number_frames_to_request
@@ -633,7 +633,7 @@ class Hexitec():
         -Normal initialisation
         -Waiting for data collection to complete, either single/multi run
         """
-        print("\n adpt.monitor_fem_progress() called")
+        # print("\n adpt.monitor_fem_progress() called")
         if (self.fem.hardware_busy):
             # Still sending data
             IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
@@ -645,7 +645,7 @@ class Hexitec():
                     # Need further bias window(s)
                     IOLoop.instance().add_callback(self.acquisition)
                     return
-        print("\n adpt.monitor_fem_progress() fem done")
+        # print("\n adpt.monitor_fem_progress() fem done")
         # Issue reset to summed_image
         command = "config/summed_image/reset_image"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")

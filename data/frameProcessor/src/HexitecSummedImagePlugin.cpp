@@ -14,6 +14,7 @@ namespace FrameProcessor
   const std::string HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER  = "threshold_lower";
   const std::string HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER  = "threshold_upper";
   const std::string HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY  = "image_frequency";
+  const std::string HexitecSummedImagePlugin::CONFIG_IMAGES_WRITTEN   = "images_written";
   const std::string HexitecSummedImagePlugin::CONFIG_RESET_IMAGE      = "reset_image";
 
   /**
@@ -36,6 +37,7 @@ namespace FrameProcessor
     threshold_lower_ = 0;
     threshold_upper_ = 16382;
     image_frequency_ = 1;
+    images_written_ = 0;
     reset_image_ = 0;
   }
 
@@ -120,6 +122,7 @@ namespace FrameProcessor
       {
         // Clear all pixels to be 0
         memset(summed_image_, 0, image_pixels_ * sizeof(uint32_t));
+        images_written_ = 0;
         reset_image_ = 0;
       }
     }
@@ -133,6 +136,7 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER, threshold_lower_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER, threshold_upper_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY, image_frequency_);
+    reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_IMAGES_WRITTEN, images_written_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_RESET_IMAGE, reset_image_);
   }
 
@@ -149,6 +153,7 @@ namespace FrameProcessor
     status.set_param(get_name() + "/threshold_lower", threshold_lower_);
     status.set_param(get_name() + "/threshold_upper", threshold_upper_);
     status.set_param(get_name() + "/image_frequency", image_frequency_);
+    status.set_param(get_name() + "/images_written", images_written_);
     status.set_param(get_name() + "/reset_image", reset_image_);
   }
 
@@ -178,22 +183,16 @@ namespace FrameProcessor
     const std::string& dataset = incoming_frame_meta.get_dataset_name();
     long long frame_number = incoming_frame_meta.get_frame_number();
 
-    if (dataset.compare(std::string("raw_frames")) == 0)
-    {
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                        << frame->get_frame_number());
-      this->push(frame);
-    }
-    else if (dataset.compare(std::string("processed_frames")) == 0)
+    // Push dataset
+    LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+                                      << frame_number);
+    this->push(frame);
+
+    if (dataset.compare(std::string("processed_frames")) == 0)
     {
       try
       {
-        // Pass on dataset processed_frames as is
-        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                          << frame->get_frame_number());
-        this->push(frame);
-
-        if ((frame->get_frame_number() % image_frequency_) == 0)
+        if ((frame_number % image_frequency_) == 0)
         {
           // Create summed_image dataset
 
@@ -204,7 +203,7 @@ namespace FrameProcessor
           summed_image_meta.set_dimensions(dims);
           summed_image_meta.set_compression_type(no_compression);
           summed_image_meta.set_data_type(raw_32bit);
-          summed_image_meta.set_frame_number(frame_number);
+          summed_image_meta.set_frame_number(images_written_);
           summed_image_meta.set_dataset_name("summed_images");
 
           const std::size_t summed_image_size = image_width_ * image_height_ * sizeof(uint32_t);
@@ -229,23 +228,17 @@ namespace FrameProcessor
 
           const std::string& dataset_name = summed_image_meta.get_dataset_name();
           LOG4CXX_TRACE(logger_, "Pushing " << dataset_name << " dataset, frame number: " <<
-                        summed_frame->get_frame_number());
+                        images_written_);
           this->push(summed_frame);
+          images_written_++;
         }
         else
-          LOG4CXX_TRACE(logger_, "Skipping frame: " << frame->get_frame_number());
+          LOG4CXX_TRACE(logger_, "Skipping frame: " << frame_number);
       }
       catch (const std::exception& e)
       {
         LOG4CXX_ERROR(logger_, "HexitecSummedImagePlugin failed: " << e.what());
       }
-    }
-    else
-    {
-      // Push any other (histogram?) dataset
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                        << frame->get_frame_number());
-      this->push(frame);
     }
   }
 

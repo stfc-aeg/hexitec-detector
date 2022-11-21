@@ -323,10 +323,11 @@ namespace FrameProcessor
     // Check dataset's name
     FrameMetaData &incoming_frame_meta = frame->meta_data();
     const std::string& dataset = incoming_frame_meta.get_dataset_name();
+    long long frame_number = incoming_frame_meta.get_frame_number();
 
-    if (frame->get_frame_number() < histogram_index_)
+    if (frame_number < histogram_index_)
     {
-      histogram_index_ = frame->get_frame_number();
+      histogram_index_ = frame_number;
     }
 
     if (dataset.compare(std::string("raw_frames")) == 0)
@@ -334,7 +335,7 @@ namespace FrameProcessor
       if (pass_raw_)
       {
         LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                          << frame->get_frame_number());
+                                          << frame_number);
         this->push(frame);
       }
     }
@@ -364,7 +365,7 @@ namespace FrameProcessor
         {
           // Pass on processed_frames dataset unmodified:
           LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                            << frame->get_frame_number());
+                                            << frame_number);
           this->push(frame);
         }
 
@@ -377,7 +378,10 @@ namespace FrameProcessor
     }
     else
     {
-      LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
+      // Push any other dataset
+      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+                                        << frame_number);
+      this->push(frame);
     }
   }
 

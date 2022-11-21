@@ -190,7 +190,7 @@ class GenerateConfigFiles():
                 logging.debug("Plugin %s missing 'enable' setting!" % key)
                 raise Exception("Plugin %s missing 'enable' setting!" % key)
 
-        plugin_chain += ["histogram", "summed_image"]
+        plugin_chain += ["summed_image", "histogram"]
         if self.live_view_selected:
             plugin_chain += ["live_view"]
 
@@ -252,13 +252,13 @@ class GenerateConfigFiles():
                         odin_plugins[plugin][2])
 
         if self.live_view_selected:
-            # Chain plugins together, with live view now branched off summed_image
+            # Chain plugins together, with live view now branched off reorder
             store_plugin_connect = ''',
                 {
                     "plugin": {
                         "connect": {
                             "index": "live_view",
-                            "connection": "summed_image"
+                            "connection": "reorder"
                         }
                     }
                 }'''
@@ -311,7 +311,6 @@ class GenerateConfigFiles():
                     }
                 }''' % (plugin, unique_setting, sensors_layout)
                 unique_setting = ""
-
         # live_view, hdf have different settings (no sensors_layout..)
 
         if self.live_view_selected:

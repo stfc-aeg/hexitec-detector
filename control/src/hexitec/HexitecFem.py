@@ -226,6 +226,9 @@ class HexitecFem():
         self.acquire_timestamp = 0
         self.offsets_timestamp = 0
 
+        # Simulate (for now) whether Hardware finished sending data
+        self.all_data_sent = 0
+
         param_tree_dict = {
             "diagnostics": {
                 "successful_reads": (lambda: self.successful_reads, None),
@@ -236,6 +239,7 @@ class HexitecFem():
             "offsets_timestamp": (lambda: self.offsets_timestamp, None),
             "hv_bias_enabled": (lambda: self.hv_bias_enabled, None),
             "debug": (self.get_debug, self.set_debug),
+            "all_data_sent": (lambda: self.all_data_sent, self.set_all_data_sent),
             "frame_rate": (lambda: self.frame_rate, None),
             "health": (lambda: self.health, None),
             "status_message": (self._get_status_message, None),
@@ -497,7 +501,8 @@ class HexitecFem():
                 message = "Expected 0x{0:02X} not 0x{1:02X}".format(expected_value, read_value)
                 logging.error("Not all VSRs' HV on, {}".format(message))
                 raise HexitecFemError("VSR(s) HV Error, {}".format(message))
-            powering_delay = 10
+            # print("\n FAKE initialisation\n")
+            powering_delay = 10  # 1
             logging.debug("VSRs enabled; Waiting {} seconds".format(powering_delay))
             self._set_status_message("Waiting {} seconds (VSRs booting)".format(powering_delay))
             IOLoop.instance().call_later(powering_delay, self.cam_connect)    # self.powering_modules_completed)
@@ -572,6 +577,10 @@ class HexitecFem():
         """Set debug messages on or off."""
         self.debug = debug
 
+    def set_all_data_sent(self, all_data_sent):
+        """Set whether all data has been sent (hardware simulation)."""
+        self.all_data_sent = all_data_sent
+
     def get_debug(self):
         """Get debug messages status."""
         return self.debug
@@ -610,6 +619,7 @@ class HexitecFem():
             logging.debug("Init modules (Sent 0xE3)")
             self._set_status_message("Waiting 5 seconds (VSRs initialising)")
             IOLoop.instance().call_later(5, self.cam_connect_completed)
+            # IOLoop.instance().call_later(0.5, self.cam_connect_completed)
         except socket_error as e:
             self.hardware_connected = False
             self.hardware_busy = False
@@ -619,7 +629,6 @@ class HexitecFem():
         """Complete VSRs boot up."""
         try:
             self._set_status_message("VSRs booted")
-            # print("\n\t INITIALISED\n")
             logging.debug("Modules Enabled")
         except socket_error as e:
             self.hardware_connected = False
@@ -663,7 +672,7 @@ class HexitecFem():
     # @run_on_executor(executor='thread_executor')
     def acquire_data(self):  # noqa: C901
         """Acquire data, poll fem for completion and read out fem monitors."""
-        print(" \n fem.acquire_data()")
+        # print(" \n fem.acquire_data()")
 
         logging.info("Initiate Data Capture")
         self.acquire_start_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
@@ -675,7 +684,7 @@ class HexitecFem():
 
     def check_acquire_finished(self):
         """Check whether all data transferred, until completed or cancelled by user."""
-        print(" \n fem.acquire_data()")
+        # print(" \n fem.acquire_data()")
         try:
             delay = 0.10
             reply = 0
@@ -685,28 +694,26 @@ class HexitecFem():
                 self.acquire_data_completed()
                 return
             else:
+                # Temporary hack - Wait until (curl) hardware finished sending data (simulated for now) #
                 # reply = self.x10g_rdma.read(0x60000014, burst_len=1, comment='Check data transfer completed?')
-                print(" *** READY? ***")
-                time.sleep(1)
-                print("\n 1 of 3..")
-                time.sleep(1)
-                print("\n 2 of 3..")
-                time.sleep(1)
-                print("\n 3 of 3..")
-                time.sleep(1)
-                reply = 1
-                if reply > 0:
-                    self.acquire_data_completed()
+                if self.all_data_sent == 0:
+                    # print(" *** Awaiting data.. ***")
+                    IOLoop.instance().call_later(0.5, self.check_acquire_finished)
                     return
                 else:
-                    self.waited += delay
-                    if self.duration_enabled:
-                        self.duration_remaining = round((self.duration - self.waited), 1)
-                        if self.duration_remaining < 0:
-                            self.duration_remaining = 0
-                        # print("\t dur'n_remain'g: {} secs".format(self.duration_remaining))
-                    IOLoop.instance().call_later(delay, self.check_acquire_finished)
+                    # print(" *** Data Received! ***" )
+                    # Original code resumes here: #
+                    self.acquire_data_completed()
                     return
+                # else:
+                #     self.waited += delay
+                #     if self.duration_enabled:
+                #         self.duration_remaining = round((self.duration - self.waited), 1)
+                #         if self.duration_remaining < 0:
+                #             self.duration_remaining = 0
+                #         # print("\t dur'n_remain'g: {} secs".format(self.duration_remaining))
+                #     IOLoop.instance().call_later(delay, self.check_acquire_finished)
+                #     return
         except HexitecFemError as e:
             self._set_status_error("Failed to collect data: %s" % str(e))
             logging.error("%s" % str(e))
@@ -720,7 +727,7 @@ class HexitecFem():
     # TODO: To be expanded
     def acquire_data_completed(self):
         """Reset variables and read out Firmware monitors post data transfer."""
-        print("\n fem.acquire_data_completed()")
+        # print("\n fem.acquire_data_completed()")
         self.acquire_stop_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
 
         if self.stop_acquisition:
@@ -758,7 +765,7 @@ class HexitecFem():
 
         # Acquisition completed, note completion
         self.acquisition_completed = True
-        print("\n fem DONE")
+        # print("\n fem DONE")
 
     def read_receive_from_all(self, op_command, register_h, register_l):
         """Read and receive from all VSRs."""
@@ -1080,7 +1087,7 @@ class HexitecFem():
                     if LSB & 2:
                         bPolling = False
                     else:
-                        print(" R.89: {} {}".format(r89_value, r89_value[1], ord(r89_value[1])))
+                        # print(" R.89: {} {}".format(r89_value, r89_value[1], ord(r89_value[1])))
                         time.sleep(0.2)
                         time_taken += 0.2
                     if time_taken > 3.0:
