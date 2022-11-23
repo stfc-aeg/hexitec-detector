@@ -248,6 +248,11 @@ class HexitecDAQ():
             logging.error("Frame Receiver(s) not configured!")
             self.in_error = True
             return False
+        elif self.are_buffers_available(fr_status) is False:
+            self.parent.fem._set_status_error("FR buffers not empty!")
+            logging.error("FR buffers not all empty")
+            self.in_error = True
+            return False
         else:
             logging.debug("Frame Receiver(s) connected and configured")
 
@@ -267,6 +272,14 @@ class HexitecDAQ():
         if not self.in_progress:
             self.daq_ready = True
         return True
+
+    def are_buffers_available(self, fr_status):
+        """Determine whether all frameReceiver(s)' buffers are empty."""
+        all_buffers_empty = True
+        for node in fr_status:
+            if (node['buffers']['empty'] == 0):
+                all_buffers_empty = False
+        return all_buffers_empty
 
     def prepare_daq(self, number_frames):
         """Turn on File Writing."""

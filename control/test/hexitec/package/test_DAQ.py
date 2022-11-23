@@ -52,6 +52,11 @@ class DAQTestFixture(object):
         self.fr_data = {
             "value": [
                 {
+                    "buffers": {
+                        "empty": 97564,
+                        "mapped": 0,
+                        "total": 97564
+                    },
                     "connected": True,
                     "status": {
                         "configuration_complete": True
@@ -381,6 +386,25 @@ class TestDAQ(unittest.TestCase):
             mock_loop.instance().call_later.assert_called_with(1.3,
                                                                self.test_daq.daq.acquisition_check_loop)
 
+    def test_start_acquisition_flags_nonempty_buffers_as_error(self):
+        """Test function flags if there are no empty buffers available."""
+        self.test_daq.daq.are_buffers_available = Mock(return_value=False)
+        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
+
+            self.test_daq.fp_data["value"][0]["hdf"]["frames_processed"] = 0
+            self.test_daq.daq.first_initialisation = False
+            odin_ready = self.test_daq.daq.prepare_odin()
+            self.test_daq.daq.prepare_daq(10)
+
+            assert self.test_daq.daq.frame_start_acquisition == 0
+            assert self.test_daq.daq.in_progress is True
+            assert self.test_daq.daq.daq_ready is False
+            assert self.test_daq.daq.file_writing is True
+            assert odin_ready is False
+
+            mock_loop.instance().call_later.assert_called_with(1.3,
+                                                               self.test_daq.daq.acquisition_check_loop)
+
     def test_start_acquisition_needs_configure(self):
         """Test function works."""
         new_fp_data = {
@@ -454,6 +478,31 @@ class TestDAQ(unittest.TestCase):
             assert odin_ready is False
 
             mock_loop.instance().add_callback.assert_not_called()
+
+    def test_are_buffers_available_flag_no_empty_buffers(self):
+        """Test function flags if frameReceiver buffers are empty."""
+        fr_status = [{'status':
+                      {'ipc_configured': True, 'decoder_configured': True, 'buffer_manager_configured': True,
+                       'rx_thread_configured': True, 'configuration_complete': True},
+                      'decoder': {'name': 'HexitecFrameDecoder', 'packets_lost': 0, 'fem_packets_lost': [0]},
+                      'buffers': {'total': 97564, 'empty': 97564, 'mapped': 0},
+                      'frames': {'timedout': 0, 'received': 0, 'released': 0, 'dropped': 0},
+                      'timestamp': '2022-11-23T10:09:24.750775', 'connected': True},
+                     {'status':
+                      {'ipc_configured': True, 'decoder_configured': True, 'buffer_manager_configured': True,
+                       'rx_thread_configured': True, 'configuration_complete': True},
+                      'buffers': {'total': 97564, 'empty': 0, 'mapped': 0},
+                      'frames': {'timedout': 0, 'received': 0, 'released': 0, 'dropped': 0},
+                      'timestamp': '2022-11-23T10:09:24.751213', 'connected': True},
+                     {'status':
+                      {'ipc_configured': True, 'decoder_configured': True, 'buffer_manager_configured': True,
+                       'rx_thread_configured': True, 'configuration_complete': True},
+                      'decoder': {'name': 'HexitecFrameDecoder', 'packets_lost': 0, 'fem_packets_lost': [0]},
+                      'buffers': {'total': 97564, 'empty': 97564, 'mapped': 0},
+                      'frames': {'timedout': 0, 'received': 0, 'released': 0, 'dropped': 0},
+                      'timestamp': '2022-11-23T10:09:24.750283', 'connected': True}]
+        status = self.test_daq.daq.are_buffers_available(fr_status)
+        assert status is False
 
     def test_acquisition_check_loop(self):
         """Test that function calls itself if hardware busy."""
