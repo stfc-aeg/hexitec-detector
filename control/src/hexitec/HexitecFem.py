@@ -145,6 +145,8 @@ class HexitecFem():
 
         self.bias_level = 0
 
+        self.vsrs_selected = 0
+
         # Acquisition completed, note completion timestamp
         self.acquisition_completed = False
 
@@ -480,9 +482,9 @@ class HexitecFem():
             logging.debug("UDP connection established")
             # Power up VSRs
             self.x10g_rdma.enable_all_vsrs()
-            expected_value = 0x3F
+            expected_value = self.vsrs_selected
             read_value = self.x10g_rdma.power_status()
-            # Mask off values above 0x3F including HV status(es)
+            # Ensure selected VSR(s) were switched on
             read_value = read_value & expected_value
             if (read_value == expected_value):
                 logging.debug(" Power OK: 0x{0:08X}".format(read_value))
@@ -492,7 +494,7 @@ class HexitecFem():
                 raise HexitecFemError("Powering VSRs Error, {}".format(message))
             # Switch HV on
             self.x10g_rdma.enable_all_hvs()
-            expected_value = 0x3F3F
+            expected_value = (self.vsrs_selected << 8) | self.vsrs_selected
             read_value = self.x10g_rdma.power_status()
             read_value = read_value & expected_value
             if (read_value == expected_value):
@@ -505,7 +507,7 @@ class HexitecFem():
             powering_delay = 10  # 1
             logging.debug("VSRs enabled; Waiting {} seconds".format(powering_delay))
             self._set_status_message("Waiting {} seconds (VSRs booting)".format(powering_delay))
-            IOLoop.instance().call_later(powering_delay, self.cam_connect)    # self.powering_modules_completed)
+            IOLoop.instance().call_later(powering_delay, self.cam_connect)
         except socket_error as e:
             self.hardware_connected = False
             self.hardware_busy = False
@@ -643,8 +645,7 @@ class HexitecFem():
         """Send commands to disconnect camera."""
         self.hardware_connected = False
         try:
-            for vsr in self.VSR_ADDRESS:
-                self.send_cmd([vsr, 0xE2])
+            self.send_cmd([0xFF, 0xE2])
             logging.debug("Modules Disabled")
             self.disconnect()
             logging.debug("Camera is Disconnected")
@@ -1128,7 +1129,7 @@ class HexitecFem():
             reg89 = []
             # print("VSR Row S1: (High, Low). S1Sph  SphS2:  adc clk delay: . FVAL/LVAL:  VCAL2, (H, L) ")
             print("VSR Row S1: (H, L). S1Sph  SphS2:  adc clk dly: . FVAL/LVAL:  VCAL2, (H, L) Gain")
-            for vsr in range(0x90, 0x96):
+            for vsr in self.VSR_ADDRESS:
                 r7_list, r7_value = self.read_register07(vsr)
                 reg07.append(r7_value)
                 r89_list, r89_value = self.read_register89(vsr)
@@ -1763,14 +1764,30 @@ class HexitecFem():
                                             bit_range=6)
         self.bias_level = self._extract_integer(self.hexitec_parameters,
                                                 'Control-Settings/HV_Bias', bit_range=15)
+        self.vsrs_selected = self._extract_integer(self.hexitec_parameters,
+                                                'Control-Settings/VSRS_selected', bit_range=6)
 
         print("row_s1: {} from {}".format(self.row_s1, self._extract_integer(self.hexitec_parameters, 'Control-Settings/Row -> S1', bit_range=14)))
         print("s1_sph: {} from {}".format(self.s1_sph, self._extract_integer(self.hexitec_parameters, 'Control-Settings/S1 -> Sph', bit_range=6)))
         print("sph_s2: {} from {}".format(self.sph_s2, self._extract_integer(self.hexitec_parameters, 'Control-Settings/Sph -> S2', bit_range=6)))
         # print("bias:   {} from {}".format(self.bias_level, self._extract_integer(self.hexitec_parameters, 'Control-Settings/HV_Bias', bit_range=15)))
+        # print(" vsrs: {}".format(self.vsrs_selected))
+        self.enable_selected_vsrs(self.vsrs_selected)
         # time.sleep(1.5)
         # print(self.hexitec_parameters)
         self.calculate_frame_rate()
+
+    def enable_selected_vsrs(self, vsrs_selected):
+        """Populate VSR_ADDRESS according to ini file selection."""
+        index = 0
+        # Clear VSR addresses before selecting according to ini file
+        self.VSR_ADDRESS = []
+        while index < 6:
+            if vsrs_selected & (1 << index):
+                self.VSR_ADDRESS.append(0x90 + index)
+            index += 1
+        # print("VSRs: {}".format(' '.join("0x{0:X}".format(x) for x in self.VSR_ADDRESS)))
+        return self.VSR_ADDRESS
 
     def convert_string_exponential_to_integer(self, exponent):
         """Convert aspect format to fit dac format.

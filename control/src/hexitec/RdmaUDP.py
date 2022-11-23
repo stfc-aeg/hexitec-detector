@@ -272,6 +272,56 @@ class RdmaUDP(object):
         # print("(RdmaUDP) UART RX'd: {}".format(' '.join("0x{0:02X}".format(x) for x in rx_data)))
         return rx_data
 
+    def reset_uart_rx_buffer(self):
+        """Clear all RX data from the UART."""
+        debug = False   # True
+        uart_status_addr = uart_status_offset
+        uart_rx_ctrl_addr = uart_rx_ctrl_offset
+        read_value = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer Status (0)')
+        buff_level = (read_value[0] & rx_buff_level_mask) >> 8
+        rx_d = (read_value[0] & rx_buff_data_mask) >> 16
+        if debug:
+            print(" RX init_buff_status: {0} (0x{1:08X})".format(read_value[0], read_value[0]))
+            print(" RX buff_level: {0} rx_d: {1} (0x{2:X}) [IGNORED - Like tickle script]".format(buff_level, rx_d, rx_d))
+        rx_status_masked = (read_value[0] & rx_buff_empty_mask)
+        rx_has_data_flag = not rx_status_masked
+        rx_data = []
+        while (rx_has_data_flag):
+            self.write(uart_rx_ctrl_addr, rx_buff_strb_mask, burst_len=1, comment="Write RX Buffer Strobe")
+            read_value = self.read(uart_rx_ctrl_addr, burst_len=1, comment='Read (back) UART RX Status Reg (0)')
+            self.write(uart_rx_ctrl_addr, deassert_all, burst_len=1, comment="Write RX Deassert All")
+            read_value = self.read(uart_rx_ctrl_addr, burst_len=1, comment='Read (back) UART RX Status Reg (1)')
+            buffer_status = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (1)')
+            buff_level = (buffer_status[0] & rx_buff_level_mask) >> 8
+            uart_status = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (2)')
+            rx_d = (uart_status[0] & rx_buff_data_mask) >> 16
+            if debug:
+                print(" RX buffer_status: {0} (0x{1:08X})".format(buffer_status[0], buffer_status[0]))
+                print(" RX buff_level: {0} rx_d: {1} (0x{2:X})".format(buff_level, rx_d, rx_d))
+            rx_data.append(rx_d)
+            read_value = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (3)')
+            rx_has_data_flag = not (read_value[0] & rx_buff_empty_mask)
+        # Clear Rx buffer (Not) empty flag - Redundant?
+        # buffer_status = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (1)')
+        # print(" 1.RX buffer_status: {0} (0x{1:08X})".format(buffer_status[0], buffer_status[0]))
+
+        # self.write(uart_rx_ctrl_addr, 0x0, burst_len=1, comment="Clear RX Buffer Strobe")
+        # read_value = self.read(uart_rx_ctrl_addr, burst_len=1, comment='Read (back) UART RX Status Reg (3)')
+        # self.write(uart_rx_ctrl_addr, 0x1, burst_len=1, comment="Write RX Buffer Strobe")
+        # read_value = self.read(uart_rx_ctrl_addr, burst_len=1, comment='Read (back) UART RX Status Reg (4)')
+
+        # self.write(uart_rx_ctrl_addr, 0x3, burst_len=1, comment="Write RX Strobe/Reset")
+        # read_value = self.read(uart_rx_ctrl_addr, burst_len=1, comment='Read (back) UART RX Status Reg (5)')
+
+        # self.write(uart_rx_ctrl_addr, 0x1, burst_len=1, comment="Write RX Buffer Strobe")
+        # read_value = self.read(uart_rx_ctrl_addr, burst_len=1, comment='Read (back) UART RX Status Reg (6)')
+
+        # self.write(uart_rx_ctrl_addr, deassert_all, burst_len=1, comment="Write RX Deassert All")
+        # read_value = self.read(uart_rx_ctrl_addr, burst_len=1, comment='Read (back) UART RX Status Reg (1)')
+
+        # buffer_status = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (1)')
+        # print(" 2.RX buffer_status: {0} (0x{1:08X})".format(buffer_status[0], buffer_status[0]))
+
     def uart_tx(self, cmd):
         """Transmit command to the UART."""
         debug = False   # True
@@ -344,7 +394,7 @@ class RdmaUDP(object):
     def check_tx_rx_buffs_empty(self):
         """Check whether tx, rx buffers empty.
 
-        Returns tx, rx status - 1 = Empty, 0 = Has data.
+        Returns tx, rx status. 1 = Empty, 0 = Has data.
         """
         is_tx_buff_empty = 0
         is_rx_buff_empty = 0
@@ -352,12 +402,12 @@ class RdmaUDP(object):
         try:
             uart_status = self.read(uart_status_offset, burst_len=1, comment="Read UART Status")
             uart_status = uart_status[0]
+            # print(" *** Check_tx_RX_buffs_empty: {0:X}".format(uart_status))
             is_tx_buff_empty = (uart_status & tx_buff_empty_mask) >> 1
             is_rx_buff_empty = (uart_status & rx_buff_empty_mask) >> 3
         except Exception as e:
             print(" *** check_tx_buff_empty error: {} ***".format(e))
         return is_tx_buff_empty, is_rx_buff_empty
-#
 
     def enable_vsr_or_hv(self, vsr_number, bit_mask):
         """Control a single VSR's power."""
