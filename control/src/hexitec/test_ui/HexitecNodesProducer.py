@@ -180,6 +180,8 @@ class HexitecNodesProducer(object):
 
                 # Prepend header to current packet
                 packet = header.tobytes() + self.byteStream[streamPosn:streamPosn + bytesToSend]
+                # if (frame < 2):
+                #     print(" header: {0}".format(' '.join("0x{0:016X}".format(x) for x in header)))
 
                 if not self.quiet:
                     print("bytesRemaining: {0:8} Sent: {1:8}".format(bytesRemaining, bytesSent),

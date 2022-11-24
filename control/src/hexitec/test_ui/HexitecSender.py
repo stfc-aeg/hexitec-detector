@@ -28,8 +28,17 @@ class HexitecSender(object):
         """Initialise object with command line arguments."""
         self.SOF = 1 << 63
         self.EOF = 1 << 62
-        self.host = host
-        self.port = port
+        # Default IP address?
+        if host == "127.0.0.1":
+            self.host = [host]
+        else:
+            self.host = host
+        print("  self.host: {} ({})".format(self.host, type(self.host)))
+        #  Default port/user didn't specify?
+        if port == 61651:
+            self.port = [port]
+        else:
+            self.port = port
         self.frames = frames
         self.extended_headers = extended_headers
         self.NROWS = rows
@@ -105,10 +114,11 @@ class HexitecSender(object):
 
         runStartTime = time.time()
 
+        bytesRemaining = len(self.byteStream)
+        nodes = len(self.host)
+
         # Loop over selected number of frame(s)
         for frame in range(self.frames):
-
-            bytesRemaining = len(self.byteStream)
 
             packetCounter = 0
             bytesSent = 0
@@ -129,10 +139,6 @@ class HexitecSender(object):
                 header = self.build_header(frame, packetCounter, packetCounterFlags)
                 # built_integer = int(header).to_bytes(self.HEADER_SIZE, 'little')     # Display as bytes str
 
-                # # Debug:
-                # if packetCounter < 20:
-                #     print("   header: {}".format(' '.join("0x{0:016X}".format(x) for x in header)))
-
                 if (packetCounter < self.primaryPackets):
                     bytesToSend = 8000
                 else:
@@ -140,6 +146,8 @@ class HexitecSender(object):
 
                 # Prepend header to current packet
                 packet = bytes(header) + self.byteStream[streamPosn:streamPosn + bytesToSend]
+                # if (frame < 2):
+                #     print(" header: {0}".format(' '.join("0x{0:016X}".format(x) for x in header)))
 
                 if not self.quiet:
                     print("bytesRemaining: {0:8} Sent: {1:8}".format(bytesRemaining, bytesSent),
@@ -147,12 +155,13 @@ class HexitecSender(object):
                                                                       streamPosn + bytesToSend))
 
                 # Transmit packet
-                bytesSent += sock.sendto(packet, (self.host, self.port))
+                bytesSent += sock.sendto(packet, (self.host[frame % nodes], self.port[0]))
 
                 bytesRemaining -= bytesToSend
                 packetCounter += 1
                 streamPosn += bytesToSend
                 if streamPosn == self.totalBytesRead:
+                    # bytesRemaining = len(self.byteStream)
                     streamPosn = 0
 
             if not self.quiet:
@@ -182,10 +191,10 @@ if __name__ == '__main__':
     desc = "HexitecSender - generate UDP data stream from pcap file"
     parser = argparse.ArgumentParser(description=desc)
 
-    parser.add_argument('--host', type=str, default='127.0.0.1',
-                        help="Hostname or IP address to transmit UDP frame data to")
-    parser.add_argument('--port', type=int, default=61651,
-                        help='select destination host IP port')
+    parser.add_argument('--host', nargs='+', type=str, default='127.0.0.1',
+                        help="Hostname(s) or IP(s) address to transmit UDP frame data to")
+    parser.add_argument('--port', nargs='+', type=int, default=61651,
+                        help='select destination port(s)')
     parser.add_argument('--frames', '-n', type=int, default=1,
                         help='select number of frames to transmit')
     parser.add_argument('--extended_headers', "-e", action="store_true",
@@ -194,7 +203,7 @@ if __name__ == '__main__':
                         help='set number of rows in frame')
     parser.add_argument('--columns', '-c', type=int, default=160,
                         help='set number of columns in frame')
-    parser.add_argument('--interval', '-t', type=float, default=0.1,
+    parser.add_argument('--interval', '-t', type=float, default=0.01,
                         help="select frame interval in seconds")
     parser.add_argument('--quiet', "-q", action="store_true",
                         help="Suppress detailed print during operation")
