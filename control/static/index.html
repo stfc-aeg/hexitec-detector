@@ -749,20 +749,52 @@
                           <td><span id="acquire_time" style="float:right">&nbsp;</span></td>
                         </tr>
                         <tr>
-                          <td>FEM packets_lost</td>
-                          <td><span id="fem_packets_lost" style="float:right">&nbsp;</span></td>
+                          <td>N0.FEM packets_lost</td>
+                          <td><span id="fem_packets_lost0" style="float:right">&nbsp;</span></td>
                         </tr>
                         <tr>
-                          <td>FR packets_lost</td>
-                          <td><span id="packets_lost" style="float:right">&nbsp;</span></td>
+                          <td>N0.FR packets_lost</td>
+                          <td><span id="packets_lost0" style="float:right">&nbsp;</span></td>
                         </tr>
                         <tr>
-                          <td>Buffers empty</td>
-                          <td><span id="buffers_empty" style="float:right">&nbsp;</span></td>
+                          <td>N0.Buffers empty</td>
+                          <td><span id="buffers_empty0" style="float:right">&nbsp;</span></td>
                         </tr>
                         <tr>
-                          <td>Buffers mapped</td>
-                          <td><span id="buffers_mapped" style="float:right">&nbsp;</span></td>
+                          <td>N0.Buffers mapped</td>
+                          <td><span id="buffers_mapped0" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N1.FEM packets_lost</td>
+                          <td><span id="fem_packets_lost1" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N1.FR packets_lost</td>
+                          <td><span id="packets_lost1" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N1.Buffers empty</td>
+                          <td><span id="buffers_empty1" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N1.Buffers mapped</td>
+                          <td><span id="buffers_mapped1" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N2.FEM packets_lost</td>
+                          <td><span id="fem_packets_lost2" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N2.FR packets_lost</td>
+                          <td><span id="packets_lost2" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N2.Buffers empty</td>
+                          <td><span id="buffers_empty2" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N2.Buffers mapped</td>
+                          <td><span id="buffers_mapped2" style="float:right">&nbsp;</span></td>
                         </tr>
                       </tbody>
                   </table>
@@ -775,20 +807,52 @@
                     </thead>
                     <tbody>
                       <tr>
-                        <td>Received</td>
-                        <td><span id="frames_received" style="float:right">&nbsp;</span></td>
+                        <td>N0.Received</td>
+                        <td><span id="frames_received0" style="float:right">&nbsp;</span></td>
                       </tr>
                       <tr>
-                        <td>Released</td>
-                        <td><span id="frames_released" style="float:right">&nbsp;</span></td>
+                        <td>N0.Released</td>
+                        <td><span id="frames_released0" style="float:right">&nbsp;</span></td>
                       </tr>
                       <tr>
-                        <td>Dropped</td>
-                        <td><span id="frames_dropped" style="float:right">&nbsp;</span></td>
+                        <td>N0.Dropped</td>
+                        <td><span id="frames_dropped0" style="float:right">&nbsp;</span></td>
                       </tr>
                       <tr>
-                        <td>Timed out</td>
-                        <td><span id="frames_timedout" style="float:right">&nbsp;</span></td>
+                        <td>N0.Timed out</td>
+                        <td><span id="frames_timedout0" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N1.Received</td>
+                        <td><span id="frames_received1" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N1.Released</td>
+                        <td><span id="frames_released1" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N1.Dropped</td>
+                        <td><span id="frames_dropped1" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N1.Timed out</td>
+                        <td><span id="frames_timedout1" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N2.Received</td>
+                        <td><span id="frames_received2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N2.Released</td>
+                        <td><span id="frames_released2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N2.Dropped</td>
+                        <td><span id="frames_dropped2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N2.Timed out</td>
+                        <td><span id="frames_timedout2" style="float:right">&nbsp;</span></td>
                       </tr>
                     </tbody>
                   </table>
@@ -872,15 +936,58 @@
                       </td>
                       <td>
                         <select class="double-width" onchange="numberNodesChange(this.value)">
-                          <option selected="selected" value="1">1</option>
+                          <option value="1">1</option>
                           <option value="2">2</option>
-                          <option value="3">3</option>
+                          <option selected="selected" value="3">3</option>
                         </select>
                       </td>
                       <td>
                         &nbsp;<td><span id="number-nodes-warning">&nbsp;</span></td>
                       </td>
                     </tr>
+                  </table>
+
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>Frame Processor</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>N0.FP Errors</td>
+                        <td><span id="fp_errors0" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N1.FP Errors</td>
+                        <td><span id="fp_errors1" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N2.FP Errors</td>
+                        <td><span id="fp_errors2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <!-- <tr>
+                        <td>daq stop</td>
+                        <td><span id="daq_stop" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>fem not busy</td>
+                        <td><span id="fem_not_busy" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Offsets TS</td>
+                        <td><span id="offsets_ts" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>vsr1_sync</td>
+                        <td><span id="vsr1_sync" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>vsr2_sync</td>
+                        <td><span id="vsr2_sync" style="float:right">&nbsp;</span></td>
+                      </tr> -->
+                    </tbody>
                   </table>
 
                 </div> <!-- col-md-11 -->

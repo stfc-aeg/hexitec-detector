@@ -230,22 +230,57 @@ function poll_fem()
         // Polls the fem(s) for hardware status, environmental data, etc
         hexitec_endpoint.get_url(hexitec_url + 'fr/status/')
         .then(result => {
-            const frames = result["value"][0].frames;
-            const decoder = result["value"][0].decoder;
-            const buffers = result["value"][0].buffers;
+            // console.log("N0, rx, rlsd: " + result["value"][0].frames.received + " " + result["value"][0].frames.released);
+            // console.log("N1, rx, rlsd: " + result["value"][1].frames.received + " " + result["value"][2].frames.released);
+            // console.log("N2, rx, rlsd: " + result["value"][2].frames.received + " " + result["value"][2].frames.released);
+            var numNodes = result["value"].length;
+            for (var i = 0; i < numNodes; i++) {
+                const frames = result["value"][i].frames;
+                const decoder = result["value"][i].decoder;
+                const buffers = result["value"][i].buffers;
+                document.querySelector('#frames_received'+i).innerHTML = frames.received;
+                document.querySelector('#frames_released'+i).innerHTML = frames.released;
+                document.querySelector('#frames_dropped'+i).innerHTML = frames.dropped;
+                document.querySelector('#frames_timedout'+i).innerHTML = frames.timedout;
 
-            document.querySelector('#frames_received').innerHTML = frames.received;
-            document.querySelector('#frames_released').innerHTML = frames.released;
-            document.querySelector('#frames_dropped').innerHTML = frames.dropped;
-            document.querySelector('#frames_timedout').innerHTML = frames.timedout;
-
-            document.querySelector('#fem_packets_lost').innerHTML = decoder.fem_packets_lost;
-            document.querySelector('#packets_lost').innerHTML = decoder.packets_lost;
-            document.querySelector('#buffers_empty').innerHTML = buffers.empty;
-            document.querySelector('#buffers_mapped').innerHTML = buffers.mapped;
+                document.querySelector('#fem_packets_lost'+i).innerHTML = decoder.fem_packets_lost;
+                document.querySelector('#packets_lost'+i).innerHTML = decoder.packets_lost;
+                document.querySelector('#buffers_empty'+i).innerHTML = buffers.empty;
+                document.querySelector('#buffers_mapped'+i).innerHTML = buffers.mapped;
+            }
         })
         .catch(error => {
             document.querySelector('#odin-control-error').innerHTML = "Polling FR: " + error.message;
+        });
+
+        // http://localhost:8888/api/0.1/hexitec/fp/status/error/2
+        // Polls the fem(s) for hardware status, environmental data, etc
+        hexitec_endpoint.get_url(hexitec_url + 'fp/status/')
+        .then(result => {
+            // // Print all errors reported by one FP:
+            // console.log("    [val][1].error: " + JSON.stringify(result["value"][1].error, null, 4));
+            var numNodes = result["value"].length;
+            for (var i = 0; i < numNodes; i++) {
+                // Print all error(s) belonging to specified node:
+                // console.log( i + " results: " + result["value"][i].error);
+                if (result["value"][i].error === undefined)
+                {
+                    // Current node not configured, clear any previous error(s)
+                    document.querySelector('#fp_errors'+i).innerHTML = 0;
+                }
+                else
+                {
+                    var numErrors = result["value"][i].error.length;
+                    document.querySelector('#fp_errors'+i).innerHTML = numErrors;
+                    for (var j = 0; j < numErrors; j++) {
+                        // Report all nodes error(s)
+                        // console.log(" Node" + i + ", Err" + j + " : " + result["value"][i].error[j]);
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = "Polling FP: " + error.message;
         });
 
         hexitec_endpoint.get_url(hexitec_url + 'detector')
