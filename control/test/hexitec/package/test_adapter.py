@@ -269,7 +269,7 @@ class TestDetector(unittest.TestCase):
                 camera_data_ip_addr=defaults.fem["camera_data_ip"]
             )
 
-    def test_poll_fem(self):
+    def test_poll_fem_handles_mid_acquisition(self):
         """Test poll fem works."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.fem.acquisition_completed = True
@@ -277,6 +277,18 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.poll_fem()
         # Ensure shutdown_processing() was called [it changes the following bool]
         assert self.test_adapter.detector.acquisition_in_progress is False
+
+    def test_poll_fem_handles_processing_completed(self):
+        """Test poll fem handles processing completed."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.fem.acquisition_completed = True
+        self.test_adapter.detector.get_frames_processed = Mock(return_value=10)
+        self.test_adapter.detector.fem.health = True
+        self.test_adapter.detector.poll_fem()
+
+        # Ensure shutdown_processing() was called [it changes the following bool]
+        assert self.test_adapter.detector.acquisition_in_progress is False
+        assert self.test_adapter.detector.fem.acquisition_completed is False
 
     def test_check_fem_watchdog(self):
         """Test fem watchdog works."""
@@ -745,3 +757,7 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.hv_off("")
         self.test_adapter.detector.fem.hv_off.assert_called()
  
+    def test_environs(self):
+        """Test function calls readout environmental data."""
+        self.test_adapter.detector.environs("")
+        self.test_adapter.detector.fem.environs.assert_called()

@@ -271,6 +271,7 @@ class Hexitec():
             "cold_initialisation": (lambda: self.cold_initialisation, None),
             "hv_on": (None, self.hv_on),
             "hv_off": (None, self.hv_off),
+            "environs": (None, self.environs),
             "acquisition": {
                 "number_frames": (lambda: self.number_frames, self.set_number_frames),
                 "duration": (lambda: self.duration, self.set_duration),
@@ -701,6 +702,10 @@ class Hexitec():
     def hv_off(self, msg):
         """Switch HV off."""
         self.fem.hv_off(msg)
+
+    def environs(self, msg):
+        """Readout environmental data."""
+        self.fem.environs()
 
     def get(self, path):
         """

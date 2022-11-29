@@ -228,6 +228,8 @@ class HexitecFem():
         self.acquire_timestamp = 0
         self.offsets_timestamp = 0
 
+        self.environs_in_progress = False
+
         # Simulate (for now) whether Hardware finished sending data
         self.all_data_sent = 0
 
@@ -251,6 +253,7 @@ class HexitecFem():
             "duration_remaining": (lambda: self.duration_remaining, None),
             "hexitec_config": (lambda: self.hexitec_config, self._set_hexitec_config),
             "read_sensors": (None, self.read_sensors),
+            "environs_in_progress": (lambda: self.environs_in_progress, None),
             "hardware_connected": (lambda: self.hardware_connected, None),
             "hardware_busy": (lambda: self.hardware_busy, None),
             "firmware_date": (lambda: self.firmware_date, None),
@@ -338,6 +341,7 @@ class HexitecFem():
     def read_sensors(self, msg=None):
         """Read environmental sensors and updates parameter tree with results."""
         try:
+            self.environs_in_progress = True
             # Note once, when firmware was built
             if self.read_firmware_version:
                 fw_date = self.x10g_rdma.read(0x8008, burst_len=1, comment='FIRMWARE DATE')
@@ -367,6 +371,7 @@ class HexitecFem():
         except Exception as e:
             self._set_status_error("Uncaught Exception; Reading sensors failed: %s" % str(e))
             logging.error("%s" % str(e))
+        self.environs_in_progress = False
 
     def disconnect(self):
         """Disconnect hardware connection."""
@@ -446,11 +451,12 @@ class HexitecFem():
         # IOLoop.instance().call_later(4.0, self.poll_sensors)  # If polling env data
         IOLoop.instance().add_callback(self.poll_sensors)   # Not polling sensors
 
+    #TODO: redundant ?
     def poll_sensors(self):
         """Poll hardware while connected but not busy initialising, collecting offsets, etc."""
-        if self.hardware_connected and (self.hardware_busy is False):
+        # if self.hardware_connected and (self.hardware_busy is False):
             # self.read_sensors()
-            print(" * poll_sensors() not reading sensors *")
+            # print(" * poll_sensors() not reading sensors *")
         IOLoop.instance().call_later(3.0, self.poll_sensors)
 
     # @run_on_executor(executor='thread_executor')
@@ -582,6 +588,7 @@ class HexitecFem():
     def set_all_data_sent(self, all_data_sent):
         """Set whether all data has been sent (hardware simulation)."""
         self.all_data_sent = all_data_sent
+        # print("\n self.all_data_sent ({}) = all_data_sent ({})\n".format(self.all_data_sent, all_data_sent))
 
     def get_debug(self):
         """Get debug messages status."""
@@ -2117,6 +2124,10 @@ class HexitecFem():
         # logging.debug("disabled, all done!")
         self.hv_bias_enabled = False
         logging.debug("HV now OFF")
+
+    def environs(self):
+        """Readout environmental data."""
+        IOLoop.instance().add_callback(self.read_sensors)
 
 class HexitecFemError(Exception):
     """Simple exception class for HexitecFem to wrap lower-level exceptions."""

@@ -39,6 +39,7 @@ document.addEventListener("DOMContentLoaded", function()
     document.querySelector('#offsetsButton').disabled = true;
     document.querySelector('#hvOnButton').disabled = true;
     document.querySelector('#hvOffButton').disabled = true;
+    document.querySelector('#environsButton').disable = true;
     // Start polling after page loaded (800 ms)
     setTimeout(function() {
         if (polling_thread_running === false)
@@ -95,6 +96,17 @@ function hvOffButtonClicked()
     document.querySelector('#hvOffButton').disabled = true;
     console.log("Switching HV off");
     hv_off();
+}
+
+function environsButtonClicked()
+{
+    hexitec_endpoint.put({"environs": ""}, 'detector')
+    .then(result => {
+        document.querySelector('#odin-control-error').innerHTML = "";
+    })
+    .catch(error => {
+        document.querySelector('#odin-control-error').innerHTML = error.message;
+    });
 }
 
 function initialiseButtonClicked()
@@ -200,6 +212,7 @@ function toggle_ui_elements(bBool)
         document.querySelector('#hvOffButton').disabled = bBool;
     else
         document.querySelector('#hvOnButton').disabled = bBool;
+    document.querySelector('#environsButton').disabled = bBool;
     document.querySelector('#offsetsButton').disabled = bBool;
     document.querySelector('#applyButton').disabled = bBool;
     document.querySelector('#applyButton2').disabled = bBool;
@@ -313,11 +326,16 @@ function poll_fem()
             {
                 if (hardware_busy === true)
                 {
-                    toggle_ui_elements(true);   // Disable
+                    toggle_ui_elements(true);   // Disable UI elements
                 }
                 else
                 {
-                    toggle_ui_elements(false);  // Enable
+                    toggle_ui_elements(false);  // Enable UI elements
+                    // Disable Environs button if collecting environmental data
+                    if (fem["environs_in_progress"] === true)
+                        document.querySelector('#environsButton').disabled = true;
+                    else
+                        document.querySelector('#environsButton').disabled = false;
                 }
                 if (daq_in_progress === true)
                 {
@@ -344,6 +362,7 @@ function poll_fem()
                     document.querySelector('#hvOffButton').disabled = true;
                 else
                     document.querySelector('#hvOnButton').disabled = true;
+                document.querySelector('#environsButton').disabled = true;
                 document.querySelector('#offsetsButton').disabled = true;
 
                 // Unlock configuration related UI elements
