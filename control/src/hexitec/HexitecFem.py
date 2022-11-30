@@ -365,6 +365,7 @@ class HexitecFem():
             self.vsr_addr = vsr  # pragma: no cover
             # ending = time.time()
             # print(" Environmental data took: {}".format(ending - beginning))
+            self.parent.software_state = "Idle"
         except HexitecFemError as e:
             self._set_status_error("Failed to read sensors: %s" % str(e))
             logging.error("%s" % str(e))
@@ -610,10 +611,8 @@ class HexitecFem():
             #     print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
             #         counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
             if counter == 15001:
-                logging.error("\n\t read_response() timed out waiting for uart!\n")
-                # TODO: Return as listening to uart now's a bit pointless yes?
-                return -1
-                break
+                logging.error("read_response, UART timed out")
+                raise HexitecFemError("UART read timed out")
         # print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
         #     counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
 
@@ -643,6 +642,7 @@ class HexitecFem():
             self.hardware_connected = False
             raise HexitecFemError(e)
         self.hardware_busy = False
+        self.parent.software_state = "Idle"
 
         # Start polling thread (connect successfully set up)
         if len(self.status_error) == 0:
@@ -684,6 +684,9 @@ class HexitecFem():
 
         logging.info("Initiate Data Capture")
         self.acquire_start_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
+
+        # TODO: Placeholder for triggering daq right here:
+
         # How to convert datetime object to float?
         self.acquire_timestamp = time.time()    # Utilised by adapter's watchdog
 
@@ -773,6 +776,7 @@ class HexitecFem():
 
         # Acquisition completed, note completion
         self.acquisition_completed = True
+        self.parent.software_state = "Idle"
         # print("\n fem DONE")
 
     def read_receive_from_all(self, op_command, register_h, register_l):
@@ -801,7 +805,6 @@ class HexitecFem():
                 vsrs_ready = False
         return vsrs_ready
 
-    # TODO: 2x2 Legacy code, to be modified
     @run_on_executor(executor='thread_executor')
     def collect_offsets(self):
         """Run collect offsets sequence.
@@ -876,6 +879,7 @@ class HexitecFem():
             self.write_receive_to_all(HexitecFem.CLR_REG_BIT, 0x32, 0x34, 0x32, 0x30)
 
             self._set_status_message("Offsets collections operation completed.")
+            self.parent.software_state = "Idle"
             # Timestamp when offsets collected
             self.offsets_timestamp = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
             # # String format can be turned into millisecond format:
@@ -1083,7 +1087,7 @@ class HexitecFem():
             for vsr in self.VSR_ADDRESS:
                 self.vsr_addr = vsr     # Largely redundant, only enable_adc(vsr)  ..
                 logging.debug(" --- Initialising VSR: 0x{0:X} ---".format(vsr))
-                self._set_status_message("Initialising VSR{}".format(vsr-143))
+                self._set_status_message("Initialising VSR{}..".format(vsr-143))
                 self.initialise_vsr(vsr)
                 # Check PLLs locked
                 bPolling = True
@@ -1161,6 +1165,8 @@ class HexitecFem():
                       gain_reply))
             print(" All vsrs, reg07: {}".format(reg07))
             print("           reg89: {}".format(reg89))
+            # DEBUGGING completed
+            self.parent.software_state = "Idle"
         except HexitecFemError as e:
             self._set_status_error("Failed to initialise camera: %s" % str(e))
             logging.error("%s" % str(e))

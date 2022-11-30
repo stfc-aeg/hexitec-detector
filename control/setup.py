@@ -4,8 +4,8 @@ from setuptools import setup, find_packages
 import versioneer
 
 install_requires = [
-    'odin @ git+https://github.com/odin-detector/odin-control@1.0.0#egg=odin_control',
-    'odin-data @ git+https://github.com/odin-detector/odin-data@1.5.0#egg=odin_data&subdirectory=tools/python',
+    'odin-control @ git+https://github.com/odin-detector/odin-control@1.3.0#egg=odin_control',
+    'odin-data @ git+https://github.com/odin-detector/odin-data@1.8.0#egg=odin_data&subdirectory=tools/python',
     'opencv-python==4.5.1.48',
     'pytest',
     'pytest-cov',

@@ -269,6 +269,7 @@ class TestFem(unittest.TestCase):
     #     error = "Uncaught Exception; Camera initialisation failed: "
     #     assert self.test_fem.fem.status_error == error
 
+    # TODO: This unit test now redundant?
     # def test_initialise_hardware_handles_fudge_initialisation(self):
     #     """Test function handles initialisation from cold."""
     #     with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
@@ -277,7 +278,6 @@ class TestFem(unittest.TestCase):
     #         self.test_fem.fem.hardware_busy = False
     #         self.test_fem.fem.debug_register24 = False
     #         self.test_fem.fem.initialise_system = Mock()
-    #         self.test_fem.fem.first_initialisation = True
     #         self.test_fem.fem.parent.daq = Mock(in_progress=False)
     #         self.test_fem.fem.parent.daq.prepare_odin = Mock()
     #         self.test_fem.fem.parent.daq.prepare_daq = Mock()
@@ -286,6 +286,7 @@ class TestFem(unittest.TestCase):
     #         mock_loop.instance().call_later.assert_called_with(0.1,
     #                                                            self.test_fem.fem.check_all_processes_ready)
 
+    # TODO: This unit test now redundant?
     # def test_initialise_hardware_handles_fudge_initialisation_prepare_odin_error(self):
     #     """Test cold initialisation handles prepare_odin error."""
     #     with patch("hexitec.HexitecFem.IOLoop"):
@@ -294,7 +295,6 @@ class TestFem(unittest.TestCase):
     #         self.test_fem.fem.hardware_busy = False
     #         self.test_fem.fem.debug_register24 = False
     #         self.test_fem.fem.initialise_system = Mock()
-    #         self.test_fem.fem.first_initialisation = True
     #         self.test_fem.fem.parent.daq = Mock(in_progress=False)
     #         self.test_fem.fem.parent.daq.prepare_odin = Mock()
     #         self.test_fem.fem.parent.daq.prepare_odin = False
@@ -304,7 +304,6 @@ class TestFem(unittest.TestCase):
 
     # def test_check_all_processes_ready_handles_daq_error(self):
     #     """Test function handles daq error gracefully."""
-    #     self.test_fem.fem.first_initialisation = True
     #     self.test_fem.fem.parent.daq.in_error = True
     #     self.test_fem.fem.check_all_processes_ready()
 
@@ -334,17 +333,15 @@ class TestFem(unittest.TestCase):
     #     self.test_fem.fem.hardware_busy = False
     #     self.test_fem.fem.debug_register24 = False
     #     self.test_fem.fem.initialise_system = Mock()
-    #     self.test_fem.fem.first_initialisation = True
     #     self.test_fem.fem.parent.daq = Mock(in_progress=True)
     #     self.test_fem.fem.initialise_hardware()
 
-    # def test_initialise_hardware_handles_warm_initialisation(self):
-    #     """Test function handles fudge free initialisation."""
+    # def test_initialise_hardware_handles_initialisation(self):
+    #     """Test function handles initialisation."""
     #     self.test_fem.fem.hardware_connected = True
     #     self.test_fem.fem.hardware_busy = False
     #     self.test_fem.fem.debug_register24 = False
     #     self.test_fem.fem.initialise_system = Mock()
-    #     self.test_fem.fem.first_initialisation = False
     #     self.test_fem.fem.initialise_hardware()
 
     # def test_collect_data_fails_on_hardware_busy(self):
@@ -378,7 +375,6 @@ class TestFem(unittest.TestCase):
     #     self.test_fem.fem.hardware_connected = True
     #     self.test_fem.fem.hardware_busy = False
     #     self.test_fem.fem.ignore_busy = True
-    #     self.test_fem.fem.first_initialisation = True
     #     # Reset variables, to be checked post run
     #     self.test_fem.fem.acquisition_completed = False
     #     self.test_fem.fem.acquire_data = Mock()
@@ -448,12 +444,17 @@ class TestFem(unittest.TestCase):
     # def test_read_response(self):
     #     """Test function works ok."""
     #     self.test_fem.fem.set_debug(True)
-    #     return_values = [0, 714158145, 0, 808520973, 0, 13]
-    #     self.test_fem.fem.x10g_rdma.read = Mock()
-    #     self.test_fem.fem.x10g_rdma.read.side_effect = return_values
-    #     address = 0xE0000011
+    #     # read_values = [000D0712, 0, 1, 0, 0, 1]
+    #     # self.test_fem.fem.x10g_rdma.read = Mock()
+    #     # self.test_fem.fem.x10g_rdma.read.side_effect = read_values
+
+    #     status_values = 0x000D0712, 0, 1, 0, 0, 1  # [42, 144, 48, 55, 48, 51, 13]
+    #     print(type(status_values))
+    #     self.test_fem.fem.x10g_rdma.read_uart_status = Mock()
+    #     self.test_fem.fem.x10g_rdma.read_uart_status.side_effect = status_values
+
     #     status = self.test_fem.fem.read_response()
-    #     self.test_fem.fem.x10g_rdma.read.assert_called_with(address, ANY)
+    #     self.test_fem.fem.x10g_rdma.read_uart_status.assert_called()
     #     assert status == '\x910A01\r\r'
 
     # def test_read_response_failed(self):
@@ -596,7 +597,6 @@ class TestFem(unittest.TestCase):
 
     # def test_acquire_data_2x2_system(self):
     #     """Test function handles normal configuration."""
-    #     self.test_fem.fem.first_initialisation = True
     #     self.test_fem.fem.sensors_layout = HexitecFem.READOUTMODE[1]
     #     self.test_fem.fem.selected_sensor = HexitecFem.OPTIONS[2]
     #     self.test_fem.fem.debug = True
@@ -747,7 +747,6 @@ class TestFem(unittest.TestCase):
 
     # # def test_acquire_data_single_sensor(self):
     # #     """Test function handles single sensor selected."""
-    # #     self.test_fem.fem.first_initialisation = True
     # #     self.test_fem.fem.sensors_layout = HexitecFem.READOUTMODE[0]
     # #     self.test_fem.fem.selected_sensor = HexitecFem.OPTIONS[0]
     # #     self.test_fem.fem.debug = True
@@ -836,14 +835,12 @@ class TestFem(unittest.TestCase):
 
     # #     assert self.test_fem.fem.hardware_busy is False
     # #     assert self.test_fem.fem.acquisition_completed is True
-    # #     assert self.test_fem.fem.first_initialisation is False
 
     # # def test_acquire_data_completed_vsr2_works(self):
     # #     """Test function handles normal end of acquisition, targeting VSR2."""
     # #     from datetime import datetime
     # #     DATE_FORMAT = self.test_fem.fem.DATE_FORMAT
     # #     self.test_fem.fem.acquire_start_time = '%s' % (datetime.now().strftime(DATE_FORMAT))
-    # #     self.test_fem.fem.first_initialisation = True
     # #     self.test_fem.fem.sensors_layout = HexitecFem.READOUTMODE[1]
     # #     self.test_fem.fem.selected_sensor = HexitecFem.OPTIONS[2]
     # #     self.test_fem.fem.debug = True
@@ -956,7 +953,6 @@ class TestFem(unittest.TestCase):
     # #     from datetime import datetime
     # #     DATE_FORMAT = self.test_fem.fem.DATE_FORMAT
     # #     self.test_fem.fem.acquire_start_time = '%s' % (datetime.now().strftime(DATE_FORMAT))
-    # #     self.test_fem.fem.first_initialisation = True
     # #     self.test_fem.fem.sensors_layout = HexitecFem.READOUTMODE[1]
     # #     self.test_fem.fem.selected_sensor = HexitecFem.OPTIONS[0]
     # #     self.test_fem.fem.debug = True

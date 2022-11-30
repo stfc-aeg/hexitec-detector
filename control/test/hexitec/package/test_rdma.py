@@ -123,6 +123,45 @@ class TestRdmaUDP():
     #     self.socket.recv = Mock(return_value=return_struct)
     #     self.rdma.socket = self.socket
 
+# #
+# from path import Path
+
+# def sanitize_line_ending(filename):
+#     """ Converts the line endings of the file to the line endings
+#         of the current system.
+#     """
+#     input_path = Path(filename)
+
+#     with input_path.in_place() as (reader, writer):
+#         for line in reader:
+#             writer.write(line)
+# #
+# @mock.patch('downloader.helpers.Path')
+# def test_sanitize_line_endings(self, mock_path):
+#     mock_path.return_value.in_place.return_value = (1,2)
+#     helpers.sanitize_line_ending('varun.txt')
+# #
+#     # TODO: Fix after reading: https://stackoverflow.com/questions/31477825/unable-to-return-a-tuple-when-mocking-a-function
+#     # TODO: The above 18 lines forms part of the same example
+#     def test_read_uart_status(self, test_rdma):
+#         """Test function works ok."""
+#         # self.test_fem.fem.set_debug(True)
+# #  uart_status: (853266,)
+# # 00084 UART: 000D0512 tx_buff_full: 0 tx_buff_empty: 1 rx_buff_full: 0 rx_buff_empty: 0 rx_pkt_done: 1
+#         test_rdma.rdma.
+#         read_values = tuple((853266, 0))
+#         # test_rdma.rdma.write(test_rdma.test_address, test_rdma.test_data
+#         test_rdma.rdma.read = Mock()
+#         test_rdma.rdma.read.side_effect = read_values
+
+#         address = 0x10
+#         burst_len=1
+#         comment="Read UART Status"
+#         returned_values = test_rdma.rdma.read_uart_status()
+#         expected_values = (0x000D0512, 0, 1, 0, 0, 1)
+#         test_rdma.rdma.read.assert_called_with(address, burst_len=1, comment='Read UART Status')
+#         assert returned_values == expected_values
+
     # TODO: how to mock socket.sendto exception?
 #     def test_write_handles_socket_exception(self, test_rdma):
 #         """Test that the write method handles a socket exception."""

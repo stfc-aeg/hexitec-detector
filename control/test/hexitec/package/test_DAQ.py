@@ -373,7 +373,6 @@ class TestDAQ(unittest.TestCase):
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
 
             self.test_daq.fp_data["value"][0]["hdf"]["frames_processed"] = 0
-            self.test_daq.daq.first_initialisation = False
             odin_ready = self.test_daq.daq.prepare_odin()
             self.test_daq.daq.prepare_daq(10)
 
@@ -392,7 +391,6 @@ class TestDAQ(unittest.TestCase):
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
 
             self.test_daq.fp_data["value"][0]["hdf"]["frames_processed"] = 0
-            self.test_daq.daq.first_initialisation = False
             odin_ready = self.test_daq.daq.prepare_odin()
             self.test_daq.daq.prepare_daq(10)
 
@@ -419,7 +417,6 @@ class TestDAQ(unittest.TestCase):
                 patch.dict(self.test_daq.fr_data['value'][0]['status'], config, clear=True), \
                 patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
 
-            self.test_daq.daq.first_initialisation = False
             return_value = self.test_daq.daq.prepare_odin()
             assert return_value is False
 
@@ -436,7 +433,6 @@ class TestDAQ(unittest.TestCase):
                 patch.dict(self.test_daq.fr_data['value'][0]['status'], config, clear=True), \
                 patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
 
-            self.test_daq.daq.first_initialisation = False
             odin_ready = self.test_daq.daq.prepare_odin()
             assert odin_ready is False
 
@@ -514,30 +510,17 @@ class TestDAQ(unittest.TestCase):
             mock_loop.instance().call_later.assert_called_with(.5,
                                                                self.test_daq.daq.acquisition_check_loop)
 
-    def test_processing_check_loop_handles_initial_acquisition(self):
-        """Test processing check loop exits initial acquisition without reopening file.
-
-        Any subsequent acquisition should add meta data but not the initial (fudge) one.
-        """
-        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
-            self.test_daq.daq.first_initialisation = True
-            self.test_daq.daq.processing_check_loop()
-            mock_loop.instance().call_later.assert_called_with(2.0,
-                                                               self.test_daq.daq.stop_acquisition)
-
     def test_acquisition_check_loop_polls_processing_once_acquisition_complete(self):
         """Test acquisition check loop polls processing status once fem(s) finished sending data."""
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
             self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.acquisition_check_loop()
-            self.test_daq.daq.first_initialisation = False
             mock_loop.instance().call_later.assert_called_with(.5,
                                                                self.test_daq.daq.processing_check_loop)
 
     def test_processing_check_loop_polls_file_status_after_processing_complete(self):
         """Test processing check loop polls for processed file closed once processing done."""
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
-            self.test_daq.daq.first_initialisation = False
             self.test_daq.fp_data["value"][0]["hdf"]["frames_processed"] = 10
             self.test_daq.daq.plugin = "hdf"
             self.test_daq.daq.frame_end_acquisition = 10
@@ -548,7 +531,6 @@ class TestDAQ(unittest.TestCase):
     def test_processing_check_loop_handles_missing_frames(self):
         """Test processing check loop will stop acquisition if data ceases mid-flow."""
         with patch("hexitec.HexitecDAQ.IOLoop"):
-            self.test_daq.daq.first_initialisation = False
             self.test_daq.daq.parent.fem.hardware_busy = True
             self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.shutdown_processing = True
@@ -561,7 +543,6 @@ class TestDAQ(unittest.TestCase):
     def test_processing_check_loop_polling_while_data_being_processed(self):
         """Test processing check loop polls itself while data coming in."""
         with patch("hexitec.HexitecDAQ.IOLoop"):
-            self.test_daq.daq.first_initialisation = False
             self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.frames_processed = 5
             self.test_daq.daq.plugin = "hdf"

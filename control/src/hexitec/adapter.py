@@ -403,6 +403,7 @@ class Hexitec():
 
     def connect_hardware(self, msg):
         """Set up watchdog timeout, start bias clock and connect with hardware."""
+        self.software_state = "Connecting"
         # TODO: Must recalculate collect and bias time both here and in initialise()
         #   Logically, commit_configuration() is the best place but it updates variables before
         #   reading .ini file
@@ -414,7 +415,6 @@ class Hexitec():
         if not self.bias_clock_running:
             IOLoop.instance().add_callback(self.start_bias_clock)
         self.fem.connect_hardware(msg)
-        self.software_state = "Idle"
 
     def start_bias_clock(self):
         """Set up bias 'clock'."""
@@ -451,6 +451,7 @@ class Hexitec():
 
         Recalculate collect and bias timing, update watchdog timeout.
         """
+        self.software_state = "Initialising"
         # TODO: Must recalculate collect and bias time both here and in initialise();
         #   Logically, commit_configuration() is the best place but it updates variables before
         #   values read from .ini file
@@ -459,7 +460,7 @@ class Hexitec():
 
         self.daq_rx_timeout = self.collect_and_bias_time + self.error_margin
         self.fem.initialise_hardware(msg)
-        # Wait for fem initialisation/fudge frames
+        # Wait for fem initialisation
         IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
 
     def disconnect_hardware(self, msg):
@@ -527,6 +528,7 @@ class Hexitec():
 
     def acquisition(self, put_data=None):
         """Instruct DAQ and FEM to acquire data."""
+        self.software_state = "Acquiring"
         # Clear (any previous) daq error
         self.daq.in_error = False
 
@@ -608,7 +610,7 @@ class Hexitec():
             # IOLoop.instance().call_later(0.05, self.await_daq_ready)
             IOLoop.instance().call_later(0.5, self.await_daq_ready)
         else:
-            self.software_state = "Acquiring"
+            # self.software_state = "Acquiring"
             # Add additional 8 ms delay to ensure file writer's file open before first frame arrives
             IOLoop.instance().call_later(0.08, self.trigger_fem_acquisition)
 
@@ -630,8 +632,7 @@ class Hexitec():
         """Check fem hardware progress.
 
         Busy either:
-        -Initialising from cold (2 fudge frames)
-        -Normal initialisation
+        -Initialising
         -Waiting for data collection to complete, either single/multi run
         """
         # print("\n adpt.monitor_fem_progress() called")
@@ -686,6 +687,7 @@ class Hexitec():
 
     def _collect_offsets(self, msg):
         """Instruct FEM to collect offsets."""
+        self.software_state = "Offsets"
         self.fem.collect_offsets()
 
     def commit_configuration(self, msg):
@@ -705,6 +707,7 @@ class Hexitec():
 
     def environs(self, msg):
         """Readout environmental data."""
+        self.software_state = "Environs"
         self.fem.environs()
 
     def get(self, path):

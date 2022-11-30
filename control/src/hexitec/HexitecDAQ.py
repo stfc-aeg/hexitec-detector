@@ -56,9 +56,6 @@ class HexitecDAQ():
         # these varables used to tell when an acquisiton is completed
         self.frame_start_acquisition = 0  # number of frames received at start of acq
 
-        # First initialisation fudges data acquisition (but without writing to disk)
-        self.first_initialisation = False   # True
-
         self.file_writing = False
         self.config_dir = ""
         self.config_files = {
@@ -293,13 +290,8 @@ class HexitecDAQ():
         self.in_progress = True
         # Reset timeout watchdog
         self.processed_timestamp = time.time()
-        if self.first_initialisation:
-            # First initialisation captures data without writing to disk
-            #   therefore don't enable file writing here
-            pass  # pragma: no cover
-        else:
-            logging.debug("Starting File Writer")
-            self.set_file_writing(True)
+        logging.debug("Starting File Writer")
+        self.set_file_writing(True)
         # Diagnostics:
         self.daq_start_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
         # About to receive fem data, daq therefore now busy
@@ -326,16 +318,7 @@ class HexitecDAQ():
 
     def processing_check_loop(self):
         """Check that the processing has completed."""
-        if self.first_initialisation:
-            # First initialisation runs without file writing; Stop acquisition
-            #   without reopening (non-existent) file to add meta data
-            self.first_initialisation = False
-            self.in_progress = False
-            self.daq_ready = True
-            # Delay calling stop_acquisition, otherwise software may beat fem to it
-            IOLoop.instance().call_later(2.0, self.stop_acquisition)
-            return
-        # Not fudge initialisation; Check HDF/histogram processing progress
+        # Check HDF/histogram processing progress
         total_frames_processed = self.get_total_frames_processed(self.plugin)
         self.frames_received = self.get_total_frames_received()
         self.received_remaining = self.number_frames - self.frames_received

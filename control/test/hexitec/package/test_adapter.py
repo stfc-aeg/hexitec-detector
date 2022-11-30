@@ -429,7 +429,6 @@ class TestDetector(unittest.TestCase):
         """
         frames = 10
         self.test_adapter.detector.number_frames = frames
-        self.test_adapter.detector.first_initialisation = True
 
         with patch("hexitec.adapter.IOLoop") as mock_loop:
 
@@ -524,7 +523,6 @@ class TestDetector(unittest.TestCase):
             in_progress=False
         )
         self.test_adapter.detector.daq.in_error = True
-        self.test_adapter.detector.first_initialisation = False
         self.test_adapter.detector.fem.bias_refresh_interval = 2
         self.test_adapter.detector.adapters = self.test_adapter.adapters
 
@@ -556,7 +554,6 @@ class TestDetector(unittest.TestCase):
         )
 
         self.test_adapter.detector.fem.bias_voltage_refresh = False
-        self.test_adapter.detector.first_initialisation = True
         self.test_adapter.detector.adapters = self.test_adapter.adapters
 
         self.test_adapter.detector.acquisition("data")
@@ -685,7 +682,6 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.number_frames = frames
         self.test_adapter.detector.fem.hardware_busy = False
         self.test_adapter.detector.extended_acquisition = False
-        self.test_adapter.detector.first_initialisation = True
         self.test_adapter.detector.adapters = self.test_adapter.adapters
 
         with patch("hexitec.adapter.IOLoop"):
@@ -729,7 +725,6 @@ class TestDetector(unittest.TestCase):
         )
 
         self.test_adapter.detector.fem.bias_voltage_refresh = False
-        self.test_adapter.detector.first_initialisation = True
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.fem.stop_acquisition = False
         self.test_adapter.detector.cancel_acquisition()
