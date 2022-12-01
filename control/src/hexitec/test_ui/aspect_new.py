@@ -86,8 +86,8 @@ class Hexitec2x6():
             uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = self.x10g_rdma.read_uart_status()
             counter += 1
             if counter == 15001:
-                print("\n\t read_response() timed out waiting for uart!\n")
-                break
+                print("read_response, UART timed out")
+                raise HexitecFemError("UART read timed out")
         response = self.x10g_rdma.uart_rx(0x0)
         # print("R: {}. {}".format(response, counter))
         # print("... receiving: {} ({})".format(' '.join("0x{0:02X}".format(x) for x in response), counter))
@@ -573,6 +573,7 @@ if __name__ == '__main__':  # noqa: C901
     try:
         VSR_ADDRESS = range(0x90, 0x96)
         hxt.x10g_rdma.enable_all_vsrs()     # Switches all VSRs on
+
         # VSR_ADDRESS = [0x90]
         # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
 
@@ -595,7 +596,7 @@ if __name__ == '__main__':  # noqa: C901
 
         # Execute equivalent of VSR1_Configure.txt:
         for vsr in VSR_ADDRESS:
-            print(" --- Initialising VSR 0{0:X} ---".format(vsr))
+            print(" --- Initialising VSR 0x{0:X} ---".format(vsr))
             hxt.initialise_vsr(vsr)
             # Check PLLs locked
             bPolling = True
@@ -695,7 +696,7 @@ if __name__ == '__main__':  # noqa: C901
         print(" All vsrs, reg07: {}".format(reg07))
         print("           reg89: {}".format(reg89))
 
-    except (socket.error, struct.error) as e:
+    except (socket.error, struct.error, HexitecFemError) as e:
         print(" *** Caught Exception: {} ***".format(e))
 
     hxt.disconnect()
