@@ -559,9 +559,43 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq.stop_acquisition()
         assert self.test_daq.daq.file_writing is False
 
+    def test_save_dict_contents_to_group_works(self):
+        """Test save_dict_contents_to_file function."""
+        param_tree_dict = \
+            {'CTProfile':
+                {'@xmlns:xsi': 'none', 'ManipulatorPosition':
+                 {'@Version': '2', 'AxisPosition': ['0', '-397.092']},
+                    'CTAxisOffset': '0',
+                    'XraySettings': {'kV': '140', 'uA': '70', 'FocusMode': 'autoDefocus'},
+                    'ShadingCorrectionProfile':
+                        {'IntensifierField': '0', 'GreyLevelTargets':
+                            {'Target':
+                                    [{'kV': '0', 'uA': '0', 'XrayFilterMaterial': None, 'XrayFilterThickness': '0',
+                                        'GreyLevel': '165', 'PercentageWhiteLevel': '0'}]},
+                            'UsesMultipleXrayFilters': 'false', 'Mode': 'CT3D', 'TiltDegrees': '0'}, 'FluxNormalisationRect':
+                    {'Location':
+                        {'X': '10', 'Y': '10'},
+                        'Size': {'Width': '100', 'Height': '100'}, 'Height': '100'}, 'JobGuid': '392c51f4-48c1-49ae-a1a6-2998093e7bc1'},
+                'Information': {'@xmlns:xsi': 'none', 'JobGuid': '392c51f4-48c1-49ae-a1a6-2998093e7bc1'},
+                'list_list': [["String"]]}
+        param_tree_dict = self.test_daq.daq._flatten_dict(param_tree_dict)
+        import h5py
+        with h5py.File("/tmp/dummy.h5", "w") as hdf_file:
+            self.test_daq.daq.save_dict_contents_to_file(hdf_file, '/', param_tree_dict)
+
+    def test_save_dict_contents_to_group_handle_mangled_format(self):
+        """Test save_dict_contents_to_file handles mangled meta format."""
+        param_tree_dict = {'list_list': [["String"]]}
+        param_tree_dict = self.test_daq.daq._flatten_dict(param_tree_dict)
+        import h5py
+        with h5py.File("/tmp/dummy.h5", "w") as hdf_file:
+            self.test_daq.daq.save_dict_contents_to_file(hdf_file, '/', param_tree_dict)
+            assert self.test_daq.daq.parent.fem.status_error == "Error parsing Meta"
+
     def test_write_metadata_works(self):
         """Test write_metadata function."""
         with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"), patch("h5py._hl.group.Group") as h5_group:
+            hdf_file = Mock()
             meta_group = h5_group
             meta_group.name = u'/hexitec'
             param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
@@ -571,7 +605,7 @@ class TestDAQ(unittest.TestCase):
             with patch("builtins.open", mock_open(read_data="data")):
                 with patch("os.path.isfile") as mock_isfile:
                     mock_isfile.return_value = True
-                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict)
+                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict, hdf_file)
 
             key = 'detector/fem/hexitec_config'
             assert key in self.test_daq.daq.config_ds
@@ -580,6 +614,7 @@ class TestDAQ(unittest.TestCase):
     def test_write_metadata_handles_IOError(self):
         """Test write_metadata handles file reading error."""
         with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"), patch("h5py._hl.group.Group") as h5_group:
+            hdf_file = Mock()
             meta_group = h5_group
             meta_group.name = u'/hexitec'
             param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
@@ -590,12 +625,13 @@ class TestDAQ(unittest.TestCase):
                 with patch("os.path.isfile") as mock_isfile:
                     mock_isfile.return_value = True
 
-                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict)
+                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict, hdf_file)
             assert rc_value == -1
 
     def test_write_metadata_handles_exception(self):
         """Test write_metadata handles general file I/O exception."""
         with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"), patch("h5py._hl.group.Group") as h5_group:
+            hdf_file = Mock()
             meta_group = h5_group
             meta_group.name = u'/hexitec'
             param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
@@ -606,12 +642,13 @@ class TestDAQ(unittest.TestCase):
                 with patch("os.path.isfile") as mock_isfile:
                     mock_isfile.return_value = True
 
-                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict)
+                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict, hdf_file)
             assert rc_value == -2
 
     def test_write_metadata_handles_file_missing(self):
         """Test write_metadata handles missing file."""
         with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"), patch("h5py._hl.group.Group") as h5_group:
+            hdf_file = Mock()
             meta_group = h5_group
             meta_group.name = u'/hexitec'
             param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
@@ -620,7 +657,7 @@ class TestDAQ(unittest.TestCase):
                 with patch("os.path.isfile") as mock_isfile:
                     mock_isfile.return_value = False
 
-                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict)
+                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict, hdf_file)
             assert rc_value == -3
 
     def test_hdf_closing_loop_waits_while_file_open(self):

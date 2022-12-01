@@ -15,7 +15,9 @@ from hexitec.GenerateConfigFiles import GenerateConfigFiles
 
 import h5py
 from datetime import datetime
+from ast import literal_eval
 import collections.abc
+import numpy as np
 import time
 import os
 
@@ -405,13 +407,13 @@ class HexitecDAQ():
         # Create metadata group, add dataset to it and pass to write function
         parent_metadata_group = hdf_file.create_group("hexitec")
         parent_tree_dict = self.parent.param_tree.get('')
-        error_code = self.write_metadata(parent_metadata_group, parent_tree_dict)
+        error_code = self.write_metadata(parent_metadata_group, parent_tree_dict, hdf_file)
 
         # TODO: Hacked until frame_process_adapter updated to use ParameterTree
         hdf_metadata_group = hdf_file.create_group("hdf")
         hdf_tree_dict = self.adapters['fp']._param
         # Only "hexitec" group contain filename entries, ignore return value of write_metadata
-        self.write_metadata(hdf_metadata_group, hdf_tree_dict)
+        self.write_metadata(hdf_metadata_group, hdf_tree_dict, hdf_file)
 
         if (error_code == 0):
             self.parent.fem._set_status_message("Meta data added to {}".format(self.hdf_file_location))
@@ -422,21 +424,48 @@ class HexitecDAQ():
         self.in_progress = False
         self.daq_ready = True
 
-    def build_metadata_attributes(self, param_tree_dict, metadata_group):
-        """Build metadata attributes from parameter tree."""
-        for param, val in param_tree_dict.items():
-            if val is None:
-                pass    # Do not add Odin control controls
-                # Avoid None or TypeError will be thrown as:
+    def save_dict_contents_to_file(self, hdf_file, path, param_tree_dict):
+        """Traverse dictionary, write each key as native type to h5file."""
+        for key, item in param_tree_dict.items():
+            item = self._convert_values(item)
+            if isinstance(item, list):
+                if isinstance(item[0], dict):
+                    newdict = {}
+                    for i in range(len(item)):
+                        newdict[key + str(i)] = item[i]
+                    item = newdict
+                    self.save_dict_contents_to_file(hdf_file, path, {})
+                else:
+                    if not isinstance(item[0], str):
+                        item = np.array(item)
+            if isinstance(item, dict):
+                self.save_dict_contents_to_file(hdf_file, path + key + '/', item)
             else:
-                metadata_group.attrs[param] = val
-        return metadata_group
+                try:
+                    hdf_file[path + key] = item
+                except TypeError as error:
+                    logging.error("Error: {} Parsing key: {}{} value: {}".format(error, path, key, item))
+                    self.parent.fem._set_status_error("Error parsing Meta")
 
-    def write_metadata(self, metadata_group, param_tree_dict):
+    def _convert_values(self, value):
+        """Convert values to correct Python types."""
+        if isinstance(value, list):
+            value = [self._convert_values(v) for v in value]
+        elif isinstance(value, dict):
+            for key, entry in value.items():
+                value[key] = self._convert_values(entry)
+        try:
+            val = literal_eval(value)
+        except:
+            val = value
+        return str(val) if isinstance(val, type(None)) else val
+
+    def write_metadata(self, metadata_group, param_tree_dict, hdf_file):
         """Write parameter tree(s) and config files as meta data."""
+        self.save_dict_contents_to_file(hdf_file, '/', param_tree_dict)
+
+        # Flatten dictionary, before checking whether any config/xml files selected
         param_tree_dict = self._flatten_dict(param_tree_dict)
-        # Build metadata attributes from dictionary
-        self.build_metadata_attributes(param_tree_dict, metadata_group)
 
         # Only write parent's (Hexitec class) parameter tree's config files once
         if metadata_group.name == u'/hexitec':
@@ -456,6 +485,7 @@ class HexitecDAQ():
 
             for param_file in file_name:
                 if param_file not in param_tree_dict:
+                    print(" *** {} not in parameter tree: {}".format(param_file, param_tree_dict))
                     continue
                 # Only attempt to open file if it exists
                 file_name = param_tree_dict[param_file]

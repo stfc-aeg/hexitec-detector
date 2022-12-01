@@ -291,13 +291,21 @@ class Hexitec():
 
         self.system_info = SystemInfo()
 
+        # Store xtek metadata
+        self.xtek_meta = {}
+
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
+            "xtek_meta": (lambda: self.xtek_meta, self.update_meta),
             "system_info": self.system_info.param_tree,
             "detector": detector
         })
 
         self._start_polling()
+
+    def update_meta(self, meta):
+        """Save to parameter tree meta data PUT by Manchester."""
+        self.xtek_meta = meta
 
     def _start_polling(self):
         IOLoop.instance().add_callback(self.polling)

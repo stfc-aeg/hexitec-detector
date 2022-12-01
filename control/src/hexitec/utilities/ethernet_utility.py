@@ -70,7 +70,7 @@ if __name__ == '__main__':
         mac = ethCard.macAddressGet()
         srcIp = ethCard.ipAddressGet()
         print("Src MAC: %r (%r)" % (mac, type(mac)))
-        print("Src IP:  %r (%r)" % (srcIp,  type(srcIp)))
+        print("Src IP:  %r (%r)" % (srcIp, type(srcIp)))
         print("  Matching MR's format:")
         print(" 0x2000C 0x{}".format(mac[4:].upper().zfill(8)))
         print(" 0x20010 0x{}".format(mac[:4].upper().zfill(8)))

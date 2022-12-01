@@ -269,8 +269,15 @@ class TestDetector(unittest.TestCase):
                 camera_data_ip_addr=defaults.fem["camera_data_ip"]
             )
 
+    def test_update_meta(self):
+        """Test update meta works."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        meta = {"Sample": 5, "test": False}
+        self.test_adapter.detector.update_meta(meta)
+        assert self.test_adapter.detector.xtek_meta == meta
+
     def test_poll_fem_handles_mid_acquisition(self):
-        """Test poll fem works."""
+        """Test poll fem handles mid acquisition."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.fem.acquisition_completed = True
         self.test_adapter.detector.fem.health = True
