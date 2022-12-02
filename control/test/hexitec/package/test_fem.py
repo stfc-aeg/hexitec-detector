@@ -114,20 +114,20 @@ class TestFem(unittest.TestCase):
     #         error = "Uncaught Exception; Reading sensors failed: "
     #         assert self.test_fem.fem._get_status_error() == error
 
-    # def test_read_sensors_HexitecFemError(self):
-    #     """Test the read_sensors handles Exception."""
-    #     with patch('hexitec.HexitecFem.RdmaUDP'):
-    #         self.test_fem.fem.read_firmware_version = True
-    #         self.test_fem.fem.x10g_rdma.read = Mock()
-    #         self.test_fem.fem.x10g_rdma.read.side_effect = HexitecFemError()
-    #         self.test_fem.fem.read_sensors()
-    #         error = "Failed to read sensors: "
-    #         assert self.test_fem.fem._get_status_error() == error
+    def test_read_sensors_HexitecFemError(self):
+        """Test the read_sensors handles Exception."""
+        with patch('hexitec.HexitecFem.RdmaUDP'):
+            self.test_fem.fem.read_firmware_version = True
+            self.test_fem.fem.x10g_rdma.read = Mock()
+            self.test_fem.fem.x10g_rdma.read.side_effect = HexitecFemError()
+            self.test_fem.fem.read_sensors()
+            error = "Failed to read sensors: "
+            assert self.test_fem.fem._get_status_error() == error
 
-    # def test_cleanup(self):
-    #     """Test cleanup function works ok."""
-    #     self.test_fem.fem.cleanup()
-    #     self.test_fem.fem.x10g_rdma.close.assert_called_with()
+    def test_cleanup(self):
+        """Test cleanup function works ok."""
+        self.test_fem.fem.cleanup()
+        self.test_fem.fem.x10g_rdma.close.assert_called_with()
 
     # def test_set_image_size(self):
     #     """Test setting image size handled ok."""
@@ -194,33 +194,52 @@ class TestFem(unittest.TestCase):
     #         call(self.test_fem.rdma_addr["frm_gate"], 0, ANY)
     #     ])
 
-    # def test_set_duration_enable(self):
-    #     """Test set_duration_enable works."""
-    #     self.test_fem.fem.duration_enabled = False
-    #     self.test_fem.fem.set_duration_enable(True)
-    #     assert self.test_fem.fem.duration_enabled is True
+    def test_set_duration_enable(self):
+        """Test set_duration_enable works."""
+        self.test_fem.fem.duration_enabled = False
+        self.test_fem.fem.set_duration_enable(True)
+        assert self.test_fem.fem.duration_enabled is True
 
-    # def test_get_health(self):
-    #     """Test obtaining health variable works."""
-    #     health = False
-    #     self.test_fem.fem.health = health
-    #     assert self.test_fem.fem.get_health() is health
+    def test_set_duration(self):
+        """Test set_duration works."""
+        row_s1 = 5
+        s1_sph = 1
+        sph_s2 = 5
+        self.test_fem.fem.row_s1 = row_s1
+        self.test_fem.fem.s1_sph = s1_sph
+        self.test_fem.fem.sph_s2 = sph_s2
+        self.test_fem.fem.duration_enabled = True
+        duration = 2
+        # self.test_fem.fem.calculate_frame_rate = Mock()
+        self.test_fem.fem.set_duration(duration)
+        assert self.test_fem.fem.frame_rate == 7154.079227920547
+        assert self.test_fem.fem.number_frames == 14308
+        # self.test_fem.fem.calculate_frame_rate.assert_called()
 
-    # def test_poll_sensors_calls_self(self):
-    #     """Test poll_sensors() calls itself after 1 seconds."""
-    #     with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
-    #         self.test_fem.fem.hardware_connected = True
-    #         self.test_fem.fem.hardware_busy = False
-    #         self.test_fem.fem.poll_sensors()
+    def test_get_health(self):
+        """Test obtaining health variable works."""
+        health = False
+        self.test_fem.fem.health = health
+        assert self.test_fem.fem.get_health() is health
 
-    #         mock_loop.instance().call_later.assert_called_with(1.0, self.test_fem.fem.poll_sensors)
+    def test_poll_sensors_calls_self(self):
+        """Test poll_sensors() calls itself after 1 seconds."""
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            # self.test_fem.fem.hardware_connected = True
+            # self.test_fem.fem.hardware_busy = False
+            self.test_fem.fem.poll_sensors()
 
+            mock_loop.instance().call_later.assert_called_with(3.0, self.test_fem.fem.poll_sensors)
+
+    # # TODO: all three fails, fix this?
     # def test_connect_hardware_fails(self):
     #     """Test that connecting with hardware handles failure."""
     #     with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
 
     #         # Fein error connecting to camera
-    #         rdma_mock.side_effect = HexitecFemError()
+    #         # rdma_mock.side_effect = HexitecFemError()
+    #         self.test_fem.fem.power_up_modules = Mock()
+    #         self.test_fem.fem.power_up_modules.side_effect = HexitecFemError()
     #         self.test_fem.fem.connect_hardware()
 
     #         assert self.test_fem.fem._get_status_error() == "Failed to connect with camera: "
@@ -238,36 +257,107 @@ class TestFem(unittest.TestCase):
     #     self.test_fem.fem.connect_hardware("test")
     #     assert self.test_fem.fem._get_status_error() == "Connection already established"
 
-    # def test_connect_hardware(self):
-    #     """Test connecting with hardware works."""
-    #     with patch("hexitec.HexitecFem.RdmaUDP"):
+    def test_connect_hardware(self):
+        """Test connecting with hardware works."""
+        with patch("hexitec.HexitecFem.RdmaUDP"):
 
-    #         self.test_fem.fem.connect_hardware("test")
-    #         assert self.test_fem.fem.hardware_connected is True
+            self.test_fem.fem.connect_hardware("test")
+            assert self.test_fem.fem.hardware_connected is True
 
-    # def test_initialise_hardware_fails_if_not_connected(self):
-    #     """Test function fails when no connection established."""
-    #     self.test_fem.fem.initialise_hardware()
-    #     error = "Failed to initialise camera: No connection established"
-    #     assert self.test_fem.fem._get_status_error() == error
+    def test_initialise_hardware_fails_if_not_connected(self):
+        """Test function fails when no connection established."""
+        self.test_fem.fem.initialise_hardware()
+        error = "Failed to initialise camera: No connection established"
+        assert self.test_fem.fem._get_status_error() == error
 
-    # def test_initialise_hardware_fails_if_hardware_busy(self):
-    #     """Test function fails when hardware busy."""
-    #     self.test_fem.fem.hardware_connected = True
-    #     self.test_fem.fem.hardware_busy = True
-    #     self.test_fem.fem.initialise_hardware()
-    #     error = "Failed to initialise camera: Hardware sensors busy initialising"
-    #     assert self.test_fem.fem.status_error == error
+    def test_power_up_modules(self):
+        """Test function works."""
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.connect = Mock()
+            vsrs_selected = 0x3F
+            self.test_fem.fem.vsrs_selected = vsrs_selected
+            self.test_fem.fem.hardware_connected = False
+            self.test_fem.fem.x10g_rdma.enable_all_vsrs = Mock()
+            # self.test_fem.fem.x10g_rdma.power_status = Mock(return_value=vsrs_selected-1)
 
-    # def test_initialise_hardware_fails_unknown_exception(self):
-    #     """Test function fails unexpected exception."""
-    #     self.test_fem.fem.hardware_connected = True
-    #     self.test_fem.fem.hardware_busy = False
-    #     self.test_fem.fem.initialise_system = Mock()
-    #     self.test_fem.fem.initialise_system.side_effect = AttributeError()
-    #     self.test_fem.fem.initialise_hardware()
-    #     error = "Uncaught Exception; Camera initialisation failed: "
-    #     assert self.test_fem.fem.status_error == error
+            hvs_selected = 0x3F3F
+            self.test_fem.fem.x10g_rdma.enable_all_hvs = Mock()
+            self.test_fem.fem.x10g_rdma.power_status = Mock()
+            self.test_fem.fem.x10g_rdma.power_status.side_effect = [vsrs_selected, hvs_selected]
+
+            self.test_fem.fem.power_up_modules()
+            assert self.test_fem.fem.hardware_connected == True
+            mock_loop.instance().call_later.assert_called_with(10, self.test_fem.fem.cam_connect)
+
+    def test_power_up_modules_flags_vsr_unpowered(self):
+        """Test function will handle if not all of selected VSRs are powered on."""
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.connect = Mock()
+            vsrs_selected = 0x3F
+            hvs_selected = 0x3F3F
+            self.test_fem.fem.vsrs_selected = vsrs_selected
+            self.test_fem.fem.hardware_connected = False
+            self.test_fem.fem.x10g_rdma.enable_all_vsrs = Mock()
+            self.test_fem.fem.x10g_rdma.power_status = Mock()
+            self.test_fem.fem.x10g_rdma.power_status.side_effect = [vsrs_selected-1, hvs_selected]
+
+            self.test_fem.fem.x10g_rdma.enable_all_hvs = Mock()
+
+            with pytest.raises(HexitecFemError) as exc_info:
+                self.test_fem.fem.power_up_modules()
+            assert exc_info.type is HexitecFemError
+            assert exc_info.value.args[0] == "Powering VSRs Error, Expected 0x3F not 0x3E"
+
+    def test_power_up_modules_flags_hvs_unpowered(self):
+        """Test function will handle if not all of selected HVs are powered on."""
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.connect = Mock()
+            vsrs_selected = 0x3F
+            hvs_selected = 0x3F3F
+            self.test_fem.fem.vsrs_selected = vsrs_selected
+            self.test_fem.fem.hardware_connected = False
+            self.test_fem.fem.x10g_rdma.enable_all_vsrs = Mock()
+            self.test_fem.fem.x10g_rdma.power_status = Mock()
+            self.test_fem.fem.x10g_rdma.power_status.side_effect = [vsrs_selected, hvs_selected-256]
+
+            self.test_fem.fem.x10g_rdma.enable_all_hvs = Mock()
+
+            with pytest.raises(HexitecFemError) as exc_info:
+                self.test_fem.fem.power_up_modules()
+            assert exc_info.type is HexitecFemError
+            message = "Expected 0x3F3F not 0x3E3F"
+            assert exc_info.value.args[0] == "VSR(s) HV Error, {}".format(message)
+
+    def test_power_up_modules_flags_socket_error(self):
+        """Test function will handle if not all of selected HVs are powered on."""
+        self.test_fem.fem.connect = Mock()
+        self.test_fem.fem.connect.side_effect = socket_error()
+        self.test_fem.fem.hardware_connected = True
+        self.test_fem.fem.hardware_busy = True
+
+        with pytest.raises(HexitecFemError) as exc_info:
+            self.test_fem.fem.power_up_modules()
+        assert exc_info.type is HexitecFemError
+        assert self.test_fem.fem.hardware_connected is False
+        assert self.test_fem.fem.hardware_busy is False
+
+    def test_initialise_hardware_fails_if_hardware_busy(self):
+        """Test function fails when hardware busy."""
+        self.test_fem.fem.hardware_connected = True
+        self.test_fem.fem.hardware_busy = True
+        self.test_fem.fem.initialise_hardware()
+        error = "Failed to initialise camera: Can't initialise, Hardware busy"
+        assert self.test_fem.fem.status_error == error
+
+    def test_initialise_hardware_fails_unknown_exception(self):
+        """Test function fails unexpected exception."""
+        self.test_fem.fem.hardware_connected = True
+        self.test_fem.fem.hardware_busy = False
+        self.test_fem.fem.initialise_system = Mock()
+        self.test_fem.fem.initialise_system.side_effect = AttributeError()
+        self.test_fem.fem.initialise_hardware()
+        error = "Uncaught Exception; Camera initialisation failed: "
+        assert self.test_fem.fem.status_error == error
 
     # TODO: This unit test now redundant?
     # def test_initialise_hardware_handles_fudge_initialisation(self):

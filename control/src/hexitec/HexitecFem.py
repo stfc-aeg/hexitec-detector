@@ -382,22 +382,22 @@ class HexitecFem():
         """Cleanup connection."""
         self.disconnect()
 
-    def frame_gate_trigger(self):
-        """Reset monitors, pulse frame gate."""
-        # the reset of monitors suggested by Rob:
-        self.x10g_rdma.write(self.rdma_addr["reset_monitor"] + 0, 0x0, burst_len=1, comment='reset monitor off')
-        self.x10g_rdma.write(self.rdma_addr["reset_monitor"] + 0, 0x1, burst_len=1, comment='reset monitor on')
-        self.x10g_rdma.write(self.rdma_addr["reset_monitor"] + 0, 0x0, burst_len=1, comment='reset monitor off')
+    # def frame_gate_trigger(self):
+    #     """Reset monitors, pulse frame gate."""
+    #     # the reset of monitors suggested by Rob:
+    #     self.x10g_rdma.write(self.rdma_addr["reset_monitor"] + 0, 0x0, burst_len=1, comment='reset monitor off')
+    #     self.x10g_rdma.write(self.rdma_addr["reset_monitor"] + 0, 0x1, burst_len=1, comment='reset monitor on')
+    #     self.x10g_rdma.write(self.rdma_addr["reset_monitor"] + 0, 0x0, burst_len=1, comment='reset monitor off')
 
-        self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 0, 0x0, burst_len=1, comment='frame gate trigger off')
-        self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 0, 0x1, burst_len=1, comment='frame gate trigger on')
-        self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 0, 0x0, burst_len=1, comment='frame gate trigger off')
+    #     self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 0, 0x0, burst_len=1, comment='frame gate trigger off')
+    #     self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 0, 0x1, burst_len=1, comment='frame gate trigger on')
+    #     self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 0, 0x0, burst_len=1, comment='frame gate trigger off')
 
-    def frame_gate_settings(self, frame_number, frame_gap):
-        """Set frame gate settings."""
-        self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 1, frame_number, burst_len=1,
-                             comment='frame gate frame number')
-        self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 2, frame_gap, burst_len=1, comment='frame gate frame gap')
+    # def frame_gate_settings(self, frame_number, frame_gap):
+    #     """Set frame gate settings."""
+    #     self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 1, frame_number, burst_len=1,
+    #                          comment='frame gate frame number')
+    #     self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 2, frame_gap, burst_len=1, comment='frame gate frame gap')
 
     def _get_status_message(self):
         return self.status_message
