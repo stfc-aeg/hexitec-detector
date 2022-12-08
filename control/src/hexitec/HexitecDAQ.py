@@ -122,7 +122,7 @@ class HexitecDAQ():
         self.rows, self.columns = 160, 160
         self.pixels = self.rows * self.columns
         self.number_frames = 10
-        self.number_nodes = 1
+        self.number_nodes = 3
         # Status variables
         self.in_error = False
         self.daq_ready = False
@@ -718,6 +718,22 @@ class HexitecDAQ():
         # Finally, update own file_writing so FEM(s) know the status
         self.file_writing = writing
 
+        # TODO: Implement if each node should accumulate summed images data as a single image
+        # # Determine each node(s)' rank, Tell which node's
+        # # summed images plugin what frame number it should use
+        # fp_statuses = self.get_adapter_status("fp")
+        # rank = []
+        # node = 0
+        # for status in fp_statuses:
+        #     current_rank = status.get('hdf', None).get('rank')
+        #     # print("Rank: ", current_rank, " hdf writing: ", writing)
+        #     rank.append(current_rank)
+        #     command = "config/summed_image/" + str(node)
+        #     # request = ApiAdapterRequest(current_rank, content_type="application/json")
+        #     request.body = "{}".format(current_rank)
+        #     self.adapters["fp"].put(command, request)
+        # print(" Node(s) rank: {}".format(rank))
+
     # def _config_odin_data(self, adapter):
     #     print("_config_odin_data() self.config_files: {}".format(self.config_files))
     #     config = os.path.join(self.config_dir, self.config_files[adapter])
@@ -909,6 +925,17 @@ class HexitecDAQ():
             logging.error(error)
             self.parent.fem._set_status_error(error)
 
+        # Delete any existing datasets
+        command = "config/plugin"
+        request = ApiAdapterRequest('{"disconnect": "all"}', content_type="application/json")
+
+        response = self.adapters["fp"].put(command, request)
+        status_code = response.status_code
+        if (status_code != 200):
+            error = "Error {} deleting existing datasets in fp adapter".format(status_code)
+            logging.error(error)
+            self.parent.fem._set_status_error(error)
+
         self.extra_datasets = []
         self.master_dataset = "spectra_bins"
 
@@ -919,21 +946,11 @@ class HexitecDAQ():
             self.master_dataset = "raw_frames"
             self.extra_datasets.append(self.master_dataset)
 
-        # self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
-        #                                compression_type=self.compression_type,
-        #                                master_dataset=self.master_dataset,
-        #                                extra_datasets=self.extra_datasets,
-        #                                selected_os="CentOS",
-        #                                live_view_selected=True)
-        # store_config, execute_config, store_string, execute_string = self.gcf.generate_config_files()
-        live_view_selected=True
-
-        # print("\n\n\n  store: {}\n  exec:  {}\n\n\n".format(store_string, execute_string))
+        # Enable live view for first node only
+        live_view_selected = True
 
         # Loop over node(s)
         for index in range(self.number_nodes):
-            print("\n\tindex={}\n".format(index))
-            # Reinstate when /config/config/ strings will replace /config/config_file/
             self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
                                         compression_type=self.compression_type,
                                         master_dataset=self.master_dataset,
@@ -943,12 +960,8 @@ class HexitecDAQ():
             store_config, execute_config, store_string, execute_string = self.gcf.generate_config_files(index)
             live_view_selected = False
 
-            # command = "config/config/" #+ str(index)      # string
-            command = "config/config_file/" + str(index)   # file
-
-            # request = ApiAdapterRequest(store_string, content_type="application/json")        # string
-            # request = ApiAdapterRequest(dict(store_string), content_type="application/json")  # dict(string)
-            request = ApiAdapterRequest(store_config, content_type="application/json")          # file
+            command = "config/store/" + str(index)
+            request = ApiAdapterRequest(store_string, content_type="application/json")
 
             response = self.adapters["fp"].put(command, request)
             status_code = response.status_code
@@ -957,9 +970,8 @@ class HexitecDAQ():
                 logging.error(error)
                 self.parent.fem._set_status_error(error)
 
-            # request = ApiAdapterRequest(execute_string, content_type="application/json")        # string
-            # request = ApiAdapterRequest(dict(execute_string), content_type="application/json")  # dict(string)
-            request = ApiAdapterRequest(execute_config, content_type="application/json")          # file
+            command = "config/execute/" + str(index)
+            request = ApiAdapterRequest(execute_string, content_type="application/json")
 
             response = self.adapters["fp"].put(command, request)
             status_code = response.status_code
@@ -996,7 +1008,7 @@ class HexitecDAQ():
         else:
             self.plugin = "histogram"
 
-        # Temporary fix: hard code Extended packet headers OFF
-        command = "config/decoder_config/extended_packet_header"
-        request = ApiAdapterRequest("0", content_type="application/json")
-        self.adapters["fr"].put(command, request)
+        # # Temporary fix: hard code Extended packet headers OFF
+        # command = "config/decoder_config/extended_packet_header"
+        # request = ApiAdapterRequest("0", content_type="application/json")
+        # self.adapters["fr"].put(command, request)

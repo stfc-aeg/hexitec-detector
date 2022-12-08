@@ -21,7 +21,7 @@ namespace FrameProcessor
   HexitecReorderPlugin::HexitecReorderPlugin() :
       packets_lost_(0),
       frame_number_(0),
-      reset_frame_number_(true)
+      reset_frame_number_(false)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecReorderPlugin");

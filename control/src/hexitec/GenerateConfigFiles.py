@@ -114,7 +114,7 @@ class GenerateConfigFiles():
 
         # Generate a unique index name
         (blank, folder, filename) = store_temp_name.split("/")
-        self.index_name = filename
+        self.index_name = filename + str(id)
 
         # ---------------- Section for the store sequence ---------------- #
 
@@ -320,7 +320,7 @@ class GenerateConfigFiles():
                     {
                         "frame_frequency": 50,
                         "per_second": 0,
-                        "live_view_socket_addr": "tcp://127.0.0.1:5020",
+                        "live_view_socket_addr": "tcp://192.168.0.13:5020",
                         "dataset_name": "raw_frames"
                     }
                 }'''
@@ -420,8 +420,8 @@ class GenerateConfigFiles():
         finally:
             self.store_temp.close()
 
-        # The execute_config file is used to wipe any existing config, then load user config
-        execute_config = '''[
+        # The execute_string file is used to wipe any existing config, then load user config
+        execute_string = '''[
     {
         "plugin":
         {
@@ -441,13 +441,23 @@ class GenerateConfigFiles():
 
         # Put together the execute sequence file
         try:
-            self.execute_temp.writelines(execute_config)
+            self.execute_temp.writelines(execute_string)
         finally:
             self.execute_temp.close()
 
         store_string = store_sequence_preamble + store_plugin_paths + store_plugin_connect + store_plugin_config
 
-        return store_temp_name, execute_temp_name, store_string[1:-1], execute_config[1:-1]
+        # Remove "execute" key (but keep its contents) from .json file contents:
+        execute_preamble = execute_string.find("execute")
+        string_without_execute_key = execute_string[execute_preamble+9: -3]
+        execute_string_without_cr = "".join(string_without_execute_key.split())
+        # Configuring FP using strings require removal of "store" key (but keeping its contents)
+        # from .json equivalent, and removing the final two brackets:
+        preamble = store_string.find("store")
+        store_string = store_string[preamble+9: -4]
+        store_string_without_cr = "".join(store_string.split())
+
+        return store_temp_name, execute_temp_name, store_string_without_cr, execute_string_without_cr
 
 
 if __name__ == '__main__':  # pragma: no cover

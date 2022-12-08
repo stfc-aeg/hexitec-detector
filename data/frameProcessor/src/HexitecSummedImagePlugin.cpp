@@ -203,7 +203,8 @@ namespace FrameProcessor
           summed_image_meta.set_dimensions(dims);
           summed_image_meta.set_compression_type(no_compression);
           summed_image_meta.set_data_type(raw_32bit);
-          summed_image_meta.set_frame_number(images_written_);
+          // summed_image_meta.set_frame_number(images_written_);
+          summed_image_meta.set_frame_number(frame_number);
           summed_image_meta.set_dataset_name("summed_images");
 
           const std::size_t summed_image_size = image_width_ * image_height_ * sizeof(uint32_t);
@@ -228,7 +229,7 @@ namespace FrameProcessor
 
           const std::string& dataset_name = summed_image_meta.get_dataset_name();
           LOG4CXX_TRACE(logger_, "Pushing " << dataset_name << " dataset, frame number: " <<
-                        images_written_);
+                        summed_image_meta.get_frame_number());
           this->push(summed_frame);
           images_written_++;
         }
