@@ -50,7 +50,8 @@ class HexitecSanityChecker():
 
     def __del__(self):
         """."""
-        self.x10g_rdma.close()
+        if self.x10g_rdma is not None:
+            self.x10g_rdma.close()
 
     def connect(self):
         """Connect to the 10 G UDP control channel."""
@@ -74,7 +75,8 @@ class HexitecSanityChecker():
         # # print(scratch1)
         # scratch2 = self.x10g_rdma.read(0x00008038, burst_len=1, comment='Read Scratch Register 3')
         # scratch3 = self.x10g_rdma.read(0x0000803C, burst_len=1, comment='Read Scratch Register 4')
-        # print("Scratch: 0x{0:08x}{1:08x}{2:08x}{3:08X}".format(scratch3, scratch2, scratch1, scratch0))
+        # print("Scratch: 0x{0:08x}{1:08x}{2:08x}{3:08X}".format(
+        #     scratch3, scratch2, scratch1, scratch0))
         print("Scratch: 0x{0:08x}".format(scratch0))
 
     def write_scratch_registers(self):
@@ -125,8 +127,9 @@ class HexitecSanityChecker():
 
     def display_environs(self, read_sensors):
         """Display environmental data in human readable format."""
-        read_sensors = read_sensors[1:]  # Omit start of sequence character, matching existing 2x2 source code formatting
-        sensors_values = "{}".format(''.join([chr(x) for x in read_sensors]))   # Turn list of integers into ASCII string
+        read_sensors = read_sensors[1:]  # Omit start of seq char, matching 2x2 source code format
+        sensors_values = "{}".format(
+            ''.join([chr(x) for x in read_sensors]))   # Turn into ASCII string
         # print(" ASCII string: {}".format(sensors_values))
         # print(" ambient:           humidity:          asic1:             asic2:          adc: ")
         print(" ({0}) {1:3.3f} C.  ({2}) {3:3.3f} %.  ({4}) {5:3.3f} C.  ({6}) {7:3.3f}  ({8}) {9:3.3f} C.".format(
@@ -141,7 +144,8 @@ class HexitecSanityChecker():
         rx_pkt_done = 0
         counter = 0
         while not rx_pkt_done:
-            uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
+            uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = \
+                hxt.x10g_rdma.read_uart_status()
             counter += 1
             if counter > 15000:
                 raise Exception("Timed out waiting for UART data")
@@ -158,12 +162,14 @@ class HexitecSanityChecker():
         counter = 0
         rx_pkt_done = 0
         while not rx_pkt_done:
-            uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = self.x10g_rdma.read_uart_status()
+            uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = \
+                self.x10g_rdma.read_uart_status()
             counter += 1
             if counter == 15001:
                 break
         response = self.x10g_rdma.uart_rx(0x0)
-        # print("... receiving: {} ({})".format(' '.join("0x{0:02X}".format(x) for x in response), counter))
+        # print("... receiving: {} ({})".format(
+        #     ' '.join("0x{0:02X}".format(x) for x in response), counter))
         return response
         # return self.x10g_rdma.uart_rx(0x0)
 
@@ -189,31 +195,34 @@ class HexitecSanityChecker():
         """
         for msb in range(16):
             for lsb in range(16):
-                (vsr2, vsr1) = self.debug_register(self.HEX_ASCII_CODE[msb], self.HEX_ASCII_CODE[lsb])
-                print(" \t\t\t\t* Register: {}{}: VSR2: {}.{} VSR1: {}.{}".format(hex(msb), hex(lsb)[-1],
-                      chr(vsr2[0]), chr(vsr2[1]),
-                      chr(vsr1[0]), chr(vsr1[1])))
+                (vsr2, vsr1) = self.debug_register(
+                    self.HEX_ASCII_CODE[msb], self.HEX_ASCII_CODE[lsb])
+                print(" \t\t\t\t* Register: {}{}: VSR2: {}.{} VSR1: {}.{}".format(
+                    hex(msb), hex(lsb)[-1], chr(vsr2[0]), chr(vsr2[1]), chr(vsr1[0]), chr(vsr1[1])))
                 time.sleep(0.25)
 
     def get_vsr_register_value(self, vsr_number, address_high, address_low):
         """Read the VSR register At address_high, address_low."""
         self.send_cmd([vsr_number, self.READ_REG_VALUE, address_high, address_low])
-        resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
-        reply = resp[2:-1]                                      # Omit start char, and end char
-        reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
-        # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_high-0x30, address_low-0x30,
-        #       len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
+        resp = self.read_response()  # ie resp = [42, 144, 48, 49, 13]
+        # Omit start char, and end char:
+        reply = resp[2:-1]
+        # Turn list of integers into ASCII string:
+        reply = "{}".format(''.join([chr(x) for x in reply]))
+        print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(
+            address_high-0x30, address_low-0x30, len(resp),
+            ' '.join("0x{0:02X}".format(x) for x in resp)))
         return resp, reply
 
     def set_vsr_register_value(self, vsr_number, address_high, address_low, value_high, value_low):
         """Write the VSR register At address_high, address_low."""
-        # self.send_cmd([vsr_number, self.SET_REG_BIT, address_high, address_low, value_high, value_low])
-        # self.send_cmd([vsr_number, self.SEND_REG_BURST, address_high, address_low, value_high, value_low])
         self.send_cmd([vsr_number, 0x40, address_high, address_low, value_high, value_low])
         time.sleep(0.25)
-        resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
-        reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
-        reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
+        resp = self.read_response()  # ie resp = [42, 144, 48, 49, 13]
+        # Omit start char, vsr & register addresses, and end char:
+        reply = resp[4:-1]
+        # Turn list of integers into ASCII string:
+        reply = "{}".format(''.join([chr(x) for x in reply]))
         # print(" *** (W) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(
         #       address_high-0x30, address_low-0x30, len(read_sensors),
         #       ' '.join("0x{0:02X}".format(x) for x in resp)))
@@ -229,23 +238,24 @@ class HexitecSanityChecker():
         uart_rx_ctrl_addr = uart_rx_ctrl_offset
         print("aSpect_UART_Tx_Control: RESET")
         # hxt.x10g_rdma.write(0x8030, 0x10203040, burst_len=1, comment="Set Scratch Reg1 value"
-        self.x10g_rdma.write(uart_tx_ctrl_addr, uart_reset_mask, burst_len=1, comment="Apply UART Tx reset mask")
-        self.x10g_rdma.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Apply Tx deassert")
+        self.x10g_rdma.write(uart_tx_ctrl_addr, uart_reset_mask, burst_len=1, comment="UART Tx Rst")
+        self.x10g_rdma.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Tx deassert")
         # Allow reset to propagate through UART logic
         time.sleep(0.2)
         print("aSpect_UART_Rx_Control: RESET")
-        self.x10g_rdma.write(uart_rx_ctrl_addr, uart_reset_mask, burst_len=1, comment="Apply UART Rx reset mask")
-        self.x10g_rdma.write(uart_rx_ctrl_addr, deassert_all, burst_len=1, comment="Apply Rx deassert")
+        self.x10g_rdma.write(uart_rx_ctrl_addr, uart_reset_mask, burst_len=1, comment="UART Rx Rst")
+        self.x10g_rdma.write(uart_rx_ctrl_addr, deassert_all, burst_len=1, comment="Rx deassert")
         # Allow reset to propagate through UART logic
         time.sleep(0.2)
 
     def compare(self, description, value_a, value_b):
         """Determine whether value_a and value_b are same or different."""
         if value_a == value_b:
-            print("   {0} : PASSED.".format(description, value_a, value_b))
+            print("   {0} : PASSED.".format(description))
             # print("   {0} : PASSED. {1:X} == {2:X}".format(description, value_a, value_b))
         else:
-            print(" ! {0} : FAILED, Read: {1:X} != Expected: {2:X}".format(description, value_a, value_b))
+            print(" ! {0} : FAILED, Read: {1:X} != Expected: {2:X}".format(
+                description, value_a, value_b))
 
     def examine_whois_reply(self, response):
         """Examine WHOIS response from UART.
@@ -287,12 +297,13 @@ class HexitecSanityChecker():
             address_high-0x30, address_low-0x30, value_high, value_low))
         for index in range(8):
             print("Write S1 (Low) (Reg 002), values: {0:X}, {1:X}".format(value_high, value_low))
-            resp, reply = hxt.set_vsr_register_value(vsr_number, address_high, address_low, value_high, value_low)
+            resp, reply = hxt.set_vsr_register_value(
+                vsr_number, address_high, address_low, value_high, value_low)
             # print("   W.resp: {}. reply: {}".format(resp, reply))
             # print("   H: {} v {}, L: {} v {}".format(value_high, resp[4], value_low, resp[5]))
             # print("   W.H? {}, L? {}".format(value_high == resp[4], value_low == resp[5]))
             if (value_high != resp[4]) or (value_low != resp[5]):
-                print(" ! W Reg 0x{0}{1} FAILED, wrote: {2:X}, {3:X} but returned: {4:X} {5:X}".format(
+                print(" ! W Reg 0x{0}{1} FAILED, wrote: {2:X}, {3:X} acked: {4:X} {5:X}".format(
                     address_high-0x30, address_low-0x30, value_high, value_low, resp[4], resp[5]))
 
             resp, reply = hxt.get_vsr_register_value(vsr_number, address_high, address_low)
@@ -301,7 +312,7 @@ class HexitecSanityChecker():
             # print("   R. H: {} v {}, L: {} v {}".format(value_high, resp[2], value_low, resp[3]))
             # print("   R. H? {} L? {}".format(value_high == resp[2], value_low == resp[3]))
             if (value_high != resp[2]) or (value_low != resp[3]):
-                print(" ! R Reg 0x{0}{1} FAILED, expected: {2:X}, {3:X} but read: {4:X} {5:X}".format(
+                print(" ! R Reg 0x{0}{1} FAILED, expected: {2:X}, {3:X} got: {4:X} {5:X}".format(
                     address_high-0x30, address_low-0x30, value_high, value_low, resp[2], resp[3]))
             value_low += 1
 
@@ -317,10 +328,10 @@ if __name__ == '__main__':  # pragma: no cover
     esdg_lab = literal_eval(sys.argv[1])
     debug = literal_eval(sys.argv[2])
     unique_cmd_no = literal_eval(sys.argv[3])
-    hxt = HexitecSanityChecker(esdg_lab=esdg_lab, debug=debug, unique_cmd_no=unique_cmd_no)
-    hxt.connect()
-
     try:
+        hxt = HexitecSanityChecker(esdg_lab=esdg_lab, debug=debug, unique_cmd_no=unique_cmd_no)
+        hxt.connect()
+
         print(" * Reload bitstream before executing * ")
         print(" ------ Running Sanity Checker ------")
         expected_value = 0x0   # 0x1
@@ -328,27 +339,13 @@ if __name__ == '__main__':  # pragma: no cover
         if (read_value == expected_value):
             print("   VSRs Power Status: 0x{0:08X} - All unpowered.".format(read_value))
         else:
-            print(" ! VSR(s) already powered. Expected 0x{0:02X} not 0x{1:02X}".format(expected_value, read_value))
+            print(" ! VSR(s) already powered. Expected 0x{0:02X} not 0x{1:02X}".format(
+                expected_value, read_value))
     except socket.error as e:
         print(" Failed to establish connection with Hardware: {} ".format(e))
         sys.exit(-1)
 
     try:
-        (address_high, address_low) = (0x30, 0x32)
-        (value_high, value_low) = (0x30, 0x31)
-        print("Writing Register 0x{0}{1}, values: {2:X}, {3:X}".format(
-            address_high-0x30, address_low-0x30, value_high, value_low))
-        # print("Write S1 (Low) (Reg 002), values: {0:X}, {1:X}".format(value_high, value_low))
-        vsr_number = 0x90
-
-        hxt.send_cmd([vsr_number, 0x40, address_high, address_low, value_high, value_low])
-        time.sleep(0.25)
-        resp = hxt.read_response()                             # ie resp = [42, 144, 48, 49, 13]
-        reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
-        reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
-        print("R: {}. {}".format(resp, reply))
-        sys.exit(1)
-
         # VSR_ADDRESS = [0x90]
         # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
         print("Switch on VSRs..")
@@ -360,7 +357,8 @@ if __name__ == '__main__':  # pragma: no cover
         if (read_value == expected_value):
             print("   VSRs Power Status: 0x{0:08X} - All VSRs powered.".format(read_value))
         else:
-            print(" ! VSR Power Issue(s). Expected 0x{0:02X} not 0x{1:02X}".format(expected_value, read_value))
+            print(" ! VSR Power Issue(s). Expected 0x{0:02X} not 0x{1:02X}".format(
+                expected_value, read_value))
 
         this_delay = 10
         print("Waiting {} seconds.. (VSRs booting)".format(this_delay))
@@ -376,7 +374,8 @@ if __name__ == '__main__':  # pragma: no cover
         hxt.x10g_rdma.uart_tx([0xFF, 0xF7])
         time.sleep(1)
         read_sensors = hxt.x10g_rdma.uart_rx(0x0)
-        # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+        # print("Received ({}) from UART: {}".format(
+        #     len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
         # print(" unmolested: {}".format(read_sensors))
         hxt.examine_whois_reply(read_sensors)
 
@@ -406,20 +405,21 @@ if __name__ == '__main__':  # pragma: no cover
 
         new_value = 0x4000003320000011
         hxt.x10g_rdma.write(0x8030, new_value, burst_len=2, comment="Set Scratch Reg12 value")
-        scratch12 = hxt.x10g_rdma.read(0x00008030, burst_len=2, comment='Read Scratch Register 1 2')
+        scratch12 = hxt.x10g_rdma.read(0x00008030, burst_len=2, comment='Read Scratch Register 12')
         int_value = (scratch12[1] << 32) + scratch12[0]
         hxt.compare("Write Scratch Registers 1&2", int_value, new_value)
 
         new_value = 0x600005554000033322200001
         hxt.x10g_rdma.write(0x8030, new_value, burst_len=3, comment="Set Scratch Reg123 value")
-        scratch123 = hxt.x10g_rdma.read(0x00008030, burst_len=3, comment='Read Scratch Register 1 2 3')
+        scratch123 = hxt.x10g_rdma.read(0x00008030, burst_len=3, comment='Read Scratch Reg 123')
         int_value = (scratch123[2] << 64) + (scratch123[1] << 32) + scratch123[0]
         hxt.compare("Write Scratch Registers 1-3", int_value, new_value)
 
         new_value = 0x81657777666600054444000322220001
         hxt.x10g_rdma.write(0x8030, new_value, burst_len=4, comment="Set Scratch Reg1234 value")
-        scratch1234 = hxt.x10g_rdma.read(0x00008030, burst_len=4, comment='Read Scratch Register 1 2 3 4')
-        int_value = (scratch1234[3] << 96) + (scratch1234[2] << 64) + (scratch1234[1] << 32) + scratch1234[0]
+        scratch1234 = hxt.x10g_rdma.read(0x00008030, burst_len=4, comment='Read Scratch Reg 1234')
+        int_value = (scratch1234[3] << 96) + (scratch1234[2] << 64) + \
+                    (scratch1234[1] << 32) + scratch1234[0]
         hxt.compare("Write Scratch Registers 1-4", int_value, new_value)
 
         print(" ------ Environmental Data ------")
@@ -431,7 +431,9 @@ if __name__ == '__main__':  # pragma: no cover
             hxt.x10g_rdma.uart_tx([index, 0x52])
             hxt.await_uart_ready()
             read_sensors = hxt.x10g_rdma.uart_rx(0x0)
-            # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)), flush=True)
+            # print("Received ({}) from UART: {}".format(
+            #     len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)),
+            #     flush=True)
             # Display the environmentals values
             hxt.display_environs(read_sensors)
 
@@ -439,55 +441,10 @@ if __name__ == '__main__':  # pragma: no cover
         print("Entire loop took: {}".format(the_end - the_start))
 
         # Test writing and reading repeatedly to same register with incremental values
-        hxt.hammer_register()
+        # hxt.hammer_register()
+
+        hxt.disconnect()
 
     except (socket.error, struct.error) as e:
         print(" *** Unexpected exception: {} ***".format(e))
 
-        # # (address_high, address_low) = (0x30, 0x33)
-        # # (value_high, value_low) = (0x30, 0x31)
-        # # print("Write S1 (High) (register 003), values: {0:X}, {1:X}".format(value_high, value_low))
-        # # hxt.set_vsr_register_value(vsr_number, address_high, address_low, value_high, value_low)
-        # # time.sleep(0.25)
-
-        # # Readout S1 (High) (register 003)
-        # vsr_number = 0x90
-        # print("Readout S1 (High) (register 003)")
-        # (address_high, address_low) = (0x30, 0x33)
-        # hxt.get_vsr_register_value(vsr_number, address_high, address_low)
-
-        # # Readout S1_SPH (register 004)
-        # vsr_number = 0x90
-        # print("Readout S1_SPH (register 004)")
-        # (address_high, address_low) = (0x30, 0x34)
-        # hxt.get_vsr_register_value(vsr_number, address_high, address_low)
-
-        # # Readout SPH_S2 (register 005)
-        # vsr_number = 0x90
-        # print("Readout SPH_S2 (register 005)")
-        # (address_high, address_low) = (0x30, 0x35)
-        # hxt.get_vsr_register_value(vsr_number, address_high, address_low)
-
-    # uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = hxt.x10g_rdma.read_uart_status()
-    # print("      UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
-    #     0, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
-
-    # SCRATCH REGISTERS #
-
-    # for index in range(100):
-    #     # hxt.x10g_rdma.write(0x8030, 0x81657777666600054444000322220001, burst_len=4, comment="New Scratch Register1234 value")
-    #     # scratch1234 = hxt.x10g_rdma.read(0x00008030, burst_len=4, comment='Read Scratch Register 1, 2, 3, 4')
-    #     hxt.x10g_rdma.write(0x8030, 0x10203040, burst_len=1, comment="New Scratch Register1 value")
-    #     scratch0 = hxt.x10g_rdma.read(0x00008030, burst_len=1, comment='Read Scratch Register 1')
-    #     # print("Reg1: {0:08X}".format(scratch0))
-    #     hxt.x10g_rdma.write(0x8034, 0x71625344, burst_len=1, comment="New Scratch Register2 value")
-    #     scratch1 = hxt.x10g_rdma.read(0x00008034, burst_len=1, comment='Read Scratch Register 2')
-    #     # print("Reg2: {0:08X}".format(scratch1))
-    #     hxt.x10g_rdma.write(0x8038, 0xBEEFBEEF, burst_len=1, comment="New Scratch Register3 value")
-    #     scratch2 = hxt.x10g_rdma.read(0x00008038, burst_len=1, comment='Read Scratch Register 3')
-    #     # print("Reg3: {0:08X}".format(scratch2))
-    #     hxt.x10g_rdma.write(0x803C, 0xDEADDEAD, burst_len=1, comment="New Scratch Register4 value")
-    #     scratch3 = hxt.x10g_rdma.read(0x0000803C, burst_len=1, comment='Read Scratch Register 4')
-    #     print("{4:000} Scratch: 0x{0:08X}{1:08X}{2:08X}{3:08X}".format(scratch3[0], scratch2[0], scratch1[0], scratch0[0], index))
-
-    hxt.disconnect()

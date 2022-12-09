@@ -21,6 +21,7 @@ from odin.adapters.system_info import SystemInfo
 from .HexitecFem import HexitecFem
 from .HexitecDAQ import HexitecDAQ
 
+
 class HexitecAdapter(ApiAdapter):
     """
     Hexitec adapter class for the ODIN server.
@@ -501,12 +502,14 @@ class Hexitec():
         if duration_enable:
             self.set_duration(self.duration)
         else:
-            # print("\n\tadp.set_duration_enable({}) number_frames: {}\n".format(duration_enable, self.number_frames))
+            # print("\n\tadp.set_duration_enable({}) number_frames: {}\n".format(
+            #     duration_enable, self.number_frames))
             self.set_number_frames(self.number_frames)
 
     def set_number_frames(self, frames):
         """Set number of frames in DAQ, FEM."""
-        # print("\n\tadp.set_number_frames({}) -> number_frames: {}\n".format(frames, self.number_frames))
+        # print("\n\tadp.set_number_frames({}) -> number_frames: {}\n".format(
+        #     frames, self.number_frames))
         self.number_frames = frames
         # Update number of frames in Hardware, and (via DAQ) in histogram and hdf plugins
         self.fem.set_number_frames(self.number_frames)
@@ -516,7 +519,8 @@ class Hexitec():
         """Set duration, calculate frames from frame rate and update DAQ, FEM."""
         self.duration = duration
         self.fem.set_duration(self.duration)
-        # print("\n\tadp.set_duration({}) number_frames {} -> {}\n".format(duration, self.fem.get_number_frames(), self.number_frames))
+        # print("\n\tadp.set_duration({}) number_frames {} -> {}\n".format(
+        #     duration, self.fem.get_number_frames(), self.number_frames))
         self.number_frames = self.fem.get_number_frames()
         self.daq.set_number_frames(self.number_frames)
 

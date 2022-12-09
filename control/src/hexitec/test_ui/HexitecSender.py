@@ -64,7 +64,8 @@ class HexitecSender(object):
         if self.trailingPacketSize > 0:
             self.trailingPackets = 1
         self.totalPackets = self.primaryPackets + self.trailingPackets
-        print("primaryPackets: {} trailingPacketSize: {}".format(self.primaryPackets, self.trailingPacketSize))
+        print("primaryPackets: {} trailingPacketSize: {}".format(
+            self.primaryPackets, self.trailingPacketSize))
         print("totalFrameSize: {}".format(totalFrameSize))
         # print("totalPackets: {}".format(self.totalPackets))
 
@@ -73,7 +74,8 @@ class HexitecSender(object):
             file_contents = self.open_file()
             (images, rows, columns) = file_contents.shape
             self.totalBytesRead = images * rows * columns * bytesPerPixel
-            print("Read {} image(s), {} rows x {} columns totalling {} Bytes.".format(images, rows, columns, self.totalBytesRead))
+            print("Read {} image(s), {} rows x {} columns totalling {} Bytes.".format(
+                images, rows, columns, self.totalBytesRead))
             self.byteStream = file_contents.tobytes()
         else:
             print("Unable to open: {}. Does it exist?".format(self.filename))
@@ -137,7 +139,8 @@ class HexitecSender(object):
                     packetCounterFlags = self.EOF
                 # Build header matching requested data dimensions:
                 header = self.build_header(frame, packetCounter, packetCounterFlags)
-                # built_integer = int(header).to_bytes(self.HEADER_SIZE, 'little')     # Display as bytes str
+                # Display as bytes string:
+                # built_integer = int(header).to_bytes(self.HEADER_SIZE, 'little')
 
                 if (packetCounter < self.primaryPackets):
                     bytesToSend = 8000

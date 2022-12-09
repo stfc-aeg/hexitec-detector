@@ -111,7 +111,7 @@ class HexitecUdpProducer(object):
             # Append frame payload to frame data, discarding header
             frame_data += payload[HEADER_SIZE:]
 
-            # If this is an end of frame packet, convert frame data to numpy array and append to frame list
+            # If end of frame packet, convert frame data to numpy array and append to frame list
             if int(header[1]) & self.EOF:
                 frame = np.frombuffer(frame_data, dtype=np.uint16).reshape((80, 80))
                 assert frame.size == self.NPIXELS
@@ -121,7 +121,8 @@ class HexitecUdpProducer(object):
         # Convert frame list to 3D numpy array
         frames = np.array(frames)
 
-        print("Decoded {} frames from {} packets in PCAP file {}".format(num_frames, num_packets, self.filename))
+        print("Decoded {} frames from {} packets in PCAP file {}".format(
+            num_frames, num_packets, self.filename))
 
         return frames
 

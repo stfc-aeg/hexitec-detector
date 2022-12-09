@@ -80,7 +80,8 @@ class HexitecNodesProducer(object):
         totalFrameSize = self.NPIXELS * bytesPerPixel
         self.primaryPackets = totalFrameSize // 8000
         self.trailingPacketSize = totalFrameSize % 8000
-        # print("primaryPackets: {} trailingPacketSize: {}".format(self.primaryPackets, self.trailingPacketSize))
+        # print("primaryPackets: {} trailingPacketSize: {}".format(
+        #     self.primaryPackets, self.trailingPacketSize))
 
         if os.access(self.filename, os.R_OK):
             print("Selected", self.frames, "frames, ", bytesToRead, "bytes.")
@@ -120,7 +121,7 @@ class HexitecNodesProducer(object):
             # Append frame payload to frame data, including header
             frame_data += payload[HEADER_SIZE:]
 
-            # If this is an end of frame packet, convert frame data to numpy array and append to frame list
+            # If end of frame packet, convert frame data to numpy array and append to frame list
             if int(header[0]) & self.EOF:
                 frame = np.frombuffer(frame_data, dtype=np.uint16)
                 assert frame.size == self.NPIXELS
@@ -130,7 +131,8 @@ class HexitecNodesProducer(object):
         # Convert frame list to 3D numpy array
         frames = np.array(frames)
 
-        print("Decoded {} frames from {} packets in PCAP file {}".format(num_frames, num_packets, self.filename))
+        print("Decoded {} frames from {} packets in PCAP file {}".format(
+            num_frames, num_packets, self.filename))
 
         return frames
 
@@ -192,7 +194,8 @@ class HexitecNodesProducer(object):
                 # bytesSent += sock.sendto(packet, (self.host, self.port[frame % nodes]))
                 # # print("Sending frame {} to port {}".format(frame, self.port[frame % nodes]))
                 bytesSent += sock.sendto(packet, (self.host[frame % nodes], self.port[0]))
-                # print("Sending frame {} to host:port {}:{}".format(frame, self.host[frame % nodes], self.port[0]))
+                # print("Sending frame {} to host:port {}:{}".format(
+                #     frame, self.host[frame % nodes], self.port[0]))
 
                 bytesRemaining -= bytesToSend
                 packetCounter += 1

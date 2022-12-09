@@ -72,7 +72,7 @@ class RdmaUDP(object):
 
         try:
             self.socket.bind((local_ip, local_port))
-        except socket.error as e:
+        except (socket.error, OSError) as e:
             error_string = "  Error: '{}' ".format(e)
             error_string += "on TX Socket: {}:{}".format(local_ip, local_port)
             print(error_string)
