@@ -80,7 +80,6 @@ class DAQTestFixture(object):
                             "hdf",
                             "view"
                         ]
-
                     },
                     "hdf": {
                         "frames_written": 0,
@@ -93,12 +92,12 @@ class DAQTestFixture(object):
                         "bin_start": 0,
                         "bin_end": 8000,
                         "bin_width": 10.0,
-                        "flush_histograms": 0,
                         "frames_processed": 0,
                         "histograms_written": 0,
                         "histogram_index": 1000,
                         "pass_processed": False,
-                        "pass_raw": False
+                        "pass_raw": False,
+                        "eoa_processed": False
                     }
                 }
             ]
@@ -525,7 +524,8 @@ class TestDAQ(unittest.TestCase):
             self.test_daq.daq.plugin = "hdf"
             self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.processing_check_loop()
-            mock_loop.instance().call_later.assert_called_with(1.0,
+            mock_loop.instance().add_callback.assert_called_with(self.test_daq.daq.flush_data)
+            mock_loop.instance().call_later.assert_called_with(0.1,
                                                                self.test_daq.daq.hdf_closing_loop)
 
     def test_processing_check_loop_handles_missing_frames(self):
@@ -549,15 +549,60 @@ class TestDAQ(unittest.TestCase):
             self.test_daq.daq.processing_check_loop()
             assert pytest.approx(self.test_daq.daq.processed_timestamp) == time.time()
 
-    def test_stop_acquisition(self):
-        """Test function stops acquisition."""
-        assert self.test_daq.daq.file_writing is False
+    def test_flush_data(self):
+        """Test function flushes out histogram data, calls stop_acquisition."""
+        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
+            self.test_daq.daq.flush_data()
+            self.test_daq.fake_fp.put.assert_has_calls([
+                # TODO: REPLACE ANY WITH ApiAdapterRequest
+                call("config/inject_eoa", ANY)
+            ])
+            mock_loop.instance().call_later.assert_called_with(0.02,
+                                                               self.test_daq.daq.monitor_eoa_progress)
 
-        self.test_daq.daq.file_writing = True
-        assert self.test_daq.daq.file_writing is True
+    def test_monitor_eoa_progress_handles_processed(self):
+        """Test function calls stop_acquisition if eoa completed"""
+        self.test_daq.daq.get_eoa_processed_status = Mock(return_value=True)
+        self.test_daq.daq.stop_acquisition = Mock()
+        self.test_daq.daq.monitor_eoa_progress()
+        self.test_daq.daq.stop_acquisition.assert_called()
 
+    def test_monitor_eoa_progress_handles_in_progress(self):
+        """Test function calls itself if eoa not completed"""
+        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
+            self.test_daq.daq.monitor_eoa_progress()
+            mock_loop.instance().call_later.assert_called_with(0.25,
+                                                               self.test_daq.daq.monitor_eoa_progress)
+
+    def test_stop_acquisition_handles_file_shut(self):
+        """Test function wraps up acquisition if file shut."""
+        self.test_daq.daq.check_hdf_write_statuses = Mock(return_value=False)
+        self.test_daq.daq.set_file_writing = Mock()
+        self.test_daq.daq.hdf_retry = 3
         self.test_daq.daq.stop_acquisition()
+        assert self.test_daq.daq.hdf_retry == 0
         assert self.test_daq.daq.file_writing is False
+        self.test_daq.daq.set_file_writing.assert_called()
+
+    def test_stop_acquisition_handles_file_not_shut(self):
+        """Test function retries in a second if file not shut."""
+        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
+            self.test_daq.daq.set_file_writing = Mock()
+            self.test_daq.daq.stop_acquisition()
+            # assert self.test_daq.daq.hdf_retry == 1
+            self.test_daq.daq.set_file_writing.assert_not_called()
+            mock_loop.instance().call_later.assert_called_with(1.0,
+                                                               self.test_daq.daq.stop_acquisition)
+
+    def test_stop_acquisition_handles_file_failed_to_shut(self):
+        """Test function flags error fifth failed attempt."""
+        self.test_daq.daq.set_file_writing = Mock()
+        self.test_daq.daq.hdf_retry = 5
+        self.test_daq.daq.stop_acquisition()
+        error = "DAQ timed out, file didn't close"
+        assert self.test_daq.daq.hdf_retry == 0
+        assert self.test_daq.daq.parent.fem.status_error == error
+        self.test_daq.daq.set_file_writing.assert_called()
 
     def test_save_dict_contents_to_group_works(self):
         """Test save_dict_contents_to_file function."""
@@ -694,6 +739,7 @@ class TestDAQ(unittest.TestCase):
                 self.test_daq.daq.hdf_retry = 6
                 self.test_daq.daq.hdf_closing_loop()
                 error = "Error reopening HDF file:"
+                assert self.test_daq.daq.hdf_retry == 0
                 assert self.test_daq.daq.in_progress is False
                 assert self.test_daq.adapter.hexitec.fem.status_error[:25] == error
 

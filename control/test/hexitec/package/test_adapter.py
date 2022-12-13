@@ -606,6 +606,16 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.acquisition("data")
         self.test_adapter.detector.daq.prepare_daq.assert_not_called()
 
+    def test_detector_acquisition_prevents_acquisition_if_odin_not_ready(self):
+        """Test adapter won't start acquisition while FR/FP not ready."""
+        self.test_adapter.detector.daq.configure_mock(
+            in_progress=False
+        )
+        self.test_adapter.detector.daq.prepare_odin = Mock(return_value=False)
+        self.test_adapter.detector.acquisition("data")
+        self.test_adapter.detector.daq.prepare_odin.assert_called()
+        self.test_adapter.detector.daq.prepare_daq.assert_not_called()
+
     def test_await_daq_ready_waits_for_daq(self):
         """Test adapter's await_daq_ready waits for DAQ to be ready."""
         self.test_adapter.detector.daq.configure_mock(

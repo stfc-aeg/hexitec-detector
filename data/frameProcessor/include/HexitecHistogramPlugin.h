@@ -59,8 +59,6 @@ namespace FrameProcessor
       static const std::string CONFIG_BIN_END;
       /** Configuration constant for bin width **/
       static const std::string CONFIG_BIN_WIDTH;
-      /** Configuration constant for flush_histograms **/
-      static const std::string CONFIG_FLUSH_HISTOS;
       /** Configuration constant for reset_histograms **/
       static const std::string CONFIG_RESET_HISTOS;
       /** Configuration constant for Hardware sensors **/
@@ -103,9 +101,6 @@ namespace FrameProcessor
       int max_frames_received_;
       /** Count number of frames processed **/
       int frames_processed_;
-      /** Flush (remaining data to) histograms **/
-      // bool flush_histograms_;
-      int flush_histograms_;
       int reset_histograms_;
       int histograms_written_;
       int histogram_index_;
@@ -118,6 +113,7 @@ namespace FrameProcessor
       long long number_bins_;
       void initialiseHistograms();
       void writeHistogramsToDisk();
+      bool end_of_acquisition_processed_;
       /// Debug only:
       int debugCounter;
   };

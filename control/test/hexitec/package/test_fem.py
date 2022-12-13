@@ -75,8 +75,7 @@ class TestFem(unittest.TestCase):
 
             mock_rdma.assert_called_with(self.test_fem.ip, 61649,
                                          self.test_fem.ip, 61648,
-                                         9000, 0.5, False,
-                                         unique_cmd_no=False)
+                                         9000, 0.5, False)
             assert self.test_fem.fem.x10g_rdma.ack is False
 
     def test_connect_fails(self):
@@ -210,7 +209,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.sph_s2 = sph_s2
         self.test_fem.fem.duration_enabled = True
         duration = 2
-        # self.test_fem.fem.calculate_frame_rate = Mock()
+        self.test_fem.fem.calculate_frame_rate()    # = Mock()
         self.test_fem.fem.set_duration(duration)
         assert self.test_fem.fem.frame_rate == 7154.079227920547
         assert self.test_fem.fem.number_frames == 14308

@@ -164,9 +164,9 @@ class GenerateConfigFiles():
         # Extract configuration from HexitecDAQ config
         d = self.param_tree['config']
 
-        # Sort parameter tree dict into R, T, N, C, A, D, H, SI, LV plugin order
+        # Sort parameter tree dict into R, T, N, C, A, D, SI, H, LV plugin order
         keyorder = ['reorder', 'threshold', 'next_frame', 'calibration', 'addition',
-                    'discrimination', 'histogram', 'summed_image', 'live_view']
+                    'discrimination', 'summed_image', 'histogram', 'live_view']
         config = OrderedDict(sorted(d.items(), key=lambda i: keyorder.index(i[0])))
 
         # Determine plugin chain (to configure frameProcessor)

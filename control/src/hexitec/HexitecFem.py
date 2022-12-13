@@ -133,7 +133,7 @@ class HexitecFem():
         self.row_s1 = 135
         self.s1_sph = 1
         self.sph_s2 = 5
-        self.frame_rate = 0
+        self.frame_rate = 1589.34   # Corresponds to the above three settings
         self.duration = 1
         self.duration_enabled = False
         self.duration_remaining = 0
@@ -330,7 +330,7 @@ class HexitecFem():
         try:
             self.x10g_rdma = RdmaUDP(self.server_ctrl_ip_addr, 61649,
                                      self.camera_ctrl_ip_addr, 61648,
-                                     9000, 0.5, self.debug, unique_cmd_no=False)
+                                     9000, 0.5, self.debug)
             self.x10g_rdma.setDebug(False)
             self.x10g_rdma.ack = False  # True
         except socket_error as e:
