@@ -460,7 +460,6 @@ class Hexitec():
 
         Recalculate collect and bias timing, update watchdog timeout.
         """
-        self.software_state = "Initialising"
         # TODO: Must recalculate collect and bias time both here and in initialise();
         #   Logically, commit_configuration() is the best place but it updates variables before
         #   values read from .ini file
@@ -485,7 +484,6 @@ class Hexitec():
         else:
             # Nothing in progress, disconnect hardware
             self.fem.disconnect_hardware(msg)
-        self.software_state = "Disconnected"
         # Reset system status
         self.status_error = ""
         self.status_message = ""
@@ -540,7 +538,6 @@ class Hexitec():
 
     def acquisition(self, put_data=None):
         """Instruct DAQ and FEM to acquire data."""
-        self.software_state = "Acquiring"
         # Clear (any previous) daq error
         self.daq.in_error = False
 
@@ -699,7 +696,6 @@ class Hexitec():
 
     def _collect_offsets(self, msg):
         """Instruct FEM to collect offsets."""
-        self.software_state = "Offsets"
         self.fem.collect_offsets()
 
     def commit_configuration(self, msg):
@@ -719,7 +715,6 @@ class Hexitec():
 
     def environs(self, msg):
         """Readout environmental data."""
-        self.software_state = "Environs"
         self.fem.environs()
 
     def get(self, path):

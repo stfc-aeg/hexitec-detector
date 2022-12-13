@@ -342,6 +342,7 @@ class HexitecFem():
         """Read environmental sensors and updates parameter tree with results."""
         try:
             self.environs_in_progress = True
+            self.parent.software_state = "Environs"
             # Note once, when firmware was built
             if self.read_firmware_version:
                 fw_date = self.x10g_rdma.read(0x8008, burst_len=1, comment='FIRMWARE DATE')
@@ -530,6 +531,7 @@ class HexitecFem():
             else:
                 self._set_status_error("")
             self.hardware_busy = True
+            self.parent.software_state = "Initialising"
             self.initialise_system()
         except HexitecFemError as e:
             self._set_status_error("Failed to initialise camera: %s" % str(e))
@@ -551,6 +553,7 @@ class HexitecFem():
             if self.ignore_busy:
                 self.ignore_busy = False
             self.hardware_busy = True
+            self.parent.software_state = "Acquiring"
             self._set_status_message("Acquiring data..")
             print("\n fem.collect_data()")
             self.acquire_data()
@@ -575,6 +578,7 @@ class HexitecFem():
             self._set_status_message("Disconnecting camera..")
             self.cam_disconnect()
             self._set_status_message("Camera disconnected")
+            self.parent.software_state = "Disconnected"
         except HexitecFemError as e:
             self._set_status_error("Failed to disconnect: %s" % str(e))
             logging.error("%s" % str(e))
@@ -820,8 +824,8 @@ class HexitecFem():
                 raise HexitecFemError("Can't collect offsets, Hardware busy")
             else:
                 self._set_status_error("")
-
             self.hardware_busy = True
+            self.parent.software_state = "Offsets"
 
             vsrs_register_24 = self.read_receive_from_all(HexitecFem.READ_REG_VALUE, 0x32, 0x34)
             logging.debug("Reading back register 24; {}".format(vsrs_register_24))
