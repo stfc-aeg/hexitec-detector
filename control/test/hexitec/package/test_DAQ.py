@@ -880,6 +880,12 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq._set_frame_frequency(frame_frequency)
         assert frame_frequency is self.test_daq.daq.frame_frequency
 
+    def test_set_live_view_socket_addr(self):
+        """Test function sets socket address."""
+        socket_addr = "tcp://10.20.30.40:5020"
+        self.test_daq.daq._set_live_view_socket_addr(socket_addr)
+        assert socket_addr is self.test_daq.daq.live_view_socket_addr
+
     def test_set_per_second(self):
         """Test function sets per second."""
         per_second = 5
@@ -1096,6 +1102,9 @@ class TestDAQ(unittest.TestCase):
                  'histogram':
                     {'bin_end': 800, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
                      'pass_processed': False, 'pass_raw': True},
+                 'live_view':
+                    {'dataset_name': 'summed_spectra', 'frame_frequency': 39,
+                     'live_view_socket_addr': 'tcp://127.0.0.1:5020', 'per_second': 1},
                  'next_frame': {'enable': False},
                  'threshold':
                     {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 10},

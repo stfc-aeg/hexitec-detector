@@ -181,6 +181,8 @@ class LiveViewer(object):
         self.bin_width = 10.0
         self.recalculate_bins()
         self.img_data = np.arange(0, self.number_bins, 1)
+        # Assuming one-dimensional data, may change
+        self.image_dims = 1
 
         self.rendered_image = self.render_image()
 
@@ -248,6 +250,9 @@ class LiveViewer(object):
         # First part will be the json header from the live view, second part is the raw image data
         header = json_decode(msg[0])
 
+        # Determine number of dimensions in data
+        self.image_dims = len(header['shape'])
+
         # json_decode returns dictionary encoded in unicode. Convert to normal strings if necessary.
         header = convert_unicode_to_string(header)
         logging.debug("Got image with header: %s", header)
@@ -257,10 +262,18 @@ class LiveViewer(object):
         dtype = header['dtype']
         if dtype == 'float':
             dtype = 'float32'
-        # print("\n\n ***\n")
-        # create a np array of the image data, of type specified in the frame header
-        self.img_data = np.fromstring(msg[1], dtype=np.dtype(dtype))
-        # int(header["shape"][0]) # Help determine number of bins? e.g. 800
+
+        if self.image_dims == 1:
+            # create a np array of the image data, of type specified in the frame header
+            self.img_data = np.fromstring(msg[1], dtype=np.dtype(dtype))
+            # int(header["shape"][0]) # Help determine number of bins? e.g. 800
+        elif self.image_dims == 2:
+            # create a np array of the image data, of type specified in the frame header
+            img_data = np.fromstring(msg[1], dtype=np.dtype(dtype))
+            self.img_data = img_data.reshape([int(header["shape"][0]), int(header["shape"][1])])
+
+        else:
+            raise Exception("Unexpected dataset size: {}".format(self.image_dims))
 
         self.header = header
         self.rendered_image = self.render_image(
@@ -278,64 +291,58 @@ class LiveViewer(object):
         :return: The rendered image binary data, encoded into a string so it can be returned
         by a GET request.
         """
-        # if colormap is None:
-        #     colormap = self.selected_colormap
+        # logging.debug("  Expected {} got {}".format(self.number_bins, len(self.img_data)))
+        if self.image_dims == 1:
+            self.recalculate_bins()
+            # Handle summed_spectra (One dimensional) dataset
+            xpoints = np.array(range(0, self.number_bins))
+            fig, ax = plt.subplots()
+            plt.plot(xpoints, self.img_data)
+            ax.set_xlabel('Number of bins')
+            ax.set_ylabel('Hits')
+            timestamp = '%s' % (datetime.now().strftime('%Y%m%d_%H%M%S.%f'))
+            ax.set_title(r'Summed_spectra ({})'.format(timestamp))
+            # Enforcing plot limits redundant?
+            plt.xlim(0, self.number_bins)
+            ymin = self.img_data.min()
+            ymax = self.img_data.max()
+            ymax = ymax + round(ymax * 0.1)
+            if ymin == ymax:
+                ymax = ymax + 1
+            plt.ylim(ymin, ymax)
+            encoded_image = io.BytesIO()
+            plt.savefig(encoded_image, format='png')
+            plt.close()
+            return encoded_image.getvalue()
+        elif self.image_dims == 2:
+            if colormap is None:
+                colormap = self.selected_colormap
 
-        # if clip_min is not None and clip_max is not None:
-        #     if clip_min > clip_max:
-        #         clip_min = None
-        #         clip_max = None
-        #         logging.warning("Clip minimum cannot be more than clip maximum")
+            if clip_min is not None and clip_max is not None:
+                if clip_min > clip_max:
+                    clip_min = None
+                    clip_max = None
+                    logging.warning("Clip minimum cannot be more than clip maximum")
 
-        # if clip_min is not None or clip_max is not None:
-        #     img_clipped = np.clip(self.img_data, clip_min, clip_max)  # clip image
+            if clip_min is not None or clip_max is not None:
+                img_clipped = np.clip(self.img_data, clip_min, clip_max)  # clip image
 
-        # else:
-        #     img_clipped = self.img_data
+            else:
+                img_clipped = self.img_data
 
-        # Scale to 0-255 for colormap
-        # img_scaled = self.scale_array(img_clipped, 0, 255).astype(dtype=np.uint8)
+            # Scale to 0-255 for colormap
+            img_scaled = self.scale_array(img_clipped, 0, 255).astype(dtype=np.uint8)
 
-        # Apply colormap
-        # cv2_colormap = self.cv2_colormaps[self.colormap_options[colormap]]
-        # img_colormapped = cv2.applyColorMap(img_scaled, cv2_colormap)
+            # Apply colormap
+            cv2_colormap = self.cv2_colormaps[self.colormap_options[colormap]]
+            img_colormapped = cv2.applyColorMap(img_scaled, cv2_colormap)
 
-        # # Most time consuming step, depending on image size and the type of image
-        # img_encode = cv2.imencode(
-        #     '.png', img_colormapped, params=[cv2.IMWRITE_PNG_COMPRESSION, 0])[1]
-        # return img_encode.tostring()
-
-        # print("\n\n *** -------------------------- ***\n\n")
-        # bins = 8000//10
-        self.recalculate_bins()
-        xpoints = np.array(range(0, self.number_bins))
-        fig, ax = plt.subplots()
-        plt.plot(xpoints, self.img_data)
-        ax.set_xlabel('Number of bins')
-        ax.set_ylabel('Hits')
-        timestamp = '%s' % (datetime.now().strftime('%Y%m%d_%H%M%S.%f'))
-        ax.set_title(r'Summed_spectra ({})'.format(timestamp))
-        # Enforcing plot limits redundant?
-        plt.xlim(0, self.number_bins)
-        ymin = self.img_data.min()
-        ymax = self.img_data.max()
-        ymax = ymax + round(ymax * 0.1)
-        if ymin == ymax:
-            ymax = ymax + 1
-        # print("  x values: ", xpoints[:100])
-        # print("  y values: ", self.img_data[:200])
-        # print("  x min, max: ", 0, self.number_bins)
-        # print("  y min, max: ", ymin, ymax)
-        plt.ylim(ymin, ymax)
-        encoded_image = io.BytesIO()
-        plt.savefig(encoded_image, format='png')
-        plt.close()
-        # encoded_image.seek(0)
-        # # Debugging purposes:
-        # with open("frommem.png", "wb") as f:
-        #   f.write(encoded_image.read())
-
-        return encoded_image.getvalue()
+            # Most time consuming step, depending on image size and the type of image
+            img_encode = cv2.imencode(
+                '.png', img_colormapped, params=[cv2.IMWRITE_PNG_COMPRESSION, 0])[1]
+            return img_encode.tostring()
+        else:
+            raise Exception("Unexpected dataset size: {}".format(self.image_dims))
 
     @staticmethod
     def scale_array(src, tmin, tmax):

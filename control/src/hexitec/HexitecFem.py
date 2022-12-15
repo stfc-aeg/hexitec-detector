@@ -25,6 +25,7 @@ from tornado.ioloop import IOLoop
 from tornado.concurrent import run_on_executor
 from concurrent import futures
 
+
 class HexitecFem():
     """
     Hexitec Fem class. Represents a single FEM-II module.
@@ -351,11 +352,12 @@ class HexitecFem():
                 fw_time = fw_time[0]
                 fw_time = "{0:06X}".format(fw_time)
                 fw_date = "{0:08X}".format(fw_date)
-                year = fw_date[0:4]    # year
-                month = fw_date[4:6]    # month
-                day = fw_date[6:8]    # day
+                year = fw_date[0:4]
+                month = fw_date[4:6]
+                day = fw_date[6:8]
                 self.firmware_date = "{0:.2}/{1:.2}/{2:.4}".format(day, month, year)
-                self.firmware_time = "{0:.2}:{1:.2}:{2:.4}".format(fw_time[0:2], fw_time[2:4], fw_time[4:6])
+                self.firmware_time = "{0:.2}:{1:.2}:{2:.4}".format(fw_time[0:2], fw_time[2:4],
+                                                                   fw_time[4:6])
                 self.read_firmware_version = False
             # beginning = time.time()
             vsr = self.vsr_addr
@@ -439,7 +441,8 @@ class HexitecFem():
         """Set duration, calculate frames to acquire using frame rate."""
         if self.frame_rate == 0:
             self.calculate_frame_rate()
-        # print("\n\tfem.set_duration({}) frames {}\n".format(duration, self.duration * self.frame_rate))
+        # print("\n\tfem.set_duration({}) frames {}\n".format(duration,
+        #                                                     self.duration * self.frame_rate))
         self.duration = duration
         frames = self.duration * self.frame_rate
         self.number_frames = int(round(frames))
@@ -453,12 +456,12 @@ class HexitecFem():
         # IOLoop.instance().call_later(4.0, self.poll_sensors)  # If polling env data
         IOLoop.instance().add_callback(self.poll_sensors)   # Not polling sensors
 
-    #TODO: redundant ?
+    # TODO: redundant ?
     def poll_sensors(self):
         """Poll hardware while connected but not busy initialising, collecting offsets, etc."""
         # if self.hardware_connected and (self.hardware_busy is False):
-            # self.read_sensors()
-            # print(" * poll_sensors() not reading sensors *")
+        #     self.read_sensors()
+        #     print(" * poll_sensors() not reading sensors *")
         IOLoop.instance().call_later(3.0, self.poll_sensors)
 
     # @run_on_executor(executor='thread_executor')
@@ -709,7 +712,7 @@ class HexitecFem():
                 self.acquire_data_completed()
                 return
             else:
-                # Temporary hack - Wait until (curl) hardware finished sending data (simulated for now) #
+                # Temporary hack - Wait until hardware finished sending data (simulated for now) #
                 # reply = self.x10g_rdma.read(0x60000014, burst_len=1, comment='Check data transfer completed?')
                 if self.all_data_sent == 0:
                     # print(" *** Awaiting data.. ***")
@@ -861,7 +864,7 @@ class HexitecFem():
                     logging.debug("Register 0x89: {0}, Done? {1} Timing: {2:2.5} s".format(vsrs_register_89,
                                   dc_captured, time.time() - poll_beginning))
                 if time.time() - poll_beginning > timeout:
-                    raise HexitecFemError("Dark images collection timed out. VSRs' R.89: {}".format(vsrs_register_89))
+                    raise HexitecFemError("Dark images timed out. R.89: {}".format(vsrs_register_89))
             # poll_ending = time.time()
             # print(" *** collect offsets polling took: {0} seconds @ {1:4.1f}Hz**".format(poll_ending - poll_beginning,
             #     self.parent.fem.frame_rate))
@@ -902,7 +905,8 @@ class HexitecFem():
             logging.error("%s" % str(e))
         self.hardware_busy = False
 
-    def load_enables_settings(self, number_registers, address_h, address_l, enables_settings, enables_defaults):
+    def load_enables_settings(self, number_registers, address_h, address_l,
+                              enables_settings, enables_defaults):
         """Load 20 bytes into registers starting from address_h, address_l.
 
         address_h, address_l is the VSR register to target.
@@ -921,24 +925,25 @@ class HexitecFem():
             # self.block_write_custom_length(self.vsr_addr, number_registers, address_h, address_l, register_values)
             self.enables_write_and_read_verify(self.vsr_addr, address_h, address_l, register_values)
         else:
-            # print("  EMPTY INI FILE ... defaults: {}  ".format(' '.join("0x{0:02X}".format(x) for x in enables_defaults)))
             # No ini file loaded, use default values
             # self.block_write_custom_length(self.vsr_addr, number_registers, address_h, address_l, enables_defaults)
             self.enables_write_and_read_verify(self.vsr_addr, address_h, address_l, enables_defaults)
 
     def enables_write_and_read_verify(self, vsr, address_h, address_l, write_list):
-        """."""
+        """Write enables to a block of registers, confirm written ok."""
         number_registers = 10
         self.block_write_custom_length(vsr, number_registers, address_h, address_l, write_list)
 
-        resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
+        resp_list, reply_list = self.block_read_and_response(vsr, number_registers,
+                                                             address_h, address_l)
         read_list = []
         for a, b in resp_list:
             read_list.append(a)
             read_list.append(b)
         if not (write_list == read_list):
             # Check again:
-            resp_list, reply_list = self.block_read_and_response(vsr, number_registers, address_h, address_l)
+            resp_list, reply_list = self.block_read_and_response(vsr, number_registers,
+                                                                 address_h, address_l)
             read_list = []
             for a, b in resp_list:
                 read_list.append(a)
@@ -959,7 +964,7 @@ class HexitecFem():
             raise HexitecFemError("Unknown VSR address! (%s)" % self.vsr_addr)
         # Address 0x90 = vsr1, 0x91 = vsr2, .. , 0x95 = vsr6. Therefore:
         vsr = self.vsr_addr - 143
-        number_registers = 10
+        num_regs = 10
 
         logging.debug("Loading Power, Cal and Read Enables")
         # logging.debug("Column Read Enable")
@@ -968,13 +973,13 @@ class HexitecFem():
         asic1_col_read_enable = self._extract_80_bits("ColumnEn_", vsr, 1, "Channel")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        self.load_enables_settings(number_registers, 0x36, 0x31, asic1_col_read_enable, enables_defaults)
+        self.load_enables_settings(num_regs, 0x36, 0x31, asic1_col_read_enable, enables_defaults)
 
         # Column Read Enable ASIC2 (Reg 0xC2)
         asic2_col_read_enable = self._extract_80_bits("ColumnEn_", vsr, 2, "Channel")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        self.load_enables_settings(number_registers, 0x43, 0x32, asic2_col_read_enable, enables_defaults)
+        self.load_enables_settings(num_regs, 0x43, 0x32, asic2_col_read_enable, enables_defaults)
 
         logging.debug("Column Power Enable")
 
@@ -982,13 +987,13 @@ class HexitecFem():
         asic1_col_power_enable = self._extract_80_bits("ColumnPwr", vsr, 1, "Channel")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        self.load_enables_settings(number_registers, 0x34, 0x44, asic1_col_power_enable, enables_defaults)
+        self.load_enables_settings(num_regs, 0x34, 0x44, asic1_col_power_enable, enables_defaults)
 
         # Column Power Enable ASIC2 (Reg 0xAE)
         asic2_col_power_enable = self._extract_80_bits("ColumnPwr", vsr, 2, "Channel")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        self.load_enables_settings(number_registers, 0x41, 0x45, asic2_col_power_enable, enables_defaults)
+        self.load_enables_settings(num_regs, 0x41, 0x45, asic2_col_power_enable, enables_defaults)
 
         logging.debug("Column Calibration Enable")
 
@@ -996,13 +1001,13 @@ class HexitecFem():
         asic1_col_cal_enable = self._extract_80_bits("ColumnCal", vsr, 1, "Channel")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        self.load_enables_settings(number_registers, 0x35, 0x37, asic1_col_cal_enable, enables_defaults)
+        self.load_enables_settings(num_regs, 0x35, 0x37, asic1_col_cal_enable, enables_defaults)
 
         # Column Calibrate Enable ASIC2 (Reg 0xB8)
         asic2_col_cal_enable = self._extract_80_bits("ColumnCal", vsr, 2, "Channel")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        self.load_enables_settings(number_registers, 0x42, 0x38, asic2_col_cal_enable, enables_defaults)
+        self.load_enables_settings(num_regs, 0x42, 0x38, asic2_col_cal_enable, enables_defaults)
 
         logging.debug("Row Read Enable")
 
@@ -1010,13 +1015,13 @@ class HexitecFem():
         asic1_row_enable = self._extract_80_bits("RowEn_", vsr, 1, "Block")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        self.load_enables_settings(number_registers, 0x34, 0x33, asic1_row_enable, enables_defaults)
+        self.load_enables_settings(num_regs, 0x34, 0x33, asic1_row_enable, enables_defaults)
 
         # Row Read Enable ASIC2 (Reg 0xA4)
         asic2_row_enable = self._extract_80_bits("RowEn_", vsr, 2, "Block")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        self.load_enables_settings(number_registers, 0x41, 0x34, asic2_row_enable, enables_defaults)
+        self.load_enables_settings(num_regs, 0x41, 0x34, asic2_row_enable, enables_defaults)
 
         logging.debug("Row Power Enable")
 
@@ -1024,13 +1029,13 @@ class HexitecFem():
         asic1_row_power_enable = self._extract_80_bits("RowPwr", vsr, 1, "Block")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        self.load_enables_settings(number_registers, 0x32, 0x46, asic1_row_power_enable, enables_defaults)
+        self.load_enables_settings(num_regs, 0x32, 0x46, asic1_row_power_enable, enables_defaults)
 
         # Row Power Enable ASIC2 (Reg 0x90)
         asic2_row_power_enable = self._extract_80_bits("RowPwr", vsr, 2, "Block")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        self.load_enables_settings(number_registers, 0x39, 0x30, asic2_row_power_enable, enables_defaults)
+        self.load_enables_settings(num_regs, 0x39, 0x30, asic2_row_power_enable, enables_defaults)
 
         logging.debug("Row Calibration Enable")
 
@@ -1038,13 +1043,13 @@ class HexitecFem():
         asic1_row_cal_enable = self._extract_80_bits("RowCal", vsr, 1, "Block")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        self.load_enables_settings(number_registers, 0x33, 0x39, asic1_row_cal_enable, enables_defaults)
+        self.load_enables_settings(num_regs, 0x33, 0x39, asic1_row_cal_enable, enables_defaults)
 
         # Row Calibrate Enable ASIC2 (Reg 0x9A)
         asic2_row_cal_enable = self._extract_80_bits("RowCal", vsr, 2, "Block")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        self.load_enables_settings(number_registers, 0x39, 0x41, asic2_row_cal_enable, enables_defaults)
+        self.load_enables_settings(num_regs, 0x39, 0x41, asic2_row_cal_enable, enables_defaults)
 
         logging.debug("Power, Cal and Read Enables have been loaded")
 
@@ -1058,9 +1063,11 @@ class HexitecFem():
     def get_vsr_register_value(self, vsr_number, address_h, address_l):
         """Read the VSR register At address_h, address_l."""
         self.send_cmd([vsr_number, self.READ_REG_VALUE, address_h, address_l])
-        resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
-        reply = resp[2:-1]                                      # Omit start char, vsr & register addresses, and end char
-        reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
+        resp = self.read_response()  # ie resp = [42, 144, 48, 49, 13]
+        # Omit start char, vsr & register addresses, and end char
+        reply = resp[2:-1]
+        # Turn list of integers into ASCII string
+        reply = "{}".format(''.join([chr(x) for x in reply]))
         # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_h-0x30, address_l-0x30,
         #       len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
         return resp, reply
@@ -1107,7 +1114,7 @@ class HexitecFem():
                         time.sleep(0.2)
                         time_taken += 0.2
                     if time_taken > 3.0:
-                        raise HexitecFemError("Timed out polling register 0x89; PLL remains disabled")
+                        raise HexitecFemError("Timed out polling register 0x89;PLL still disabled")
 
             logging.debug("set re_EN_TRAINING '1'")
             # training_en_mask = 0x10
@@ -1131,7 +1138,7 @@ class HexitecFem():
                     logging.debug("VSR{0} Locked (0x{1:X})".format(vsr-143, locked))
                 else:
                     logging.error("VSR{0} incomplete lock! (0x{1:X})".format(vsr-143, locked))
-                    # raise HexitecFemError("VSR{0} failed to lock! (0x{1:X})".format(vsr-143, locked))
+                    # raise HexitecFemError("VSR{0} didn't lock! (0x{1:X})".format(vsr-143, locked))
                 vsr_status_addr += 4
 
             self._set_status_message("Initialisation completed. VSRs configured.")
@@ -1143,7 +1150,7 @@ class HexitecFem():
             reg07 = []
             reg89 = []
             # print("VSR Row S1: (High, Low). S1Sph  SphS2:  adc clk delay: . FVAL/LVAL:  VCAL2, (H, L) ")
-            print("VSR Row S1: (H, L). S1Sph  SphS2:  adc clk dly: . FVAL/LVAL:  VCAL2, (H, L) Gain")
+            print("VSR Row S1: (H, L). S1Sph  SphS2: adc clk dly: . FVAL/LVAL:  VCAL2 (H, L) Gain")
             for vsr in self.VSR_ADDRESS:
                 r7_list, r7_value = self.read_register07(vsr)
                 reg07.append(r7_value)
@@ -1159,7 +1166,7 @@ class HexitecFem():
                 vcal_high_resp, vcal_high_reply = self.read_and_response(vsr, 0x31, 0x39)  # VCAL2 -> VCAL1 high byte
                 vcal_low_resp, vcal_low_reply = self.read_and_response(vsr, 0x31, 0x38)  # VCAL2 -> VCAL1 low byte
                 gain_resp, gain_reply = self.read_and_response(vsr, 0x30, 0x36)  # Gain
-                print(" {}        {}  {}     {}     {}          {}             {}             {} {}  {}".format(
+                print(" {}           {} {}    {}     {}        {}             {}            {} {} {}".format(
                       vsr-143, s1_high_reply, s1_low_reply,
                       sph_reply,
                       s2_reply,
@@ -1252,11 +1259,11 @@ class HexitecFem():
         self.write_and_response(vsr, 0x30, 0x34, value_004[0], value_004[1], masked=masked, delay=delayed)     # S1Sph
         self.write_and_response(vsr, 0x30, 0x35, value_005[0], value_005[1], masked=masked, delay=delayed)     # SphS2
         # TODO: ADDITIONALLY ADDED, IS THIS NEEDED OR NOT: ??
-        self.write_and_response(vsr, 0x30, 0x36, value_006[0], value_006[1], delay=delayed)     # Gain
-        # self.write_and_response(vsr, 0x30, 0x39, value_009[0], value_009[1], delay=delayed)     # ADC Clock Delay
+        self.write_and_response(vsr, 0x30, 0x36, value_006[0], value_006[1], delay=delayed)  # Gain
+        # self.write_and_response(vsr, 0x30, 0x39, value_009[0], value_009[1], delay=delayed)  # ADC Clock Delay
         self.send_cmd([vsr, 0x42, 0x30, 0x39, value_009[0], value_009[1]])
         self.read_response()
-        # self.write_and_response(vsr, 0x30, 0x45, value_00E[0], value_00E[1], delay=delayed)     # FVAL/LVAL Delay
+        # self.write_and_response(vsr, 0x30, 0x45, value_00E[0], value_00E[1], delay=delayed)  # FVAL/LVAL Delay
         self.send_cmd([vsr, 0x42, 0x30, 0x45, value_00E[0], value_00E[1]])
         self.read_response()
         # self.write_and_response(vsr, 0x31, 0x42, 0x30, 0x38)    # SM wait Low Row, 8 bits
@@ -1294,9 +1301,11 @@ class HexitecFem():
         90	43	24	20	;Enable Vcal
         90	42	24	20	;Disable Vcal
         """
-        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x32, False)    # Disable Vcal/Capture Avg Picture (False=don't mask)
+        # Disable Vcal/Capture Avg Picture (False=don't mask)
+        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x32, False)
         # print("Disable Vcal/En DC spectroscopic mode")
-        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x38, False)    # Disable Vcal/En DC spectroscopic mode (False=don't mask)
+        # Disable Vcal/En DC spectroscopic mode (False=don't mask)
+        self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x38, False)
         logging.debug("Enable Training")
         self.write_and_response(vsr, 0x30, 0x31, 0x38, 0x30)    # Enable Training
         # self.send_cmd([vsr, 0x42, 0x30, 0x31, 0x38, 0x30])
@@ -1315,8 +1324,8 @@ class HexitecFem():
         # self.write_and_response(vsr, 0x32, 0x34, 0x32, 0x30)     # Disable Vcal
 
         """MR's tcl script also also set these two:"""
-        # set queue_1 { { 0x40 0x01 0x30                                              "Disable_Training" } \
-        #             { 0x40 0x0A 0x01                                              "Enable_Triggered_SM_Start" }
+        # set queue_1 { { 0x40 0x01 0x30    "Disable_Training" } \
+        #             { 0x40 0x0A 0x01      "Enable_Triggered_SM_Start" }
         # }
 
     def read_and_response(self, vsr, address_h, address_l, delay=False):
@@ -1326,14 +1335,18 @@ class HexitecFem():
         self.send_cmd([vsr, 0x41, address_h, address_l])
         if delay:
             time.sleep(0.1)
-        resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
-        reply = resp[2:-1]                                      # Omit start char, vsr address and end char
-        reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
+        resp = self.read_response()  # ie resp = [42, 144, 48, 49, 13]
+        # Omit start char, vsr address and end char
+        reply = resp[2:-1]
+        # Turn list of integers into ASCII string
+        reply = "{}".format(''.join([chr(x) for x in reply]))
         # print(" RR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
         return resp, reply
 
-    def write_and_response(self, vsr, address_h, address_l, value_h, value_l, masked=True, delay=False):
-        """Write value_h, value_l to address_h, address_l of vsr, if not masked then register value overwritten."""
+    def write_and_response(self, vsr, address_h, address_l, value_h, value_l,
+                           masked=True, delay=False):
+        """Write value_h, value_l to address_h, address_l of vsr, if not masked
+        then register value overwritten."""
         resp, reply = self.read_and_response(vsr, address_h, address_l)
         resp = resp[2:-1]   # Extract payload
         if masked:
@@ -1344,38 +1357,46 @@ class HexitecFem():
         self.send_cmd([vsr, 0x40, address_h, address_l, value_h, value_l])
         if delay:
             time.sleep(0.1)
-        resp = self.read_response()                             # ie resp = [42, 144, 48, 49, 13]
+        resp = self.read_response()  # ie resp = [42, 144, 48, 49, 13]
         if delay:
             time.sleep(0.1)
-        reply = resp[4:-1]                                      # Omit start char, vsr & register addresses, and end char
-        reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
+        reply = resp[4:-1]  # Omit start char, vsr & register addresses, and end char
+        # Turn list of integers into ASCII string
+        reply = "{}".format(''.join([chr(x) for x in reply]))
         # print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
         if ((resp[4] != value_h) or (resp[5] != value_l)):
             print("H? {} L? {}".format(resp[4] == value_h, resp[5] == value_l))
-            print("WaR. reply: {} (resp: {}) VERSUS value_h: {} value_l: {}".format(reply, resp, value_h, value_l))
-            print("WaR. (resp: {} {}) VERSUS value_h: {} value_l: {}".format(resp[4], resp[5], value_h, value_l))
+            print("WaR. reply: {} (resp: {}) VS H: {} L: {}".format(reply, resp, value_h, value_l))
+            print("WaR. (resp: {} {}) VS H: {} L: {}".format(resp[4], resp[5], value_h, value_l))
             raise HexitecFemError("Readback value did not match written!")
         return resp, reply
 
-    def block_write_and_response(self, vsr, number_registers, address_h, address_l, value_h, value_l):
-        """Write value_h, value_l to address_h, address_l of vsr, spanning number_registers."""
-        most_significant, least_significant = self.expand_addresses(number_registers, address_h, address_l)
+    def block_write_and_response(self, vsr, number_registers, address_h, address_l,
+                                 value_h, value_l):
+        """Write value_h, value_l to address_h, address_l of vsr, span number_registers."""
+        most_significant, least_significant = self.expand_addresses(number_registers,
+                                                                    address_h, address_l)
         for index in range(number_registers):
-            # print("   BWaR Write: {} {} {} {} {}".format(vsr, most_significant[index], least_significant[index], value_h, value_l))
-            self.write_and_response(vsr, most_significant[index], least_significant[index], value_h, value_l, False)
+            # print("   BWaR Write: {} {} {} {} {}".format(vsr, most_significant[index],
+            #                                              least_significant[index], value_h,
+            #                                              value_l))
+            self.write_and_response(vsr, most_significant[index], least_significant[index],
+                                    value_h, value_l, False)
 
     def block_write_custom_length(self, vsr, number_registers, address_h, address_l, write_values):
-        """Write write_values starting with address_h, address_l of vsr, spanning number_registers."""
+        """Write write_values starting with address_h, address_l of vsr, span number_registers."""
         if (number_registers * 2) != len(write_values):
             print("Mismatch! number_registers ({}) isn't half of write_values ({}).".format(number_registers, len(write_values)))
             return -1
         values_list = write_values.copy()
-        most_significant, least_significant = self.expand_addresses(number_registers, address_h, address_l)
+        most_significant, least_significant = self.expand_addresses(number_registers, address_h,
+                                                                    address_l)
         for index in range(number_registers):
             value_h = values_list.pop(0)
             value_l = values_list.pop(0)
             # print("   BWCL Write: {0:X} {1:X} {2:X} {3:X} {4:X}".format(vsr, most_significant[index], least_significant[index], value_h, value_l))
-            self.write_and_response(vsr, most_significant[index], least_significant[index], value_h, value_l, False)
+            self.write_and_response(vsr, most_significant[index], least_significant[index],
+                                    value_h, value_l, False)
 
     def expand_addresses(self, number_registers, address_h, address_l):
         """Expand addresses by the number_registers specified.
@@ -1402,11 +1423,13 @@ class HexitecFem():
 
     def block_read_and_response(self, vsr, number_registers, address_h, address_l):
         """Read from address_h, address_l of vsr, covering number_registers registers."""
-        most_significant, least_significant = self.expand_addresses(number_registers, address_h, address_l)
+        most_significant, least_significant = self.expand_addresses(number_registers, address_h,
+                                                                    address_l)
         resp_list = []
         reply_list = []
         for index in range(number_registers):
-            resp, reply = self.read_and_response(vsr, most_significant[index], least_significant[index])
+            resp, reply = self.read_and_response(vsr, most_significant[index],
+                                                 least_significant[index])
             # print(" BRaR: {} and {}".format(resp, reply))
             resp_list.append(resp[2:-1])
             reply_list.append(reply)
@@ -1444,11 +1467,11 @@ class HexitecFem():
 
         # print(" *** umid_value: {} vcal_value: {}".format(umid_value, vcal_value))
         self.send_cmd([vsr_address, HexitecFem.WRITE_DAC_VAL,
-                       vcal[0], vcal[1], vcal[2], vcal[3],          # Vcal, e.g. 0x0111 =: 0.2V
-                       umid[0], umid[1], umid[2], umid[3],          # Umid, e.g. 0x0555 =: 1.0V
-                       hv[0], hv[1], hv[2], hv[3],                  # reserve1, 0x0555 =: 1V (HV ~-250V)
-                       dctrl[0], dctrl[1], dctrl[2], dctrl[3],      # DET ctrl, 0x000
-                       rsrv2[0], rsrv2[1], rsrv2[2], rsrv2[3]])     # reserve2, 0x08E8 =: 1.67V
+                       vcal[0], vcal[1], vcal[2], vcal[3],       # Vcal, e.g. 0x0111 = 0.2V
+                       umid[0], umid[1], umid[2], umid[3],       # Umid, e.g. 0x0555 = 1.0V
+                       hv[0], hv[1], hv[2], hv[3],               # reserve1, 0x0555 = 1V (HV ~-250)
+                       dctrl[0], dctrl[1], dctrl[2], dctrl[3],   # DET ctrl, 0x000
+                       rsrv2[0], rsrv2[1], rsrv2[2], rsrv2[3]])  # reserve2, 0x08E8 = 1.67V
         self.read_response()
         logging.debug("DAC values set")
 
@@ -1472,7 +1495,7 @@ class HexitecFem():
         self.read_response()
 
         logging.debug("Write ADC register")     # 90 53 16 09   ;Write ADC Register
-        self.send_cmd([self.vsr_addr, 0x53, 0x31, 0x36, 0x30, 0x39])  # Works as well as the one below
+        self.send_cmd([self.vsr_addr, 0x53, 0x31, 0x36, 0x30, 0x39])  # Works just as the one below
         self.read_response()
         # self.write_and_response(self.vsr_addr, 0x31, 0x36, 0x30, 0x39)
 
@@ -1587,8 +1610,9 @@ class HexitecFem():
         # sensors_values = sensors_values.strip()
         read_sensors = self.read_response()
         # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
-        read_sensors = read_sensors[1:]     # Omit start of sequence character, matching existing 2x2 source code formatting
-        sensors_values = self.convert_list_to_string(read_sensors)   # Turn list of integers into ASCII string
+        read_sensors = read_sensors[1:]  # Omit start of sequence char, matches existing 2x2 source
+        # Turn list of integers into ASCII string
+        sensors_values = self.convert_list_to_string(read_sensors)
         if len(sensors_values) != 50:
             logging.warning("VSR 0x{0:X}: Received incomplete power data".format(self.vsr_addr))
             return None
@@ -1641,10 +1665,11 @@ class HexitecFem():
         read_sensors = self.read_response()
         # print("Received ({0}) from 0x{1:02X}: {2}".format(len(read_sensors), self.vsr_addr, ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
         if len(read_sensors) != 25:
-            logging.warning("VSR 0x{0:X}: Received incomplete environmental data".format(self.vsr_addr))
+            logging.warning("VSR 0x{0:X}: Received incomplete environ data".format(self.vsr_addr))
             return None
-        read_sensors = read_sensors[1:]     # Omit start of sequence character, matching existing 2x2 source code formatting
-        sensors_values = self.convert_list_to_string(read_sensors)   # Turn list of integers into ASCII string
+        read_sensors = read_sensors[1:]  # Omit start of sequence char, matches existing 2x2 source
+        # Turn list of integers into ASCII string
+        sensors_values = self.convert_list_to_string(read_sensors)
         # print(" ASCII string: {}".format(sensors_values))
 
         if self.debug:
@@ -1656,11 +1681,16 @@ class HexitecFem():
         asic1_hex = sensors_values[9:13]
         asic2_hex = sensors_values[13:17]
         adc_hex = sensors_values[17:21]
-        # print(" * ambient_hex:  {} -> {} Celsius".format(sensors_values[1:5], self.get_ambient_temperature(sensors_values[1:5])))
-        # print(" * humidity_hex: {} -> {}".format(sensors_values[5:9], self.get_humidity(sensors_values[5:9])))
-        # print(" * asic1_hex:    {} -> {} Celsius".format(sensors_values[9:13], self.get_asic_temperature(sensors_values[9:13])))
-        # print(" * asic2_hex:    {} -> {} Celsius".format(sensors_values[13:17], self.get_asic_temperature(sensors_values[13:17])))
-        # print(" * adc_hex:      {} -> {} Celsius".format(sensors_values[17:21], self.get_adc_temperature(sensors_values[17:21])))
+        print(" * amb_hex:  {} -> {} C".format(sensors_values[1:5],
+                                               self.get_ambient_temperature(sensors_values[1:5])))
+        print(" * hum_hex:  {} -> {}".format(sensors_values[5:9],
+                                             self.get_humidity(sensors_values[5:9])))
+        print(" * asic1_hex:{} -> {} C".format(sensors_values[9:13],
+                                               self.get_asic_temperature(sensors_values[9:13])))
+        print(" * asic2_hex:{} -> {} C".format(sensors_values[13:17],
+                                               self.get_asic_temperature(sensors_values[13:17])))
+        print(" * adc_hex:  {} -> {} C".format(sensors_values[17:21],
+                                               self.get_adc_temperature(sensors_values[17:21])))
 
         if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
             self.vsr1_ambient = self.get_ambient_temperature(ambient_hex)
@@ -1782,7 +1812,7 @@ class HexitecFem():
         self.bias_level = self._extract_integer(self.hexitec_parameters,
                                                 'Control-Settings/HV_Bias', bit_range=15)
         self.vsrs_selected = self._extract_integer(self.hexitec_parameters,
-                                                'Control-Settings/VSRS_selected', bit_range=6)
+                                                   'Control-Settings/VSRS_selected', bit_range=6)
 
         print("row_s1: {} from {}".format(self.row_s1, self._extract_integer(self.hexitec_parameters, 'Control-Settings/Row -> S1', bit_range=14)))
         print("s1_sph: {} from {}".format(self.s1_sph, self._extract_integer(self.hexitec_parameters, 'Control-Settings/S1 -> Sph', bit_range=6)))
@@ -1991,7 +2021,7 @@ class HexitecFem():
         low_int = int(low_string, 16)
         high_encoded = self.HEX_ASCII_CODE[high_int]
         low_encoded = self.HEX_ASCII_CODE[low_int]
-        # print(" *** convert_to_aspect_format({}) -> {}, {}".format(value, high_encoded, low_encoded))
+        # print(" *** conv_to_aspect_..({}) -> {}, {}".format(value, high_encoded, low_encoded))
         return high_encoded, low_encoded
 
     def read_ini_file(self, filename, parameter_dict, debug=False):
@@ -2067,15 +2097,19 @@ class HexitecFem():
         try:
             for msb in range(1):
                 for lsb in range(2, 6):
-                    (vsr2, vsr1) = self.debug_register(self.HEX_ASCII_CODE[msb], self.HEX_ASCII_CODE[lsb])
-                    print("  * Register: {}{}: VSR2: {}.{} VSR1: {}.{}".format(hex(msb), hex(lsb)[-1],
+                    (vsr2, vsr1) = self.debug_register(self.HEX_ASCII_CODE[msb],
+                                                       self.HEX_ASCII_CODE[lsb])
+                    print("  * Register: {}{}: VSR2: {}.{} VSR1: {}.{}".format(hex(msb),
+                          hex(lsb)[-1],
                           chr(vsr2[0]), chr(vsr2[1]),
                           chr(vsr1[0]), chr(vsr1[1])))
                     time.sleep(0.25)
             # for msb in range(16):
             #     for lsb in range(16):
-            #         (vsr2, vsr1) = self.debug_register(self.HEX_ASCII_CODE[msb], self.HEX_ASCII_CODE[lsb])
-            #         print(" \t\t\t\t* Register: {}{}: VSR2: {}.{} VSR1: {}.{}".format(hex(msb), hex(lsb)[-1],
+            #         (vsr2, vsr1) = self.debug_register(self.HEX_ASCII_CODE[msb],
+            #             self.HEX_ASCII_CODE[lsb])
+            #         print(" \t* Register: {}{}: VSR2: {}.{} VSR1: {}.{}".format(hex(msb),
+            #             hex(lsb)[-1],
             #             chr(vsr2[0]), chr(vsr2[1]),
             #             chr(vsr1[0]), chr(vsr1[1])))
             #         time.sleep(0.25)
@@ -2138,6 +2172,7 @@ class HexitecFem():
     def environs(self):
         """Readout environmental data."""
         IOLoop.instance().add_callback(self.read_sensors)
+
 
 class HexitecFemError(Exception):
     """Simple exception class for HexitecFem to wrap lower-level exceptions."""

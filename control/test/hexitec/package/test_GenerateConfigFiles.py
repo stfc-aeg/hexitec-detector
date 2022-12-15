@@ -16,25 +16,31 @@ class ObjectTestFixture(object):
     def __init__(self, selected_os="CentOS", live_view_selected=True):
         """Initialise object."""
         param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
-                      'sensors_layout': '1x1', 'receiver':
-                      {'config_file': '', 'configured': False, 'connected': False},
-                      'status': {'in_progress': False, 'daq_ready': False},
-                      # The 'config' nested dictionary control which plugin(s) are loaded:
-                      'config':
-                      {'calibration':
-                       {'enable': True, 'intercepts_filename': '', 'gradients_filename': ''},
-                       'addition':
-                       {'enable': True, 'pixel_grid_size': 3},
-                       'discrimination': {'enable': False, 'pixel_grid_size': 5},
-                       'histogram':
-                       {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
+                    'sensors_layout': '2x2', 'receiver':
+                    {'config_file': '', 'configured': False, 'connected': False},
+                    'status': {'in_progress': False, 'daq_ready': False},
+                    # The 'config' nested dictionary control which plugin(s) are loaded:
+                    'config':
+                    {'calibration':
+                    {'enable': True, 'intercepts_filename': '', 'gradients_filename': ''},
+                    'addition':
+                    {'enable': True, 'pixel_grid_size': 3},
+                    'discrimination': {'enable': False, 'pixel_grid_size': 5},
+                    'histogram':
+                    {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
                         'pass_processed': True, 'pass_raw': True},
-                       'next_frame': {'enable': False},
-                       'threshold':
-                       {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'},
-                       'summed_image': {'threshold_lower': 120, 'threshold_upper': 4800}
-                       },
-                      'processor': {'config_file': '', 'configured': False, 'connected': False}}
+                    'live_view':
+                    {'dataset_name': 'summed_spectra', 'frame_frequency': 39,
+                        'live_view_socket_addr': 'tcp://127.0.0.1:5020', 'per_second': 1},
+                    'next_frame': {'enable': True},
+                    'threshold':
+                    {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'},
+                    'summed_image': {
+                        'threshold_lower': 120,
+                        'threshold_upper': 4800,
+                        'image_frequency': 1}
+                    },
+                    'processor': {'config_file': '', 'configured': False, 'connected': False}}
 
         bin_end = param_tree['config']['histogram']['bin_end']
         bin_start = param_tree['config']['histogram']['bin_start']
@@ -119,6 +125,32 @@ class TestObject(unittest.TestCase):
 
         histogram_config = self.test_detector_adapter.adapter.histogram_settings(settings)
         assert histogram_config == correct_histogram_settings
+
+    def test_live_view_settings_fails_invalid_config(self):
+        """Test function fails on bad settings."""
+        settings = {'bad_key_name': 99}
+
+        with self.assertRaises(KeyError):
+            self.test_detector_adapter.adapter.live_view_settings(settings)
+
+    def test_live_view_settings(self):
+        """Test function ok with valid settings."""
+        settings = {'frame_frequency': 5, 'per_second': 1,
+                        'live_view_socket_addr': 'tcp://192.168.0.13:5020',
+                        'dataset_name': 'processed_frames'}
+
+        correct_live_view_settings = ''',
+                {
+                    "live_view":
+                    {
+                        "frame_frequency": 5,
+                        "per_second": 1,
+                        "live_view_socket_addr": "tcp://192.168.0.13:5020",
+                        "dataset_name": "processed_frames"
+                    }
+                }'''
+        live_view_config = self.test_detector_adapter.adapter.live_view_settings(settings)
+        assert live_view_config == correct_live_view_settings
 
     def test_summed_image_settings_fails_invalid_config(self):
         """Test function fails on bad settings."""

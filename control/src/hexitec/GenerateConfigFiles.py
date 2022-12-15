@@ -43,7 +43,7 @@ class GenerateConfigFiles():
         return string
 
     def threshold_settings(self, threshold):
-        """Add threshold plugin section to configuration file."""
+        """Add threshold plugin section to configuration."""
         try:
             threshold_config = '''
                         "threshold_file": "%s",
@@ -58,7 +58,7 @@ class GenerateConfigFiles():
         return threshold_config
 
     def calibration_settings(self, calibration):
-        """Add calibration plugin section to configuration file."""
+        """Add calibration plugin section to configuration."""
         try:
             calibration_config = '''
                         "gradients_file": "%s",
@@ -71,7 +71,7 @@ class GenerateConfigFiles():
         return calibration_config
 
     def histogram_settings(self, histogram):
-        """Add histogram plugin section to configuration file."""
+        """Add histogram plugin section to configuration."""
         try:
             histogram_config = '''
                         "bin_start": %s,
@@ -91,7 +91,7 @@ class GenerateConfigFiles():
         return histogram_config
 
     def summed_image_settings(self, summed_image):
-        """Add summed_image plugin section to configuration file."""
+        """Add summed_image plugin section to configuration."""
         try:
             summed_image_config = '''
                         "threshold_lower": %s,
@@ -103,8 +103,33 @@ class GenerateConfigFiles():
             raise KeyError("Couldn't locate summed_image setting(s)!")
         return summed_image_config
 
+    def live_view_settings(self, live_view):
+        """Add live_view plugin section to configuration."""
+        try:
+            print(" *** parameter_tree:\n {}\n".format(live_view))
+            frame_frequency = live_view["frame_frequency"]
+            per_second = live_view["per_second"]
+            socket_addr = live_view["live_view_socket_addr"]
+            dataset_name = live_view["dataset_name"]
+            # socket_addr = "tcp://192.168.0.13:5020"
+            live_view_config = ''',
+                {
+                    "live_view":
+                    {
+                        "frame_frequency": %s,
+                        "per_second": %s,
+                        "live_view_socket_addr": "%s",
+                        "dataset_name": "%s"
+                    }
+                }''' % (frame_frequency, per_second, socket_addr, dataset_name)
+        except KeyError:
+            logging.error("Error extracting live_view settings!")
+            print("Error extracting live_view_settings!")
+            raise KeyError("Couldn't locate live_view setting(s)!")
+        return live_view_config
+
     def generate_config_files(self, id=""):  # noqa: C901
-        """Generate the two configuration files.
+        """Generate the two configuration files, and configuration strings.
 
         The store config file contains the actual configuration.
         The execute config file is used to execute the configuration of the store file.
@@ -252,13 +277,17 @@ class GenerateConfigFiles():
                         odin_plugins[plugin][2])
 
         if self.live_view_selected:
-            # Chain plugins together, with live view now branched off reorder
+            # Chain plugins together, with live view branched off histogram
+            # so it can support the following datasets, plugins:
+            # * raw_frames/processed_frames (from reorder)
+            # * summed_spectra (from histogram)
+            # * summed_images (from summed_image)
             store_plugin_connect = ''',
                 {
                     "plugin": {
                         "connect": {
                             "index": "live_view",
-                            "connection": "reorder"
+                            "connection": "histogram"
                         }
                     }
                 }'''
@@ -314,16 +343,7 @@ class GenerateConfigFiles():
         # live_view, hdf have different settings (no sensors_layout..)
 
         if self.live_view_selected:
-            store_plugin_config += ''',
-                {
-                    "live_view":
-                    {
-                        "frame_frequency": 50,
-                        "per_second": 0,
-                        "live_view_socket_addr": "tcp://192.168.0.13:5020",
-                        "dataset_name": "raw_frames"
-                    }
-                }'''
+            store_plugin_config += self.live_view_settings(self.param_tree["config"]["live_view"])
 
         # Configure blosc (common settings) if selected
         if self.compression_type == "blosc":
@@ -378,19 +398,22 @@ class GenerateConfigFiles():
                             {
                                 "datatype": "float",
                                 "dims": [%s],''' % (self.number_histograms) + '''
-                                "chunks": [1, %s],%s''' % (self.number_histograms, blosc_settings) + '''
+                                "chunks": [1, %s],%s''' % (self.number_histograms,
+                                                           blosc_settings) + '''
                             },
                             "pixel_spectra":
                             {
                                 "datatype": "float",
                                 "dims": [%s, %s],''' % (pixels, self.number_histograms) + '''
-                                "chunks": [1, %s, %s],%s''' % (pixels, self.number_histograms, blosc_settings) + '''
+                                "chunks": [1, %s, %s],%s''' % (pixels, self.number_histograms,
+                                                               blosc_settings) + '''
                             },
                             "summed_spectra":
                             {
                                 "datatype": "uint64",
                                 "dims": [%s],''' % (self.number_histograms) + '''
-                                "chunks": [1, %s],%s''' % (self.number_histograms, blosc_settings) + '''
+                                "chunks": [1, %s],%s''' % (self.number_histograms,
+                                                           blosc_settings) + '''
                             }
                         }
                     }
@@ -445,7 +468,8 @@ class GenerateConfigFiles():
         finally:
             self.execute_temp.close()
 
-        store_string = store_sequence_preamble + store_plugin_paths + store_plugin_connect + store_plugin_config
+        store_string = store_sequence_preamble + store_plugin_paths + store_plugin_connect + \
+            store_plugin_config
 
         # Remove "execute" key (but keep its contents) from .json file contents:
         execute_preamble = execute_string.find("execute")
@@ -457,7 +481,8 @@ class GenerateConfigFiles():
         store_string = store_string[preamble+9: -4]
         store_string_without_cr = "".join(store_string.split())
 
-        return store_temp_name, execute_temp_name, store_string_without_cr, execute_string_without_cr
+        return store_temp_name, execute_temp_name, store_string_without_cr, \
+            execute_string_without_cr
 
 
 if __name__ == '__main__':  # pragma: no cover
@@ -475,6 +500,9 @@ if __name__ == '__main__':  # pragma: no cover
                    'histogram':
                    {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
                     'pass_processed': True, 'pass_raw': True},
+                   'live_view':
+                   {'dataset_name': 'summed_spectra', 'frame_frequency': 39,
+                    'live_view_socket_addr': 'tcp://127.0.0.1:5020', 'per_second': 1},
                    'next_frame': {'enable': False},
                    'threshold':
                    {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'},

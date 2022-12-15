@@ -16,7 +16,7 @@ from datetime import datetime
 
 if __name__ == "__main__":
 
-    hdf_file_location = "/tmp/13June1122_000001.h5"
+    hdf_file_location = "/u/ckd27546/tmp/100_xtek_000001.h5"
     hdf_file = h5py.File(hdf_file_location, 'r')
     # hdf_file 
     #<HDF5 file "13June1122_000001.h5" (mode r)>

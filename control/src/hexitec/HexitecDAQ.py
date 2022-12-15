@@ -108,6 +108,7 @@ class HexitecDAQ():
         self.shutdown_processing = False
 
         self.dataset_name = "summed_spectra"    # "raw_frames"
+        self.live_view_socket_addr = "tcp://127.0.0.1:5020"
         self.frame_frequency = 50
         self.per_second = 1
 
@@ -193,6 +194,8 @@ class HexitecDAQ():
                 "live_view": {
                     "dataset_name": (lambda: self.dataset_name, self._set_dataset_name),
                     "frame_frequency": (lambda: self.frame_frequency, self._set_frame_frequency),
+                    "live_view_socket_addr": (lambda: self.live_view_socket_addr,
+                                              self._set_live_view_socket_addr),
                     "per_second": (lambda: self.per_second, self._set_per_second)
                 },
                 "next_frame": {
@@ -310,8 +313,9 @@ class HexitecDAQ():
             self.frames_processed = self.get_total_frames_processed(self.plugin)
             self.processed_remaining = self.number_frames - self.frames_processed
             self.received_remaining = self.number_frames - self.frames_received
-            # print("\n0\t rxd {} left: {} proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
-            #                                                           self.frames_processed, self.processed_remaining))
+            # print("\n0\t rxd {} left: {} proc'd {} left: {}\n".format(
+            #     self.frames_received, self.received_remaining, self.frames_processed,
+            #     self.processed_remaining))
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
             self.fem_not_busy = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
@@ -325,8 +329,9 @@ class HexitecDAQ():
         total_frames_processed = self.get_total_frames_processed(self.plugin)
         self.frames_received = self.get_total_frames_received()
         self.received_remaining = self.number_frames - self.frames_received
-        # print("\nX\t rxd {} left: {} proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
-        #                                                           self.frames_processed, self.processed_remaining))
+        # print("\nX\t rxd {} left: {} proc'd {} left: {}\n".format(
+        #     self.frames_received, self.received_remaining, self.frames_processed,
+        #     self.processed_remaining))
         if total_frames_processed == self.number_frames:
             IOLoop.instance().add_callback(self.flush_data)
             logging.debug("Acquisition Complete")
@@ -341,7 +346,7 @@ class HexitecDAQ():
                     self.shutdown_processing = False
                     self.in_progress = False
                     self.daq_ready = True
-                    # Don't turn off FileWriterPlugin; Wait for EndOfAcquisition to flush out histograms
+                    # Don't turn off FileWriterPlugin; EndOfAcquisition to flush out histograms
                     self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
                     self.file_writing = False
                     return
@@ -350,8 +355,9 @@ class HexitecDAQ():
                 self.processed_timestamp = time.time()
                 self.frames_processed = total_frames_processed
                 self.processed_remaining = self.number_frames - self.frames_processed
-                # print("\n1\t rxd {} (left: {}) proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
-                #                                                           self.frames_processed, self.processed_remaining))
+                # print("\n1\t rxd {} (left: {}) proc'd {} left: {}\n".format(
+                #     self.frames_received, self.received_remaining, self.frames_processed,
+                #     self.processed_remaining))
             # Wait 0.5 seconds and check again
             IOLoop.instance().call_later(.5, self.processing_check_loop)
 
@@ -386,8 +392,9 @@ class HexitecDAQ():
         self.set_file_writing(False)
         self.frames_processed = self.get_total_frames_processed(self.plugin)
         self.processed_remaining = self.number_frames - self.frames_processed
-        # print("\n2\t rxd {} (left: {}) proc'd {} left: {}\n".format(self.frames_received, self.received_remaining,
-        #                                                           self.frames_processed, self.processed_remaining))
+        # print("\n2\t rxd {} (left: {}) proc'd {} left: {}\n".format(
+        #     self.frames_received, self.received_remaining, self.frames_processed,
+        #     self.processed_remaining))
 
     def check_hdf_write_statuses(self):
         """Check hdf node(s) statuses, return True until all finished writing."""
@@ -442,7 +449,8 @@ class HexitecDAQ():
         self.write_metadata(hdf_metadata_group, hdf_tree_dict, hdf_file)
 
         if (error_code == 0):
-            self.parent.fem._set_status_message("Meta data added to {}".format(self.hdf_file_location))
+            self.parent.fem._set_status_message("Meta data added to {}".format(
+                self.hdf_file_location))
         else:
             self.parent.fem._set_status_error("Meta data writer unable to access file(s)!")
 
@@ -470,7 +478,8 @@ class HexitecDAQ():
                 try:
                     hdf_file[path + key] = item
                 except TypeError as error:
-                    logging.error("Error: {} Parsing key: {}{} value: {}".format(error, path, key, item))
+                    logging.error("Error: {} Parsing key: {}{} value: {}".format(
+                        error, path, key, item))
                     self.parent.fem._set_status_error("Error parsing Meta")
 
     def _convert_values(self, value):
@@ -579,7 +588,7 @@ class HexitecDAQ():
         frames_processed = 0
         for fp_status in fp_statuses:
             fw_status = fp_status.get(plugin, None).get('frames_processed')
-            # print("Rank:", fp_status.get('hdf', None).get('rank'), " frames_processed: ", fw_status)
+            # print("Rank:", fp_status.get('hdf', None).get('rank'), " frames_proc'd: ", fw_status)
             if fw_status > 0:   # TODO: Sort out this better
                 frames_processed = frames_processed + fw_status
         return frames_processed
@@ -694,7 +703,7 @@ class HexitecDAQ():
             request = ApiAdapterRequest(None)
             response = self.adapters['file_interface'].get('', request).data
             self.config_dir = response['config_dir']
-            # print("\n *** get_config_file(), response: {}\n\t ({})".format(response, type(response)))
+            # print("\n get_config_file(), response: {}\n\t ({})".format(response, type(response)))
             for config_file in response["{}_config_files".format(adapter)]:
                 if "hexitec" in config_file.lower():
                     return_val.append(config_file)
@@ -807,6 +816,9 @@ class HexitecDAQ():
 
     def _set_frame_frequency(self, frame_frequency):
         self.frame_frequency = frame_frequency
+
+    def _set_live_view_socket_addr(self, socket_addr):
+        self.live_view_socket_addr = socket_addr
 
     def _set_per_second(self, per_second):
         self.per_second = per_second
@@ -990,12 +1002,13 @@ class HexitecDAQ():
         # Loop over node(s)
         for index in range(self.number_nodes):
             self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
-                                        compression_type=self.compression_type,
-                                        master_dataset=self.master_dataset,
-                                        extra_datasets=self.extra_datasets,
-                                        selected_os="CentOS",
-                                        live_view_selected=live_view_selected)
-            store_config, execute_config, store_string, execute_string = self.gcf.generate_config_files(index)
+                                           compression_type=self.compression_type,
+                                           master_dataset=self.master_dataset,
+                                           extra_datasets=self.extra_datasets,
+                                           selected_os="CentOS",
+                                           live_view_selected=live_view_selected)
+            store_config, execute_config, store_string, execute_string = \
+                self.gcf.generate_config_files(index)
             live_view_selected = False
 
             command = "config/store/" + str(index)
@@ -1004,7 +1017,7 @@ class HexitecDAQ():
             response = self.adapters["fp"].put(command, request)
             status_code = response.status_code
             if (status_code != 200):
-                error = "Error {} parsing store json config file in fp adapter".format(status_code)
+                error = "Error {} parsing store json in fp adapter".format(status_code)
                 logging.error(error)
                 self.parent.fem._set_status_error(error)
 
@@ -1014,7 +1027,7 @@ class HexitecDAQ():
             response = self.adapters["fp"].put(command, request)
             status_code = response.status_code
             if (status_code != 200):
-                error = "Error {} parsing execute json config file in fp adapter".format(status_code)
+                error = "Error {} parsing execute json in fp adapter".format(status_code)
                 logging.error(error)
                 self.parent.fem._set_status_error(error)
 
@@ -1031,7 +1044,8 @@ class HexitecDAQ():
                 # print("                   config/%s/%s" % (plugin, param_key), " -> ",
                 #       self.param_tree.tree['config'][plugin][param_key].get(""))
 
-                # Don't send histogram's pass_raw, pass_processed, since Odin Control do not support bool
+                # Don't send histogram's pass_raw, pass_processed,
+                #   since Odin Control do not support bool
                 if param_key not in ["pass_processed", "pass_raw"]:
 
                     command = "config/%s/%s" % (plugin, param_key)
