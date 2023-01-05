@@ -63,216 +63,215 @@
           <div class="row contflex row-cols-1 row-cols-md-2 g-4">
             <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
 
-              <div class="container-fluid">
-                <div class="row contflex">
-                  <table class="overall-table">
-                    <tr>
-                      <td></td> <!--Intentionally left blank-->
-                    </tr>
-                    <tr>
-                      <td>
-                        <th>File Options&nbsp;</th>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Path:&nbsp;
-                      </td>
-                      <td>
-                        <div class="text-columns">
-                          <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' value="/tmp/" maxlength="256" size="35">
-                        </div>
-                      </td>
-                      <td>
-                        &nbsp;<td><span id="hdf-file-path-warning">&nbsp;</span></td>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Name:&nbsp;
-                      </td>
-                      <td>
-                        <div class="text-columns">
-                          <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' value="a" maxlength="256" size="35">
-                        </div>
-                      </td>
-                      <td>
-                        &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Compression:&nbsp;
-                      </td>
-                      <td>
-                        <select class="double-width" id="compression-text" onchange="compressionChange(this.value)">
-                          <option selected="selected" value="none">none</option>
-                          <option value="blosc">blosc</option>
-                        </select>
-                      </td>
-                      <td>
-                        &nbsp;<td><span id="compression-warning">&nbsp;</span></td>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <th>Camera&nbsp;</th>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Mode&nbsp;
-                      </td>
-                      <td>
-                        <div class="row sidebar-row vertical-align">
-                          <div class="col-xs-7">
-                            <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                              <input type="radio" class="btn-check" name="mode_radio" id="mode_radio1" autocomplete="off" onclick="changeModeEnable()">
-                              <label class="btn btn-outline-primary" for="mode_radio1">Seconds</label>
-                              <input type="radio" class="btn-check" name="mode_radio" id="mode_radio2" autocomplete="off" onclick="changeModeEnable()" checked>
-                              <label class="btn btn-outline-primary" for="mode_radio2">Frames</label>
-                            </div>
+              <div class="row contflex">
+                <table class="overall-table">
+                  <tr>
+                    <td></td> <!--Intentionally left blank-->
+                  </tr>
+                  <tr>
+                    <td>
+                      <th>File Options&nbsp;</th>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Path:&nbsp;
+                    </td>
+                    <td>
+                      <div class="text-columns">
+                        <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' value="/tmp/" maxlength="256"  style="width: 100%">
+                      </div>
+                    </td>
+                    <td>
+                      &nbsp;<td><span id="hdf-file-path-warning">&nbsp;</span></td>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Name:&nbsp;
+                    </td>
+                    <td>
+                      <div class="text-columns">
+                        <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' value="a" maxlength="256" style="width: 100%">
+                      </div>
+                    </td>
+                    <td>
+                      &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Compression:&nbsp;
+                    </td>
+                    <td>
+                      <select class="double-width" id="compression-text" onchange="compressionChange(this.value)">
+                        <option selected="selected" value="none">none</option>
+                        <option value="blosc">blosc</option>
+                      </select>
+                    </td>
+                    <td>
+                      &nbsp;<td><span id="compression-warning">&nbsp;</span></td>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <th>Camera&nbsp;</th>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Mode&nbsp;
+                    </td>
+                    <td>
+                      <div class="row sidebar-row vertical-align">
+                        <div class="col-xs-7">
+                          <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                            <input type="radio" class="btn-check" name="mode_radio" id="mode_radio1" autocomplete="off" onclick="changeModeEnable()">
+                            <label class="btn btn-outline-primary" for="mode_radio1">Seconds</label>
+                            <input type="radio" class="btn-check" name="mode_radio" id="mode_radio2" autocomplete="off" onclick="changeModeEnable()" checked>
+                            <label class="btn btn-outline-primary" for="mode_radio2">Frames</label>
                           </div>
                         </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Frames&nbsp;
-                      </td>
-                      <td>
-                        <div class="text-frames">
-                          <input type="text" id="frames-text" onChange='frames_changed()' maxlength="40" size="3" value= "10">
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Duration&nbsp;
-                      </td>
-                      <td>
-                        <div class="text-duration">
-                          <input type="text" id="duration-text" onChange='duration_changed()' maxlength="40" size="3" value= "1" disabled="true">
-                        </div>
-                      </td>
-                      <td>
-                        &nbsp;<td><span id="duration-warning">&nbsp;</span></td>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <th>Config File&nbsp;</th>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Hexitec Config:&nbsp;
-                      </td>
-                      <td>
-                        <div class="text-columns">
-                          <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' value="control/config/hexitec_unified_CSD__performance.ini" maxlength="256" size="35">
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td></td>
-                      <td>
-                        <input type="button" onclick="applyButton2Clicked()" class="btn btn-primary double-width" id='applyButton2' data-size="small" value="Apply">
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <th>Trigger Status&nbsp;</th>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                      </td>
-                      <td>
-                        (placeholder)&nbsp;
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <th>FPGA Trigger Mode&nbsp;</th>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                      </td>
-                      <td>
-                        (placeholder)&nbsp;
-                      </td>
-                    </tr>
-                  </table>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Frames&nbsp;
+                    </td>
+                    <td>
+                      <div class="text-frames">
+                        <input type="text" id="frames-text" onChange='frames_changed()' maxlength="40" size="3" value= "10">
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Duration&nbsp;
+                    </td>
+                    <td>
+                      <div class="text-duration">
+                        <input type="text" id="duration-text" onChange='duration_changed()' maxlength="40" size="3" value= "1" disabled="true">
+                      </div>
+                    </td>
+                    <td>
+                      &nbsp;<td><span id="duration-warning">&nbsp;</span></td>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <th>Config File&nbsp;</th>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Hexitec Config:&nbsp;
+                    </td>
+                    <td>
+                      <div class="text-columns">
+                        <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' value="control/config/hexitec_unified_CSD__performance.ini" maxlength="256" style="width: 100%">
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td>
+                      <input type="button" onclick="applyButton2Clicked()" class="btn btn-primary double-width" id='applyButton2' data-size="small" value="Apply">
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <th>Trigger Status&nbsp;</th>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                    </td>
+                    <td>
+                      (placeholder)&nbsp;
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <th>FPGA Trigger Mode&nbsp;</th>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                    </td>
+                    <td>
+                      (placeholder)&nbsp;
+                    </td>
+                  </tr>
+                </table>
 
-                  <table>
-                    <tr>
-                      <td>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        System<br>Health:
-                      </td>
-                      <td>
-                        <!-- Single traffic light to indicate system health -->
-                        <div id="trafficLight">
-                          <div class="lamp" id="Green"></div>
-                          <!-- Temporary fix; Ensure Progress/Messages/Errors don't grow/shrink dramatically -->
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        DAQ:&nbsp;
-                      </td>
-                      <td>
-                        <progress id="daq-progress" style="width: 100%" value="0" max="100"> </progress>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Processing:&nbsp;
-                      </td>
-                      <td>
-                        <progress id="processing-progress" style="width: 100%" value="0" max="100"> </progress>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Messages:&nbsp;
-                      </td>
-                      &nbsp;<td><span id="odin-control-message">&nbsp;</span></td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Errors:&nbsp;
-                      </td>
-                      &nbsp;<td><span id="odin-control-error">&nbsp;</span></td>
-                      <td>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        elog:&nbsp;
-                      </td>
-                      <td>
-                        <div class="text-elog">
-                          <input type="text" id="elog-text" onChange='elog_changed()' maxlength="40" size="40" value="Today's eLog entry..">
-                        </div>
-                      </td>
-                      &nbsp;<td><span id="elog-error">&nbsp;</span></td>
-                      <td>
-                      </td>
-                    </tr>
-                  </table>
-                </div>  <!-- class="row contflex">  -->
-              </div>
+                <table>
+                  <tr>
+                    <td>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      System<br>Health:
+                    </td>
+                    <td>
+                      <!-- Single traffic light to indicate system health -->
+                      <div id="trafficLight">
+                        <div class="lamp" id="Green"></div>
+                        <!-- Temporary fix; Ensure Progress/Messages/Errors don't grow/shrink dramatically -->
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      DAQ:&nbsp;
+                    </td>
+                    <td>
+                      <progress id="daq-progress" style="width: 100%" value="0" max="100"> </progress>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Processing:&nbsp;
+                    </td>
+                    <td>
+                      <progress id="processing-progress" style="width: 100%" value="0" max="100"> </progress>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Messages:&nbsp;
+                    </td>
+                    &nbsp;<td><span id="odin-control-message">&nbsp;</span></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Errors:&nbsp;
+                    </td>
+                    &nbsp;<td><span id="odin-control-error">&nbsp;</span></td>
+                    <td>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      elog:&nbsp;
+                    </td>
+                    <td>
+                      <div class="text-elog">
+                        <input type="text" id="elog-text" onChange='elog_changed()' maxlength="40" value="Today's eLog entry.." style="width: 100%">
+                      </div>
+                    </td>
+                    &nbsp;<td><span id="elog-error">&nbsp;</span></td>
+                    <td>
+                    </td>
+                  </tr>
+                </table>
+              </div>  <!-- class="row contflex">  -->
+
             </div>  <!-- class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">  -->
 
             <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
@@ -397,7 +396,7 @@
                                 <td>
                                   <div class="row sidebar-row vertical-align">
                                     <div class="col-xs-7">
-                                      <select class="form-control" id="lv_dataset_select" onchange="lv_dataset_changed(this.value)">
+                                      <select class="form-control" id="lv_dataset_select" onchange="lv_dataset_changed(this.value)" style="width: 180px">
                                         <option value="raw_frames">raw_frames</option>
                                         <option value="processed_frames">processed_frames</option>
                                         <option selected="selected" value="summed_spectra">summed_spectra</option>
@@ -416,7 +415,7 @@
                                 </td>
                                 <td>
                                   <div class="text-columns">
-                                    <input type="text" id="frame-frequency-text" onChange='frame_frequency_changed()' value="50">
+                                    <input type="text" id="frame-frequency-text" onChange='frame_frequency_changed()' size="3" value="50">
                                   </div>
                                 </td>
                               </tr>
@@ -426,16 +425,16 @@
                                 </td>
                                 <td>
                                   <div class="text-columns">
-                                    <input type="text" id="per-second-text" onChange='per_second_changed()' value="1">
+                                    <input type="text" id="per-second-text" onChange='per_second_changed()' size="3" value="1">
                                   </div>
                                 </td>
                               </tr>
-
                             </table>
+
                             <table>
                               <tr>
                                 <td>
-                                  <th>Summed Image&nbsp;</th>
+                                  <th>Summed&nbsp;Image&nbsp;</th>
                                 </td>
                               </tr>
                               <tr>
@@ -444,7 +443,7 @@
                                 </td>
                                 <td>
                                   <div class="text-columns">
-                                    <input type="text" id="threshold-lower-text" onChange='threshold_lower_changed()' value="0">
+                                    <input type="text" id="threshold-lower-text" onChange='threshold_lower_changed()' size="3" value="0">
                                   </div>
                                 </td>
                               </tr>
@@ -454,7 +453,7 @@
                                 </td>
                                 <td>
                                   <div class="text-columns">
-                                    <input type="text" id="threshold-upper-text" onChange='threshold_upper_changed()' value="4400">
+                                    <input type="text" id="threshold-upper-text" onChange='threshold_upper_changed()' size="3" value="4400">
                                   </div>
                                 </td>
                               </tr>
@@ -464,7 +463,7 @@
                                 </td>
                                 <td>
                                   <div class="text-columns">
-                                    <input type="text" id="image-frequency-text" onChange='image_frequency_changed()' value="1">
+                                    <input type="text" id="image-frequency-text" onChange='image_frequency_changed()' size="3" value="1">
                                   </div>
                                 </td>
                               </tr>
@@ -499,226 +498,230 @@
       <div class="tab-pane fade" id="processing" role="tabpanel"> <!-- id="processing" -->
 
         <div class="container-fluid">
-          <table>
-            <tr>
-              <th>Datasets&nbsp;</th>
-            </tr>
-            <tr>
-              <td></td>
-              <td>  
-                Raw Data&nbsp;
-              </td>
-              <td>
-                <div class="row sidebar-row vertical-align">
-                  <div class="col-xs-7">
-                    <!-- <input type="checkbox" accesskey="w" id='rawDataButton' name="raw_data_enable" data-size="small"> -->
-                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                      <input type="radio" class="btn-check" name="raw_data_radio" accesskey="w" id="raw_data_radio1" autocomplete="off" onclick="changeRawDataEnable()">
-                      <label class="btn btn-outline-primary" for="raw_data_radio1">On</label>
-                      <input type="radio" class="btn-check" name="raw_data_radio" id="raw_data_radio2" autocomplete="off" onclick="changeRawDataEnable()" checked>
-                      <label class="btn btn-outline-primary" for="raw_data_radio2">Off</label>
+          <div class="row contflex">
+            <table class="overall-table">
+              <tr>
+                <th>Datasets&nbsp;</th>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  Raw Data&nbsp;
+                </td>
+                <td>
+                  <div class="row sidebar-row vertical-align">
+                    <div class="col-xs-7">
+                      <!-- <input type="checkbox" accesskey="w" id='rawDataButton' name="raw_data_enable" data-size="small"> -->
+                      <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                        <input type="radio" class="btn-check" name="raw_data_radio" accesskey="w" id="raw_data_radio1" autocomplete="off" onclick="changeRawDataEnable()">
+                        <label class="btn btn-outline-primary" for="raw_data_radio1">On</label>
+                        <input type="radio" class="btn-check" name="raw_data_radio" id="raw_data_radio2" autocomplete="off" onclick="changeRawDataEnable()" checked>
+                        <label class="btn btn-outline-primary" for="raw_data_radio2">Off</label>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td></td>
-              <td>
-                Processed Data&nbsp;
-              </td>
-              <td>
-                <div class="row sidebar-row vertical-align">
-                  <div class="col-xs-7">
-                    <!-- <input type="checkbox" accesskey="p" id='processedDataButton' name="processed_data_enable" data-size="small"> -->
-                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                      <input type="radio" class="btn-check" name="processed_data_radio" accesskey="p" id="processed_data_radio1" autocomplete="off" onclick="changeProcessedDataEnable()">
-                      <label class="btn btn-outline-primary" for="processed_data_radio1">On</label>
-                      <input type="radio" class="btn-check" name="processed_data_radio" id="processed_data_radio2" autocomplete="off" onclick="changeProcessedDataEnable()" checked>
-                      <label class="btn btn-outline-primary" for="processed_data_radio2">Off</label>
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  Processed Data&nbsp;
+                </td>
+                <td>
+                  <div class="row sidebar-row vertical-align">
+                    <div class="col-xs-7">
+                      <!-- <input type="checkbox" accesskey="p" id='processedDataButton' name="processed_data_enable" data-size="small"> -->
+                      <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                        <input type="radio" class="btn-check" name="processed_data_radio" accesskey="p" id="processed_data_radio1" autocomplete="off" onclick="changeProcessedDataEnable()">
+                        <label class="btn btn-outline-primary" for="processed_data_radio1">On</label>
+                        <input type="radio" class="btn-check" name="processed_data_radio" id="processed_data_radio2" autocomplete="off" onclick="changeProcessedDataEnable()" checked>
+                        <label class="btn btn-outline-primary" for="processed_data_radio2">Off</label>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </td>
-            </tr>
-            <tr>  
-              <th>Threshold&nbsp;</th>
-            </tr>
-            <tr>
-              <td></td>
-              <td>
-                Mode:&nbsp;
-              </td>
-              <td>
-                <select class="double-width" id="threshold-mode-text" onchange="threshold_mode_changed(this.value)">
-                  <option value="filename">filename</option>
-                  <option selected="selected" value="value">value</option>
-                  <option value="none">none</option>
-                </select>
-              </td>
-              <td></td> <!-- Leave column blank-->
-              <td>
-                &nbsp;<span id="threshold-mode-warning">&nbsp;</span>
-              </td>
-            </tr>
-            <tr>  
-              <td></td>
-              <td>  
-                Filename:&nbsp;
-              </td>
-              <td>
-                <div class="text-characters">
-                  <input type="text" id="threshold-filename-text" onChange='threshold_filename_changed()' size="42" value="data/config/thresh_2018_01_001_400V_20C.txt">
-                </div>
-              </td>
-              <td>
-              </td>
-              <td>
-              </td>
-            </tr>
-            <tr>
-              <td></td>
-              <td>  
-                Value:&nbsp;
-              </td>
-              <td>  
-                <div class="text-integer">
-                  <input type="text" id="threshold-value-text" onChange='threshold_value_changed()' size="3" value="120">
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <th>Next Frame&nbsp;</th>
-              <td></td>
-              <td>
-                <div class="row sidebar-row vertical-align">
-                  <div class="col-xs-7">
-                    <!-- <input type="checkbox" name="next_frame_enable" data-size="small"> -->
-                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                      <input type="radio" class="btn-check" name="next_frame_radio" id="next_frame_radio1" autocomplete="off" onclick="changeNextFrameEnable()">
-                      <label class="btn btn-outline-primary" for="next_frame_radio1">On</label>
-                      <input type="radio" class="btn-check" name="next_frame_radio" id="next_frame_radio2" autocomplete="off" onclick="changeNextFrameEnable()" checked>
-                      <label class="btn btn-outline-primary" for="next_frame_radio2">Off</label>
+                </td>
+              </tr>
+              <tr>
+                <th>Threshold&nbsp;</th>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  Mode:&nbsp;
+                </td>
+                <td>
+                  <select class="double-width" id="threshold-mode-text" onchange="threshold_mode_changed(this.value)">
+                    <option value="filename">filename</option>
+                    <option selected="selected" value="value">value</option>
+                    <option value="none">none</option>
+                  </select>
+                </td>
+                <td></td> <!-- Leave column blank-->
+                <td>
+                  &nbsp;<span id="threshold-mode-warning">&nbsp;</span>
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                  <td>
+                    Filename:&nbsp;
+                  </td>
+                  <td>
+                    <div class="text-columns">
+                      <input type="text" id="threshold-filename-text" onChange='threshold_filename_changed()' value="data/config/thresh_2018_01_001_400V_20C.txt" maxlength="256" style="width: 100%">
                     </div>
+                  </td>
+                  <td>
+                  </td>
+                  <td>
+                  </td>
+                </tr>
+                <tr>
+                <td></td>
+                <td>
+                  Value:&nbsp;
+                </td>
+                <td>
+                  <div class="text-integer">
+                    <input type="text" id="threshold-value-text" onChange='threshold_value_changed()' size="3" value="120">
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th>Next Frame&nbsp;</th>
+                <td></td>
+                <td>
+                  <div class="row sidebar-row vertical-align">
+                    <div class="col-xs-7">
+                      <!-- <input type="checkbox" name="next_frame_enable" data-size="small"> -->
+                      <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                        <input type="radio" class="btn-check" name="next_frame_radio" id="next_frame_radio1" autocomplete="off" onclick="changeNextFrameEnable()">
+                        <label class="btn btn-outline-primary" for="next_frame_radio1">On</label>
+                        <input type="radio" class="btn-check" name="next_frame_radio" id="next_frame_radio2" autocomplete="off" onclick="changeNextFrameEnable()" checked>
+                        <label class="btn btn-outline-primary" for="next_frame_radio2">Off</label>
+                      </div>
 
-                  </div>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <th>Calibration&nbsp;</th>
-              <td>&nbsp;</td>
-              <td>
-                <div class="row sidebar-row vertical-align">
-                  <div class="col-xs-7">
-                    <!-- <input type="checkbox" name="calibration_enable" data-size="small"> -->
-                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                      <input type="radio" class="btn-check" name="calibration_radio" id="calibration_radio1" autocomplete="off" onclick="changeCalibrationEnable()">
-                      <label class="btn btn-outline-primary" for="calibration_radio1">On</label>
-                      <input type="radio" class="btn-check" name="calibration_radio" id="calibration_radio2" autocomplete="off" onclick="changeCalibrationEnable()" checked>
-                      <label class="btn btn-outline-primary" for="calibration_radio2">Off</label>
                     </div>
                   </div>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td></td>
-              <td>  
-                Gradients:&nbsp;
-              </td>
-              <td>
-                <div class="text-characters">
-                  <input type="text" id="gradients-filename-text" onChange='gradients_filename_changed()' size="42" value="data/config/m_2018_01_001_400V_20C.txt">
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td></td>
-              <td>  
-                Intercepts:&nbsp;
-              </td>
-              <td>
-                <div class="text-characters">
-                  <input type="text" id="intercepts-filename-text" onChange='intercepts_filename_changed()' size="42" value="data/config/c_2018_01_001_400V_20C.txt">
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <th>Charged Sharing&nbsp;</th>
-            </tr>
-            <tr>
-              <td></td>
-              <td>
-                Mode:&nbsp;
-              </td>
-              <!-- <td></td> -->
-              <td>
-                <!-- Set Charged Sharing algorithm -->
-                <input type="button" class="btn btn-primary fixed-width" id='noneButton' name="b1" data-size="small" value="None" onclick="setCS(event)" style="background-color:#0000FF">
-                <input type="button" class="btn btn-primary fixed-width" id='addButton' name="b2" data-size="small" value="Add" onclick="setCS(event)">
-                <input type="button" class="btn btn-primary fixed-width" id='disButton' name="b3" data-size="small" value="Dis" onclick="setCS(event)">            
-              </td>
-            </tr>
-            <tr>
-              <td></td>
-              <td>
-                Pixel Grid Size:&nbsp;&nbsp;&nbsp;
-              </td>
-              <td>
-                <div class="text-columns">
-                  <input type="text" id="pixel-grid-size-text" onChange='pixel_grid_size_changed()' size="3" value="3">
-                </div>
-              </td>
-            </tr>
-            <tr>  
-              <th>Histogram&nbsp;</th>
-              <td>  
-              </td>
-            </tr>
-            <tr>
-              <td></td>
-              <td>
-                <div id="bin_start">Bin Start: [ADU]&nbsp;</div>
-              </td>
-              <td>
-                <div class="text-columns">
-                  <input type="text" id="bin-start-text" onChange='bin_start_changed()' size="3" value="0" size="8">
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td></td>
-              <td>
-                <div id="bin_end">Bin End: [ADU]&nbsp;</div>
-              </td>
-              <td>
-                <div class="text-columns">
-                  <input type="text" id="bin-end-text" onChange='bin_end_changed()' size="3" value="8000" size="8">
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td></td>
-              <td> 
-                <div id="bin_width">Bin Width: [ADU]&nbsp;</div>
-              </td>
-              <td> 
-                <div class="text-columns">
-                  <input type="text" id="bin-width-text" onChange='bin_width_changed()' size="3" value="10" size="8">
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                &nbsp;
-              </td>
-              <td></td>
-              <td>
-                <input type="button" onclick="applyButtonClicked()" accesskey="y" class="btn btn-primary double-width" id='applyButton' data-size="small" value="Apply All">
-              </td>
-            </tr>
-          </table>
+                </td>
+              </tr>
+              <tr>
+                <th>Calibration&nbsp;</th>
+                <td>&nbsp;</td>
+                <td>
+                  <div class="row sidebar-row vertical-align">
+                    <div class="col-xs-7">
+                      <!-- <input type="checkbox" name="calibration_enable" data-size="small"> -->
+                      <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                        <input type="radio" class="btn-check" name="calibration_radio" id="calibration_radio1" autocomplete="off" onclick="changeCalibrationEnable()">
+                        <label class="btn btn-outline-primary" for="calibration_radio1">On</label>
+                        <input type="radio" class="btn-check" name="calibration_radio" id="calibration_radio2" autocomplete="off" onclick="changeCalibrationEnable()" checked>
+                        <label class="btn btn-outline-primary" for="calibration_radio2">Off</label>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  Gradients:&nbsp;
+                </td>
+                <td>
+                  <div class="text-characters">
+                    <input type="text" id="gradients-filename-text" onChange='gradients_filename_changed()' size="42" value="data/config/m_2018_01_001_400V_20C.txt" style="width: 100%">
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  Intercepts:&nbsp;
+                </td>
+                <td>
+                  <div class="text-characters">
+                    <input type="text" id="intercepts-filename-text" onChange='intercepts_filename_changed()' size="42" value="data/config/c_2018_01_001_400V_20C.txt" style="width: 100%">
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th>Charged Sharing&nbsp;</th>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  Mode:&nbsp;
+                </td>
+                <!-- <td></td> -->
+                <td>
+                  <!-- Set Charged Sharing algorithm -->
+                  <input type="button" class="btn btn-primary fixed-width" id='noneButton' name="b1" data-size="small" value="None" onclick="setCS(event)" style="background-color:#0000FF">
+                  <input type="button" class="btn btn-primary fixed-width" id='addButton' name="b2" data-size="small" value="Add" onclick="setCS(event)">
+                  <input type="button" class="btn btn-primary fixed-width" id='disButton' name="b3" data-size="small" value="Dis" onclick="setCS(event)">
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  Pixel Grid Size:&nbsp;&nbsp;&nbsp;
+                </td>
+                <td>
+                  <div class="text-columns">
+                    <input type="text" id="pixel-grid-size-text" onChange='pixel_grid_size_changed()' size="3" value="3">
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th>Histogram&nbsp;</th>
+                <td>
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  <div id="bin_start">Bin Start: [ADU]&nbsp;</div>
+                </td>
+                <td>
+                  <div class="text-columns">
+                    <input type="text" id="bin-start-text" onChange='bin_start_changed()' size="3" value="0" size="8">
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  <div id="bin_end">Bin End: [ADU]&nbsp;</div>
+                </td>
+                <td>
+                  <div class="text-columns">
+                    <input type="text" id="bin-end-text" onChange='bin_end_changed()' size="3" value="8000" size="8">
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  <div id="bin_width">Bin Width: [ADU]&nbsp;</div>
+                </td>
+                <td>
+                  <div class="text-columns">
+                    <input type="text" id="bin-width-text" onChange='bin_width_changed()' size="3" value="10" size="8">
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  &nbsp;
+                </td>
+                <td></td>
+                <td>
+                  <input type="button" onclick="applyButtonClicked()" accesskey="y" class="btn btn-primary double-width" id='applyButton' data-size="small" value="Apply All">
+                </td>
+              </tr>
+
+            </table>
+
+          </div>  <!-- class="row contflex row-cols-1 row-cols-md-2 g-4" -->
         </div><!-- container fluid-container -->
       </div>  <!-- id="processing" -->
 
