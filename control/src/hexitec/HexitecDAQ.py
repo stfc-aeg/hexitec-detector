@@ -107,10 +107,15 @@ class HexitecDAQ():
         self.frames_processed = 0
         self.shutdown_processing = False
 
-        self.dataset_name = "summed_spectra"    # "raw_frames"
-        self.live_view_socket_addr = "tcp://127.0.0.1:5020"
-        self.frame_frequency = 50
-        self.per_second = 1
+        self.lvframes_dataset_name = "raw_frames"
+        self.lvframes_socket_addr = "tcp://127.0.0.1:5020"
+        self.lvframes_frequency = 0
+        self.lvframes_per_second = 2
+
+        self.lvspectra_dataset_name = "summed_spectra"
+        self.lvspectra_socket_addr = "tcp://127.0.0.1:5021"
+        self.lvspectra_frequency = 0
+        self.lvspectra_per_second = 1
 
         self.threshold_lower = 0
         self.threshold_upper = 4400
@@ -123,7 +128,7 @@ class HexitecDAQ():
         self.rows, self.columns = 160, 160
         self.pixels = self.rows * self.columns
         self.number_frames = 10
-        self.number_nodes = 3
+        self.number_nodes = 1   # 3
         # Status variables
         self.in_error = False
         self.daq_ready = False
@@ -191,12 +196,25 @@ class HexitecDAQ():
                     "pass_processed": (lambda: self.pass_processed, self._set_pass_processed),
                     "pass_raw": (lambda: self.pass_raw, self._set_pass_raw)
                 },
-                "live_view": {
-                    "dataset_name": (lambda: self.dataset_name, self._set_dataset_name),
-                    "frame_frequency": (lambda: self.frame_frequency, self._set_frame_frequency),
-                    "live_view_socket_addr": (lambda: self.live_view_socket_addr,
-                                              self._set_live_view_socket_addr),
-                    "per_second": (lambda: self.per_second, self._set_per_second)
+                "lvframes": {
+                    "dataset_name": (lambda: self.lvframes_dataset_name,
+                                     self._set_lvframes_dataset_name),
+                    "frame_frequency": (lambda: self.lvframes_frequency,
+                                        self._set_lvframes_frequency),
+                    "live_view_socket_addr": (lambda: self.lvframes_socket_addr,
+                                              self._set_lvframes_socket_addr),
+                    "per_second": (lambda: self.lvframes_per_second,
+                                   self._set_lvframes_per_second)
+                },
+                "lvspectra": {
+                    "dataset_name": (lambda: self.lvspectra_dataset_name,
+                                     self._set_lvspectra_dataset_name),
+                    "frame_frequency": (lambda: self.lvspectra_frequency,
+                                        self._set_lvspectra_frequency),
+                    "live_view_socket_addr": (lambda: self.lvspectra_socket_addr,
+                                              self._set_lvspectra_socket_addr),
+                    "per_second": (lambda: self.lvspectra_per_second,
+                                   self._set_lvspectra_per_second)
                 },
                 "next_frame": {
                     "enable": (lambda: self.next_frame_enable, self._set_next_frame_enable)
@@ -811,17 +829,29 @@ class HexitecDAQ():
     def _set_discrimination_enable(self, discrimination_enable):
         self.discrimination_enable = discrimination_enable
 
-    def _set_dataset_name(self, dataset_name):
-        self.dataset_name = dataset_name
+    def _set_lvframes_dataset_name(self, lvframes_dataset_name):
+        self.lvframes_dataset_name = lvframes_dataset_name
 
-    def _set_frame_frequency(self, frame_frequency):
-        self.frame_frequency = frame_frequency
+    def _set_lvframes_frequency(self, lvframes_frequency):
+        self.lvframes_frequency = lvframes_frequency
 
-    def _set_live_view_socket_addr(self, socket_addr):
-        self.live_view_socket_addr = socket_addr
+    def _set_lvframes_socket_addr(self, socket_addr):
+        self.lvframes_socket_addr = socket_addr
 
-    def _set_per_second(self, per_second):
-        self.per_second = per_second
+    def _set_lvframes_per_second(self, lvframes_per_second):
+        self.lvframes_per_second = lvframes_per_second
+
+    def _set_lvspectra_dataset_name(self, lvspectra_dataset_name):
+        self.lvspectra_dataset_name = lvspectra_dataset_name
+
+    def _set_lvspectra_frequency(self, lvspectra_frequency):
+        self.lvspectra_frequency = lvspectra_frequency
+
+    def _set_lvspectra_socket_addr(self, socket_addr):
+        self.lvspectra_socket_addr = socket_addr
+
+    def _set_lvspectra_per_second(self, lvspectra_per_second):
+        self.lvspectra_per_second = lvspectra_per_second
 
     def _set_next_frame_enable(self, next_frame_enable):
         self.next_frame_enable = next_frame_enable
@@ -1011,8 +1041,10 @@ class HexitecDAQ():
                 self.gcf.generate_config_files(index)
             live_view_selected = False
 
-            command = "config/store/" + str(index)
+            command = "config/store/" + str(index)    # Configure using strings
             request = ApiAdapterRequest(store_string, content_type="application/json")
+            # command = "config/config_file/" + str(index)   # file
+            # request = ApiAdapterRequest(store_config, content_type="application/json")  # File
 
             response = self.adapters["fp"].put(command, request)
             status_code = response.status_code
@@ -1021,8 +1053,9 @@ class HexitecDAQ():
                 logging.error(error)
                 self.parent.fem._set_status_error(error)
 
-            command = "config/execute/" + str(index)
+            command = "config/execute/" + str(index)  # Configure using strings
             request = ApiAdapterRequest(execute_string, content_type="application/json")
+            # request = ApiAdapterRequest(execute_config, content_type="application/json")  # File
 
             response = self.adapters["fp"].put(command, request)
             status_code = response.status_code

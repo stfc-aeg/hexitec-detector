@@ -285,12 +285,12 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.x10g_rdma.power_status.side_effect = [vsrs_selected, hvs_selected]
 
             self.test_fem.fem.power_up_modules()
-            assert self.test_fem.fem.hardware_connected == True
+            assert self.test_fem.fem.hardware_connected is True
             mock_loop.instance().call_later.assert_called_with(10, self.test_fem.fem.cam_connect)
 
     def test_power_up_modules_flags_vsr_unpowered(self):
         """Test function will handle if not all of selected VSRs are powered on."""
-        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+        with patch("hexitec.HexitecFem.IOLoop"):
             self.test_fem.fem.connect = Mock()
             vsrs_selected = 0x3F
             hvs_selected = 0x3F3F
@@ -309,7 +309,7 @@ class TestFem(unittest.TestCase):
 
     def test_power_up_modules_flags_hvs_unpowered(self):
         """Test function will handle if not all of selected HVs are powered on."""
-        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+        with patch("hexitec.HexitecFem.IOLoop"):
             self.test_fem.fem.connect = Mock()
             vsrs_selected = 0x3F
             hvs_selected = 0x3F3F
@@ -446,7 +446,8 @@ class TestFem(unittest.TestCase):
     #     """Test function fails without established hardware connection."""
     #     self.test_fem.fem.hardware_connected = False
     #     self.test_fem.fem.collect_data("test")
-    #     assert self.test_fem.fem._get_status_error() == "Failed to collect data: No connection established"
+    #     assert self.test_fem.fem._get_status_error() == \
+    #       "Failed to collect data: No connection established"
 
     # def test_collect_data_fails_on_exception(self):
     #     """Test function can handle unexpected exception."""
@@ -679,7 +680,8 @@ class TestFem(unittest.TestCase):
     #         with pytest.raises(HexitecFemError) as exc_info:
     #             self.test_fem.fem.calibrate_sensor()
     #         assert exc_info.type is HexitecFemError
-    #         assert exc_info.value.args[0] == "Timed out polling register 0x89; PLL remains disabled"
+    #         assert exc_info.value.args[0] == \
+    #           "Timed out polling register 0x89; PLL remains disabled"
 
     #     assert self.test_fem.fem.image_size_x == 160
     #     assert self.test_fem.fem.image_size_y == 160
@@ -790,13 +792,16 @@ class TestFem(unittest.TestCase):
     # #         self.test_fem.fem.duration_enabled = True
     # #         self.test_fem.fem.duration = 2.0
     # #         self.test_fem.fem.check_acquire_finished()
-    # #         mock_loop.instance().call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
+    # #         instance = mock_loop.instance()
+    # #         instance.call_later.assert_called_with(0.1,
+    # #                                                self.test_fem.fem.check_acquire_finished)
     # #         assert self.test_fem.fem.waited == 0.1
     # #         assert self.test_fem.fem.duration_remaining == 1.9
 
     # # def test_check_acquire_finished_handles_negative_duration_remaining(self):
     # #     """Test check_acquire_finished handles data sent, edge case of 'negative' duration."""
-    # #     # Because polling at 1Hz, will reached -0.1s once all data sent, which is 'rounded' to 0.0
+    # #     # Because polling at 1Hz, will reached -0.1s once all data sent,
+    # #     #   which is 'rounded' to 0.0
     # #     with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
     # #         self.test_fem.fem.stop_acquisition = False
     # #         self.test_fem.fem.x10g_rdma.read = Mock()
@@ -804,7 +809,9 @@ class TestFem(unittest.TestCase):
     # #         self.test_fem.fem.duration_enabled = True
     # #         self.test_fem.fem.duration = 0.0
     # #         self.test_fem.fem.check_acquire_finished()
-    # #         mock_loop.instance().call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
+    # #         instance = mock_loop.instance().
+    # #         instance.call_later.assert_called_with(0.1,
+    # #                                                self.test_fem.fem.check_acquire_finished)
     # #         assert self.test_fem.fem.waited == 0.1
     # #         assert self.test_fem.fem.duration_remaining == 0.0
 
@@ -1217,7 +1224,8 @@ class TestFem(unittest.TestCase):
     #     if sph_s2 > -1:
     #         v005 = self.test_fem.fem.convert_to_aspect_format(sph_s2)
 
-    #     gain = self.test_fem.fem._extract_integer(self.test_fem.fem.hexitec_parameters, 'Control-Settings/Gain', bit_range=1)
+    #     gain = self.test_fem.fem._extract_integer(self.test_fem.fem.hexitec_parameters,
+    #                                               'Control-Settings/Gain', bit_range=1)
     #     if gain > -1:
     #         v006 = self.test_fem.fem.convert_to_aspect_format(gain)
 
@@ -1294,7 +1302,8 @@ class TestFem(unittest.TestCase):
     # #     """Test function handles hardware disconnected."""
     # #     self.test_fem.fem.hardware_connected = False
     # #     self.test_fem.fem.collect_offsets()
-    # #     error = "Can't collect offsets while disconnected: Can't collect offsets while disconnected"
+    # #     error = \
+    # #         "Can't collect offsets while disconnected: Can't collect offsets while disconnected"
     # #     assert self.test_fem.fem._get_status_error() == error
 
     # # def test_collect_offsets_handles_hardware_busy(self):
@@ -1703,7 +1712,8 @@ class TestFem(unittest.TestCase):
 
     # #     register_057 = [0x35, 0x37]   # Column Calibrate Enable ASIC1 (Reg 0x57)
     # #     register_0B8 = [0x42, 0x38]   # Column Calibrate Enable ASIC2 (Reg 0xB8)
-    # #     value_057 = [53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53]
+    # #     value_057 = [53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53,
+    # #                  53, 53]
     # #     value_0B8 = list_of_30s
 
     # #     # Column Calibrate Enable, for ASIC1 (Reg 0x57)
@@ -1728,7 +1738,8 @@ class TestFem(unittest.TestCase):
 
     # #     register_039 = [0x33, 0x39]   # Row Calibrate Enable ASIC1 (Reg 0x39)
     # #     register_09A = [0x39, 0x41]   # Row Calibrate Enable ASIC2 (Reg 0x9A)
-    # #     value_039 = [53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53]
+    # #     value_039 = [53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53,
+    # #                  53, 53]
     # #     value_09A = list_of_30s
 
     # #     # Row Calibrate Enable, for ASIC1 (Reg 0x39)
@@ -1851,7 +1862,8 @@ class TestFem(unittest.TestCase):
         vsr_addr = HexitecFem.VSR_ADDRESS[0]
         self.test_fem.fem.vsr_addr = vsr_addr
         (address_h, address_l) = (0x30, 0x31)
-        resp, reply = self.test_fem.fem.read_and_response(vsr_addr, address_h, address_l, delay=True)
+        resp, reply = \
+            self.test_fem.fem.read_and_response(vsr_addr, address_h, address_l, delay=True)
 
         read_register_01 = [vsr_addr, 0x41, 0x30, 0x31]
         print(resp, reply)
@@ -1870,7 +1882,9 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.read_response = Mock(return_value=response)
         vsr_addr = HexitecFem.VSR_ADDRESS[0]
         self.test_fem.fem.vsr_addr = vsr_addr
-        resp, reply = self.test_fem.fem.write_and_response(vsr_addr, address_h, address_l, value_h, value_l, delay=True)
+        resp, reply = \
+            self.test_fem.fem.write_and_response(vsr_addr, address_h, address_l,
+                                                 value_h, value_l, delay=True)
         print(resp, reply)
         read_register_01 = [vsr_addr, 0x41, address_h, address_l]
         write_register_01 = [vsr_addr, 0x40, address_h, address_l, value_h, value_l]
@@ -1892,7 +1906,9 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.vsr_addr = vsr_addr
 
         with pytest.raises(HexitecFemError) as exc_info:
-            resp, reply = self.test_fem.fem.write_and_response(vsr_addr, address_h, address_l, value_h, value_l)
+            resp, reply = \
+                self.test_fem.fem.write_and_response(vsr_addr, address_h, address_l,
+                                                     value_h, value_l)
         assert exc_info.type is HexitecFemError
 
     def test_block_write_and_response(self):
@@ -1905,7 +1921,8 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.read_response = Mock(return_value=response)
         vsr_addr = HexitecFem.VSR_ADDRESS[0]
         self.test_fem.fem.vsr_addr = vsr_addr
-        self.test_fem.fem.block_write_and_response(vsr_addr, number_registers, address_h, address_l, value_h, value_l)
+        self.test_fem.fem.block_write_and_response(vsr_addr, number_registers, address_h,
+                                                   address_l, value_h, value_l)
         read_register_01 = [vsr_addr, 0x41, address_h, address_l]
         write_register_01 = [vsr_addr, 0x40, address_h, address_l, value_h, value_l]
         self.test_fem.fem.send_cmd.assert_has_calls([
@@ -1923,16 +1940,19 @@ class TestFem(unittest.TestCase):
         for value in values:
             response.append(value)
         response.append(13)
-        # Dummy response with 00 because not masking and so what read_and_response() sees doesn't matter
+        # Dummy response with 00 because not masking and so what read_and_response()
+        #   sees doesn't matter
         dummy = [42, 144, 48, 48]
         response_1 = [42, 144, address_h, address_l, values[0], values[1]]
         response_2 = [42, 144, address_h, address_l, values[2], values[3]]
         response_3 = [42, 144, address_h, address_l, values[4], values[5]]
-        self.test_fem.fem.read_response = Mock()    # Mock(return_value=response)
-        self.test_fem.fem.read_response.side_effect = [dummy, response_1, dummy, response_2, dummy, response_3]
+        self.test_fem.fem.read_response = Mock()
+        self.test_fem.fem.read_response.side_effect = \
+            [dummy, response_1, dummy, response_2, dummy, response_3]
         vsr_addr = HexitecFem.VSR_ADDRESS[0]
         self.test_fem.fem.vsr_addr = vsr_addr
-        self.test_fem.fem.block_write_custom_length(vsr_addr, number_registers, address_h, address_l, values[:number_registers*2])
+        self.test_fem.fem.block_write_custom_length(vsr_addr, number_registers, address_h,
+                                                    address_l, values[:number_registers*2])
         read_register_01 = [vsr_addr, 0x41, address_h, address_l]
         write_register_01 = [vsr_addr, 0x40, address_h, address_l, values[0], values[1]]
         self.test_fem.fem.send_cmd.assert_has_calls([
@@ -1954,13 +1974,15 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.read_response = Mock(return_value=response)
         vsr_addr = HexitecFem.VSR_ADDRESS[0]
         self.test_fem.fem.vsr_addr = vsr_addr
-        self.test_fem.fem.block_write_custom_length(vsr_addr, number_registers, address_h, address_l, values)
+        self.test_fem.fem.block_write_custom_length(vsr_addr, number_registers,
+                                                    address_h, address_l, values)
 
     def test_expand_addresses(self):
         """Test function works okay."""
         number_registers = 10
         (address_h, address_l) = (0x39, 0x38)
-        most_significant, least_significant = self.test_fem.fem.expand_addresses(number_registers, address_h, address_l)
+        most_significant, least_significant = \
+            self.test_fem.fem.expand_addresses(number_registers, address_h, address_l)
         print(most_significant)
         assert len(most_significant) == number_registers
         assert len(least_significant) == number_registers
@@ -1982,11 +2004,14 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.vsr_addr = vsr_addr
         (address_h, address_l) = (0x30, 0x31)
         number_registers = 10
-        resp_list, reply_list = self.test_fem.fem.block_read_and_response(vsr_addr, number_registers, address_h, address_l)
+        resp_list, reply_list = \
+            self.test_fem.fem.block_read_and_response(vsr_addr, number_registers, address_h,
+                                                      address_l)
 
         read_register_01 = [vsr_addr, 0x41, 0x30, 0x31]
         # print(resp_list)    # Will contain:
-        # [[48, 49], [48, 49], [48, 49], [48, 49], [48, 49], [48, 49], [48, 49], [48, 49], [48, 49], [48, 49]]
+        # [[48, 49], [48, 49], [48, 49], [48, 49], [48, 49], [48, 49], [48, 49], [48, 49],
+        # [48, 49], [48, 49]]
         # print(reply_list)   # Will contain:
         # ['01', '01', '01', '01', '01', '01', '01', '01', '01', '01']
         self.test_fem.fem.send_cmd.assert_has_calls([
@@ -2027,7 +2052,7 @@ class TestFem(unittest.TestCase):
     def test_enable_adc(self):
         """Test function handles enables ADCs ok."""
         self.test_fem.fem.send_cmd = Mock()
-        response = [42, 144, 49, 54, 49, 70, 13]    # [42, 144, 48, 50, 69, 53, 48, 53, 68, 48, 48, 56, 67, 66, 48, 13]
+        response = [42, 144, 49, 54, 49, 70, 13]
         self.test_fem.fem.read_response = Mock(return_value=response)
         vsr_addr = HexitecFem.VSR_ADDRESS[0]
         self.test_fem.fem.vsr_addr = vsr_addr
@@ -2260,7 +2285,8 @@ class TestFem(unittest.TestCase):
         """Test function handle sensor values ok."""
         self.test_fem.fem.send_cmd = Mock()
         # response = "7C00270802A702B002D60F"
-        response = [42, 145, 54, 53, 69, 56, 53, 66, 49, 67, 48, 65, 48, 48, 48, 65, 48, 48, 48, 49, 57, 67, 48, 70, 13]
+        response = [42, 145, 54, 53, 69, 56, 53, 66, 49, 67, 48, 65, 48, 48, 48, 65, 48, 48, 48,
+                    49, 57, 67, 48, 70, 13]
         self.test_fem.fem.read_response = Mock(return_value=response)
         vsr_addr = HexitecFem.VSR_ADDRESS[1]
         self.test_fem.fem.vsr_addr = vsr_addr
@@ -2285,7 +2311,8 @@ class TestFem(unittest.TestCase):
     def test_read_temperatures_humidity_values_vsr1(self):
         """Test function handle sensor values ok."""
         self.test_fem.fem.send_cmd = Mock()
-        response = [42, 144, 54, 53, 54, 56, 53, 67, 54, 67, 48, 65, 48, 48, 48, 65, 48, 48, 48, 49, 56, 66, 70, 53, 13]
+        response = [42, 144, 54, 53, 54, 56, 53, 67, 54, 67, 48, 65, 48, 48, 48, 65, 48, 48, 48,
+                    49, 56, 66, 70, 53, 13]
         self.test_fem.fem.read_response = Mock(return_value=response)
         vsr_addr = HexitecFem.VSR_ADDRESS[0]
         self.test_fem.fem.vsr_addr = vsr_addr
@@ -2311,7 +2338,8 @@ class TestFem(unittest.TestCase):
     def test_read_temperatures_humidity_values_vsr3(self):
         """Test function handle sensor values ok."""
         self.test_fem.fem.send_cmd = Mock()
-        response = [42, 146, 54, 54, 51, 52, 53, 56, 69, 56, 48, 65, 48, 48, 48, 65, 48, 48, 48, 49, 57, 69, 48, 70, 13]
+        response = [42, 146, 54, 54, 51, 52, 53, 56, 69, 56, 48, 65, 48, 48, 48, 65, 48, 48, 48,
+                    49, 57, 69, 48, 70, 13]
         self.test_fem.fem.read_response = Mock(return_value=response)
         vsr_addr = HexitecFem.VSR_ADDRESS[2]
         self.test_fem.fem.vsr_addr = vsr_addr
@@ -2336,7 +2364,8 @@ class TestFem(unittest.TestCase):
     def test_read_temperatures_humidity_values_vsr4(self):
         """Test function handle sensor values ok."""
         self.test_fem.fem.send_cmd = Mock()
-        response = [42, 147, 54, 54, 56, 48, 53, 65, 49, 48, 48, 65, 48, 48, 48, 65, 48, 48, 48, 49, 57, 68, 48, 70, 13]
+        response = [42, 147, 54, 54, 56, 48, 53, 65, 49, 48, 48, 65, 48, 48, 48, 65, 48, 48, 48,
+                    49, 57, 68, 48, 70, 13]
         self.test_fem.fem.read_response = Mock(return_value=response)
         vsr_addr = HexitecFem.VSR_ADDRESS[3]
         self.test_fem.fem.vsr_addr = vsr_addr
@@ -2361,7 +2390,8 @@ class TestFem(unittest.TestCase):
     def test_read_temperatures_humidity_values_vsr5(self):
         """Test function handle sensor values ok."""
         self.test_fem.fem.send_cmd = Mock()
-        response = [42, 148, 54, 55, 48, 48, 53, 55, 66, 52, 48, 65, 48, 48, 48, 65, 48, 48, 48, 49, 65, 52, 49, 48, 13]
+        response = [42, 148, 54, 55, 48, 48, 53, 55, 66, 52, 48, 65, 48, 48, 48, 65, 48, 48, 48,
+                    49, 65, 52, 49, 48, 13]
         self.test_fem.fem.read_response = Mock(return_value=response)
         vsr_addr = HexitecFem.VSR_ADDRESS[4]
         self.test_fem.fem.vsr_addr = vsr_addr
@@ -2386,7 +2416,8 @@ class TestFem(unittest.TestCase):
     def test_read_temperatures_humidity_values_vsr6(self):
         """Test function handle sensor values ok."""
         self.test_fem.fem.send_cmd = Mock()
-        response = [42, 149, 54, 54, 70, 52, 53, 67, 49, 56, 48, 65, 48, 48, 48, 65, 48, 48, 48, 49, 65, 48, 48, 70, 13]
+        response = [42, 149, 54, 54, 70, 52, 53, 67, 49, 56, 48, 65, 48, 48, 48, 65, 48, 48, 48,
+                    49, 65, 48, 48, 70, 13]
         self.test_fem.fem.read_response = Mock(return_value=response)
         vsr_addr = HexitecFem.VSR_ADDRESS[5]
         self.test_fem.fem.vsr_addr = vsr_addr
@@ -2411,7 +2442,8 @@ class TestFem(unittest.TestCase):
     def test_read_temperatures_humidity_values_bad_vsr(self):
         """Test function handle misconfigured VSR."""
         self.test_fem.fem.send_cmd = Mock()
-        response = [42, 149, 54, 54, 70, 52, 53, 67, 49, 56, 48, 65, 48, 48, 48, 65, 48, 48, 48, 49, 65, 48, 48, 70, 13]
+        response = [42, 149, 54, 54, 70, 52, 53, 67, 49, 56, 48, 65, 48, 48, 48, 65, 48, 48, 48,
+                    49, 65, 48, 48, 70, 13]
         self.test_fem.fem.read_response = Mock(return_value=response)
         vsr_addr = 151  # HexitecFem.VSR_ADDRESS[5]
         self.test_fem.fem.vsr_addr = vsr_addr
@@ -2612,17 +2644,20 @@ class TestFem(unittest.TestCase):
         channel1 = self.test_fem.fem._extract_80_bits("ColumnEn_", vsr, 1, "Channel")
         assert channel1[0] == (-1, -1)
 
-        self.test_fem.fem.hexitec_parameters['Sensor-Config_V1_S1/ColumnEn_1stChannel'] = '11111111111111111111'
+        self.test_fem.fem.hexitec_parameters['Sensor-Config_V1_S1/ColumnEn_1stChannel'] = \
+            '11111111111111111111'
 
         channel2 = self.test_fem.fem._extract_80_bits("ColumnEn_", vsr, 1, "Channel")
         assert channel2[0] == (-1, -1)
 
-        self.test_fem.fem.hexitec_parameters['Sensor-Config_V1_S1/ColumnEn_2ndChannel'] = '11111111111111111111'
+        self.test_fem.fem.hexitec_parameters['Sensor-Config_V1_S1/ColumnEn_2ndChannel'] = \
+            '11111111111111111111'
 
         channel3 = self.test_fem.fem._extract_80_bits("ColumnEn_", vsr, 1, "Channel")
         assert channel3[0] == (-1, -1)
 
-        self.test_fem.fem.hexitec_parameters['Sensor-Config_V1_S1/ColumnEn_3rdChannel'] = '11111111111111111111'
+        self.test_fem.fem.hexitec_parameters['Sensor-Config_V1_S1/ColumnEn_3rdChannel'] = \
+            '11111111111111111111'
 
         channel4 = self.test_fem.fem._extract_80_bits("ColumnEn_", vsr, 1, "Channel")
         assert channel4[0] == (-1, -1)

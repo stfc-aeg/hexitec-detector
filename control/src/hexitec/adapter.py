@@ -254,7 +254,7 @@ class Hexitec():
         self.status_message = ""
         self.status_error = ""
         self.elog = ""
-        self.number_nodes = 3
+        self.number_nodes = 1   # 3
         # Software states:
         #   Cold, Disconnected, Idle, Acquiring
         self.software_state = "Cold"

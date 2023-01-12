@@ -311,11 +311,12 @@ namespace FrameProcessor
       histogram_index_ = frame_number;
     }
 
-    const std::string& plugin_name = "live_view";
+    const std::string& lvframes = "lvframes";
+    const std::string& lvspectra = "lvspectra";
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-      // Pass dataset down the chain, or only to live_view
+      // Pass raw_frames dataset down the chain, or only to lvframes
       if (pass_raw_)
       {
         LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
@@ -324,8 +325,8 @@ namespace FrameProcessor
       }
       else
       {
-          LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset to " << plugin_name << " only");
-          this->push(plugin_name, frame);
+          LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset to " << lvframes << " only");
+          this->push(lvframes, frame);
       }
     }
     else if (dataset.compare(std::string("processed_frames")) == 0)
@@ -348,21 +349,15 @@ namespace FrameProcessor
         }
         else
         {
-          // The rest of the time, keep passing the histogram datasets to the live view
-          LOG4CXX_TRACE(logger_, "Pushing " << spectra_bins_->get_meta_data().get_dataset_name() << " dataset to " << plugin_name << " only");
-          this->push(plugin_name, spectra_bins_);
-
-          LOG4CXX_TRACE(logger_, "Pushing " << summed_spectra_->get_meta_data().get_dataset_name() << " dataset to " << plugin_name << " only");
-          this->push(plugin_name, summed_spectra_);
-
-          LOG4CXX_TRACE(logger_, "Pushing " << pixel_spectra_->get_meta_data().get_dataset_name() << " dataset to " << plugin_name << " only");
-          this->push(plugin_name, pixel_spectra_);
+          // Otherwise, keep passing summed_spectra dataset to lvspectra
+          LOG4CXX_TRACE(logger_, "Pushing " << summed_spectra_->get_meta_data().get_dataset_name() << " dataset to " << lvspectra << " only");
+          this->push(lvspectra, summed_spectra_);
         }
 
         /// Histogram will access processed_frames dataset but not change it
         /// Therefore do not need to check frame dimensions, etc
 
-        // Pass dataset down the chain, or live_view only
+        // Pass processed_frames dataset down the chain, or lvframes only
         if (pass_processed_)
         {
           // Pass on processed_frames dataset unmodified:
@@ -370,11 +365,11 @@ namespace FrameProcessor
                                             << frame_number);
           this->push(frame);
         }
-      else
-      {
-          LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset to " << plugin_name << " only");
-          this->push(plugin_name, frame);
-      }
+        else
+        {
+            LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset to " << lvframes << " only");
+            this->push(lvframes, frame);
+        }
 
         frames_processed_++;
       }

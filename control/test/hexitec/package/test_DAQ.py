@@ -48,7 +48,8 @@ class DAQTestFixture(object):
         self.fake_fp = MagicMock()
         self.fake_fi = MagicMock()
 
-        # once the odin_data adapter is refactored to use param tree, this structure will need fixing
+        # Once the odin_data adapter is refactored to use param tree,
+        # this structure will need fixing
         self.fr_data = {
             "value": [
                 {
@@ -162,7 +163,8 @@ class DAQTestFixture(object):
               'daq':
               {'diagnostics':
                {'daq_start_time': '', 'daq_stop_time': '', 'fem_not_busy': ''},
-               'receiver': {'connected': True, 'configured': True, 'config_file': 'fr_hexitec_config.json'},
+               'receiver': {'connected': True, 'configured': True,
+                            'config_file': 'fr_hexitec_config.json'},
                'processor': {'connected': True, 'configured': True, 'config_file': 'file.json'},
                'file_info': {'enabled': False, 'file_name': 'filename', 'file_dir': '/tmp/'},
                'status': {'in_progress': True, 'daq_ready': False},
@@ -362,7 +364,8 @@ class TestDAQ(unittest.TestCase):
     #         self.test_daq.daq.config_files["fp"] = "fp_hexitec.config"
 
     #         self.test_daq.daq._config_odin_data("fp")
-    #         config = "/{}/{}".format(self.test_daq.daq.config_dir, self.test_daq.daq.config_files["fp"])
+    #         config = "/{}/{}".format(self.test_daq.daq.config_dir,
+    #                                  self.test_daq.daq.config_files["fp"])
 
     #         mock_request.assert_called_with(config, content_type="application/json")
     #         self.test_daq.fake_fp.put.assert_called_with("config/config_file", mock_request())
@@ -381,8 +384,8 @@ class TestDAQ(unittest.TestCase):
             assert self.test_daq.daq.file_writing is True
             assert odin_ready is True
 
-            mock_loop.instance().call_later.assert_called_with(1.3,
-                                                               self.test_daq.daq.acquisition_check_loop)
+            instance = mock_loop.instance()
+            instance.call_later.assert_called_with(1.3, self.test_daq.daq.acquisition_check_loop)
 
     def test_start_acquisition_flags_nonempty_buffers_as_error(self):
         """Test function flags if there are no empty buffers available."""
@@ -399,8 +402,8 @@ class TestDAQ(unittest.TestCase):
             assert self.test_daq.daq.file_writing is True
             assert odin_ready is False
 
-            mock_loop.instance().call_later.assert_called_with(1.3,
-                                                               self.test_daq.daq.acquisition_check_loop)
+            instance = mock_loop.instance()
+            instance.call_later.assert_called_with(1.3, self.test_daq.daq.acquisition_check_loop)
 
     def test_start_acquisition_needs_configure(self):
         """Test function works."""
@@ -477,22 +480,27 @@ class TestDAQ(unittest.TestCase):
     def test_are_buffers_available_flag_no_empty_buffers(self):
         """Test function flags if frameReceiver buffers are empty."""
         fr_status = [{'status':
-                      {'ipc_configured': True, 'decoder_configured': True, 'buffer_manager_configured': True,
-                       'rx_thread_configured': True, 'configuration_complete': True},
-                      'decoder': {'name': 'HexitecFrameDecoder', 'packets_lost': 0, 'fem_packets_lost': [0]},
+                      {'ipc_configured': True, 'decoder_configured': True,
+                       'buffer_manager_configured': True, 'rx_thread_configured': True,
+                       'configuration_complete': True},
+                      'decoder': {'name': 'HexitecFrameDecoder', 'packets_lost': 0,
+                                  'fem_packets_lost': [0]},
                       'buffers': {'total': 97564, 'empty': 97564, 'mapped': 0},
                       'frames': {'timedout': 0, 'received': 0, 'released': 0, 'dropped': 0},
                       'timestamp': '2022-11-23T10:09:24.750775', 'connected': True},
                      {'status':
-                      {'ipc_configured': True, 'decoder_configured': True, 'buffer_manager_configured': True,
-                       'rx_thread_configured': True, 'configuration_complete': True},
+                      {'ipc_configured': True, 'decoder_configured': True,
+                       'buffer_manager_configured': True, 'rx_thread_configured': True,
+                       'configuration_complete': True},
                       'buffers': {'total': 97564, 'empty': 0, 'mapped': 0},
                       'frames': {'timedout': 0, 'received': 0, 'released': 0, 'dropped': 0},
                       'timestamp': '2022-11-23T10:09:24.751213', 'connected': True},
                      {'status':
-                      {'ipc_configured': True, 'decoder_configured': True, 'buffer_manager_configured': True,
-                       'rx_thread_configured': True, 'configuration_complete': True},
-                      'decoder': {'name': 'HexitecFrameDecoder', 'packets_lost': 0, 'fem_packets_lost': [0]},
+                      {'ipc_configured': True, 'decoder_configured': True,
+                       'buffer_manager_configured': True, 'rx_thread_configured': True,
+                       'configuration_complete': True},
+                      'decoder': {'name': 'HexitecFrameDecoder', 'packets_lost': 0,
+                                  'fem_packets_lost': [0]},
                       'buffers': {'total': 97564, 'empty': 97564, 'mapped': 0},
                       'frames': {'timedout': 0, 'received': 0, 'released': 0, 'dropped': 0},
                       'timestamp': '2022-11-23T10:09:24.750283', 'connected': True}]
@@ -506,16 +514,16 @@ class TestDAQ(unittest.TestCase):
             self.test_daq.adapter.hexitec.fem.hardware_busy = True
 
             self.test_daq.daq.acquisition_check_loop()
-            mock_loop.instance().call_later.assert_called_with(.5,
-                                                               self.test_daq.daq.acquisition_check_loop)
+            instance = mock_loop.instance()
+            instance.call_later.assert_called_with(.5, self.test_daq.daq.acquisition_check_loop)
 
     def test_acquisition_check_loop_polls_processing_once_acquisition_complete(self):
         """Test acquisition check loop polls processing status once fem(s) finished sending data."""
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
             self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.acquisition_check_loop()
-            mock_loop.instance().call_later.assert_called_with(.5,
-                                                               self.test_daq.daq.processing_check_loop)
+            instance = mock_loop.instance()
+            instance.call_later.assert_called_with(.5, self.test_daq.daq.processing_check_loop)
 
     def test_processing_check_loop_polls_file_status_after_processing_complete(self):
         """Test processing check loop polls for processed file closed once processing done."""
@@ -557,8 +565,8 @@ class TestDAQ(unittest.TestCase):
                 # TODO: REPLACE ANY WITH ApiAdapterRequest
                 call("config/inject_eoa", ANY)
             ])
-            mock_loop.instance().call_later.assert_called_with(0.02,
-                                                               self.test_daq.daq.monitor_eoa_progress)
+            instance = mock_loop.instance()
+            instance.call_later.assert_called_with(0.02, self.test_daq.daq.monitor_eoa_progress)
 
     def test_monitor_eoa_progress_handles_processed(self):
         """Test function calls stop_acquisition if eoa completed"""
@@ -571,8 +579,8 @@ class TestDAQ(unittest.TestCase):
         """Test function calls itself if eoa not completed"""
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
             self.test_daq.daq.monitor_eoa_progress()
-            mock_loop.instance().call_later.assert_called_with(0.25,
-                                                               self.test_daq.daq.monitor_eoa_progress)
+            instance = mock_loop.instance()
+            instance.call_later.assert_called_with(0.25, self.test_daq.daq.monitor_eoa_progress)
 
     def test_stop_acquisition_handles_file_shut(self):
         """Test function wraps up acquisition if file shut."""
@@ -615,13 +623,18 @@ class TestDAQ(unittest.TestCase):
                     'ShadingCorrectionProfile':
                         {'IntensifierField': '0', 'GreyLevelTargets':
                             {'Target':
-                                    [{'kV': '0', 'uA': '0', 'XrayFilterMaterial': None, 'XrayFilterThickness': '0',
-                                        'GreyLevel': '165', 'PercentageWhiteLevel': '0'}]},
-                            'UsesMultipleXrayFilters': 'false', 'Mode': 'CT3D', 'TiltDegrees': '0'}, 'FluxNormalisationRect':
+                                    [{'kV': '0', 'uA': '0', 'XrayFilterMaterial': None,
+                                      'XrayFilterThickness': '0', 'GreyLevel': '165',
+                                      'PercentageWhiteLevel': '0'}]},
+                            'UsesMultipleXrayFilters': 'false', 'Mode': 'CT3D',
+                            'TiltDegrees': '0'}, 'FluxNormalisationRect':
                     {'Location':
                         {'X': '10', 'Y': '10'},
-                        'Size': {'Width': '100', 'Height': '100'}, 'Height': '100'}, 'JobGuid': '392c51f4-48c1-49ae-a1a6-2998093e7bc1'},
-                'Information': {'@xmlns:xsi': 'none', 'JobGuid': '392c51f4-48c1-49ae-a1a6-2998093e7bc1'},
+                        'Size': {'Width': '100', 'Height': '100'},
+                        'Height': '100'},
+                    'JobGuid': '392c51f4-48c1-49ae-a1a6-2998093e7bc1'},
+                'Information': {'@xmlns:xsi': 'none',
+                                'JobGuid': '392c51f4-48c1-49ae-a1a6-2998093e7bc1'},
                 'list_list': [["String"]]}
         param_tree_dict = self.test_daq.daq._flatten_dict(param_tree_dict)
         import h5py
@@ -639,71 +652,84 @@ class TestDAQ(unittest.TestCase):
 
     def test_write_metadata_works(self):
         """Test write_metadata function."""
-        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"), patch("h5py._hl.group.Group") as h5_group:
-            hdf_file = Mock()
-            meta_group = h5_group
-            meta_group.name = u'/hexitec'
-            param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
-            self.test_daq.daq.calibration_enable = True
-            self.test_daq.daq.threshold_mode = self.test_daq.daq.THRESHOLDOPTIONS[1]  # = "filename"
+        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"):
+            with patch("h5py._hl.group.Group") as h5_group:
+                hdf_file = Mock()
+                meta_group = h5_group
+                meta_group.name = u'/hexitec'
+                param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
+                self.test_daq.daq.calibration_enable = True
+                # THRESHOLDOPTIONS[1] = "filename"
+                self.test_daq.daq.threshold_mode = self.test_daq.daq.THRESHOLDOPTIONS[1]
 
-            with patch("builtins.open", mock_open(read_data="data")):
-                with patch("os.path.isfile") as mock_isfile:
-                    mock_isfile.return_value = True
-                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict, hdf_file)
+                with patch("builtins.open", mock_open(read_data="data")):
+                    with patch("os.path.isfile") as mock_isfile:
+                        mock_isfile.return_value = True
+                        rc_value = self.test_daq.daq.write_metadata(meta_group,
+                                                                    param_tree_dict,
+                                                                    hdf_file)
 
-            key = 'detector/fem/hexitec_config'
-            assert key in self.test_daq.daq.config_ds
-            assert rc_value == 0
+                key = 'detector/fem/hexitec_config'
+                assert key in self.test_daq.daq.config_ds
+                assert rc_value == 0
 
     def test_write_metadata_handles_IOError(self):
         """Test write_metadata handles file reading error."""
-        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"), patch("h5py._hl.group.Group") as h5_group:
-            hdf_file = Mock()
-            meta_group = h5_group
-            meta_group.name = u'/hexitec'
-            param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
+        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"):
+            with patch("h5py._hl.group.Group") as h5_group:
+                hdf_file = Mock()
+                meta_group = h5_group
+                meta_group.name = u'/hexitec'
+                param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
 
-            with patch("builtins.open", mock_open(read_data="data")) as mock_file:
-                mock_file.side_effect = IOError(Mock())
+                with patch("builtins.open", mock_open(read_data="data")) as mock_file:
+                    mock_file.side_effect = IOError(Mock())
 
-                with patch("os.path.isfile") as mock_isfile:
-                    mock_isfile.return_value = True
+                    with patch("os.path.isfile") as mock_isfile:
+                        mock_isfile.return_value = True
 
-                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict, hdf_file)
-            assert rc_value == -1
+                        rc_value = self.test_daq.daq.write_metadata(meta_group,
+                                                                    param_tree_dict,
+                                                                    hdf_file)
+                assert rc_value == -1
 
     def test_write_metadata_handles_exception(self):
         """Test write_metadata handles general file I/O exception."""
-        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"), patch("h5py._hl.group.Group") as h5_group:
-            hdf_file = Mock()
-            meta_group = h5_group
-            meta_group.name = u'/hexitec'
-            param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
+        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"):
+            with patch("h5py._hl.group.Group") as h5_group:
+                hdf_file = Mock()
+                meta_group = h5_group
+                meta_group.name = u'/hexitec'
+                param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
 
-            with patch("builtins.open", mock_open(read_data="data")) as mock_file:
-                mock_file.side_effect = Exception(Mock())
+                with patch("builtins.open", mock_open(read_data="data")) as mock_file:
+                    mock_file.side_effect = Exception(Mock())
 
-                with patch("os.path.isfile") as mock_isfile:
-                    mock_isfile.return_value = True
+                    with patch("os.path.isfile") as mock_isfile:
+                        mock_isfile.return_value = True
 
-                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict, hdf_file)
-            assert rc_value == -2
+                        rc_value = self.test_daq.daq.write_metadata(meta_group,
+                                                                    param_tree_dict,
+                                                                    hdf_file)
+                assert rc_value == -2
 
     def test_write_metadata_handles_file_missing(self):
         """Test write_metadata handles missing file."""
-        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"), patch("h5py._hl.group.Group") as h5_group:
-            hdf_file = Mock()
-            meta_group = h5_group
-            meta_group.name = u'/hexitec'
-            param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
+        with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"):
+            with patch("h5py._hl.group.Group") as h5_group:
+                hdf_file = Mock()
+                meta_group = h5_group
+                meta_group.name = u'/hexitec'
+                param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
 
-            with patch("builtins.open", mock_open(read_data="data")):
-                with patch("os.path.isfile") as mock_isfile:
-                    mock_isfile.return_value = False
+                with patch("builtins.open", mock_open(read_data="data")):
+                    with patch("os.path.isfile") as mock_isfile:
+                        mock_isfile.return_value = False
 
-                    rc_value = self.test_daq.daq.write_metadata(meta_group, param_tree_dict, hdf_file)
-            assert rc_value == -3
+                        rc_value = self.test_daq.daq.write_metadata(meta_group,
+                                                                    param_tree_dict,
+                                                                    hdf_file)
+                assert rc_value == -3
 
     def test_hdf_closing_loop_waits_while_file_open(self):
         """Test the function waits while file being written."""
@@ -796,7 +822,8 @@ class TestDAQ(unittest.TestCase):
     def test_are_processes_configured_works(self):
         """Test checking node(s) status can be resolved."""
         status = [{'shared_memory': {'configured': True},
-                   'plugins': {'names': ['hdf', 'live_view', 'reorder', 'summed_image', 'threshold']},
+                   'plugins': {'names': ['hdf', 'lvframes', 'lvspectra', 'reorder',
+                                         'summed_image', 'threshold']},
                    'connected': True}]
         adapter = "fp"
         configured = self.test_daq.daq.are_processes_configured(status, adapter)
@@ -864,33 +891,57 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq._set_discrimination_enable(discrimination_enable)
         assert discrimination_enable is self.test_daq.daq.discrimination_enable
 
-    def test_set_dataset_name(self):
+    def test_set_lvframes_dataset_name(self):
         """Test function sets dataset name."""
         dataset_name = "raw_frames"
-        self.test_daq.daq._set_dataset_name(dataset_name)
-        assert dataset_name is self.test_daq.daq.dataset_name
+        self.test_daq.daq._set_lvframes_dataset_name(dataset_name)
+        assert dataset_name is self.test_daq.daq.lvframes_dataset_name
 
         dataset_name = "processed_frames"
-        self.test_daq.daq._set_dataset_name(dataset_name)
-        assert dataset_name is self.test_daq.daq.dataset_name
+        self.test_daq.daq._set_lvframes_dataset_name(dataset_name)
+        assert dataset_name is self.test_daq.daq.lvframes_dataset_name
 
-    def test_set_frame_frequency(self):
+    def test_set_lvframes_frequency(self):
         """Test function sets frame frequency."""
-        frame_frequency = 67
-        self.test_daq.daq._set_frame_frequency(frame_frequency)
-        assert frame_frequency is self.test_daq.daq.frame_frequency
+        lvframes_frequency = 67
+        self.test_daq.daq._set_lvframes_frequency(lvframes_frequency)
+        assert lvframes_frequency is self.test_daq.daq.lvframes_frequency
 
-    def test_set_live_view_socket_addr(self):
+    def test_set_lvframes_socket_addr(self):
         """Test function sets socket address."""
         socket_addr = "tcp://10.20.30.40:5020"
-        self.test_daq.daq._set_live_view_socket_addr(socket_addr)
-        assert socket_addr is self.test_daq.daq.live_view_socket_addr
+        self.test_daq.daq._set_lvframes_socket_addr(socket_addr)
+        assert socket_addr is self.test_daq.daq.lvframes_socket_addr
 
-    def test_set_per_second(self):
+    def test_set_lvframes_per_second(self):
         """Test function sets per second."""
-        per_second = 5
-        self.test_daq.daq._set_per_second(per_second)
-        assert per_second is self.test_daq.daq.per_second
+        lvframes_per_second = 5
+        self.test_daq.daq._set_lvframes_per_second(lvframes_per_second)
+        assert lvframes_per_second is self.test_daq.daq.lvframes_per_second
+
+    def test_set_lvspectra_dataset_name(self):
+        """Test function sets dataset name."""
+        dataset_name = "summed_spectra"
+        self.test_daq.daq._set_lvspectra_dataset_name(dataset_name)
+        assert dataset_name is self.test_daq.daq.lvspectra_dataset_name
+
+    def test_set_lvspectra_frequency(self):
+        """Test function sets frame frequency."""
+        lvspectra_frequency = 24
+        self.test_daq.daq._set_lvspectra_frequency(lvspectra_frequency)
+        assert lvspectra_frequency is self.test_daq.daq.lvspectra_frequency
+
+    def test_set_lvspectra_socket_addr(self):
+        """Test function sets socket address."""
+        socket_addr = "tcp://50.60.70.80:5021"
+        self.test_daq.daq._set_lvspectra_socket_addr(socket_addr)
+        assert socket_addr is self.test_daq.daq.lvspectra_socket_addr
+
+    def test_set_lvspectra_per_second(self):
+        """Test function sets per second."""
+        lvspectra_per_second = 7
+        self.test_daq.daq._set_lvspectra_per_second(lvspectra_per_second)
+        assert lvspectra_per_second is self.test_daq.daq.lvspectra_per_second
 
     def test_set_next_frame_enable(self):
         """Test function sets next frame bool."""
@@ -1102,9 +1153,12 @@ class TestDAQ(unittest.TestCase):
                  'histogram':
                     {'bin_end': 800, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
                      'pass_processed': False, 'pass_raw': True},
-                 'live_view':
-                    {'dataset_name': 'summed_spectra', 'frame_frequency': 39,
-                     'live_view_socket_addr': 'tcp://127.0.0.1:5020', 'per_second': 1},
+                 'lvframes':
+                    {'dataset_name': 'raw_frames', 'frame_frequency': 0,
+                     'live_view_socket_addr': 'tcp://127.0.0.1:5020', 'per_second': 2},
+                 'lvspectra':
+                    {'dataset_name': 'summed_spectra', 'frame_frequency': 0,
+                     'live_view_socket_addr': 'tcp://127.0.0.1:5021', 'per_second': 1},
                  'next_frame': {'enable': False},
                  'threshold':
                     {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 10},
@@ -1126,7 +1180,8 @@ class TestDAQ(unittest.TestCase):
             #     call("config/config_file/", ANY)
             # ])
 
-            mock_loop.instance().call_later.assert_called_with(.4, self.test_daq.daq.submit_configuration)
+            instance = mock_loop.instance()
+            instance.call_later.assert_called_with(.4, self.test_daq.daq.submit_configuration)
 
     def test_submit_configuration_hdf_branch(self):
         """Test function handles sample parameter tree ok."""
@@ -1135,12 +1190,15 @@ class TestDAQ(unittest.TestCase):
         # config_dict = \
         #     {
         #         'addition': {'enable': False, 'pixel_grid_size': 3},
-        #         'calibration': {'enable': False, 'gradients_filename': '', 'intercepts_filename': ''},
+        #         'calibration': {'enable': False, 'gradients_filename': '',
+        #                         'intercepts_filename': ''},
         #         'discrimination': {'enable': False, 'pixel_grid_size': 3},
-        #         'histogram': {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
+        #         'histogram': {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0,
+        #                       'max_frames_received': 10,
         #                       'pass_processed': False, 'pass_raw': True},
         #         'next_frame': {'enable': False},
-        #         'threshold': {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 100}
+        #         'threshold': {'threshold_filename': '', 'threshold_mode': 'value',
+        #                       'threshold_value': 100}
         #     }
 
         # Mock using single entry parameter tree (i.e. dictionary)
@@ -1168,7 +1226,8 @@ class TestDAQ(unittest.TestCase):
 
         with patch("hexitec.HexitecDAQ.IOLoop"):
             self.test_daq.daq.param_tree.tree.get = Mock(return_value=config_dict)
-            self.test_daq.daq.param_tree.tree['config'].get = Mock(return_value={"pixel_grid_size": 5})
+            self.test_daq.daq.param_tree.tree['config'].get = \
+                Mock(return_value={"pixel_grid_size": 5})
 
             self.test_daq.daq.pass_raw = False
             self.test_daq.daq.pass_processed = False

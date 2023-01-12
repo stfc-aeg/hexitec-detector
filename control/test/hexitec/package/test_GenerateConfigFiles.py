@@ -8,6 +8,7 @@ from hexitec.GenerateConfigFiles import GenerateConfigFiles
 
 import unittest
 import pytest
+import json
 
 
 class ObjectTestFixture(object):
@@ -15,32 +16,33 @@ class ObjectTestFixture(object):
 
     def __init__(self, selected_os="CentOS", live_view_selected=True):
         """Initialise object."""
-        param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
-                    'sensors_layout': '2x2', 'receiver':
-                    {'config_file': '', 'configured': False, 'connected': False},
-                    'status': {'in_progress': False, 'daq_ready': False},
-                    # The 'config' nested dictionary control which plugin(s) are loaded:
-                    'config':
-                    {'calibration':
-                    {'enable': True, 'intercepts_filename': '', 'gradients_filename': ''},
-                    'addition':
-                    {'enable': True, 'pixel_grid_size': 3},
-                    'discrimination': {'enable': False, 'pixel_grid_size': 5},
-                    'histogram':
-                    {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
-                        'pass_processed': True, 'pass_raw': True},
-                    'live_view':
-                    {'dataset_name': 'summed_spectra', 'frame_frequency': 39,
-                        'live_view_socket_addr': 'tcp://127.0.0.1:5020', 'per_second': 1},
-                    'next_frame': {'enable': True},
-                    'threshold':
-                    {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'},
-                    'summed_image': {
-                        'threshold_lower': 120,
-                        'threshold_upper': 4800,
-                        'image_frequency': 1}
-                    },
-                    'processor': {'config_file': '', 'configured': False, 'connected': False}}
+        param_tree = {'file_info':
+                      {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
+                      'sensors_layout': '2x2',
+                      'receiver':
+                      {'config_file': '', 'configured': False, 'connected': False},
+                      'status': {'in_progress': False, 'daq_ready': False},
+                      # The 'config' nested dictionary control which plugin(s) are loaded:
+                      'config':
+                      {'calibration': {'enable': True, 'intercepts_filename': '',
+                                       'gradients_filename': ''},
+                       'addition': {'enable': True, 'pixel_grid_size': 3},
+                       'discrimination': {'enable': False, 'pixel_grid_size': 5},
+                       'histogram': {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0,
+                                     'max_frames_received': 10, 'pass_processed': True,
+                                     'pass_raw': True},
+                       'lvframes': {'dataset_name': 'raw_frames', 'frame_frequency': 0,
+                                    'live_view_socket_addr': 'tcp://127.0.0.1:5020',
+                                    'per_second': 2},
+                       'lvspectra': {'dataset_name': 'summed_spectra', 'frame_frequency': 0,
+                                     'live_view_socket_addr': 'tcp://127.0.0.1:5021',
+                                     'per_second': 1},
+                       'next_frame': {'enable': True},
+                       'threshold': {'threshold_value': 99, 'threshold_filename': '',
+                                     'threshold_mode': 'none'},
+                       'summed_image': {'threshold_lower': 120, 'threshold_upper': 4800,
+                                        'image_frequency': 1}},
+                      'processor': {'config_file': '', 'configured': False, 'connected': False}}
 
         bin_end = param_tree['config']['histogram']['bin_end']
         bin_start = param_tree['config']['histogram']['bin_start']
@@ -50,8 +52,10 @@ class ObjectTestFixture(object):
         extra_datasets = [master_dataset, "processed_frames"]
 
         self.adapter = GenerateConfigFiles(param_tree, number_histograms, compression_type="blosc",
-                                           master_dataset=master_dataset, extra_datasets=extra_datasets,
-                                           selected_os=selected_os, live_view_selected=live_view_selected)
+                                           master_dataset=master_dataset,
+                                           extra_datasets=extra_datasets,
+                                           selected_os=selected_os,
+                                           live_view_selected=live_view_selected)
 
 
 class TestObject(unittest.TestCase):
@@ -68,15 +72,17 @@ class TestObject(unittest.TestCase):
         assert response == "true"
 
     def test_threshold_settings_fails_invalid_config(self):
-        """."""
-        settings = {'bad_key_name': 99, 'threshold_filename': '/a/path/and/name.txt', 'threshold_mode': 'value'}
+        """Test function fails on bad settings."""
+        settings = {'bad_key_name': 99, 'threshold_filename': '/a/path/and/name.txt',
+                    'threshold_mode': 'value'}
 
         with self.assertRaises(KeyError):
             self.test_detector_adapter.adapter.threshold_settings(settings)
 
     def test_threshold_settings(self):
-        """."""
-        settings = {'threshold_value': 99, 'threshold_filename': '/path/and/filename.txt', 'threshold_mode': 'none'}
+        """Test function ok with valid settings."""
+        settings = {'threshold_value': 99, 'threshold_filename': '/path/and/filename.txt',
+                    'threshold_mode': 'none'}
 
         correct_threshold_settings = """
                         "threshold_file": "/path/and/filename.txt",
@@ -113,7 +119,8 @@ class TestObject(unittest.TestCase):
 
     def test_histogram_settings(self):
         """Test function ok with valid settings."""
-        settings = {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10, 'pass_processed': True, 'pass_raw': True}
+        settings = {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
+                    'pass_processed': True, 'pass_raw': True}
 
         correct_histogram_settings = """
                         "bin_start": 0,
@@ -131,25 +138,27 @@ class TestObject(unittest.TestCase):
         settings = {'bad_key_name': 99}
 
         with self.assertRaises(KeyError):
-            self.test_detector_adapter.adapter.live_view_settings(settings)
+            self.test_detector_adapter.adapter.live_view_settings("lvspectra", settings)
 
     def test_live_view_settings(self):
         """Test function ok with valid settings."""
+        plugin_name = "lvframes"
         settings = {'frame_frequency': 5, 'per_second': 1,
-                        'live_view_socket_addr': 'tcp://192.168.0.13:5020',
-                        'dataset_name': 'processed_frames'}
+                    'live_view_socket_addr': 'tcp://192.168.0.13:5020',
+                    'dataset_name': 'processed_frames'}
 
         correct_live_view_settings = ''',
                 {
-                    "live_view":
+                    "%s":
                     {
                         "frame_frequency": 5,
                         "per_second": 1,
                         "live_view_socket_addr": "tcp://192.168.0.13:5020",
                         "dataset_name": "processed_frames"
                     }
-                }'''
-        live_view_config = self.test_detector_adapter.adapter.live_view_settings(settings)
+                }''' % plugin_name
+        live_view_config = \
+            self.test_detector_adapter.adapter.live_view_settings(plugin_name, settings)
         assert live_view_config == correct_live_view_settings
 
     def test_summed_image_settings_fails_invalid_config(self):
@@ -172,7 +181,72 @@ class TestObject(unittest.TestCase):
 
     def test_generate_config_files(self):
         """Test function works ok."""
-        self.test_detector_adapter.adapter.generate_config_files()
+        store_temp_name, execute_temp_name, store_string_without_cr, \
+            execute_string_without_cr = self.test_detector_adapter.adapter.generate_config_files()
+        assert store_temp_name == "/tmp/_tmp_store.json"
+        assert execute_temp_name == "/tmp/_tmp_execute.json"
+
+        d = json.loads(store_string_without_cr)
+        assert d['index'] == store_temp_name[5:]
+        assert d['value'][0]['plugin']['load']['index'] == 'reorder'
+        assert d['value'][1]['plugin']['load']['index'] == 'threshold'
+        assert d['value'][2]['plugin']['load']['index'] == 'next_frame'
+        assert d['value'][3]['plugin']['load']['index'] == 'calibration'
+        assert d['value'][4]['plugin']['load']['index'] == 'addition'
+        assert d['value'][5]['plugin']['load']['index'] == 'summed_image'
+        assert d['value'][6]['plugin']['load']['index'] == 'histogram'
+        assert d['value'][7]['plugin']['load']['index'] == 'lvframes'
+        assert d['value'][8]['plugin']['load']['index'] == 'lvspectra'
+        assert d['value'][9]['plugin']['load']['index'] == 'blosc'
+        assert d['value'][10]['plugin']['load']['index'] == 'hdf'
+        assert d['value'][11]['plugin'] == {'connect': {'index': 'lvframes',
+                                            'connection': 'histogram'}}
+        assert d['value'][12]['plugin'] == {'connect': {'index': 'lvspectra',
+                                            'connection': 'histogram'}}
+        assert d['value'][13]['plugin'] == {'connect': {'index': 'reorder',
+                                            'connection': 'frame_receiver'}}
+        assert d['value'][14]['plugin'] == {'connect':
+                                            {'index': 'threshold', 'connection': 'reorder'}}
+        assert d['value'][15]['plugin'] == {'connect':
+                                            {'index': 'next_frame', 'connection': 'threshold'}}
+        assert d['value'][16]['plugin'] == {'connect':
+                                            {'index': 'calibration', 'connection': 'next_frame'}}
+        assert d['value'][17]['plugin'] == {'connect':
+                                            {'index': 'addition', 'connection': 'calibration'}}
+        assert d['value'][18]['plugin'] == {'connect':
+                                            {'index': 'summed_image', 'connection': 'addition'}}
+        assert d['value'][19]['plugin'] == {'connect':
+                                            {'index': 'histogram', 'connection': 'summed_image'}}
+        assert d['value'][20]['plugin'] == {'connect':
+                                            {'index': 'blosc', 'connection': 'histogram'}}
+        assert d['value'][21]['plugin'] == {'connect': {'index': 'hdf', 'connection': 'blosc'}}
+        assert d['value'][22] == {'reorder': {'sensors_layout': '2x2'}}
+        assert d['value'][23] == {'threshold':
+                                  {'threshold_file': '', 'threshold_value': 99,
+                                   'threshold_mode': 'none', 'sensors_layout': '2x2'}}
+        assert d['value'][24] == {'next_frame': {'sensors_layout': '2x2'}}
+        assert d['value'][25] == {'calibration':
+                                  {'gradients_file': '', 'intercepts_file': '',
+                                   'sensors_layout': '2x2'}}
+        assert d['value'][26] == {'addition': {'pixel_grid_size': 3, 'sensors_layout': '2x2'}}
+        assert d['value'][27] == {'summed_image':
+                                  {'threshold_lower': 120, 'threshold_upper': 4800,
+                                   'sensors_layout': '2x2'}}
+        assert d['value'][28] == {'histogram':
+                                  {'bin_start': 0, 'bin_end': 8000, 'bin_width': 10.0,
+                                   'max_frames_received': 10, 'pass_processed': True,
+                                   'pass_raw': True, 'sensors_layout': '2x2'}}
+        assert d['value'][29] == {'blosc': {'sensors_layout': '2x2'}}
+        assert d['value'][30] == {'lvframes':
+                                  {'frame_frequency': 0, 'per_second': 2,
+                                   'live_view_socket_addr': 'tcp://127.0.0.1:5020',
+                                   'dataset_name': 'raw_frames'}}
+        assert d['value'][31] == {'lvspectra':
+                                  {'frame_frequency': 0, 'per_second': 1,
+                                   'live_view_socket_addr': 'tcp://127.0.0.1:5021',
+                                   'dataset_name': 'summed_spectra'}}
+
+        assert execute_string_without_cr == '{"index":"_tmp_store.json"}'
 
 
 class TestObject2(unittest.TestCase):

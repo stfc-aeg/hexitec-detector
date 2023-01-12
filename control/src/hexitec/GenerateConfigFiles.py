@@ -103,25 +103,23 @@ class GenerateConfigFiles():
             raise KeyError("Couldn't locate summed_image setting(s)!")
         return summed_image_config
 
-    def live_view_settings(self, live_view):
-        """Add live_view plugin section to configuration."""
+    def live_view_settings(self, plugin_name, live_view):
+        """Add plugin_name (a live_view plugin) section to configuration."""
         try:
-            print(" *** parameter_tree:\n {}\n".format(live_view))
             frame_frequency = live_view["frame_frequency"]
             per_second = live_view["per_second"]
             socket_addr = live_view["live_view_socket_addr"]
             dataset_name = live_view["dataset_name"]
-            # socket_addr = "tcp://192.168.0.13:5020"
             live_view_config = ''',
                 {
-                    "live_view":
+                    "%s":
                     {
                         "frame_frequency": %s,
                         "per_second": %s,
                         "live_view_socket_addr": "%s",
                         "dataset_name": "%s"
                     }
-                }''' % (frame_frequency, per_second, socket_addr, dataset_name)
+                }''' % (plugin_name, frame_frequency, per_second, socket_addr, dataset_name)
         except KeyError:
             logging.error("Error extracting live_view settings!")
             print("Error extracting live_view_settings!")
@@ -139,7 +137,7 @@ class GenerateConfigFiles():
 
         # Generate a unique index name
         (blank, folder, filename) = store_temp_name.split("/")
-        self.index_name = filename + str(id)
+        self.index_name = filename
 
         # ---------------- Section for the store sequence ---------------- #
 
@@ -175,7 +173,8 @@ class GenerateConfigFiles():
 
         # Odin plugins
         odin_plugins = {}
-        odin_plugins["live_view"] = ["live_view", "LiveView", "LiveView"]
+        odin_plugins["lvframes"] = ["lvframes", "LiveView", "LiveView"]
+        odin_plugins["lvspectra"] = ["lvspectra", "LiveView", "LiveView"]
         odin_plugins['hdf'] = ["hdf", "FileWriter", "Hdf5"]
         odin_plugins['blosc'] = ["blosc", "Blosc", "Blosc"]
 
@@ -191,7 +190,7 @@ class GenerateConfigFiles():
 
         # Sort parameter tree dict into R, T, N, C, A, D, SI, H, LV plugin order
         keyorder = ['reorder', 'threshold', 'next_frame', 'calibration', 'addition',
-                    'discrimination', 'summed_image', 'histogram', 'live_view']
+                    'discrimination', 'summed_image', 'histogram', 'lvframes', 'lvspectra']
         config = OrderedDict(sorted(d.items(), key=lambda i: keyorder.index(i[0])))
 
         # Determine plugin chain (to configure frameProcessor)
@@ -217,7 +216,8 @@ class GenerateConfigFiles():
 
         plugin_chain += ["summed_image", "histogram"]
         if self.live_view_selected:
-            plugin_chain += ["live_view"]
+            plugin_chain += ["lvframes"]
+            plugin_chain += ["lvspectra"]
 
         # Add blosc if compression selected
         if self.compression_type == "blosc":
@@ -277,7 +277,7 @@ class GenerateConfigFiles():
                         odin_plugins[plugin][2])
 
         if self.live_view_selected:
-            # Chain plugins together, with live view branched off histogram
+            # Chain plugins together, with live view plugins branched off histogram
             # so it can support the following datasets, plugins:
             # * raw_frames/processed_frames (from reorder)
             # * summed_spectra (from histogram)
@@ -286,13 +286,25 @@ class GenerateConfigFiles():
                 {
                     "plugin": {
                         "connect": {
-                            "index": "live_view",
+                            "index": "lvframes",
                             "connection": "histogram"
                         }
                     }
                 }'''
-            # Remove live_view from main plugin chain
-            plugin_chain.remove("live_view")
+            # Remove lvframes from main plugin chain
+            plugin_chain.remove("lvframes")
+
+            store_plugin_connect += ''',
+                {
+                    "plugin": {
+                        "connect": {
+                            "index": "lvspectra",
+                            "connection": "histogram"
+                        }
+                    }
+                }'''
+            # Remove lvspectra from main plugin chain
+            plugin_chain.remove("lvspectra")
         else:
             store_plugin_connect = ""
 
@@ -316,7 +328,7 @@ class GenerateConfigFiles():
         unique_setting = ""
         for plugin in plugin_chain:
             # rinse and repeat for all (except live view, hdf, and blosc if selected)
-            if plugin not in ["live_view", "hdf"]:
+            if plugin not in ["lvframes", "lvspectra", "hdf"]:
 
                 # Get unique_setting(s) according to plugin
                 if plugin == "threshold":
@@ -340,10 +352,14 @@ class GenerateConfigFiles():
                     }
                 }''' % (plugin, unique_setting, sensors_layout)
                 unique_setting = ""
-        # live_view, hdf have different settings (no sensors_layout..)
+        # Live view, hdf have different settings (e.g. no sensors_layout)
 
         if self.live_view_selected:
-            store_plugin_config += self.live_view_settings(self.param_tree["config"]["live_view"])
+            # Add frames, spectra live view settings
+            store_plugin_config += \
+                self.live_view_settings("lvframes", self.param_tree["config"]["lvframes"])
+            store_plugin_config += \
+                self.live_view_settings("lvspectra", self.param_tree["config"]["lvspectra"])
 
         # Configure blosc (common settings) if selected
         if self.compression_type == "blosc":
@@ -486,31 +502,30 @@ class GenerateConfigFiles():
 
 
 if __name__ == '__main__':  # pragma: no cover
-    param_tree = {'file_info': {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
-                  'sensors_layout': '2x2', 'receiver':
+    param_tree = {'file_info':
+                  {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
+                  'sensors_layout': '2x2',
+                  'receiver':
                   {'config_file': '', 'configured': False, 'connected': False},
                   'status': {'in_progress': False, 'daq_ready': False},
                   # The 'config' nested dictionary control which plugin(s) are loaded:
                   'config':
-                  {'calibration':
-                   {'enable': False, 'intercepts_filename': '', 'gradients_filename': ''},
-                   'addition':
-                   {'enable': False, 'pixel_grid_size': 3},
+                  {'calibration': {'enable': True, 'intercepts_filename': '',
+                                   'gradients_filename': ''},
+                   'addition': {'enable': True, 'pixel_grid_size': 3},
                    'discrimination': {'enable': False, 'pixel_grid_size': 5},
-                   'histogram':
-                   {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
-                    'pass_processed': True, 'pass_raw': True},
-                   'live_view':
-                   {'dataset_name': 'summed_spectra', 'frame_frequency': 39,
-                    'live_view_socket_addr': 'tcp://127.0.0.1:5020', 'per_second': 1},
-                   'next_frame': {'enable': False},
-                   'threshold':
-                   {'threshold_value': 99, 'threshold_filename': '', 'threshold_mode': 'none'},
-                   'summed_image': {
-                       'threshold_lower': 120,
-                       'threshold_upper': 4800,
-                       'image_frequency': 1}
-                   },
+                   'histogram': {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0,
+                                 'max_frames_received': 10, 'pass_processed': True,
+                                 'pass_raw': True},
+                   'lvframes': {'dataset_name': 'raw_frames', 'frame_frequency': 0,
+                                'live_view_socket_addr': 'tcp://127.0.0.1:5020', 'per_second': 2},
+                   'lvspectra': {'dataset_name': 'summed_spectra', 'frame_frequency': 0,
+                                 'live_view_socket_addr': 'tcp://127.0.0.1:5021', 'per_second': 1},
+                   'next_frame': {'enable': True},
+                   'threshold': {'threshold_value': 99, 'threshold_filename': '',
+                                 'threshold_mode': 'none'},
+                   'summed_image': {'threshold_lower': 120, 'threshold_upper': 4800,
+                                    'image_frequency': 1}},
                   'processor': {'config_file': '', 'configured': False, 'connected': False}}
 
     bin_end = param_tree['config']['histogram']['bin_end']

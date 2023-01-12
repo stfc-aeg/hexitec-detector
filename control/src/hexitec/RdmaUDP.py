@@ -93,7 +93,7 @@ class RdmaUDP(object):
             self.cmd_no = 0
 
     def __del__(self):
-        """."""
+        """Ensure rdma connection closed."""
         self.socket.close()
 
     def read(self, address, burst_len=1, comment=''):
@@ -224,11 +224,11 @@ class RdmaUDP(object):
         return data_array
 
     def close(self):
-        """."""
+        """Ensure rdma connection closed."""
         self.socket.close()
 
     def setDebug(self, enabled=True):
-        """."""
+        """Set debugging."""
         self.debug = enabled
 
     def uart_rx(self, uart_address):

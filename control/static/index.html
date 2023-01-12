@@ -99,7 +99,7 @@
                       &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
                     </td>
                   </tr>
-                  <tr>
+                  <!-- <tr>
                     <td>
                       Compression:&nbsp;
                     </td>
@@ -112,7 +112,7 @@
                     <td>
                       &nbsp;<td><span id="compression-warning">&nbsp;</span></td>
                     </td>
-                  </tr>
+                  </tr> -->
                   <tr>
                     <td>
                       <th>Camera&nbsp;</th>
@@ -187,11 +187,10 @@
                   <tr>
                     <td>
                     </td>
-                    <td>
-                      (placeholder)&nbsp;
-                    </td>
+                    <td>All Data Sent</td>
+                    <td><span id="all_data_sent" style="float:left">&nbsp;</span></td>
                   </tr>
-                  <tr>
+                  <!-- <tr>
                     <td>
                       <th>FPGA Trigger Mode&nbsp;</th>
                     </td>
@@ -202,7 +201,7 @@
                     <td>
                       (placeholder)&nbsp;
                     </td>
-                  </tr>
+                  </tr> -->
                 </table>
 
                 <table>
@@ -372,6 +371,12 @@
                                   <input type="radio" class="btn-check" name="autosize_radio" id="autosize_radio2" autocomplete="off" onclick="changeAutosizeEnable()" checked>
                                   <label class="btn btn-outline-primary" for="autosize_radio2">Off</label>
                                 </div>
+                                <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                                  <input type="radio" class="btn-check" name="autosizeHis_radio" id="autosizeHis_radio1" autocomplete="off" onclick="changeAutosizeHisEnable()">
+                                  <label class="btn btn-outline-primary" for="autosizeHis_radio1">On</label>
+                                  <input type="radio" class="btn-check" name="autosizeHis_radio" id="autosizeHis_radio2" autocomplete="off" onclick="changeAutosizeHisEnable()" checked>
+                                  <label class="btn btn-outline-primary" for="autosizeHis_radio2">Off</label>
+                                </div>
                               </div>
                             </div>
                             <div class="row sidebar-row vertical-align row-bold">
@@ -388,6 +393,22 @@
                                 />
                               </div>
                             </div>
+                            <div class="row sidebar-row sidebar-row-full">
+                              <div class="col-xs12 range-col">
+                                <input id="size_rangeHis"
+                                  type="text" value="" data-slider-id="size-range"
+                                  data-slider-min="0" data-slider-max="200"
+                                  data-slider-step="1" data-slider-value="100"
+                                />
+                              </div>
+                            </div>
+                            <table>
+                              <tr>
+                                <td>
+                                  <th>Frames&nbsp;Viewer&nbsp;</th>
+                                </td>
+                              </tr>
+                            </table>
                             <table>
                               <tr>
                                 <td>
@@ -397,9 +418,8 @@
                                   <div class="row sidebar-row vertical-align">
                                     <div class="col-xs-7">
                                       <select class="form-control" id="lv_dataset_select" onchange="lv_dataset_changed(this.value)" style="width: 180px">
-                                        <option value="raw_frames">raw_frames</option>
+                                        <option selected="selected" value="raw_frames">raw_frames</option>
                                         <option value="processed_frames">processed_frames</option>
-                                        <option selected="selected" value="summed_spectra">summed_spectra</option>
                                         <option value="summed_images">summed_images</option>
                                       </select>
                                     </div>
@@ -409,23 +429,55 @@
                                   &nbsp;<td><span id="lv-dataset-changed-warning">&nbsp;</span></td>
                                 </td>
                               </tr>
+                            </table>
+                            <table>
                               <tr>
                                 <td>
                                   Frame Frequency:&nbsp;
                                 </td>
                                 <td>
                                   <div class="text-columns">
-                                    <input type="text" id="frame-frequency-text" onChange='frame_frequency_changed()' size="3" value="50">
+                                    <input type="text" id="lvframes-frame-frequency-text" onChange='lvframes_frame_frequency_changed()' size="3" value="50">
                                   </div>
                                 </td>
-                              </tr>
-                              <tr>
+                              <!-- </tr>
+                              <tr> -->
                                 <td>
-                                  Per Second:&nbsp;
+                                  &nbsp;Per Second:&nbsp;
                                 </td>
                                 <td>
                                   <div class="text-columns">
-                                    <input type="text" id="per-second-text" onChange='per_second_changed()' size="3" value="1">
+                                    <input type="text" id="lvframes-per-second-text" onChange='lvframes_per_second_changed()' size="3" value="1">
+                                  </div>
+                                </td>
+                              </tr>
+                            </table>
+
+                            <table>
+                              <tr>
+                                <td>
+                                  <th>Spectra&nbsp;Viewer&nbsp;</th>
+                                </td>
+                              </tr>
+                            </table>
+                            <table>
+                              <tr>
+                                <td>
+                                  Frame Frequency:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="text-columns">
+                                    <input type="text" id="lvspectra-frame-frequency-text" onChange='lvspectra_frame_frequency_changed()' size="3" value="50">
+                                  </div>
+                                </td>
+                              <!-- </tr>
+                              <tr> -->
+                                <td>
+                                  &nbsp;Per Second:&nbsp;
+                                </td>
+                                <td>
+                                  <div class="text-columns">
+                                    <input type="text" id="lvspectra-per-second-text" onChange='lvspectra_per_second_changed()' size="3" value="1">
                                   </div>
                                 </td>
                               </tr>
@@ -437,6 +489,8 @@
                                   <th>Summed&nbsp;Image&nbsp;</th>
                                 </td>
                               </tr>
+                            </table>
+                            <table>
                               <tr>
                                 <td>
                                   Threshold Lower:&nbsp;
@@ -446,8 +500,8 @@
                                     <input type="text" id="threshold-lower-text" onChange='threshold_lower_changed()' size="3" value="0">
                                   </div>
                                 </td>
-                              </tr>
-                              <tr>
+                              <!-- </tr>
+                              <tr> -->
                                 <td>
                                   Threshold Upper:&nbsp;
                                 </td>
@@ -456,8 +510,8 @@
                                     <input type="text" id="threshold-upper-text" onChange='threshold_upper_changed()' size="3" value="4400">
                                   </div>
                                 </td>
-                              </tr>
-                              <tr>
+                              <!-- </tr>
+                              <tr> -->
                                 <td>
                                   Image Frequency:&nbsp;
                                 </td>
@@ -483,9 +537,16 @@
             </div>  <!-- class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">  -->
 
             <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
-              <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Live Data Preview</p>
+              <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Frames Viewer</p>
               <div id="liveview_container" class="odin-server live-image">
                 <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image' load="resizeImage()">
+              </div>
+            </div>
+
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+              <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Spectra Viewer</p>
+              <div id="livehis_container" class="odin-server live-image">
+                <img id='livehis_image' src='/api/0.1/live_histogram/image' data-src='/api/0.1/live_histogram/image' load="resizeHis()">
               </div>
             </div>
 
@@ -501,7 +562,7 @@
           <div class="row contflex">
             <table class="overall-table">
               <tr>
-                <th>Datasets&nbsp;</th>
+                <th>Save Datasets&nbsp;</th>
               </tr>
               <tr>
                 <td></td>
@@ -645,7 +706,7 @@
                 </td>
               </tr>
               <tr>
-                <th>Charged Sharing&nbsp;</th>
+                <th>Charged Sharing Correction&nbsp;</th>
               </tr>
               <tr>
                 <td></td>
@@ -1230,6 +1291,7 @@
 
     <script src="js/bootstrap-slider-10.2.1/js/bootstrap-slider.min.js"></script> <!-- Required by live view -->
     <script src='js/live_view.js'></script>
+    <script src='js/live_his.js'></script>
     <script src="js/odin_server.js"></script>
     <script src="js/odin_control.js"></script>
   </body>
