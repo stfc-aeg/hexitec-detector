@@ -68,15 +68,5 @@ jobs:
         pip install numpy
         pip install h5py
         pip install nose
-        echo "Check processed_frames dataset as expected"
-        ls -la
-
-    # - name: Slack Notification
-    #   uses: rtCamp/action-slack-notify@v2
-    #   env:
-    #     SLACK_CHANNEL: hexitec
-    #     SLACK_COLOR: ${{ job.status }}
-    #     SLACK_ICON: https://avatars.githubusercontent.com/odin-detector?size=48
-    #     SLACK_TITLE: Test hexitec CI action completed
-    #     SLACK_USERNAME: odin-detector
-    #     SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }} 
+        echo "Check processed_frames dataset is as expected"
+        python ${INSTALL_PREFIX}/test_config/dataset_check.py --filename 2x2_test_000000.h5 

@@ -15,9 +15,10 @@ var duration_enable = false;
 var polling_thread_running = false;
 var system_health = true;
 var ui_frames = 10;
-var cold_initialisation = true;
+var js_not_initialised = true;
 var hv_enabled = false;
 var software_state = "Unknown";
+var odin_cold_initialisation = true;
 
 // Called once, when page 1st loaded
 document.addEventListener("DOMContentLoaded", function()
@@ -64,7 +65,7 @@ function connectButtonClicked()
     // On cold initialisation: configure FP, wait 800 ms before connecting
     //  Any subsequent time: Do not configure FP, connect straightaway
     let time_delay = 0;
-    if (cold_initialisation) {
+    if (odin_cold_initialisation) {
         commit_configuration();
         hexitec_config_changed();
         time_delay = 800;
@@ -221,13 +222,13 @@ function poll_fem()
         // Clear any previous error
         document.querySelector('#odin-control-error').innerHTML = "";
         software_state = result["detector"]["software_state"];
-        const odin_cold_initialisation = result["detector"]["cold_initialisation"];
+        odin_cold_initialisation = result["detector"]["cold_initialisation"];
 
-        // If Odin already initiated, but javascript isn't, populate UI with Odin settings
-        if ((odin_cold_initialisation === false) && (cold_initialisation === true))
+        // If javascript isn't initialised, populate UI with Odin's settings
+        if (js_not_initialised)
         {
             update_ui_with_odin_settings();
-            cold_initialisation = odin_cold_initialisation;
+            js_not_initialised = false;
         }
 
         // Odin running, commence polling
@@ -256,7 +257,7 @@ function poll_fem()
         });
 
         // http://localhost:8888/api/0.1/hexitec/fp/status/error/2
-        // Polls the fem(s) for hardware status, environmental data, etc
+        // Polls the fem for hardware status, environmental data, etc
         hexitec_endpoint.get_url(hexitec_url + 'fp/status/')
         .then(result => {
             // // Print all errors reported by one FP:
@@ -371,7 +372,6 @@ function poll_fem()
             var frame_rate = fem["frame_rate"];
             document.querySelector('#frame_rate').innerHTML = frame_rate.toFixed(2);
 
-            /// UNCOMMENT ME
             // console.log(hardware_busy + " " + daq_in_progress + 
             //             " <= hw_busy, daq_in_prog " + "   %_compl: "
             //             + " reads: " + num_reads + " msg: " + adapter_status["status_message"]);
@@ -1154,18 +1154,19 @@ function update_ui_with_odin_settings()
 
         const acquisition = result["detector"]["acquisition"];
 
+        const duration = acquisition.duration;
+        document.querySelector('#duration-text').value = duration;
+        const frames = acquisition.number_frames;
+        document.querySelector('#frames-text').value = frames;
+
         duration_enable = acquisition.duration_enable;
         if (duration_enable === true)
         {
-            const duration = acquisition.duration;
             document.querySelector('#mode_radio1').checked = true;	// Seconds
-            document.querySelector('#duration-text').value = duration;
         }
         else
         {
-            const frames = acquisition.number_frames;
             document.querySelector('#mode_radio2').checked = true;	// Frames
-            document.querySelector('#frames-text').value = frames;
         }
         configure_duration(duration_enable);
 

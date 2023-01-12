@@ -749,7 +749,7 @@ class HexitecDetectorDefaults():
     def __init__(self):
         """Initialise member variables."""
         self.save_dir = "/tmp/"
-        self.save_file = "default_file"
+        self.save_file = "a"
         self.number_frames = 10
         self.fem = {
             "id": 0,

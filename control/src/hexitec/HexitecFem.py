@@ -220,7 +220,7 @@ class HexitecFem():
         self.firmware_time = "N/A"
 
         # Variables supporting handling of ini-style hexitec config file
-        self.hexitec_config = "(Blank)"
+        self.hexitec_config = self.base_path + "control/config/hexitec_unified_CSD__performance.ini"
         self.hexitec_parameters = {}
 
         self.acquire_start_time = ""
