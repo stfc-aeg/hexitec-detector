@@ -129,6 +129,17 @@ function disconnectButtonClicked()
     disconnect_hardware();
 }
 
+function saveOdinClicked()
+{
+    save_odin();
+}
+
+function loadOdinClicked()
+{
+    load_odin();
+    js_not_initialised = true;
+}
+
 // Set Charged Sharing selection, supporting function
 function setCSSelection(value)
 {
@@ -579,6 +590,38 @@ function disconnect_hardware()
     })
     .catch(error => {
         document.querySelector('#odin-control-error').innerHTML = error.message;
+    });
+}
+
+function save_odin()
+{
+    saveOdinButton = document.querySelector('#saveOdinButton');
+    hexitec_endpoint.put({"save_odin": ""}, 'detector')
+    .then(result => {
+        document.querySelector('#odin-control-error').innerHTML = "";
+        saveOdinButton.classList.remove('alert-danger');
+    })
+    .catch(error => {
+        document.querySelector('#odin-control-error').innerHTML = error.message;
+        saveOdinButton.setCustomValidity(error.message);
+        saveOdinButton.reportValidity();
+        saveOdinButton.classList.add('alert-danger');
+    });
+}
+
+function load_odin()
+{
+    loadOdinButton = document.querySelector('#loadOdinButton');
+    hexitec_endpoint.put({"load_odin": ""}, 'detector')
+    .then(result => {
+        document.querySelector('#odin-control-error').innerHTML = "";
+        loadOdinButton.classList.remove('alert-danger');
+    })
+    .catch(error => {
+        document.querySelector('#odin-control-error').innerHTML = error.message;
+        loadOdinButton.setCustomValidity(error.message);
+        loadOdinButton.reportValidity();
+        loadOdinButton.classList.add('alert-danger');
     });
 }
 

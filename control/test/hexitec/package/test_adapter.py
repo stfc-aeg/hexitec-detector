@@ -4,7 +4,7 @@ Test Cases for HexitecAdapter, Hexitec in hexitec.HexitecDAQ, hexitec.Hexitec.
 Christian Angelsen, STFC Detector Systems Software Group
 """
 
-from hexitec.adapter import HexitecAdapter, Hexitec, HexitecDetectorDefaults
+from hexitec.adapter import HexitecAdapter, Hexitec, HexitecDetectorDefaults, HexitecError
 from odin.adapters.parameter_tree import ParameterTreeError
 
 import unittest
@@ -13,7 +13,7 @@ import time
 import sys
 
 if sys.version_info[0] == 3:  # pragma: no cover
-    from unittest.mock import Mock, MagicMock, patch
+    from unittest.mock import Mock, MagicMock, patch, mock_open
 else:                         # pragma: no cover
     from mock import Mock, MagicMock, patch
 
@@ -54,7 +54,8 @@ class DetectorAdapterTestFixture(object):
         self.fake_fp = MagicMock()
         self.fake_fi = MagicMock()
 
-        # once the odin_data adapter is refactored to use param tree, this structure will need fixing
+        # Once the odin_data adapter is refactored to use param tree,
+        # this structure will need fixing
         self.fp_data = {
             "value": [
                 {
@@ -363,7 +364,8 @@ class TestDetector(unittest.TestCase):
             self.test_adapter.detector.bias_clock_running = False
             self.test_adapter.detector.connect_hardware("")
 
-            mock_loop.instance().add_callback.assert_called_with(self.test_adapter.detector.start_bias_clock)
+            i = mock_loop.instance()
+            i.add_callback.assert_called_with(self.test_adapter.detector.start_bias_clock)
 
     def test_start_bias_clock(self):
         """Test function starch bias clock if not already running."""
@@ -389,8 +391,8 @@ class TestDetector(unittest.TestCase):
         with patch("hexitec.adapter.IOLoop") as mock_loop:
 
             self.test_adapter.detector.poll_bias_clock()
-            mock_loop.instance().call_later.assert_called_with(0.1,
-                                                               self.test_adapter.detector.poll_bias_clock)
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(0.1, self.test_adapter.detector.poll_bias_clock)
 
     def test_poll_bias_clock_blocks_collection_during_bias_window(self):
         """Test function blocks data collection during bias window."""
@@ -409,8 +411,8 @@ class TestDetector(unittest.TestCase):
 
             self.test_adapter.detector.poll_bias_clock()
             assert self.test_adapter.detector.bias_blocking_acquisition is True
-            mock_loop.instance().call_later.assert_called_with(0.1,
-                                                               self.test_adapter.detector.poll_bias_clock)
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(0.1, self.test_adapter.detector.poll_bias_clock)
 
     def test_poll_bias_clock_reset_bias_clock_beyond_blackout_period(self):
         """Test function resets bias clock (collection allowed) when bias blackout exceeded."""
@@ -426,8 +428,8 @@ class TestDetector(unittest.TestCase):
         with patch("hexitec.adapter.IOLoop") as mock_loop:
 
             self.test_adapter.detector.poll_bias_clock()
-            mock_loop.instance().call_later.assert_called_with(0.1,
-                                                               self.test_adapter.detector.poll_bias_clock)
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(0.1, self.test_adapter.detector.poll_bias_clock)
 
     def test_initialise_hardware(self):
         """Test function initialises hardware.
@@ -443,8 +445,8 @@ class TestDetector(unittest.TestCase):
 
             assert self.test_adapter.detector.backed_up_number_frames == frames
             # assert self.test_adapter.detector.number_frames == 2
-            mock_loop.instance().call_later.assert_called_with(0.5,
-                                                               self.test_adapter.detector.monitor_fem_progress)
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(0.5, self.test_adapter.detector.monitor_fem_progress)
 
     def test_disconnect_hardware(self):
         """Test function disconnects hardware and stops bias clock."""
@@ -468,8 +470,40 @@ class TestDetector(unittest.TestCase):
             assert self.test_adapter.detector.acquisition_in_progress is False
             self.test_adapter.detector.cancel_acquisition.assert_called_with()
             self.test_adapter.detector.shutdown_processing.assert_called_with()
-            mock.instance().call_later.assert_called_with(0.2,
-                                                          self.test_adapter.detector.fem.disconnect_hardware)
+            i = mock.instance()
+            i.call_later.assert_called_with(0.2, self.test_adapter.detector.fem.disconnect_hardware)
+
+    def test_save_odin(self):
+        """Test function works ok."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        with patch("builtins.open", mock_open(read_data="data")):
+            with patch('json.dump'):
+                self.test_adapter.detector.save_odin("")
+
+    def test_save_odin_handle_exception(self):
+        """Test function handles Exception."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        with patch('json.dump') as mock_dump:
+            mock_dump.side_effect = Exception()
+            with pytest.raises(HexitecError) as exc_info:
+                self.test_adapter.detector.save_odin("")
+            assert exc_info.type is HexitecError
+
+    def test_load_odin(self):
+        """Test function works ok."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        with patch("builtins.open", mock_open(read_data="data")):
+            with patch('json.load'):
+                self.test_adapter.detector.load_odin("")
+
+    def test_load_odin_handle_exception(self):
+        """Test function handles FileNotFoundError."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        with patch('json.load') as mock_load:
+            mock_load.side_effect = FileNotFoundError()
+            with pytest.raises(HexitecError) as exc_info:
+                self.test_adapter.detector.load_odin("")
+            assert exc_info.type is HexitecError
 
     def test_set_duration_enable_true(self):
         """Test function can update duration enable to True."""
@@ -579,8 +613,8 @@ class TestDetector(unittest.TestCase):
         with patch("hexitec.adapter.IOLoop") as mock_loop:
 
             self.test_adapter.detector.acquisition("data")
-            mock_loop.instance().call_later.assert_called_with(0.1,
-                                                               self.test_adapter.detector.acquisition)
+            instance = mock_loop.instance()
+            instance.call_later.assert_called_with(0.1, self.test_adapter.detector.acquisition)
 
     def test_detector_acquisition_respects_collection_window(self):
         """Test function won't acquire data time window to small (i.e. < 0s)."""
@@ -595,8 +629,8 @@ class TestDetector(unittest.TestCase):
         with patch("hexitec.adapter.IOLoop") as mock_loop:
 
             self.test_adapter.detector.acquisition("data")
-            mock_loop.instance().call_later.assert_called_with(0.09,
-                                                               self.test_adapter.detector.acquisition)
+            instance = mock_loop.instance()
+            instance.call_later.assert_called_with(0.09, self.test_adapter.detector.acquisition)
 
     def test_detector_acquisition_prevents_new_acquisition_whilst_one_in_progress(self):
         """Test adapter won't start acquisition whilst one already in progress."""
@@ -625,8 +659,8 @@ class TestDetector(unittest.TestCase):
             self.test_adapter.detector.daq.in_error = False
             self.test_adapter.detector.await_daq_ready()
             # mock_loop.instance().call_later.assert_called_with(0.05,
-            mock_loop.instance().call_later.assert_called_with(0.5,
-                                                               self.test_adapter.detector.await_daq_ready)
+            instance = mock_loop.instance()
+            instance.call_later.assert_called_with(0.5, self.test_adapter.detector.await_daq_ready)
 
     def test_await_daq_ready_handles_daq_error_gracefully(self):
         """Test adapter's await_daq_ready will reset variables, exit function."""
@@ -650,15 +684,16 @@ class TestDetector(unittest.TestCase):
 
         with patch("hexitec.adapter.IOLoop") as mock_loop:
             self.test_adapter.detector.await_daq_ready()
-            mock_loop.instance().call_later.assert_called_with(0.08,
-                                                               self.test_adapter.detector.trigger_fem_acquisition)
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(0.08,
+                                            self.test_adapter.detector.trigger_fem_acquisition)
 
     def test_trigger_fem_acquisition(self):
         """Test trigger data acquisition in FEM(s)."""
         with patch("hexitec.adapter.IOLoop") as mock_loop:
             self.test_adapter.detector.trigger_fem_acquisition()
-            mock_loop.instance().call_later.assert_called_with(0.0,
-                                                               self.test_adapter.detector.monitor_fem_progress)
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(0.0, self.test_adapter.detector.monitor_fem_progress)
         init_time = self.test_adapter.detector.fem_start_timestamp
         assert pytest.approx(init_time) == time.time()
 
@@ -669,8 +704,8 @@ class TestDetector(unittest.TestCase):
         with patch("hexitec.adapter.IOLoop") as mock_loop:
 
             self.test_adapter.detector.monitor_fem_progress()
-            mock_loop.instance().call_later.assert_called_with(0.5,
-                                                               self.test_adapter.detector.monitor_fem_progress)
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(0.5, self.test_adapter.detector.monitor_fem_progress)
 
     def test_monitor_fem_progress_acquire_outstanding_frames(self):
         """Test function calls acquire to collect all required frames.
@@ -686,7 +721,8 @@ class TestDetector(unittest.TestCase):
         with patch("hexitec.adapter.IOLoop") as mock_loop:
 
             self.test_adapter.detector.monitor_fem_progress()
-            mock_loop.instance().add_callback.assert_called_with(self.test_adapter.detector.acquisition)
+            instance = mock_loop.instance()
+            instance.add_callback.assert_called_with(self.test_adapter.detector.acquisition)
 
     def test_monitor_fem_progress_resets_variables_on_completion(self):
         """Test function resets variables when all data has been sent.
@@ -768,7 +804,7 @@ class TestDetector(unittest.TestCase):
         """Test function switches HV off."""
         self.test_adapter.detector.hv_off("")
         self.test_adapter.detector.fem.hv_off.assert_called()
- 
+
     def test_environs(self):
         """Test function calls readout environmental data."""
         self.test_adapter.detector.environs("")

@@ -17,6 +17,7 @@ from odin.adapters.adapter import (ApiAdapter, ApiAdapterRequest,
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from odin.util import convert_unicode_to_string, decode_request_body
 from odin.adapters.system_info import SystemInfo
+import json
 
 from .HexitecFem import HexitecFem
 from .HexitecDAQ import HexitecDAQ
@@ -266,6 +267,8 @@ class Hexitec():
             "connect_hardware": (None, self.connect_hardware),
             "initialise_hardware": (None, self.initialise_hardware),
             "disconnect_hardware": (None, self.disconnect_hardware),
+            "save_odin": (None, self.save_odin),
+            "load_odin": (None, self.load_odin),
             "collect_offsets": (None, self._collect_offsets),
             "commit_configuration": (None, self.commit_configuration),
             "software_state": (lambda: self.software_state, None),
@@ -301,6 +304,8 @@ class Hexitec():
             "system_info": self.system_info.param_tree,
             "detector": detector
         })
+
+        self.odin_config_file = "odin_config.json"
 
         self._start_polling()
 
@@ -491,6 +496,87 @@ class Hexitec():
         # Stop bias clock
         if self.bias_clock_running:
             self.bias_clock_running = False
+
+    def save_odin(self, msg):
+        """Save Odin's settings to file."""
+        config = {}
+        config["fem/hexitec_config"] = self.fem.hexitec_config
+        config["daq/file_name"] = self.daq.file_name
+        config["daq/file_dir"] = self.daq.file_dir
+        config["daq/addition_enable"] = self.daq.addition_enable
+        config["daq/pixel_grid_size"] = self.daq.pixel_grid_size
+        config["daq/calibration_enable"] = self.daq.calibration_enable
+        config["daq/gradients_filename"] = self.daq.gradients_filename
+        config["daq/intercepts_filename"] = self.daq.intercepts_filename
+        config["daq/discrimination_enable"] = self.daq.discrimination_enable
+        config["daq/bin_end"] = self.daq.bin_end
+        config["daq/bin_start"] = self.daq.bin_start
+        config["daq/bin_width"] = self.daq.bin_width
+        config["daq/max_frames_received"] = self.daq.max_frames_received
+        config["daq/pass_processed"] = self.daq.pass_processed
+        config["daq/pass_raw"] = self.daq.pass_raw
+        config["daq/lvframes_dataset_name"] = self.daq.lvframes_dataset_name
+        config["daq/lvframes_frequency"] = self.daq.lvframes_frequency
+        config["daq/lvframes_per_second"] = self.daq.lvframes_per_second
+        config["daq/lvspectra_frequency"] = self.daq.lvspectra_frequency
+        config["daq/lvspectra_per_second"] = self.daq.lvspectra_per_second
+        config["daq/next_frame_enable"] = self.daq.next_frame_enable
+        config["daq/threshold_lower"] = self.daq.threshold_lower
+        config["daq/threshold_upper"] = self.daq.threshold_upper
+        config["daq/image_frequency"] = self.daq.image_frequency
+        config["daq/threshold_filename"] = self.daq.threshold_filename
+        config["daq/threshold_mode"] = self.daq.threshold_mode
+        config["daq/threshold_value"] = self.daq.threshold_value
+        config["number_frames"] = self.number_frames
+        config["duration"] = self.duration
+        config["duration_enable"] = self.duration_enable
+        try:
+            with open(self.odin_config_file, "w") as f:
+                json.dump(config, f)
+        except Exception as e:
+            logging.error("Save Odin config: {}".format(e))
+            self.fem._set_status_error("Saving Odin config: %s" % e)
+            raise HexitecError(e)
+
+    def load_odin(self, msg):
+        """Load Odin's settings from file."""
+        try:
+            with open(self.odin_config_file, "r") as f:
+                config = json.load(f)
+                self.fem.hexitec_config = config["fem/hexitec_config"]
+                self.daq.file_name = config["daq/file_name"]
+                self.daq.file_dir = config["daq/file_dir"]
+                self.daq.addition_enable = config["daq/addition_enable"]
+                self.daq.pixel_grid_size = config["daq/pixel_grid_size"]
+                self.daq.calibration_enable = config["daq/calibration_enable"]
+                self.daq.gradients_filename = config["daq/gradients_filename"]
+                self.daq.intercepts_filename = config["daq/intercepts_filename"]
+                self.daq.discrimination_enable = config["daq/discrimination_enable"]
+                self.daq.bin_end = config["daq/bin_end"]
+                self.daq.bin_start = config["daq/bin_start"]
+                self.daq.bin_width = config["daq/bin_width"]
+                self.daq.max_frames_received = config["daq/max_frames_received"]
+                self.daq.pass_processed = config["daq/pass_processed"]
+                self.daq.pass_raw = config["daq/pass_raw"]
+                self.daq.lvframes_dataset_name = config["daq/lvframes_dataset_name"]
+                self.daq.lvframes_frequency = config["daq/lvframes_frequency"]
+                self.daq.lvframes_per_second = config["daq/lvframes_per_second"]
+                self.daq.lvspectra_frequency = config["daq/lvspectra_frequency"]
+                self.daq.lvspectra_per_second = config["daq/lvspectra_per_second"]
+                self.daq.next_frame_enable = config["daq/next_frame_enable"]
+                self.daq.threshold_lower = config["daq/threshold_lower"]
+                self.daq.threshold_upper = config["daq/threshold_upper"]
+                self.daq.image_frequency = config["daq/image_frequency"]
+                self.daq.threshold_filename = config["daq/threshold_filename"]
+                self.daq.threshold_mode = config["daq/threshold_mode"]
+                self.daq.threshold_value = config["daq/threshold_value"]
+                self.number_frames = config["number_frames"]
+                self.duration = config["duration"]
+                self.duration_enable = config["duration_enable"]
+        except FileNotFoundError as e:
+            logging.error("Load Odin config: {}".format(e))
+            self.fem._set_status_error("%s" % "Loading Odin config - file missing")
+            raise HexitecError(e)
 
     def set_duration_enable(self, duration_enable):
         """Set duration enable, calculating number of frames accordingly."""
