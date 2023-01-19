@@ -13,7 +13,7 @@
         "enable_packet_logging": false,
         "frame_timeout_ms": 1000,
         "fem_port_map": "61652:0",
-        "sensors_layout": "2x2"
+        "sensors_layout": "2x6"
     }
   }
 ]

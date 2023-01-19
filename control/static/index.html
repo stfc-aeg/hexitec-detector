@@ -14,8 +14,47 @@
     <link href="js/bootstrap-5.1.1-dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="js/bootstrap-slider-10.2.1/css/bootstrap-slider.css" rel="stylesheet">
   </head>
-
+  <!-- Styling must reside here, not picked up from odin-server.css -->
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    /* Create two equal columns that floats next to each other */
+    .column2 {
+      float: left;
+      width: 50%;
+      /* padding: 10px; */
+    }
+    /* Create three equal columns that floats next to each other */
+    .column3 {
+      float: left;
+      width: 33%;
+      padding: 10px;
+    }
+    /* Clear floats after the columns */
+    .row:after {
+      content: "";
+      display: table;
+      clear: both;
+    }
+    </style>
   <body>
+<!--
+    <div class="row">
+      <div class="column3" style="background-color:#aaa;">
+        <h2>Column 1</h2>
+        <p>Some text..</p>
+      </div>
+      <div class="column3" style="background-color:#bbb;">
+        <h2>Column 2</h2>
+        <p>Some text..</p>
+      </div>
+      <div class="column3" style="background-color:#aaa;">
+        <h2>Column 3</h2>
+        <p>Some text..</p>
+      </div>
+    </div> -->
+
     <div class="row">
       <div class="col-sm-12">
         <div id="1" class="main-container">
@@ -54,7 +93,7 @@
       <!-- <li class="nav-item" role="presentation"><a class="nav-link active" aria-selected="True"          accesskey="u" data-bs-toggle="tab" type="button" role="tab" aria-controls="health" data-bs-target="#health">Health</a></li> -->
       <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"          accesskey="u" data-bs-toggle="tab" type="button" role="tab" aria-controls="health" data-bs-target="#health">Health</a></li>
 
-      <!-- <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"          accesskey="o" data-bs-toggle="tab" type="button" role="tab" aria-controls="contact" data-bs-target="#contact">Contact</a></li> -->
+      <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"          accesskey="o" data-bs-toggle="tab" type="button" role="tab" aria-controls="debug" data-bs-target="#debug">Debug</a></li>
     </ul>
 
     <div class="tab-content"> <!-- tab-content -->
@@ -347,11 +386,17 @@
                                 </td>
                               </tr>
                             </table>
-                            <div class="row sidebar-row vertical-align row-bold">
+
+                            <div class="row">
+                              <div class="column3" id="clip_min">&nbsp;</div>
+                              <div class="column3">Range</div>
+                              <div class="column3" id="clip_max">&nbsp;</div>
+                            </div>
+                            <!-- <div class="row sidebar-row vertical-align row-bold">
                               <div class="col-xs-4 text-left" id="clip_min">&nbsp;</div>
                               <div class="col-xs-4 text-center">Range</div>
                               <div class="col-xs-4 text-right" id="clip_max">&nbsp;</div>
-                            </div>
+                            </div> -->
                             <div class="row sidebar-row sidebar-row-full">
                               <div class="col-xs12 range-col">
                                 <input id="clip_range"
@@ -381,29 +426,44 @@
                                 </div>
                               </div>
                             </div>
-                            <div class="row sidebar-row vertical-align row-bold">
+
+                            <div class="row">
+                              <div class="column3" id="clip_min">0%</div>
+                              <div class="column3">Size</div>
+                              <div class="column3" id="clip_max">100%</div>
+                            </div>
+                            <!-- <div class="row sidebar-row vertical-align row-bold">
                               <div class="col-xs-4 text-left" id="clip_min">0%</div>
                               <div class="col-xs-4 text-center">Size</div>
                               <div class="col-xs-4 text-right" id="clip_max">100%</div>
-                            </div>
-                            <div class="row sidebar-row sidebar-row-full">
-                              <div class="col-xs12 range-col">
-                                <input id="size_range"
-                                  type="text" data-slider-id="size-range"
-                                  data-slider-min="0" data-slider-max="200"
-                                  data-slider-step="1" data-slider-value="100"
-                                />
-                              </div>
-                            </div>
-                            <div class="row sidebar-row sidebar-row-full">
-                              <div class="col-xs12 range-col">
-                                <input id="size_rangeHis"
-                                  type="text" data-slider-id="size-range"
-                                  data-slider-min="0" data-slider-max="200"
-                                  data-slider-step="1" data-slider-value="100"
-                                />
-                              </div>
-                            </div>
+                            </div> -->
+                            <table>
+                              <tr>
+                                <td>
+                                <!-- <div class="row"> -->
+                                  <div class="column3">
+                                    <input id="size_range"
+                                      type="text" data-slider-id="size-range"
+                                      data-slider-min="0" data-slider-max="200"
+                                      data-slider-step="1" data-slider-value="100"
+                                    />
+                                  </div>
+                                </td>
+                                <td>
+                                  <!-- <div class="column3">&nbsp;&nbsp;&nbsp;</div> -->
+                                  <!-- </div>
+                                  <div class="row sidebar-row sidebar-row-full"> -->
+                                  <div class="column3">
+                                    <input id="size_rangeHis"
+                                      type="text" data-slider-id="size-range"
+                                      data-slider-min="0" data-slider-max="200"
+                                      data-slider-step="1" data-slider-value="100"
+                                    />
+                                  </div>
+                                </td>
+                                <!-- </div> -->
+                              </tr>
+                            </table>
                             <table>
                               <tr>
                                 <td>
@@ -794,274 +854,6 @@
         <div class="container-fluid">
           <div class="row contflex row-cols-1 row-cols-md-2 g-4">
 
-            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card"> <!-- Begin: First row, first column -->
-              <div class="row">
-                <p class="lead text-center">Statistics</p>
-              </div>
-              <div class="row contflex">
-                <div class="col-md-11">
-                  <table class="table table-striped" style="width=100%">
-                      <thead>
-                        <tr>
-                          <th>Measure</th>
-                          <th>Value</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td>Frame rate</td>
-                          <td><span id="frame_rate" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Acquire time</td>
-                          <td><span id="acquire_time" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N0.FEM packets_lost</td>
-                          <td><span id="fem_packets_lost0" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N0.FR packets_lost</td>
-                          <td><span id="packets_lost0" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N0.Buffers empty</td>
-                          <td><span id="buffers_empty0" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N0.Buffers mapped</td>
-                          <td><span id="buffers_mapped0" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N1.FEM packets_lost</td>
-                          <td><span id="fem_packets_lost1" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N1.FR packets_lost</td>
-                          <td><span id="packets_lost1" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N1.Buffers empty</td>
-                          <td><span id="buffers_empty1" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N1.Buffers mapped</td>
-                          <td><span id="buffers_mapped1" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N2.FEM packets_lost</td>
-                          <td><span id="fem_packets_lost2" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N2.FR packets_lost</td>
-                          <td><span id="packets_lost2" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N2.Buffers empty</td>
-                          <td><span id="buffers_empty2" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N2.Buffers mapped</td>
-                          <td><span id="buffers_mapped2" style="float:right">&nbsp;</span></td>
-                        </tr>
-                      </tbody>
-                  </table>
-                  <table class="table table-striped" style="width=100%">
-                    <thead>
-                      <tr>
-                        <th>Frame Receiver</th>
-                        <th>Packets</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>N0.Received</td>
-                        <td><span id="frames_received0" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N0.Released</td>
-                        <td><span id="frames_released0" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N0.Dropped</td>
-                        <td><span id="frames_dropped0" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N0.Timed out</td>
-                        <td><span id="frames_timedout0" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N1.Received</td>
-                        <td><span id="frames_received1" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N1.Released</td>
-                        <td><span id="frames_released1" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N1.Dropped</td>
-                        <td><span id="frames_dropped1" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N1.Timed out</td>
-                        <td><span id="frames_timedout1" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N2.Received</td>
-                        <td><span id="frames_received2" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N2.Released</td>
-                        <td><span id="frames_released2" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N2.Dropped</td>
-                        <td><span id="frames_dropped2" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N2.Timed out</td>
-                        <td><span id="frames_timedout2" style="float:right">&nbsp;</span></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "" -->  <!-- End: First row, first column -->
-
-            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card"> <!-- Begin: First row, second column -->
-              <div class="row">
-                <p class="lead text-center">DAQ Debug</p>
-              </div>
-              <div class="row contflex">
-                <div class="col-md-11">
-                  <table class="table table-striped" style="width=100%">
-                    <thead>
-                      <tr>
-                        <th>Measure</th>
-                        <th>Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>acquire start</td>
-                        <td><span id="acquire_start" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>acquire stop</td>
-                        <td><span id="acquire_stop" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>daq start</td>
-                        <td><span id="daq_start" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>daq stop</td>
-                        <td><span id="daq_stop" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>fem not busy</td>
-                        <td><span id="fem_not_busy" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Offsets TS</td>
-                        <td><span id="offsets_ts" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>vsr1_sync</td>
-                        <td><span id="vsr1_sync" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>vsr2_sync</td>
-                        <td><span id="vsr2_sync" style="float:right">&nbsp;</span></td>
-                      </tr>
-                    </tbody>
-                  </table>
-
-                  <table class="overall-table">
-                    <tr>
-                      <td>
-                        <th>(Orphaned)&nbsp;</th>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Sensors Layout:&nbsp;
-                      </td>
-                      <td>
-                        <select class="double-width" onchange="sensorsLayoutChange(this.value)">
-                          <option value="1x1">1x1 (80x80)</option>
-                          <option selected="selected" value="2x2">2x2 (160x160)</option>
-                          <option value="2x6">2x6 (160x480)</option>
-                        </select>
-                      </td>
-                      <td>
-                        &nbsp;<td><span id="sensors-layout-warning">&nbsp;</span></td>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Number Nodes:&nbsp;
-                      </td>
-                      <td>
-                        <select class="double-width" onchange="numberNodesChange(this.value)">
-                          <option value="1">1</option>
-                          <option value="2">2</option>
-                          <option selected="selected" value="3">3</option>
-                        </select>
-                      </td>
-                      <td>
-                        &nbsp;<td><span id="number-nodes-warning">&nbsp;</span></td>
-                      </td>
-                    </tr>
-                  </table>
-
-                  <table class="table table-striped" style="width=100%">
-                    <thead>
-                      <tr>
-                        <th>Frame Processor</th>
-                        <th>Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>N0.FP Errors</td>
-                        <td><span id="fp_errors0" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N1.FP Errors</td>
-                        <td><span id="fp_errors1" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N2.FP Errors</td>
-                        <td><span id="fp_errors2" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <!-- <tr>
-                        <td>daq stop</td>
-                        <td><span id="daq_stop" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>fem not busy</td>
-                        <td><span id="fem_not_busy" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Offsets TS</td>
-                        <td><span id="offsets_ts" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>vsr1_sync</td>
-                        <td><span id="vsr1_sync" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>vsr2_sync</td>
-                        <td><span id="vsr2_sync" style="float:right">&nbsp;</span></td>
-                      </tr> -->
-                    </tbody>
-                  </table>
-
-                </div> <!-- col-md-11 -->
-              </div> <!-- row contflex -->
-            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "DAQ DEBUG" -->  <!-- End: First row, second column -->
-
             <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">  <!-- End: Second row, first column -->
               <div class="row">
                 <p class="lead text-center">Environmental Sensors</p>
@@ -1285,10 +1077,291 @@
                 </div>
               </div>
             </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "Environmental Sensors" --> <!-- End: Second row, second column -->
+
           </div> <!-- row conflex-->
         </div><!-- container fluid-container -->
 
       </div> <!-- id="health"-->
+
+      <div class="tab-pane fade" id="debug" role="tabpanel">
+      <!-- <div class="tab-pane fade show active" id="debug" role="tabpanel"> -->
+
+        <div class="container-fluid">
+          <div class="row contflex row-cols-1 row-cols-md-2 g-4">
+
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card"> <!-- Begin: First row, first column -->
+              <div class="row">
+                <p class="lead text-center">Statistics</p>
+              </div>
+              <div class="row contflex">
+                <div class="col-md-11">
+                  <table class="table table-striped" style="width=100%">
+                      <thead>
+                        <tr>
+                          <th>Measure</th>
+                          <th>Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Frame rate</td>
+                          <td><span id="frame_rate" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Acquire time</td>
+                          <td><span id="acquire_time" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N0.FEM packets_lost</td>
+                          <td><span id="fem_packets_lost0" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N0.FR packets_lost</td>
+                          <td><span id="packets_lost0" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N0.Buffers empty</td>
+                          <td><span id="buffers_empty0" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N0.Buffers mapped</td>
+                          <td><span id="buffers_mapped0" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N1.FEM packets_lost</td>
+                          <td><span id="fem_packets_lost1" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N1.FR packets_lost</td>
+                          <td><span id="packets_lost1" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N1.Buffers empty</td>
+                          <td><span id="buffers_empty1" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N1.Buffers mapped</td>
+                          <td><span id="buffers_mapped1" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N2.FEM packets_lost</td>
+                          <td><span id="fem_packets_lost2" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N2.FR packets_lost</td>
+                          <td><span id="packets_lost2" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N2.Buffers empty</td>
+                          <td><span id="buffers_empty2" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>N2.Buffers mapped</td>
+                          <td><span id="buffers_mapped2" style="float:right">&nbsp;</span></td>
+                        </tr>
+                      </tbody>
+                  </table>
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>Frame Receiver</th>
+                        <th>Packets</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>N0.Received</td>
+                        <td><span id="frames_received0" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N0.Released</td>
+                        <td><span id="frames_released0" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N0.Dropped</td>
+                        <td><span id="frames_dropped0" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N0.Timed out</td>
+                        <td><span id="frames_timedout0" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N1.Received</td>
+                        <td><span id="frames_received1" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N1.Released</td>
+                        <td><span id="frames_released1" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N1.Dropped</td>
+                        <td><span id="frames_dropped1" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N1.Timed out</td>
+                        <td><span id="frames_timedout1" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N2.Received</td>
+                        <td><span id="frames_received2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N2.Released</td>
+                        <td><span id="frames_released2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N2.Dropped</td>
+                        <td><span id="frames_dropped2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N2.Timed out</td>
+                        <td><span id="frames_timedout2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "" -->  <!-- End: First row, first column -->
+
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card"> <!-- Begin: First row, second column -->
+              <div class="row">
+                <p class="lead text-center">DAQ Debug</p>
+              </div>
+              <div class="row contflex">
+                <div class="col-md-11">
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>Measure</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>acquire start</td>
+                        <td><span id="acquire_start" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>acquire stop</td>
+                        <td><span id="acquire_stop" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>daq start</td>
+                        <td><span id="daq_start" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>daq stop</td>
+                        <td><span id="daq_stop" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>fem not busy</td>
+                        <td><span id="fem_not_busy" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Offsets TS</td>
+                        <td><span id="offsets_ts" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>vsr1_sync</td>
+                        <td><span id="vsr1_sync" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>vsr2_sync</td>
+                        <td><span id="vsr2_sync" style="float:right">&nbsp;</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <table class="overall-table">
+                    <tr>
+                      <td>
+                        <th>(Orphaned)&nbsp;</th>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Sensors Layout:&nbsp;
+                      </td>
+                      <td>
+                        <select class="double-width" onchange="sensorsLayoutChange(this.value)">
+                          <option value="1x1">1x1 (80x80)</option>
+                          <option value="2x2">2x2 (160x160)</option>
+                          <option selected="selected" value="2x6">2x6 (160x480)</option>
+                        </select>
+                      </td>
+                      <td>
+                        &nbsp;<td><span id="sensors-layout-warning">&nbsp;</span></td>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Number Nodes:&nbsp;
+                      </td>
+                      <td>
+                        <select class="double-width" onchange="numberNodesChange(this.value)">
+                          <option selected="selected" value="1">1</option>
+                          <option value="2">2</option>
+                          <option value="3">3</option>
+                        </select>
+                      </td>
+                      <td>
+                        &nbsp;<td><span id="number-nodes-warning">&nbsp;</span></td>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>Frame Processor</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>N0.FP Errors</td>
+                        <td><span id="fp_errors0" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N1.FP Errors</td>
+                        <td><span id="fp_errors1" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>N2.FP Errors</td>
+                        <td><span id="fp_errors2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <!-- <tr>
+                        <td>daq stop</td>
+                        <td><span id="daq_stop" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>fem not busy</td>
+                        <td><span id="fem_not_busy" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Offsets TS</td>
+                        <td><span id="offsets_ts" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>vsr1_sync</td>
+                        <td><span id="vsr1_sync" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>vsr2_sync</td>
+                        <td><span id="vsr2_sync" style="float:right">&nbsp;</span></td>
+                      </tr> -->
+                    </tbody>
+                  </table>
+
+                </div> <!-- col-md-11 -->
+              </div> <!-- row contflex -->
+            </div> <!-- col-xl-5 col-lg-5 col-md-5 col-sm-11 card "DAQ DEBUG" -->  <!-- End: First row, second column -->
+
+          </div> <!-- row conflex-->
+        </div><!-- container fluid-container -->
+
+      </div> <!-- id="health"-->
+
     </div>  <!-- tab-content -->
 
     <script src="js/bootstrap-slider-10.2.1/js/bootstrap-slider.min.js"></script> <!-- Required by live view -->

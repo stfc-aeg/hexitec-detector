@@ -18,7 +18,7 @@ class ObjectTestFixture(object):
         """Initialise object."""
         param_tree = {'file_info':
                       {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
-                      'sensors_layout': '2x2',
+                      'sensors_layout': '2x6',
                       'receiver':
                       {'config_file': '', 'configured': False, 'connected': False},
                       'status': {'in_progress': False, 'daq_ready': False},
@@ -186,6 +186,8 @@ class TestObject(unittest.TestCase):
         assert store_temp_name == "/tmp/_tmp_store.json"
         assert execute_temp_name == "/tmp/_tmp_execute.json"
 
+        sl_value = self.test_detector_adapter.adapter.param_tree["sensors_layout"]
+        sl_dic = {'sensors_layout': sl_value}
         d = json.loads(store_string_without_cr)
         assert d['index'] == store_temp_name[5:]
         assert d['value'][0]['plugin']['load']['index'] == 'reorder'
@@ -220,23 +222,23 @@ class TestObject(unittest.TestCase):
         assert d['value'][20]['plugin'] == {'connect':
                                             {'index': 'blosc', 'connection': 'histogram'}}
         assert d['value'][21]['plugin'] == {'connect': {'index': 'hdf', 'connection': 'blosc'}}
-        assert d['value'][22] == {'reorder': {'sensors_layout': '2x2'}}
+        assert d['value'][22] == {'reorder': sl_dic}
         assert d['value'][23] == {'threshold':
                                   {'threshold_file': '', 'threshold_value': 99,
-                                   'threshold_mode': 'none', 'sensors_layout': '2x2'}}
-        assert d['value'][24] == {'next_frame': {'sensors_layout': '2x2'}}
+                                   'threshold_mode': 'none', 'sensors_layout': sl_value}}
+        assert d['value'][24] == {'next_frame': sl_dic}
         assert d['value'][25] == {'calibration':
                                   {'gradients_file': '', 'intercepts_file': '',
-                                   'sensors_layout': '2x2'}}
-        assert d['value'][26] == {'addition': {'pixel_grid_size': 3, 'sensors_layout': '2x2'}}
+                                   'sensors_layout': sl_value}}
+        assert d['value'][26] == {'addition': {'pixel_grid_size': 3, 'sensors_layout': sl_value}}
         assert d['value'][27] == {'summed_image':
                                   {'threshold_lower': 120, 'threshold_upper': 4800,
-                                   'sensors_layout': '2x2'}}
+                                   'sensors_layout': sl_value}}
         assert d['value'][28] == {'histogram':
                                   {'bin_start': 0, 'bin_end': 8000, 'bin_width': 10.0,
                                    'max_frames_received': 10, 'pass_processed': True,
-                                   'pass_raw': True, 'sensors_layout': '2x2'}}
-        assert d['value'][29] == {'blosc': {'sensors_layout': '2x2'}}
+                                   'pass_raw': True, 'sensors_layout': sl_value}}
+        assert d['value'][29] == {'blosc': sl_dic}
         assert d['value'][30] == {'lvframes':
                                   {'frame_frequency': 0, 'per_second': 2,
                                    'live_view_socket_addr': 'tcp://127.0.0.1:5020',

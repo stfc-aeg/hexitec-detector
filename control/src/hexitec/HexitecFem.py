@@ -36,23 +36,11 @@ class HexitecFem():
     # Thread executor used for functions handling rdma transactions
     thread_executor = futures.ThreadPoolExecutor(max_workers=1)
 
-    OPTIONS = [
-        "Sensor_1_1",
-        "Sensor_1_2",
-        "Sensor_2_1",
-        "Sensor_2_2"
-    ]
-
     IMAGE = [
         "LOG HDF5 FILE",
         "LOG BIN FILE",
         "STREAM DATA",
         "NETWORK PACKETS ONLY"
-    ]
-
-    READOUTMODE = [
-        "SINGLE",
-        "2x2"
     ]
 
     # VSR_ADDRESS = [0x90]
@@ -160,9 +148,6 @@ class HexitecFem():
         self.status_message = ""
         self.status_error = ""
         self.stop_acquisition = False
-
-        self.selected_sensor = HexitecFem.OPTIONS[2]        # "Sensor_2_1"
-        self.sensors_layout = HexitecFem.READOUTMODE[1]     # "2x2"
 
         self.vsr1_ambient = 0
         self.vsr1_humidity = 0

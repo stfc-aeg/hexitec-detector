@@ -88,7 +88,7 @@ class DAQTestFixture(object):
                         "writing": True
                     },
                     "histogram": {
-                        "sensors_layout": "2x2",
+                        "sensors_layout": "2x6",
                         "max_frames_received": 10,
                         "bin_start": 0,
                         "bin_end": 8000,
@@ -181,7 +181,7 @@ class DAQTestFixture(object):
                 'next_frame': {'enable': False},
                 'threshold':
                 {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 120}},
-               'sensors_layout': '2x2'},
+               'sensors_layout': '2x6'},
               'connect_hardware': None, 'initialise_hardware': None, 'disconnect_hardware': None,
               'collect_offsets': None, 'commit_configuration': None, 'debug_count': 0,
               'acquisition':
@@ -1113,7 +1113,7 @@ class TestDAQ(unittest.TestCase):
 
     def test_access_sensors_layout(self):
         """Test function sets sensors_layout."""
-        sensors_layout = "2x2"
+        sensors_layout = "2x6"
         self.test_daq.daq._set_sensors_layout(sensors_layout)
         assert self.test_daq.daq._get_sensors_layout() == sensors_layout
 
@@ -1164,7 +1164,7 @@ class TestDAQ(unittest.TestCase):
                     {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 10},
                  'summed_image':
                     {'threshold_lower': 120, 'threshold_upper': 4800}},
-                 'sensors_layout': '2x2'}
+                 'sensors_layout': '2x6'}
 
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
 
