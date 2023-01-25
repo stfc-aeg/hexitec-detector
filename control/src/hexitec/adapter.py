@@ -592,8 +592,8 @@ class Hexitec():
 
     def set_number_frames(self, frames):
         """Set number of frames in DAQ, FEM."""
-        # print("\n\tadp.set_number_frames({}) -> number_frames: {}\n".format(
-        #     frames, self.number_frames))
+        if frames <= 0:
+            raise ParameterTreeError("frames must be above 0!")
         self.number_frames = frames
         # Update number of frames in Hardware, and (via DAQ) in histogram and hdf plugins
         self.fem.set_number_frames(self.number_frames)
@@ -601,6 +601,8 @@ class Hexitec():
 
     def set_duration(self, duration):
         """Set duration, calculate frames from frame rate and update DAQ, FEM."""
+        if duration <= 0:
+            raise ParameterTreeError("duration must be above 0!")
         self.duration = duration
         self.fem.set_duration(self.duration)
         # print("\n\tadp.set_duration({}) number_frames {} -> {}\n".format(

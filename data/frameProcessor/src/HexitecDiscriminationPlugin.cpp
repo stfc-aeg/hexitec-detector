@@ -89,7 +89,7 @@ namespace FrameProcessor
     if (config.has_param(HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE))
     {
       pixel_grid_size_ =
-          config.get_param<int>(HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE);
+          config.get_param<unsigned int>(HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE);
       directional_distance_ = (int)pixel_grid_size_/2;
     }
 

@@ -121,7 +121,7 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE))
     {
-      threshold_value_ = config.get_param<int>(
+      threshold_value_ = config.get_param<unsigned int>(
         HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE);
         LOG4CXX_TRACE(logger_, "Setting threshold value to: " << threshold_value_);
     }

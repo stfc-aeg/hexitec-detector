@@ -833,24 +833,32 @@ class HexitecDAQ():
         self.lvframes_dataset_name = lvframes_dataset_name
 
     def _set_lvframes_frequency(self, lvframes_frequency):
+        if lvframes_frequency < 0:
+            raise ParameterTreeError("lvframes_frequency must be positive!")
         self.lvframes_frequency = lvframes_frequency
 
     def _set_lvframes_socket_addr(self, socket_addr):
         self.lvframes_socket_addr = socket_addr
 
     def _set_lvframes_per_second(self, lvframes_per_second):
+        if lvframes_per_second < 0:
+            raise ParameterTreeError("lvframes_per_second must be positive!")
         self.lvframes_per_second = lvframes_per_second
 
     def _set_lvspectra_dataset_name(self, lvspectra_dataset_name):
         self.lvspectra_dataset_name = lvspectra_dataset_name
 
     def _set_lvspectra_frequency(self, lvspectra_frequency):
+        if lvspectra_frequency < 0:
+            raise ParameterTreeError("lvspectra_frequency must be positive!")
         self.lvspectra_frequency = lvspectra_frequency
 
     def _set_lvspectra_socket_addr(self, socket_addr):
         self.lvspectra_socket_addr = socket_addr
 
     def _set_lvspectra_per_second(self, lvspectra_per_second):
+        if lvspectra_per_second < 0:
+            raise ParameterTreeError("lvspectra_per_second must be positive!")
         self.lvspectra_per_second = lvspectra_per_second
 
     def _set_next_frame_enable(self, next_frame_enable):
@@ -876,16 +884,22 @@ class HexitecDAQ():
 
     def _set_bin_end(self, bin_end):
         """Update bin_end and datasets' histograms' dimensions."""
+        if bin_end < 1:
+            raise ParameterTreeError("bin_end must be positive!")
         self.bin_end = bin_end
         self.update_histogram_dimensions()
 
     def _set_bin_start(self, bin_start):
         """Update bin_start and datasets' histograms' dimensions."""
+        if bin_start < 0:
+            raise ParameterTreeError("bin_start must be positive!")
         self.bin_start = bin_start
         self.update_histogram_dimensions()
 
     def _set_bin_width(self, bin_width):
         """Update bin_width and datasets' histograms' dimensions."""
+        if bin_width <= 0:
+            raise ParameterTreeError("bin_width must be positive!")
         self.bin_width = bin_width
         self.update_histogram_dimensions()
 
@@ -944,15 +958,23 @@ class HexitecDAQ():
             raise ParameterTreeError("Must be one of: value, filename or none")
 
     def _set_threshold_value(self, threshold_value):
+        if threshold_value < 0:
+            raise ParameterTreeError("threshold_value must be positive!")
         self.threshold_value = threshold_value
 
     def _set_threshold_lower(self, threshold_lower):
+        if threshold_lower < 0:
+            raise ParameterTreeError("threshold_lower must be positive!")
         self.threshold_lower = threshold_lower
 
     def _set_threshold_upper(self, threshold_upper):
+        if threshold_upper < 0:
+            raise ParameterTreeError("threshold_upper must be positive!")
         self.threshold_upper = threshold_upper
 
     def _set_image_frequency(self, image_frequency):
+        if image_frequency < 0:
+            raise ParameterTreeError("image_frequency must be positive!")
         self.image_frequency = image_frequency
 
     def _get_sensors_layout(self):

@@ -521,11 +521,17 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.set_number_frames(frames)
         assert self.test_adapter.detector.number_frames == frames
 
+        with pytest.raises(ParameterTreeError, match="frames must be above 0!"):
+            self.test_adapter.detector.set_number_frames(-1)
+
     def test_set_duration(self):
         """Test function sets collection duration."""
         duration = 2
         self.test_adapter.detector.set_duration(duration)
         assert self.test_adapter.detector.duration == duration
+
+        with pytest.raises(ParameterTreeError, match="duration must be above 0!"):
+            self.test_adapter.detector.set_duration(-1)
 
     def test_set_elog(self):
         """Test function sets elog correctly."""

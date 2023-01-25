@@ -101,22 +101,22 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER))
     {
-      threshold_lower_ = config.get_param<int>(HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER);
+      threshold_lower_ = config.get_param<unsigned int>(HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER);
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER))
     {
-      threshold_upper_ = config.get_param<int>(HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER);
+      threshold_upper_ = config.get_param<unsigned int>(HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER);
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY))
     {
-      image_frequency_ = config.get_param<int>(HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY);
+      image_frequency_ = config.get_param<unsigned int>(HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY);
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_RESET_IMAGE))
     {
-      reset_image_ = config.get_param<int>(HexitecSummedImagePlugin::CONFIG_RESET_IMAGE);
+      reset_image_ = config.get_param<unsigned int>(HexitecSummedImagePlugin::CONFIG_RESET_IMAGE);
 
       if (reset_image_ == 1)
       {

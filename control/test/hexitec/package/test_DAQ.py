@@ -907,6 +907,9 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq._set_lvframes_frequency(lvframes_frequency)
         assert lvframes_frequency is self.test_daq.daq.lvframes_frequency
 
+        with pytest.raises(ParameterTreeError, match="lvframes_frequency must be positive!"):
+            self.test_daq.daq._set_lvframes_frequency(-1)
+
     def test_set_lvframes_socket_addr(self):
         """Test function sets socket address."""
         socket_addr = "tcp://10.20.30.40:5020"
@@ -918,6 +921,9 @@ class TestDAQ(unittest.TestCase):
         lvframes_per_second = 5
         self.test_daq.daq._set_lvframes_per_second(lvframes_per_second)
         assert lvframes_per_second is self.test_daq.daq.lvframes_per_second
+
+        with pytest.raises(ParameterTreeError, match="lvframes_per_second must be positive!"):
+            self.test_daq.daq._set_lvframes_per_second(-1)
 
     def test_set_lvspectra_dataset_name(self):
         """Test function sets dataset name."""
@@ -931,6 +937,9 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq._set_lvspectra_frequency(lvspectra_frequency)
         assert lvspectra_frequency is self.test_daq.daq.lvspectra_frequency
 
+        with pytest.raises(ParameterTreeError, match="lvspectra_frequency must be positive!"):
+            self.test_daq.daq._set_lvspectra_frequency(-1)
+
     def test_set_lvspectra_socket_addr(self):
         """Test function sets socket address."""
         socket_addr = "tcp://50.60.70.80:5021"
@@ -942,6 +951,9 @@ class TestDAQ(unittest.TestCase):
         lvspectra_per_second = 7
         self.test_daq.daq._set_lvspectra_per_second(lvspectra_per_second)
         assert lvspectra_per_second is self.test_daq.daq.lvspectra_per_second
+
+        with pytest.raises(ParameterTreeError, match="lvspectra_per_second must be positive!"):
+            self.test_daq.daq._set_lvspectra_per_second(-1)
 
     def test_set_next_frame_enable(self):
         """Test function sets next frame bool."""
@@ -1023,17 +1035,26 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq._set_bin_end(bin_end)
         assert bin_end == self.test_daq.daq.bin_end
 
+        with pytest.raises(ParameterTreeError, match="bin_end must be positive!"):
+            self.test_daq.daq._set_bin_end(-1)
+
     def test_set_bin_start(self):
         """Test function sets been_start."""
         bin_start = 0
         self.test_daq.daq._set_bin_start(bin_start)
         assert bin_start == self.test_daq.daq.bin_start
 
+        with pytest.raises(ParameterTreeError, match="bin_start must be positive!"):
+            self.test_daq.daq._set_bin_start(-1)
+
     def test_set_bin_width(self):
         """Test function sets bin_width."""
         bin_width = 10
         self.test_daq.daq._set_bin_width(bin_width)
         assert bin_width == self.test_daq.daq.bin_width
+
+        with pytest.raises(ParameterTreeError, match="bin_width must be positive!"):
+            self.test_daq.daq._set_bin_width(-1)
 
     def test_update_histogram_dimensions(self):
         """Update histograms' dimensions in the relevant datasets."""
@@ -1093,11 +1114,17 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq._set_threshold_value(threshold_value)
         assert self.test_daq.daq.threshold_value == threshold_value
 
+        with pytest.raises(ParameterTreeError, match="threshold_value must be positive!"):
+            self.test_daq.daq._set_threshold_value(-1)
+
     def test_set_threshold_upper(self):
         """Test function sets Summed Image's threshold upper."""
         threshold_upper = 80
         self.test_daq.daq._set_threshold_upper(threshold_upper)
         assert self.test_daq.daq.threshold_upper == threshold_upper
+
+        with pytest.raises(ParameterTreeError, match="threshold_upper must be positive!"):
+            self.test_daq.daq._set_threshold_upper(-1)
 
     def test_set_threshold_lower(self):
         """Test function sets Summed Image's threshold lower."""
@@ -1105,11 +1132,17 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq._set_threshold_lower(threshold_lower)
         assert self.test_daq.daq.threshold_lower == threshold_lower
 
+        with pytest.raises(ParameterTreeError, match="threshold_lower must be positive!"):
+            self.test_daq.daq._set_threshold_lower(-1)
+
     def test_set_image_frequency(self):
         """Test function sets Summed Image's image frequency."""
         image_frequency = 5
         self.test_daq.daq._set_image_frequency(image_frequency)
         assert self.test_daq.daq.image_frequency == image_frequency
+
+        with pytest.raises(ParameterTreeError, match="image_frequency must be positive!"):
+            self.test_daq.daq._set_image_frequency(-1)
 
     def test_access_sensors_layout(self):
         """Test function sets sensors_layout."""

@@ -182,17 +182,17 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_MAX_FRAMES))
     {
-      max_frames_received_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_MAX_FRAMES);
+      max_frames_received_ = config.get_param<unsigned int>(HexitecHistogramPlugin::CONFIG_MAX_FRAMES);
     }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_START))
     {
-      bin_start_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_BIN_START);
+      bin_start_ = config.get_param<unsigned int>(HexitecHistogramPlugin::CONFIG_BIN_START);
     }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_END))
     {
-      bin_end_ = config.get_param<long>(HexitecHistogramPlugin::CONFIG_BIN_END);
+      bin_end_ = config.get_param<unsigned int>(HexitecHistogramPlugin::CONFIG_BIN_END);
     }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_WIDTH))
@@ -204,7 +204,7 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_RESET_HISTOS))
     {
-      reset_histograms_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_RESET_HISTOS);
+      reset_histograms_ = config.get_param<unsigned int>(HexitecHistogramPlugin::CONFIG_RESET_HISTOS);
 
       if (reset_histograms_ == 1)
       {

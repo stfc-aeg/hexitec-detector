@@ -238,6 +238,7 @@ function poll_fem()
         // If javascript isn't initialised, populate UI with Odin's settings
         if (js_not_initialised)
         {
+            load_odin();
             update_ui_with_odin_settings();
             js_not_initialised = false;
         }

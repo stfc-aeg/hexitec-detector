@@ -92,7 +92,7 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS))
     {
-      packets_lost_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS);
+      packets_lost_ = config.get_param<unsigned int>(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS);
     }
 
     if (config.has_param(HexitecReorderPlugin::CONFIG_RESET_FRAME_NUMBER))
@@ -102,7 +102,7 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecReorderPlugin::CONFIG_FRAME_NUMBER))
     {
-      frame_number_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_FRAME_NUMBER);
+      frame_number_ = config.get_param<unsigned int>(HexitecReorderPlugin::CONFIG_FRAME_NUMBER);
       LOG4CXX_DEBUG(logger_, " *** RESET frame_number to be " << frame_number_);
     }
 
