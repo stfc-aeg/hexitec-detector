@@ -127,11 +127,6 @@ class HexitecFem():
         self.duration_enabled = False
         self.duration_remaining = 0
 
-        self.bias_refresh_interval = 60.0
-        self.bias_voltage_refresh = False
-        self.time_refresh_voltage_held = 3.0
-        self.bias_voltage_settle_time = 2.0
-
         self.bias_level = 0
 
         self.vsrs_selected = 0
@@ -327,8 +322,7 @@ class HexitecFem():
     def read_sensors(self, msg=None):
         """Read environmental sensors and updates parameter tree with results."""
         try:
-            self.environs_in_progress = True
-            self.parent.software_state = "Environs"
+            # TODO: Implement 2x6 version
             # Note once, when firmware was built
             if self.read_firmware_version:
                 fw_date = self.x10g_rdma.read(0x8008, burst_len=1, comment='FIRMWARE DATE')
@@ -345,6 +339,8 @@ class HexitecFem():
                                                                    fw_time[4:6])
                 self.read_firmware_version = False
             # beginning = time.time()
+            self.environs_in_progress = True
+            self.parent.software_state = "Environs"
             vsr = self.vsr_addr
             for VSR in self.VSR_ADDRESS:
                 self.vsr_addr = VSR
@@ -353,7 +349,6 @@ class HexitecFem():
             self.vsr_addr = vsr  # pragma: no cover
             # ending = time.time()
             # print(" Environmental data took: {}".format(ending - beginning))
-            self.parent.software_state = "Idle"
         except HexitecFemError as e:
             self._set_status_error("Failed to read sensors: %s" % str(e))
             logging.error("%s" % str(e))
@@ -361,6 +356,7 @@ class HexitecFem():
             self._set_status_error("Uncaught Exception; Reading sensors failed: %s" % str(e))
             logging.error("%s" % str(e))
         self.environs_in_progress = False
+        self.parent.software_state = "Idle"
 
     def disconnect(self):
         """Disconnect hardware connection."""
@@ -628,8 +624,8 @@ class HexitecFem():
     def cam_connect_completed(self):
         """Complete VSRs boot up."""
         try:
-            self._set_status_message("VSRs booted")
             logging.debug("Modules Enabled")
+            self._set_status_message("VSRs booted")
         except socket_error as e:
             self.hardware_connected = False
             raise HexitecFemError(e)
@@ -1759,55 +1755,49 @@ class HexitecFem():
             logging.debug("hexitec_config: '%s'" % (self.hexitec_config))
         except IOError as e:
             logging.error("Cannot open provided hexitec file: %s" % e)
-            raise IOError("Error: %s" % e)
+            self._set_status_error("%s" % str(e))
+            return
 
-        self.read_ini_file(self.hexitec_config, self.hexitec_parameters, debug=False)
+        try:
+            # Read INI file contents, parse key/value pairs into hexitec_parameters argument
+            self.read_ini_file(self.hexitec_config, self.hexitec_parameters, debug=False)
 
-        # bias_refresh_interval = self._extract_integer(self.hexitec_parameters,
-        #                                               'Bias_Voltage/Bias_Refresh_Interval',
-        #                                               bit_range=32)
-        # if bias_refresh_interval > -1:
-        #     self.bias_refresh_interval = bias_refresh_interval / 1000.0
+            # Recalculate frame rate
+            row_s1 = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Row -> S1',
+                                        bit_range=14)
+            if row_s1 > -1:
+                self.row_s1 = row_s1
 
-        # bias_voltage_refresh = self._extract_boolean(self.hexitec_parameters,
-        #                                              'Bias_Voltage/Bias_Voltage_Refresh')
-        # if bias_voltage_refresh > -1:
-        #     self.bias_voltage_refresh = bias_voltage_refresh
+            s1_sph = self._extract_integer(self.hexitec_parameters, 'Control-Settings/S1 -> Sph',
+                                        bit_range=6)
+            if s1_sph > -1:
+                self.s1_sph = s1_sph
 
-        # time_refresh_voltage_held = self._extract_integer(self.hexitec_parameters,
-        #                                                   'Bias_Voltage/Time_Refresh_Voltage_Held',
-        #                                                   bit_range=32)
-        # if time_refresh_voltage_held > -1:
-        #     self.time_refresh_voltage_held = time_refresh_voltage_held / 1000.0
+            sph_s2 = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Sph -> S2',
+                                        bit_range=6)
+            if sph_s2 > -1:
+                self.sph_s2 = sph_s2
 
-        # bias_voltage_settle_time = self._extract_integer(self.hexitec_parameters,
-        #                                                  'Bias_Voltage/Bias_Voltage_Settle_Time',
-        #                                                  bit_range=32)
-        # if bias_voltage_settle_time > -1:
-        #     self.time_refresh_voltage_held = time_refresh_voltage_held / 1000.0
-        #     self.bias_voltage_settle_time = bias_voltage_settle_time / 1000.0
+            bias_level = self._extract_integer(self.hexitec_parameters,
+                                            'Control-Settings/HV_Bias', bit_range=15)
+            if bias_level > -1:
+                self.bias_level = bias_level
 
-        # Recalculate frame rate
-        self.row_s1 = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Row -> S1',
-                                            bit_range=14)
-        self.s1_sph = self._extract_integer(self.hexitec_parameters, 'Control-Settings/S1 -> Sph',
-                                            bit_range=6)
-        self.sph_s2 = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Sph -> S2',
-                                            bit_range=6)
-        self.bias_level = self._extract_integer(self.hexitec_parameters,
-                                                'Control-Settings/HV_Bias', bit_range=15)
-        self.vsrs_selected = self._extract_integer(self.hexitec_parameters,
-                                                   'Control-Settings/VSRS_selected', bit_range=6)
+            vsrs_selected = self._extract_integer(self.hexitec_parameters,
+                                                'Control-Settings/VSRS_selected', bit_range=6)
+            if vsrs_selected > -1:
+                self.vsrs_selected = vsrs_selected
 
-        print("row_s1: {} from {}".format(self.row_s1, self._extract_integer(self.hexitec_parameters, 'Control-Settings/Row -> S1', bit_range=14)))
-        print("s1_sph: {} from {}".format(self.s1_sph, self._extract_integer(self.hexitec_parameters, 'Control-Settings/S1 -> Sph', bit_range=6)))
-        print("sph_s2: {} from {}".format(self.sph_s2, self._extract_integer(self.hexitec_parameters, 'Control-Settings/Sph -> S2', bit_range=6)))
-        # print("bias:   {} from {}".format(self.bias_level, self._extract_integer(self.hexitec_parameters, 'Control-Settings/HV_Bias', bit_range=15)))
-        # print(" vsrs: {}".format(self.vsrs_selected))
-        self.enable_selected_vsrs(self.vsrs_selected)
-        # time.sleep(1.5)
-        # print(self.hexitec_parameters)
-        self.calculate_frame_rate()
+            # print("row_s1: {} from {}".format(self.row_s1, row_s1))
+            # print("s1_sph: {} from {}".format(self.s1_sph, s1_sph))
+            # print("sph_s2: {} from {}".format(self.sph_s2, sph_s2))
+            # print("bias:   {} from {}".format(self.bias_level, bias_level))
+            # print(" vsrs: {}".format(self.vsrs_selected))
+            self.enable_selected_vsrs(self.vsrs_selected)
+            self.calculate_frame_rate()
+        except HexitecFemError as e:
+            logging.error("Key Error: %s" % e)
+            self._set_status_error("%s" % str(e))
 
     def enable_selected_vsrs(self, vsrs_selected):
         """Populate VSR_ADDRESS according to ini file selection."""
@@ -1877,7 +1867,7 @@ class HexitecFem():
                               (descriptor, setting, valid_range[0], valid_range[1]))
                 setting = -1
         except KeyError:
-            logging.warning("Warning: No '%s' Key defined!" % descriptor)
+            raise HexitecFemError("Missing Key: '%s'" % descriptor)
         return setting
 
     def _extract_integer(self, parameter_dict, descriptor, bit_range):
@@ -1893,7 +1883,7 @@ class HexitecFem():
                               (descriptor, setting, valid_range[0], valid_range[1]))
                 setting = -1
         except KeyError:
-            logging.warning("Warning: No '%s' Key defined!" % descriptor)
+            raise HexitecFemError("Missing Key: '%s'" % descriptor)
 
         return setting
 
@@ -2010,7 +2000,7 @@ class HexitecFem():
         return high_encoded, low_encoded
 
     def read_ini_file(self, filename, parameter_dict, debug=False):
-        """Read filename, parse case sensitive keys decoded as strings."""
+        """Read filename, parse case sensitive keys decoded as strings into parameter_dict."""
         parser = configparser.ConfigParser()
         if debug:  # pragma: no cover
             print("---------------------------------------------------------------------")

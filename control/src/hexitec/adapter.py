@@ -17,6 +17,7 @@ from odin.adapters.adapter import (ApiAdapter, ApiAdapterRequest,
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from odin.util import convert_unicode_to_string, decode_request_body
 from odin.adapters.system_info import SystemInfo
+from json.decoder import JSONDecodeError
 import json
 
 from .HexitecFem import HexitecFem
@@ -576,6 +577,10 @@ class Hexitec():
         except FileNotFoundError as e:
             logging.error("Load Odin config: {}".format(e))
             self.fem._set_status_error("%s" % "Loading Odin config - file missing")
+            raise HexitecError(e)
+        except JSONDecodeError as e:
+            logging.error("Load Odin config: {}".format(e))
+            self.fem._set_status_error("%s" % "Loading Odin config - Bad json?")
             raise HexitecError(e)
 
     def set_duration_enable(self, duration_enable):
