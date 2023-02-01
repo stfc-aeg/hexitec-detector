@@ -227,27 +227,12 @@ class Hexitec():
 
         self.fem_health = True
 
-        # Bias (clock) tracking variables #
-        self.bias_clock_running = False
-        self.bias_init_time = 0         # Placeholder
-        self.bias_blocking_acquisition = False
-        self.extended_acquisition = False       # Track acquisition spanning bias window(s)
-        self.frames_already_acquired = 0        # Track frames acquired across collection windows
-
-        self.collect_and_bias_time = self.fem.bias_refresh_interval + \
-            self.fem.bias_voltage_settle_time + self.fem.time_refresh_voltage_held
-
-        # Tracks whether first acquisition of multiple, bias-window(s), collection
-        self.initial_acquisition = True
-
         self.acquisition_in_progress = False
 
         # Watchdog variables
         self.error_margin = 400                               # TODO: Revisit timeouts
         self.fem_tx_timeout = 5000
-        self.daq_rx_timeout = self.collect_and_bias_time + self.error_margin
-        self.fem_start_timestamp = 0
-        self.time_waiting_for_data_arrival = 0
+        self.daq_rx_timeout = self.error_margin
 
         # Store initialisation time
         self.init_time = time.time()
@@ -258,7 +243,7 @@ class Hexitec():
         self.elog = ""
         self.number_nodes = 1   # 3
         # Software states:
-        #   Cold, Disconnected, Idle, Acquiring
+        #   Cold, Environs, Initialising, Offsets, Disconnected, Idle, Acquiring
         self.software_state = "Cold"
         self.cold_initialisation = True
 
@@ -417,62 +402,12 @@ class Hexitec():
             return response
 
     def connect_hardware(self, msg):
-        """Set up watchdog timeout, start bias clock and connect with hardware."""
+        """Connect with hardware."""
         self.software_state = "Connecting"
-        # TODO: Must recalculate collect and bias time both here and in initialise()
-        #   Logically, commit_configuration() is the best place but it updates variables before
-        #   reading .ini file
-        self.collect_and_bias_time = self.fem.bias_refresh_interval + \
-            self.fem.bias_voltage_settle_time + self.fem.time_refresh_voltage_held
-
-        self.daq_rx_timeout = self.collect_and_bias_time + self.error_margin
-        # Start bias clock if not running
-        if not self.bias_clock_running:
-            IOLoop.instance().add_callback(self.start_bias_clock)
         self.fem.connect_hardware(msg)
 
-    def start_bias_clock(self):
-        """Set up bias 'clock'."""
-        if not self.bias_clock_running:
-            self.bias_init_time = time.time()
-            self.bias_clock_running = True
-        self.poll_bias_clock()
-
-    def poll_bias_clock(self):
-        """Call periodically (0.1 seconds often enough??) to bias window status.
-
-        Are we in bias refresh intv /  refresh volt held / Settle time ?
-        Example: 60000 / 3000 / 2000: Collect for 60s, pause for 3+2 secs
-        """
-        current_time = time.time()
-        time_elapsed = current_time - self.bias_init_time
-        if (time_elapsed < self.fem.bias_refresh_interval):
-            # Still within collection window - acquiring data is allowed
-            pass
-        else:
-            if (time_elapsed < self.collect_and_bias_time):
-                # Blackout period - Wait for electrons to replenish/voltage to stabilise
-                self.bias_blocking_acquisition = True
-            else:
-                # Beyond blackout period - Back within bias
-                # Reset bias clock
-                self.bias_init_time = current_time
-                self.bias_blocking_acquisition = False
-
-        IOLoop.instance().call_later(0.1, self.poll_bias_clock)
-
     def initialise_hardware(self, msg):
-        """Initialise hardware.
-
-        Recalculate collect and bias timing, update watchdog timeout.
-        """
-        # TODO: Must recalculate collect and bias time both here and in initialise();
-        #   Logically, commit_configuration() is the best place but it updates variables before
-        #   values read from .ini file
-        self.collect_and_bias_time = self.fem.bias_refresh_interval + \
-            self.fem.bias_voltage_settle_time + self.fem.time_refresh_voltage_held
-
-        self.daq_rx_timeout = self.collect_and_bias_time + self.error_margin
+        """Initialise hardware."""
         self.fem.initialise_hardware(msg)
         # Wait for fem initialisation
         IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
@@ -494,9 +429,6 @@ class Hexitec():
         self.status_error = ""
         self.status_message = ""
         self.system_health = True
-        # Stop bias clock
-        if self.bias_clock_running:
-            self.bias_clock_running = False
 
     def save_odin(self, msg):
         """Save Odin's settings to file."""
@@ -634,11 +566,10 @@ class Hexitec():
         # Clear (any previous) daq error
         self.daq.in_error = False
 
-        if self.extended_acquisition is False:
-            if self.daq.in_progress:
-                logging.warning("Cannot Start Acquistion: Already in progress")
-                self.fem._set_status_error("Cannot Start Acquistion: Already in progress")
-                return
+        if self.daq.in_progress:
+            logging.warning("Cannot Start Acquistion: Already in progress")
+            self.fem._set_status_error("Cannot Start Acquistion: Already in progress")
+            return
 
         if not self.daq.prepare_odin():
             logging.error("Odin's frameReceiver/frameProcessor not ready")
@@ -647,61 +578,10 @@ class Hexitec():
         self.total_delay = 0
         self.number_frames_to_request = self.number_frames
 
-        if self.fem.bias_voltage_refresh:
-            # Did the acquisition coincide with bias dead time?
-            if self.bias_blocking_acquisition:
-                IOLoop.instance().call_later(0.1, self.acquisition)
-                return
-
-            # Work out how many frames can be acquired before next bias refresh
-            time_into_window = time.time() - self.bias_init_time
-            time_available = self.fem.bias_refresh_interval - time_into_window
-
-            if time_available < 0:
-                IOLoop.instance().call_later(0.09, self.acquisition)
-                return
-
-            frames_before_bias = self.fem.frame_rate * time_available
-            number_frames_before_bias = int(round(frames_before_bias))
-
-            self.number_frames_to_request = self.number_frames - self.frames_already_acquired
-
-            # Can we obtain all required frames within current bias window?
-            if (number_frames_before_bias < self.number_frames_to_request):
-                # Need >1 bias window to fulfil acquisition
-                self.extended_acquisition = True
-                self.number_frames_to_request = number_frames_before_bias
-
-            self.total_delay = time_available + self.fem.bias_voltage_settle_time + \
-                self.fem.time_refresh_voltage_held
-
-        # # TODO: Remove once Firmware made to reset on each new acquisition
-        # # TODO: WILL BE NON 0 VALUE IN THE FUTURE - TO SUPPORT BIAS REFRESH INTV
-        # #       BUT, if nonzero then won't FP's Acquisition time out before processing done?????
-        # #
-        # Reset Reorder plugin's frame_number (to current frame number, for multi-window acquire)
-        command = "config/reorder/frame_number"
-        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-        request.body = "{}".format(self.frames_already_acquired)
-        self.adapters["fp"].put(command, request)
-        # TODO: To be removed once firmware updated? FP may be slow to process frame_number reset
-        time.sleep(0.5)
-
-        # First acquisition of multiple, bias-window(s), collection?
-        # Reset histograms, call DAQ's prepare_daq() once per acquisition
-        if self.initial_acquisition:
-            # Issue reset to histogram
-            command = "config/histogram/reset_histograms"
-            request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-            request.body = "{}".format(1)
-            self.adapters["fp"].put(command, request)
-
-            self.daq_target = time.time()
-            self.daq.prepare_daq(self.number_frames)
-            self.initial_acquisition = False
-            # Acquisition (whether single/multi-run) starts here
-            self.acquisition_in_progress = True
-
+        self.daq_target = time.time()
+        self.daq.prepare_daq(self.number_frames)
+        # Acquisition starts here
+        self.acquisition_in_progress = True
         # Wait for DAQ (i.e. file writer) to be enabled before FEM told to collect data
         IOLoop.instance().add_callback(self.await_daq_ready)
 
@@ -728,10 +608,6 @@ class Hexitec():
             self.number_frames_to_request
         self.fem.set_number_frames(self.number_frames_to_request)
         self.fem.collect_data()
-
-        self.frames_already_acquired += self.number_frames_to_request
-        # Note when FEM told to begin collecting data
-        self.fem_start_timestamp = time.time()
         IOLoop.instance().call_later(self.total_delay, self.monitor_fem_progress)
 
     def monitor_fem_progress(self):
@@ -746,13 +622,6 @@ class Hexitec():
             # Still sending data
             IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
             return
-        else:
-            # Current collection completed; Do we have all the requested frames?
-            if self.extended_acquisition:
-                if (self.frames_already_acquired < self.number_frames):
-                    # Need further bias window(s)
-                    IOLoop.instance().add_callback(self.acquisition)
-                    return
         # print("\n adpt.monitor_fem_progress() fem done")
         # Issue reset to summed_image
         command = "config/summed_image/reset_image"
@@ -767,11 +636,7 @@ class Hexitec():
 
         Utilised by await_daq_ready(), monitor_fem_progress()
         """
-        print("\n adpt.reset_state_variables() called")
-        self.initial_acquisition = True
-        self.extended_acquisition = False
         self.acquisition_in_progress = False
-        self.frames_already_acquired = 0
         self.software_state = "Idle"
 
     def cancel_acquisition(self, put_data=None):

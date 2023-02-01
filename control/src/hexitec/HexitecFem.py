@@ -324,20 +324,20 @@ class HexitecFem():
         try:
             # TODO: Implement 2x6 version
             # Note once, when firmware was built
-            if self.read_firmware_version:
-                fw_date = self.x10g_rdma.read(0x8008, burst_len=1, comment='FIRMWARE DATE')
-                fw_time = self.x10g_rdma.read(0x800C, burst_len=1, comment='FIRMWARE TIME')
-                fw_date = fw_date[0]
-                fw_time = fw_time[0]
-                fw_time = "{0:06X}".format(fw_time)
-                fw_date = "{0:08X}".format(fw_date)
-                year = fw_date[0:4]
-                month = fw_date[4:6]
-                day = fw_date[6:8]
-                self.firmware_date = "{0:.2}/{1:.2}/{2:.4}".format(day, month, year)
-                self.firmware_time = "{0:.2}:{1:.2}:{2:.4}".format(fw_time[0:2], fw_time[2:4],
-                                                                   fw_time[4:6])
-                self.read_firmware_version = False
+            # if self.read_firmware_version:
+            #     fw_date = self.x10g_rdma.read(0x8008, burst_len=1, comment='FIRMWARE DATE')
+            #     fw_time = self.x10g_rdma.read(0x800C, burst_len=1, comment='FIRMWARE TIME')
+            #     fw_date = fw_date[0]
+            #     fw_time = fw_time[0]
+            #     fw_time = "{0:06X}".format(fw_time)
+            #     fw_date = "{0:08X}".format(fw_date)
+            #     year = fw_date[0:4]
+            #     month = fw_date[4:6]
+            #     day = fw_date[6:8]
+            #     self.firmware_date = "{0:.2}/{1:.2}/{2:.4}".format(day, month, year)
+            #     self.firmware_time = "{0:.2}:{1:.2}:{2:.4}".format(fw_time[0:2], fw_time[2:4],
+            #                                                        fw_time[4:6])
+            #     self.read_firmware_version = False
             # beginning = time.time()
             self.environs_in_progress = True
             self.parent.software_state = "Environs"
@@ -432,9 +432,8 @@ class HexitecFem():
         """Get FEM health status."""
         return self.health
 
-    def _start_polling(self):  # pragma: no cover
-        # TODO: Still need IOLoop call if sensor polling is scrapped
-        # IOLoop.instance().call_later(4.0, self.poll_sensors)  # If polling env data
+    # TODO: Still need IOLoop call if sensor polling is scrapped?
+    def _start_polling(self):
         IOLoop.instance().add_callback(self.poll_sensors)   # Not polling sensors
 
     # TODO: redundant ?
@@ -666,7 +665,7 @@ class HexitecFem():
 
     # TODO: 2x2 Legacy code, to be reconstructed
     # @run_on_executor(executor='thread_executor')
-    def acquire_data(self):  # noqa: C901
+    def acquire_data(self):
         """Acquire data, poll fem for completion and read out fem monitors."""
         # print(" \n fem.acquire_data()")
 
@@ -767,7 +766,8 @@ class HexitecFem():
         self.parent.software_state = "Idle"
         # print("\n fem DONE")
 
-    def read_receive_from_all(self, op_command, register_h, register_l):
+    # TODO: Revisit and unit test:
+    def read_receive_from_all(self, op_command, register_h, register_l):  # pragma: no coverage
         """Read and receive from all VSRs."""
         reply = []
         for VSR in self.VSR_ADDRESS:
@@ -778,13 +778,15 @@ class HexitecFem():
             reply.append(resp)
         return reply
 
-    def write_receive_to_all(self, op_command, register_h, register_l, value_h, value_l):
+    # TODO: Revisit and unit test:
+    def write_receive_to_all(self, op_command, register_h, register_l, value_h, value_l):  # pragma: no coverage
         """Write and receive to all VSRs."""
         for VSR in self.VSR_ADDRESS:
             self.send_cmd([VSR, op_command, register_h, register_l, value_h, value_l])
             self.read_response()
 
-    def are_capture_dc_ready(self, vsrs_register_89):
+    # TODO: Revisit and unit test:
+    def are_capture_dc_ready(self, vsrs_register_89):  # pragma: no coverage
         """Check status of Register 89, bit 0: Capture DC ready."""
         vsrs_ready = True
         for vsr in vsrs_register_89:
@@ -1055,12 +1057,11 @@ class HexitecFem():
 
     def read_register89(self, vsr_number):
         """Read out register 89."""
-        # time.sleep(0.25)
         (address_h, address_l) = (0x38, 0x39)
         # print("Read Register 0x{0}{1}".format(address_h-0x30, address_l-0x30))
         return self.get_vsr_register_value(vsr_number, address_h, address_l)
 
-    def read_register07(self, vsr_number):
+    def read_register07(self, vsr_number):  # pragma: no coverage
         """Read out register 07."""
         # time.sleep(0.25)
         (address_h, address_l) = (0x30, 0x37)
@@ -1069,7 +1070,7 @@ class HexitecFem():
 
     @run_on_executor(executor='thread_executor')
     def initialise_system(self):
-        """Configure in full VSR2, then VSR1.
+        """Configure in full all VSRs.
 
         Initialise, load enables, set up state machine, write to DAC and enable ADCs.
         """
@@ -1106,7 +1107,7 @@ class HexitecFem():
 
             logging.debug("set re_EN_TRAINING '0'")
             # training_en_mask = 0x00
-            self.x10g_rdma.write(0x00000020, 0x00, burst_len=1, comment="Enabling training")
+            self.x10g_rdma.write(0x00000020, 0x00, burst_len=1, comment="Disabling training")
 
             vsr_status_addr = 0x000003E8  # Flags of interest: locked, +4 to get to the next VSR, et cetera for all VSRs
             for vsr in self.VSR_ADDRESS:
@@ -1128,37 +1129,11 @@ class HexitecFem():
             print("     initialisation took: {}".format(ending-beginning))
 
             # DEBUGGING Info:
-            reg07 = []
-            reg89 = []
-            # print("VSR Row S1: (High, Low). S1Sph  SphS2:  adc clk delay: . FVAL/LVAL:  VCAL2, (H, L) ")
-            print("VSR Row S1: (H, L). S1Sph  SphS2: adc clk dly: . FVAL/LVAL:  VCAL2 (H, L) Gain")
-            for vsr in self.VSR_ADDRESS:
-                r7_list, r7_value = self.read_register07(vsr)
-                reg07.append(r7_value)
-                r89_list, r89_value = self.read_register89(vsr)
-                reg89.append(r89_value)
-
-                s1_high_resp, s1_high_reply = self.read_and_response(vsr, 0x30, 0x33)
-                s1_low_resp, s1_low_reply = self.read_and_response(vsr, 0x30, 0x32)
-                sph_resp, sph_reply = self.read_and_response(vsr, 0x30, 0x34)
-                s2_resp, s2_reply = self.read_and_response(vsr, 0x30, 0x35)
-                adc_clock_resp, adc_clock_reply = self.read_and_response(vsr, 0x30, 0x39)  # ADC Clock Delay
-                vals_delay_resp, vals_delay_reply = self.read_and_response(vsr, 0x30, 0x45)  # FVAL/LVAL Delay
-                vcal_high_resp, vcal_high_reply = self.read_and_response(vsr, 0x31, 0x39)  # VCAL2 -> VCAL1 high byte
-                vcal_low_resp, vcal_low_reply = self.read_and_response(vsr, 0x31, 0x38)  # VCAL2 -> VCAL1 low byte
-                gain_resp, gain_reply = self.read_and_response(vsr, 0x30, 0x36)  # Gain
-                print(" {}           {} {}    {}     {}        {}             {}            {} {} {}".format(
-                      vsr-143, s1_high_reply, s1_low_reply,
-                      sph_reply,
-                      s2_reply,
-                      adc_clock_reply,
-                      vals_delay_reply,
-                      vcal_high_reply, vcal_low_reply,
-                      gain_reply))
-            print(" All vsrs, reg07: {}".format(reg07))
-            print("           reg89: {}".format(reg89))
+            self.debugging_function()
             # DEBUGGING completed
             self.parent.software_state = "Idle"
+            print("state: ", self.parent.software_state)
+            print(self.hardware_busy)
         except HexitecFemError as e:
             self._set_status_error("Failed to initialise camera: %s" % str(e))
             logging.error("%s" % str(e))
@@ -1167,7 +1142,40 @@ class HexitecFem():
             logging.error("%s" % str(e))
         self.hardware_busy = False
 
-    def initialise_vsr(self, vsr):
+    def debugging_function(self):  # pragma: no coverage
+        """Provides additional debugging information for initialise_system()"""
+        reg07 = []
+        reg89 = []
+        # print("VSR Row S1: (High, Low). S1Sph  SphS2:  adc clk delay: . FVAL/LVAL:  VCAL2, (H, L) ")
+        print("VSR Row S1: (H, L). S1Sph  SphS2: adc clk dly: . FVAL/LVAL:  VCAL2 (H, L) Gain")
+        for vsr in self.VSR_ADDRESS:
+            r7_list, r7_value = self.read_register07(vsr)
+            reg07.append(r7_value)
+            r89_list, r89_value = self.read_register89(vsr)
+            reg89.append(r89_value)
+
+            s1_high_resp, s1_high_reply = self.read_and_response(vsr, 0x30, 0x33)
+            s1_low_resp, s1_low_reply = self.read_and_response(vsr, 0x30, 0x32)
+            sph_resp, sph_reply = self.read_and_response(vsr, 0x30, 0x34)
+            s2_resp, s2_reply = self.read_and_response(vsr, 0x30, 0x35)
+            adc_clock_resp, adc_clock_reply = self.read_and_response(vsr, 0x30, 0x39)  # ADC Clock Delay
+            vals_delay_resp, vals_delay_reply = self.read_and_response(vsr, 0x30, 0x45)  # FVAL/LVAL Delay
+            vcal_high_resp, vcal_high_reply = self.read_and_response(vsr, 0x31, 0x39)  # VCAL2 -> VCAL1 high byte
+            vcal_low_resp, vcal_low_reply = self.read_and_response(vsr, 0x31, 0x38)  # VCAL2 -> VCAL1 low byte
+            gain_resp, gain_reply = self.read_and_response(vsr, 0x30, 0x36)  # Gain
+            print(" {}           {} {}    {}     {}        {}             {}            {} {} {}".format(
+                    vsr-143, s1_high_reply, s1_low_reply,
+                    sph_reply,
+                    s2_reply,
+                    adc_clock_reply,
+                    vals_delay_reply,
+                    vcal_high_reply, vcal_low_reply,
+                    gain_reply))
+        print(" All vsrs, reg07: {}".format(reg07))
+        print("           reg89: {}".format(reg89))
+
+    # TODO: Revisit and finishing unit test
+    def initialise_vsr(self, vsr):  # pragma: no coverage
         """Initialise a VSR."""
         value_002 = 0x30, 0x31  # RowS1 Low Byte value: 1 = maximum frame rate
         value_003 = 0x30, 0x30  # RowS1 High Byte value : 0 = ditto

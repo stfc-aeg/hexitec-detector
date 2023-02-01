@@ -14,9 +14,9 @@ import sys
 import os
 
 if sys.version_info[0] == 3:  # pragma: no cover
-    from unittest.mock import Mock, MagicMock, patch
+    from unittest.mock import Mock, patch
 else:                         # pragma: no cover
-    from mock import Mock, MagicMock, patch
+    from mock import Mock, patch
 
 
 class AdapterTestFixture(object):
@@ -165,8 +165,10 @@ class TestAdapter(unittest.TestCase):
     def test_adapter_put_request_syntax_error(self):
         """Test adapter handles invalid PUT containing request syntax error."""
         path = "odin_version"
+        error_part1 = 'Failed to decode PUT request body:'
+        error_part2 = "the JSON object must be str, bytes or bytearray, not NoneType"
         expected_response = {
-            'error': 'Failed to decode PUT request body: the JSON object must be str, bytes or bytearray, not NoneType'
+            'error': "{} {}".format(error_part1, error_part2)
         }
         response = self.test_adapter.adapter.put(
             path,
@@ -176,9 +178,10 @@ class TestAdapter(unittest.TestCase):
 
     def test_adapter_delete(self):
         """Test that adapter's DELETE function works."""
-        expected_response = '{}: DELETE on path {}'.format("FileInterfaceAdapter", self.test_adapter.path)
+        expected_response = '{}: DELETE on path {}'.format("FileInterfaceAdapter",
+                                                           self.test_adapter.path)
         response = self.test_adapter.adapter.delete(self.test_adapter.path,
-                                                             self.test_adapter.request)
+                                                    self.test_adapter.request)
         assert response.data == expected_response
         assert response.status_code == 200
 
