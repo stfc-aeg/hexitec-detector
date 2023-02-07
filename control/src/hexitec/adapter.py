@@ -230,7 +230,7 @@ class Hexitec():
         self.acquisition_in_progress = False
 
         # Watchdog variables
-        self.error_margin = 400                               # TODO: Revisit timeouts
+        self.error_margin = 400     # TODO: Revisit timeouts
         self.fem_tx_timeout = 5000
         self.daq_rx_timeout = self.error_margin
 
@@ -243,7 +243,7 @@ class Hexitec():
         self.elog = ""
         self.number_nodes = 1   # 3
         # Software states:
-        #   Cold, Environs, Initialising, Offsets, Disconnected, Idle, Acquiring
+        #   Cold, Environs, Initialising, Offsets, Disconnected, Idle, Acquiring, Error, Cleared
         self.software_state = "Cold"
         self.cold_initialisation = True
 
@@ -262,6 +262,7 @@ class Hexitec():
             "hv_on": (None, self.hv_on),
             "hv_off": (None, self.hv_off),
             "environs": (None, self.environs),
+            "reset_error": (None, self.reset_error),
             "acquisition": {
                 "number_frames": (lambda: self.number_frames, self.set_number_frames),
                 "duration": (lambda: self.duration, self.set_duration),
@@ -335,18 +336,16 @@ class Hexitec():
         if self.fem.acquisition_completed:
             frames_processed = self.get_frames_processed()
             # Check all frames finished processed
-            if (frames_processed == self.number_frames):  # noqa: W503
+            if (frames_processed == self.number_frames):
                 # Reset FEM's acquisiton status ahead of future acquisitions
                 self.fem.acquisition_completed = False
-        # TODO: Also check sensor values?
-        # ..
         fem_health = self.fem.get_health()
         self.fem_health = fem_health
-        if self.system_health:
-            self.status_error = self.fem._get_status_error()
-            self.status_message = self.fem._get_status_message()
-            self.system_health = self.system_health and self.fem_health
+        self.status_error = self.fem._get_status_error()
+        self.status_message = self.fem._get_status_message()
+        self.system_health = self.system_health and self.fem_health
 
+    # TODO: Revisit and update once firmware data readout available
     def check_fem_watchdog(self):
         """Check data sent when FEM acquiring data."""
         if self.acquisition_in_progress:
@@ -356,12 +355,12 @@ class Hexitec():
                 delta_time = time.time() - fem_begun
                 logging.debug("    FEM w-dog: {0:.2f} < {1:.2f}".format(delta_time,
                                                                         self.fem_tx_timeout))
-                if (delta_time > self.fem_tx_timeout):
-                    self.fem.stop_acquisition = True
-                    self.shutdown_processing()
-                    logging.error("FEM data transmission timed out")
-                    error = "Timed out waiting ({0:.2f} seconds) for FEM data".format(delta_time)
-                    self.fem._set_status_message(error)
+                # if (delta_time > self.fem_tx_timeout):
+                #     self.fem.stop_acquisition = True
+                #     self.shutdown_processing()
+                #     logging.error("FEM data transmission timed out")
+                #     error = "Timed out waiting ({0:.2f} seconds) for FEM data".format(delta_time)
+                #     self.fem._set_status_message(error)
 
     def check_daq_watchdog(self):
         """Monitor DAQ's frames_processed while data processed.
@@ -425,10 +424,11 @@ class Hexitec():
         else:
             # Nothing in progress, disconnect hardware
             self.fem.disconnect_hardware(msg)
-        # Reset system status
-        self.status_error = ""
-        self.status_message = ""
-        self.system_health = True
+        # TODO: Do not reset status; See reset_error()
+        # # Reset system status
+        # self.status_error = ""
+        # self.status_message = ""
+        # self.system_health = True
 
     def save_odin(self, msg):
         """Save Odin's settings to file."""
@@ -467,8 +467,7 @@ class Hexitec():
             with open(self.odin_config_file, "w") as f:
                 json.dump(config, f)
         except Exception as e:
-            logging.error("Save Odin config: {}".format(e))
-            self.fem._set_status_error("Saving Odin config: %s" % e)
+            self.fem.flag_error("Saving Odin config", str(e))
             raise HexitecError(e)
 
     def load_odin(self, msg):
@@ -507,12 +506,10 @@ class Hexitec():
                 self.duration = config["duration"]
                 self.duration_enable = config["duration_enable"]
         except FileNotFoundError as e:
-            logging.error("Load Odin config: {}".format(e))
-            self.fem._set_status_error("%s" % "Loading Odin config - file missing")
+            self.fem.flag_error("Loading Odin config - file missing", str(e))
             raise HexitecError(e)
         except JSONDecodeError as e:
-            logging.error("Load Odin config: {}".format(e))
-            self.fem._set_status_error("%s" % "Loading Odin config - Bad json?")
+            self.fem.flag_error("Loading Odin config - Bad json?", str(e))
             raise HexitecError(e)
 
     def set_duration_enable(self, duration_enable):
@@ -674,6 +671,15 @@ class Hexitec():
     def environs(self, msg):
         """Readout environmental data."""
         self.fem.environs()
+
+    def reset_error(self, msg):
+        """Reset error."""
+        self.fem.reset_error()
+        # Reset system status
+        self.status_error = ""
+        self.status_message = ""
+        self.system_health = True
+        self.software_state = "Cleared"
 
     def get(self, path):
         """

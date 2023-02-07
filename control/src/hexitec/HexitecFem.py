@@ -79,8 +79,10 @@ class HexitecFem():
         :param server_data_ip_addr: PC interface for data path
         :param camera_data_ip_addr: FEM interface for data path
         """
-        # logging.info("server_ctrl_ip_addr={}, camera_ctrl_ip_addr={}".format(server_ctrl_ip_addr, camera_ctrl_ip_addr))
-        # logging.info("server_data_ip_addr={}, camera_data_ip_addr={}".format(server_data_ip_addr, camera_data_ip_addr))
+        # logging.info("server_ctrl_ip_addr={}, camera_ctrl_ip_addr={}".format(
+        #     server_ctrl_ip_addr, camera_ctrl_ip_addr))
+        # logging.info("server_data_ip_addr={}, camera_data_ip_addr={}".format(
+        #     server_data_ip_addr, camera_data_ip_addr))
         # Give access to parent class (Hexitec)
         self.parent = parent
         self.x10g_rdma = None
@@ -232,7 +234,7 @@ class HexitecFem():
             "number_frames": (self.get_number_frames, self.set_number_frames),
             "duration": (self.get_duration, self.set_duration),
             "duration_remaining": (lambda: self.duration_remaining, None),
-            "hexitec_config": (lambda: self.hexitec_config, self._set_hexitec_config),
+            "hexitec_config": (lambda: self.hexitec_config, self.set_hexitec_config),
             "read_sensors": (None, self.read_sensors),
             "environs_in_progress": (lambda: self.environs_in_progress, None),
             "hardware_connected": (lambda: self.hardware_connected, None),
@@ -350,13 +352,12 @@ class HexitecFem():
             # ending = time.time()
             # print(" Environmental data took: {}".format(ending - beginning))
         except HexitecFemError as e:
-            self._set_status_error("Failed to read sensors: %s" % str(e))
-            logging.error("%s" % str(e))
+            self.flag_error("Failed to read sensors", str(e))
         except Exception as e:
-            self._set_status_error("Uncaught Exception; Reading sensors failed: %s" % str(e))
-            logging.error("%s" % str(e))
-        self.environs_in_progress = False
-        self.parent.software_state = "Idle"
+            self.flag_error("Uncaught Exception; Reading sensors failed", str(e))
+        else:
+            self.environs_in_progress = False
+            self.parent.software_state = "Idle"
 
     def disconnect(self):
         """Disconnect hardware connection."""
@@ -365,23 +366,6 @@ class HexitecFem():
     def cleanup(self):
         """Cleanup connection."""
         self.disconnect()
-
-    # def frame_gate_trigger(self):
-    #     """Reset monitors, pulse frame gate."""
-    #     # the reset of monitors suggested by Rob:
-    #     self.x10g_rdma.write(self.rdma_addr["reset_monitor"] + 0, 0x0, burst_len=1, comment='reset monitor off')
-    #     self.x10g_rdma.write(self.rdma_addr["reset_monitor"] + 0, 0x1, burst_len=1, comment='reset monitor on')
-    #     self.x10g_rdma.write(self.rdma_addr["reset_monitor"] + 0, 0x0, burst_len=1, comment='reset monitor off')
-
-    #     self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 0, 0x0, burst_len=1, comment='frame gate trigger off')
-    #     self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 0, 0x1, burst_len=1, comment='frame gate trigger on')
-    #     self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 0, 0x0, burst_len=1, comment='frame gate trigger off')
-
-    # def frame_gate_settings(self, frame_number, frame_gap):
-    #     """Set frame gate settings."""
-    #     self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 1, frame_number, burst_len=1,
-    #                          comment='frame gate frame number')
-    #     self.x10g_rdma.write(self.rdma_addr["frm_gate"] + 2, frame_gap, burst_len=1, comment='frame gate frame gap')
 
     def _get_status_message(self):
         return self.status_message
@@ -408,7 +392,8 @@ class HexitecFem():
         """Set number of frames, initialise frame_rate if not set."""
         if self.frame_rate == 0:
             self.calculate_frame_rate()
-        # print("\n\tfem.set_number_frames({}) > number_frames {} duration {}\n".format(frames, self.number_frames, self.number_frames / self.frame_rate))
+        # print("\n\tfem.set_number_frames({}) > number_frames {} duration {}\n".format(
+        #     frames, self.number_frames, self.number_frames / self.frame_rate))
         if self.number_frames != frames:
             self.number_frames = frames
             self.duration = self.number_frames / self.frame_rate
@@ -422,8 +407,8 @@ class HexitecFem():
         """Set duration, calculate frames to acquire using frame rate."""
         if self.frame_rate == 0:
             self.calculate_frame_rate()
-        # print("\n\tfem.set_duration({}) frames {}\n".format(duration,
-        #                                                     self.duration * self.frame_rate))
+        # print("\n\tfem.set_duration({}) frames {}\n".format(
+        #     duration, self.duration * self.frame_rate))
         self.duration = duration
         frames = self.duration * self.frame_rate
         self.number_frames = int(round(frames))
@@ -455,13 +440,10 @@ class HexitecFem():
             self.hardware_busy = True
             self.power_up_modules()
         except HexitecFemError as e:
-            self._set_status_error("%s" % str(e))
+            self.flag_error("Error", str(e))
             self._set_status_message("Is the camera powered?")
-            logging.error("%s" % str(e))
         except Exception as e:
-            error = "Uncaught Exception; Camera connection: %s" % str(e)
-            self._set_status_error(error)
-            logging.error("Camera connection: %s" % str(e))
+            self.flag_error("Uncaught Exception; Camera connection", str(e))
             # Cannot raise error beyond current thread
 
     def power_up_modules(self):
@@ -517,11 +499,10 @@ class HexitecFem():
             self.parent.software_state = "Initialising"
             self.initialise_system()
         except HexitecFemError as e:
-            self._set_status_error("Failed to initialise camera: %s" % str(e))
-            logging.error("%s" % str(e))
+            self.flag_error("Failed to initialise camera", str(e))
         except Exception as e:
-            self._set_status_error("Uncaught Exception; Camera initialisation failed: %s" % str(e))
-            logging.error("%s" % str(e))
+            error = "Uncaught Exception; Camera initialisation failed"
+            self.flag_error(error, str(e))
 
     def collect_data(self, msg=None):
         """Acquire data from camera."""
@@ -541,11 +522,9 @@ class HexitecFem():
             print("\n fem.collect_data()")
             self.acquire_data()
         except HexitecFemError as e:
-            self._set_status_error("Failed to collect data: %s" % str(e))
-            logging.error("%s" % str(e))
+            self.flag_error("Failed to collect data", str(e))
         except Exception as e:
-            self._set_status_error("Uncaught Exception; Data collection failed: %s" % str(e))
-            logging.error("%s" % str(e))
+            self.flag_error("Uncaught Exception; Data collection failed", str(e))
 
     def disconnect_hardware(self, msg=None):
         """Disconnect camera."""
@@ -563,11 +542,9 @@ class HexitecFem():
             self._set_status_message("Camera disconnected")
             self.parent.software_state = "Disconnected"
         except HexitecFemError as e:
-            self._set_status_error("Failed to disconnect: %s" % str(e))
-            logging.error("%s" % str(e))
+            self.flag_error("Failed to disconnect", str(e))
         except Exception as e:
-            self._set_status_error("Uncaught Exception; Disconnection failed: %s" % str(e))
-            logging.error("%s" % str(e))
+            self.flag_error("Uncaught Exception; Disconnection failed", str(e))
 
     def set_debug(self, debug):
         """Set debug messages on or off."""
@@ -576,7 +553,8 @@ class HexitecFem():
     def set_all_data_sent(self, all_data_sent):
         """Set whether all data has been sent (hardware simulation)."""
         self.all_data_sent = all_data_sent
-        # print("\n self.all_data_sent ({}) = all_data_sent ({})\n".format(self.all_data_sent, all_data_sent))
+        # print("\n self.all_data_sent ({}) = all_data_sent ({})\n".format(
+        #     self.all_data_sent, all_data_sent))
 
     def get_debug(self):
         """Get debug messages status."""
@@ -592,19 +570,25 @@ class HexitecFem():
         counter = 0
         rx_pkt_done = 0
         while not rx_pkt_done:
-            uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done = self.x10g_rdma.read_uart_status()
+            uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done \
+                = self.x10g_rdma.read_uart_status()
             counter += 1
             # if counter % 100 == 0:
-            #     print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
-            #         counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
+            #     msg = "{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X}".format(
+            #         counter, uart_status, tx_buff_full, tx_buff_empty)
+            #     print("{0} rx_buff_full: {1:0X} rx_buff_empty: {2:0X} rx_pkt_done: {3:0X}".format(
+            #         msg, rx_buff_full, rx_buff_empty, rx_pkt_done))
             if counter == 15001:
                 logging.error("read_response, UART timed out")
                 raise HexitecFemError("UART read timed out")
-        # print("{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X} rx_buff_full: {4:0X} rx_buff_empty: {5:0X} rx_pkt_done: {6:0X}".format(
-        #     counter, uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done))
+        # msg = "{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X}".format(
+        #     counter, uart_status, tx_buff_full, tx_buff_empty)
+        # print("{0} rx_buff_full: {1:0X} rx_buff_empty: {2:0X} rx_pkt_done: {3:0X}".format(
+        #     msg, rx_buff_full, rx_buff_empty, rx_pkt_done))
 
         response = self.x10g_rdma.uart_rx(0x0)
-        # print("R: {}.  ({}). {}".format(' '.join("0x{0:02X}".format(x) for x in response), response, counter))
+        # print("R: {}.  ({}). {}".format(
+        #     ' '.join("0x{0:02X}".format(x) for x in response), response, counter))
         return response
 
     def cam_connect(self):
@@ -618,16 +602,12 @@ class HexitecFem():
         except socket_error as e:
             self.hardware_connected = False
             self.hardware_busy = False
-            raise HexitecFemError(e)
+            self.flag_error("Failed to initialise modules", str(e))
 
     def cam_connect_completed(self):
         """Complete VSRs boot up."""
-        try:
-            logging.debug("Modules Enabled")
-            self._set_status_message("VSRs booted")
-        except socket_error as e:
-            self.hardware_connected = False
-            raise HexitecFemError(e)
+        logging.debug("Modules Enabled")
+        self._set_status_message("VSRs booted")
         self.hardware_busy = False
         self.parent.software_state = "Idle"
 
@@ -644,10 +624,11 @@ class HexitecFem():
             self.disconnect()
             logging.debug("Camera is Disconnected")
         except socket_error as e:
-            logging.error("Unable to disconnect camera: %s" % str(e))
+            self.flag_error("Unable to disconnect camera", str(e))
             raise HexitecFemError(e)
         except AttributeError as e:
-            logging.error("Unable to disconnect camera: %s" % "No active connection")
+            error = "Unable to disconnect camera: No active connection"
+            self.flag_error(error, str(e))
             raise HexitecFemError("%s; %s" % (e, "No active connection"))
 
     def print_firmware_info(self):  # pragma: no cover
@@ -663,29 +644,30 @@ class HexitecFem():
             print("   Register 0x8{}, VSR2: {} VSR1: {}".format(index, vsr2, vsr1))
         print("__________________________________________________________")
 
-    # TODO: 2x2 Legacy code, to be reconstructed
+    # TODO: Reconstruct when data readout available
     # @run_on_executor(executor='thread_executor')
     def acquire_data(self):
         """Acquire data, poll fem for completion and read out fem monitors."""
-        # print(" \n fem.acquire_data()")
+        try:
+            logging.info("Initiate Data Capture")
+            self.acquire_start_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
 
-        logging.info("Initiate Data Capture")
-        self.acquire_start_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
+            # TODO: Placeholder for triggering daq
 
-        # TODO: Placeholder for triggering daq right here:
+            # How to convert datetime object to float?
+            self.acquire_timestamp = time.time()    # Utilised by adapter's watchdog
 
-        # How to convert datetime object to float?
-        self.acquire_timestamp = time.time()    # Utilised by adapter's watchdog
-
-        self.waited = 0.1
-        IOLoop.instance().call_later(0.1, self.check_acquire_finished)
+            self.waited = 0.1
+            IOLoop.instance().call_later(0.1, self.check_acquire_finished)
+        except Exception as e:
+            self.flag_error("Failed to start acquire_data", str(e))
 
     def check_acquire_finished(self):
         """Check whether all data transferred, until completed or cancelled by user."""
         # print(" \n fem.acquire_data()")
         try:
-            delay = 0.10
-            reply = 0
+            # delay = 0.10
+            # reply = 0
             # Stop if user clicked on Cancel button
             if (self.stop_acquisition):
                 logging.debug(" -=-=-=- HexitecFem told to cancel acquisition -=-=-=-")
@@ -693,7 +675,8 @@ class HexitecFem():
                 return
             else:
                 # Temporary hack - Wait until hardware finished sending data (simulated for now) #
-                # reply = self.x10g_rdma.read(0x60000014, burst_len=1, comment='Check data transfer completed?')
+                # reply = self.x10g_rdma.read(
+                #     0x60000014, burst_len=1, comment='Check data transfer completed?')
                 if self.all_data_sent == 0:
                     # print(" *** Awaiting data.. ***")
                     IOLoop.instance().call_later(0.5, self.check_acquire_finished)
@@ -713,11 +696,9 @@ class HexitecFem():
                 #     IOLoop.instance().call_later(delay, self.check_acquire_finished)
                 #     return
         except HexitecFemError as e:
-            self._set_status_error("Failed to collect data: %s" % str(e))
-            logging.error("%s" % str(e))
+            self.flag_error("Failed to collect data", str(e))
         except Exception as e:
-            self._set_status_error("Uncaught Exception; Data collection failed: %s" % str(e))
-            logging.error("%s" % str(e))
+            self.flag_error("Uncaught Exception; Data collection failed", str(e))
 
         # Acquisition interrupted
         self.acquisition_completed = True
@@ -779,7 +760,8 @@ class HexitecFem():
         return reply
 
     # TODO: Revisit and unit test:
-    def write_receive_to_all(self, op_command, register_h, register_l, value_h, value_l):  # pragma: no coverage
+    def write_receive_to_all(self, op_command, register_h, register_l,
+                             value_h, value_l):  # pragma: no coverage
         """Write and receive to all VSRs."""
         for VSR in self.VSR_ADDRESS:
             self.send_cmd([VSR, op_command, register_h, register_l, value_h, value_l])
@@ -841,16 +823,18 @@ class HexitecFem():
             self._set_status_message("Collecting dark images..")
             dc_captured = False
             while not dc_captured:
-                vsrs_register_89 = self.read_receive_from_all(HexitecFem.READ_REG_VALUE, 0x38, 0x39)
+                vsrs_register_89 = self.read_receive_from_all(
+                    HexitecFem.READ_REG_VALUE, 0x38, 0x39)
                 dc_captured = self.are_capture_dc_ready(vsrs_register_89)
                 if self.debug:
-                    logging.debug("Register 0x89: {0}, Done? {1} Timing: {2:2.5} s".format(vsrs_register_89,
-                                  dc_captured, time.time() - poll_beginning))
+                    logging.debug("Register 0x89: {0}, Done? {1} Timing: {2:2.5} s".format(
+                        vsrs_register_89, dc_captured, time.time() - poll_beginning))
                 if time.time() - poll_beginning > timeout:
-                    raise HexitecFemError("Dark images timed out. R.89: {}".format(vsrs_register_89))
+                    raise HexitecFemError("Dark images timed out. R.89: {}".format(
+                        vsrs_register_89))
             # poll_ending = time.time()
-            # print(" *** collect offsets polling took: {0} seconds @ {1:4.1f}Hz**".format(poll_ending - poll_beginning,
-            #     self.parent.fem.frame_rate))
+            # print(" *** collect offsets polling took: {0} seconds @ {1:4.1f}Hz**".format(
+            #     poll_ending - poll_beginning, self.parent.fem.frame_rate))
 
             # 6. Stop state machine
             self.write_receive_to_all(HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x31)
@@ -881,11 +865,9 @@ class HexitecFem():
             # ending = time.time()
             # print("     collect_offsets took: {}".format(ending-beginning))
         except HexitecFemError as e:
-            self._set_status_error("%s" % str(e))
-            logging.error("%s" % str(e))
+            self.flag_error("Offsets", str(e))
         except Exception as e:
-            self._set_status_error("Uncaught Exception; Failed to collect offsets: %s" % str(e))
-            logging.error("%s" % str(e))
+            self.flag_error("Uncaught Exception; Failed to collect offsets", str(e))
         self.hardware_busy = False
 
     def load_enables_settings(self, number_registers, address_h, address_l,
@@ -903,14 +885,19 @@ class HexitecFem():
                 asic1_command.append(msb)
                 asic1_command.append(lsb)
             register_values = asic1_command
-            # print("  ... producing register_values: {}  ".format(' '.join("0x{0:02X}".format(x) for x in register_values)))
+            # print("  ... producing register_values: {}  ".format(
+            #     ' '.join("0x{0:02X}".format(x) for x in register_values)))
             # print("   i.e.:  {}".format(register_values))
-            # self.block_write_custom_length(self.vsr_addr, number_registers, address_h, address_l, register_values)
-            self.enables_write_and_read_verify(self.vsr_addr, address_h, address_l, register_values)
+            # self.block_write_custom_length(
+            #     self.vsr_addr, number_registers, address_h, address_l, register_values)
+            self.enables_write_and_read_verify(
+                self.vsr_addr, address_h, address_l, register_values)
         else:
             # No ini file loaded, use default values
-            # self.block_write_custom_length(self.vsr_addr, number_registers, address_h, address_l, enables_defaults)
-            self.enables_write_and_read_verify(self.vsr_addr, address_h, address_l, enables_defaults)
+            # self.block_write_custom_length(
+            #     self.vsr_addr, number_registers, address_h, address_l, enables_defaults)
+            self.enables_write_and_read_verify(
+                self.vsr_addr, address_h, address_l, enables_defaults)
 
     def enables_write_and_read_verify(self, vsr, address_h, address_l, write_list):
         """Write enables to a block of registers, confirm written ok."""
@@ -935,13 +922,14 @@ class HexitecFem():
                 logging.error(" ** Readback value(s) still inaccurate:")
                 logging.error(" **    Wrote: {}".format(write_list))
                 logging.error(" **    Read : {}".format(read_list))
-                self.error_list.append(" VSR {2:X} Register 0x{0}{1}: ERROR".format(chr(address_h), chr(address_l), vsr))
+                self.error_list.append(" VSR {2:X} Register 0x{0}{1}: ERROR".format(
+                    chr(address_h), chr(address_l), vsr))
                 self.error_list.append("     Wrote: {}".format(write_list))
                 self.error_list.append("     Read : {}".format(read_list))
         # else:
         #     print(" Register 0x{0}{1} -- ALL FINE".format(chr(address_h), chr(address_l)))
 
-    def load_pwr_cal_read_enables(self):  # noqa: C901
+    def load_pwr_cal_read_enables(self):
         """Load power, calibration and read enables - optionally from hexitec file."""
         if self.vsr_addr not in HexitecFem.VSR_ADDRESS:
             raise HexitecFemError("Unknown VSR address! (%s)" % self.vsr_addr)
@@ -1051,8 +1039,8 @@ class HexitecFem():
         reply = resp[2:-1]
         # Turn list of integers into ASCII string
         reply = "{}".format(''.join([chr(x) for x in reply]))
-        # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_h-0x30, address_l-0x30,
-        #       len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
+        # print(" *** (R) Reg 0x{0:X}{1:X}, Received ({2}) from UART: {3}".format(address_h-0x30,
+        #       address_l-0x30, len(resp), ' '.join("0x{0:02X}".format(x) for x in resp)))
         return resp, reply
 
     def read_register89(self, vsr_number):
@@ -1078,7 +1066,7 @@ class HexitecFem():
             beginning = time.time()
             self.hardware_busy = True
             for vsr in self.VSR_ADDRESS:
-                self.vsr_addr = vsr     # Largely redundant, only enable_adc(vsr)  ..
+                self.vsr_addr = vsr
                 logging.debug(" --- Initialising VSR: 0x{0:X} ---".format(vsr))
                 self._set_status_message("Initialising VSR{}..".format(vsr-143))
                 self.initialise_vsr(vsr)
@@ -1093,36 +1081,36 @@ class HexitecFem():
                         bPolling = False
                     else:
                         # print(" R.89: {} {}".format(r89_value, r89_value[1], ord(r89_value[1])))
-                        time.sleep(0.2)
-                        time_taken += 0.2
-                    if time_taken > 3.0:
+                        time.sleep(0.1)
+                        time_taken += 0.1
+                    if time_taken > 0.4:
                         raise HexitecFemError("Timed out polling register 0x89;PLL still disabled")
 
             logging.debug("set re_EN_TRAINING '1'")
             # training_en_mask = 0x10
             self.x10g_rdma.write(0x00000020, 0x10, burst_len=1, comment="Enabling training")
-
             logging.debug("Waiting 0.2 seconds..")
             time.sleep(0.2)
 
             logging.debug("set re_EN_TRAINING '0'")
             # training_en_mask = 0x00
             self.x10g_rdma.write(0x00000020, 0x00, burst_len=1, comment="Disabling training")
-
-            vsr_status_addr = 0x000003E8  # Flags of interest: locked, +4 to get to the next VSR, et cetera for all VSRs
+            # Flags of interest: locked, +4 to get to the next VSR, etc for all VSRs
+            vsr_status_addr = 0x000003E8
             for vsr in self.VSR_ADDRESS:
                 index = vsr - 144
-                vsr_status = self.x10g_rdma.read(vsr_status_addr, burst_len=1, comment="Read vsr{}_status".format(index))
+                vsr_status = self.x10g_rdma.read(vsr_status_addr, burst_len=1,
+                                                 comment="Read vsr{}_status".format(index))
                 vsr_status = vsr_status[0]
                 locked = vsr_status & 0xFF
-                # print("vsr{0}_status 0x{1:08X} = 0x{2:08X}. Locked? 0x{3:X}".format(index, vsr_status_addr, vsr_status, locked))
+                # print("vsr{0}_status 0x{1:08X} = 0x{2:08X}. Locked? 0x{3:X}".format(
+                #     index, vsr_status_addr, vsr_status, locked))
                 if (locked == 0xFF):
-                    logging.debug("VSR{0} Locked (0x{1:X})".format(vsr-143, locked))
+                    logging.debug("VSR{0} Locked (0x{1:X})".format(index, locked))
                 else:
-                    logging.error("VSR{0} incomplete lock! (0x{1:X})".format(vsr-143, locked))
-                    # raise HexitecFemError("VSR{0} didn't lock! (0x{1:X})".format(vsr-143, locked))
+                    logging.error("VSR{0} incomplete lock! (0x{1:X})".format(index, locked))
+                    # raise HexitecFemError("VSR{0} didn't lock! (0x{1:X})".format(index, locked))
                 vsr_status_addr += 4
-
             self._set_status_message("Initialisation completed. VSRs configured.")
             print(" -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=- ")
             ending = time.time()
@@ -1132,21 +1120,16 @@ class HexitecFem():
             self.debugging_function()
             # DEBUGGING completed
             self.parent.software_state = "Idle"
-            print("state: ", self.parent.software_state)
-            print(self.hardware_busy)
         except HexitecFemError as e:
-            self._set_status_error("Failed to initialise camera: %s" % str(e))
-            logging.error("%s" % str(e))
+            self.flag_error("Failed to initialise camera", str(e))
         except Exception as e:
-            self._set_status_error("Uncaught Exception; Camera initialisation failed: %s" % str(e))
-            logging.error("%s" % str(e))
+            self.flag_error("Uncaught Exception; Camera initialisation failed", str(e))
         self.hardware_busy = False
 
     def debugging_function(self):  # pragma: no coverage
         """Provides additional debugging information for initialise_system()"""
         reg07 = []
         reg89 = []
-        # print("VSR Row S1: (High, Low). S1Sph  SphS2:  adc clk delay: . FVAL/LVAL:  VCAL2, (H, L) ")
         print("VSR Row S1: (H, L). S1Sph  SphS2: adc clk dly: . FVAL/LVAL:  VCAL2 (H, L) Gain")
         for vsr in self.VSR_ADDRESS:
             r7_list, r7_value = self.read_register07(vsr)
@@ -1158,19 +1141,24 @@ class HexitecFem():
             s1_low_resp, s1_low_reply = self.read_and_response(vsr, 0x30, 0x32)
             sph_resp, sph_reply = self.read_and_response(vsr, 0x30, 0x34)
             s2_resp, s2_reply = self.read_and_response(vsr, 0x30, 0x35)
-            adc_clock_resp, adc_clock_reply = self.read_and_response(vsr, 0x30, 0x39)  # ADC Clock Delay
-            vals_delay_resp, vals_delay_reply = self.read_and_response(vsr, 0x30, 0x45)  # FVAL/LVAL Delay
-            vcal_high_resp, vcal_high_reply = self.read_and_response(vsr, 0x31, 0x39)  # VCAL2 -> VCAL1 high byte
-            vcal_low_resp, vcal_low_reply = self.read_and_response(vsr, 0x31, 0x38)  # VCAL2 -> VCAL1 low byte
+            # ADC Clock Delay
+            adc_clock_resp, adc_clock_reply = self.read_and_response(vsr, 0x30, 0x39)
+            # FVAL/LVAL Delay
+            vals_delay_resp, vals_delay_reply = self.read_and_response(vsr, 0x30, 0x45)
+            # VCAL2 -> VCAL1 high byte
+            vcal_high_resp, vcal_high_reply = self.read_and_response(vsr, 0x31, 0x39)
+            # VCAL2 -> VCAL1 low byte
+            vcal_low_resp, vcal_low_reply = self.read_and_response(vsr, 0x31, 0x38)
             gain_resp, gain_reply = self.read_and_response(vsr, 0x30, 0x36)  # Gain
-            print(" {}           {} {}    {}     {}        {}             {}            {} {} {}".format(
-                    vsr-143, s1_high_reply, s1_low_reply,
-                    sph_reply,
-                    s2_reply,
-                    adc_clock_reply,
-                    vals_delay_reply,
-                    vcal_high_reply, vcal_low_reply,
-                    gain_reply))
+            print(" {} {} {} {}    {}     {}        {}             {}            {} {} {}".format(
+                vsr-143, s1_high_reply, s1_low_reply,
+                "         ",
+                sph_reply,
+                s2_reply,
+                adc_clock_reply,
+                vals_delay_reply,
+                vcal_high_reply, vcal_low_reply,
+                gain_reply))
         print(" All vsrs, reg07: {}".format(reg07))
         print("           reg89: {}".format(reg89))
 
@@ -1193,7 +1181,8 @@ class HexitecFem():
             self.row_s1_high = self.row_s1 >> 8
             value_002 = self.convert_to_aspect_format(self.row_s1_low)
             value_003 = self.convert_to_aspect_format(self.row_s1_high)
-            # print(" *** Row_s1: {0} -> high: {1} low: {2} ".format(self.row_s1, self.row_s1_high, self.row_s1_low))
+            # print(" *** Row_s1: {0} -> high: {1} low: {2} ".format(
+            #     self.row_s1, self.row_s1_high, self.row_s1_low))
             # print("     R.02          0x{0:X} 0x{1:X}".format(value_002[0], value_002[1]))
             # print("     R.03          0x{0:X} 0x{1:X}".format(value_003[0], value_003[1]))
         if self.s1_sph > -1:
@@ -1207,17 +1196,16 @@ class HexitecFem():
         gain = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Gain', bit_range=1)
         if gain > -1:
             value_006 = self.convert_to_aspect_format(gain)
-        adc1_delay = self._extract_integer(self.hexitec_parameters, 'Control-Settings/ADC1 Delay',
-                                           bit_range=2)
+        adc1_delay = self._extract_integer(
+            self.hexitec_parameters, 'Control-Settings/ADC1 Delay', bit_range=2)
         if adc1_delay > -1:
             value_009 = self.convert_to_aspect_format(adc1_delay)
-        delay_sync_signals = self._extract_integer(self.hexitec_parameters,
-                                                   'Control-Settings/delay sync signals',
-                                                   bit_range=8)
+        delay_sync_signals = self._extract_integer(
+            self.hexitec_parameters, 'Control-Settings/delay sync signals', bit_range=8)
         if delay_sync_signals > -1:
             value_00E = self.convert_to_aspect_format(delay_sync_signals)
-        vcal2_vcal1 = self._extract_integer(self.hexitec_parameters,
-                                            'Control-Settings/VCAL2 -> VCAL1', bit_range=15)
+        vcal2_vcal1 = self._extract_integer(
+            self.hexitec_parameters, 'Control-Settings/VCAL2 -> VCAL1', bit_range=15)
         if vcal2_vcal1 > -1:
             vcal2_vcal1_low = vcal2_vcal1 & 0xFF
             vcal2_vcal1_high = vcal2_vcal1 >> 8
@@ -1228,14 +1216,18 @@ class HexitecFem():
         90	42	07	03	;Enable PLLs
         90	42	02	01	;LowByte Row S1
         """
-        delayed = False     # Debugging: Extra 0.2 second delay between read, write?
+        delayed = False  # Debugging: Extra 0.2 second delay between read, write?
         masked = False
-        self.write_and_response(vsr, 0x30, 0x31, 0x31, 0x30)    # Select external Clock
-        # self.write_and_response(vsr, 0x30, 0x37, 0x30, 0x33)    # Enable PLLs; 1 = Enable PLL; 2 = Enable ADC PLL
-        self.send_cmd([vsr, 0x42, 0x30, 0x37, 0x30, 0x33])  # Enable PLLs; 1 = Enable PLL; 2 = Enable ADC PLL
+        # Select external Clock
+        self.write_and_response(vsr, 0x30, 0x31, 0x31, 0x30)
+        # Enable PLLs; 1 = Enable PLL; 2 = Enable ADC PLL
+        # self.write_and_response(vsr, 0x30, 0x37, 0x30, 0x33)
+        self.send_cmd([vsr, 0x42, 0x30, 0x37, 0x30, 0x33])
         self.read_response()
-        self.write_and_response(vsr, 0x30, 0x32, value_002[0], value_002[1], masked=masked, delay=delayed)     # LowByte Row S1
-        self.write_and_response(vsr, 0x30, 0x33, value_003[0], value_003[1], masked=masked, delay=delayed)    # HighByte Row S1
+        self.write_and_response(vsr, 0x30, 0x32, value_002[0], value_002[1],
+                                masked=masked, delay=delayed)   # LowByte Row S1
+        self.write_and_response(vsr, 0x30, 0x33, value_003[0], value_003[1],
+                                masked=masked, delay=delayed)   # HighByte Row S1
         """
         90	42	04	01	;S1Sph
         90	42	05	06	;SphS2
@@ -1245,20 +1237,26 @@ class HexitecFem():
         90	42	14	01	;Start SM on falling edge
         90	42	01	20	;Enable LVDS Interface
         """
-        self.write_and_response(vsr, 0x30, 0x34, value_004[0], value_004[1], masked=masked, delay=delayed)     # S1Sph
-        self.write_and_response(vsr, 0x30, 0x35, value_005[0], value_005[1], masked=masked, delay=delayed)     # SphS2
+        self.write_and_response(vsr, 0x30, 0x34, value_004[0], value_004[1],
+                                masked=masked, delay=delayed)     # S1Sph
+        self.write_and_response(vsr, 0x30, 0x35, value_005[0], value_005[1],
+                                masked=masked, delay=delayed)     # SphS2
         # TODO: ADDITIONALLY ADDED, IS THIS NEEDED OR NOT: ??
         self.write_and_response(vsr, 0x30, 0x36, value_006[0], value_006[1], delay=delayed)  # Gain
-        # self.write_and_response(vsr, 0x30, 0x39, value_009[0], value_009[1], delay=delayed)  # ADC Clock Delay
+        # ADC Clock Delay:
+        # self.write_and_response(vsr, 0x30, 0x39, value_009[0], value_009[1], delay=delayed)
         self.send_cmd([vsr, 0x42, 0x30, 0x39, value_009[0], value_009[1]])
         self.read_response()
-        # self.write_and_response(vsr, 0x30, 0x45, value_00E[0], value_00E[1], delay=delayed)  # FVAL/LVAL Delay
+        # FVAL/LVAL Delay:
+        # self.write_and_response(vsr, 0x30, 0x45, value_00E[0], value_00E[1], delay=delayed)
         self.send_cmd([vsr, 0x42, 0x30, 0x45, value_00E[0], value_00E[1]])
         self.read_response()
-        # self.write_and_response(vsr, 0x31, 0x42, 0x30, 0x38)    # SM wait Low Row, 8 bits
+        # SM wait Low Row, 8 bits:
+        # self.write_and_response(vsr, 0x31, 0x42, 0x30, 0x38)
         self.send_cmd([vsr, 0x42, 0x31, 0x42, 0x30, 0x38])
         self.read_response()
-        # self.write_and_response(vsr, 0x31, 0x34, 0x30, 0x31)    # Start SM on falling edge ('0' = rising edge) of ADC-CLK
+        # Start SM on falling edge ('0' = rising edge) of ADC-CLK:
+        # self.write_and_response(vsr, 0x31, 0x34, 0x30, 0x31)
         self.send_cmd([vsr, 0x42, 0x31, 0x34, 0x30, 0x31])
         self.read_response()
         self.write_and_response(vsr, 0x30, 0x31, 0x32, 0x30)    # Enable LVDS Interface
@@ -1366,26 +1364,28 @@ class HexitecFem():
         most_significant, least_significant = self.expand_addresses(number_registers,
                                                                     address_h, address_l)
         for index in range(number_registers):
-            # print("   BWaR Write: {} {} {} {} {}".format(vsr, most_significant[index],
-            #                                              least_significant[index], value_h,
-            #                                              value_l))
+            # print("   BWaR Write: {} {} {} {} {}".format(
+            #     vsr, most_significant[index], least_significant[index], value_h, value_l))
             self.write_and_response(vsr, most_significant[index], least_significant[index],
                                     value_h, value_l, False)
 
     def block_write_custom_length(self, vsr, number_registers, address_h, address_l, write_values):
         """Write write_values starting with address_h, address_l of vsr, span number_registers."""
         if (number_registers * 2) != len(write_values):
-            print("Mismatch! number_registers ({}) isn't half of write_values ({}).".format(number_registers, len(write_values)))
-            return -1
+            err1 = "Mismatch! number_registers"
+            err2 = "isn't half of write_values"
+            raise HexitecFemError("{} ({}) {} ({}).".format(
+                err1, number_registers, err2, len(write_values)))
         values_list = write_values.copy()
-        most_significant, least_significant = self.expand_addresses(number_registers, address_h,
-                                                                    address_l)
+        most_significant, least_significant = self.expand_addresses(
+            number_registers, address_h, address_l)
         for index in range(number_registers):
             value_h = values_list.pop(0)
             value_l = values_list.pop(0)
-            # print("   BWCL Write: {0:X} {1:X} {2:X} {3:X} {4:X}".format(vsr, most_significant[index], least_significant[index], value_h, value_l))
-            self.write_and_response(vsr, most_significant[index], least_significant[index],
-                                    value_h, value_l, False)
+            # print("   BWCL Write: {0:X} {1:X} {2:X} {3:X} {4:X}".format(
+            #     vsr, most_significant[index], least_significant[index], value_h, value_l))
+            self.write_and_response(
+                vsr, most_significant[index], least_significant[index], value_h, value_l, False)
 
     def expand_addresses(self, number_registers, address_h, address_l):
         """Expand addresses by the number_registers specified.
@@ -1514,7 +1514,8 @@ class HexitecFem():
 
         self.frame_rate = frame_rate
         if self.duration_enabled:
-            # print("\n\tfem.calculate_frame_rate() (duration {} setting parent's number_frames {})\n".format(self.duration, self.number_frames))
+            # print("\n\tfem.calculate_frame_rate() (duration {} setting parent's
+            # number_frames {})\n".format(self.duration, self.number_frames))
             # With duration enabled, recalculate number of frames in case clocks changed
             self.set_duration(self.duration)
             self.parent.set_number_frames(self.number_frames)
@@ -1598,7 +1599,8 @@ class HexitecFem():
         # sensors_values = self.read_response()
         # sensors_values = sensors_values.strip()
         read_sensors = self.read_response()
-        # print("Received ({}) from UART: {}".format(len(read_sensors), ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+        # print("Received ({}) from UART: {}".format(len(read_sensors),
+        # ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
         read_sensors = read_sensors[1:]  # Omit start of sequence char, matches existing 2x2 source
         # Turn list of integers into ASCII string
         sensors_values = self.convert_list_to_string(read_sensors)
@@ -1652,7 +1654,8 @@ class HexitecFem():
         """Read and convert sensor data into temperatures and humidity values."""
         self.send_cmd([self.vsr_addr, 0x52])
         read_sensors = self.read_response()
-        # print("Received ({0}) from 0x{1:02X}: {2}".format(len(read_sensors), self.vsr_addr, ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
+        # print("Received ({0}) from 0x{1:02X}: {2}".format(
+        # len(read_sensors), self.vsr_addr, ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
         if len(read_sensors) != 25:
             logging.warning("VSR 0x{0:X}: Received incomplete environ data".format(self.vsr_addr))
             return None
@@ -1670,16 +1673,16 @@ class HexitecFem():
         asic1_hex = sensors_values[9:13]
         asic2_hex = sensors_values[13:17]
         adc_hex = sensors_values[17:21]
-        print(" * amb_hex:  {} -> {} C".format(sensors_values[1:5],
-                                               self.get_ambient_temperature(sensors_values[1:5])))
-        print(" * hum_hex:  {} -> {}".format(sensors_values[5:9],
-                                             self.get_humidity(sensors_values[5:9])))
-        print(" * asic1_hex:{} -> {} C".format(sensors_values[9:13],
-                                               self.get_asic_temperature(sensors_values[9:13])))
-        print(" * asic2_hex:{} -> {} C".format(sensors_values[13:17],
-                                               self.get_asic_temperature(sensors_values[13:17])))
-        print(" * adc_hex:  {} -> {} C".format(sensors_values[17:21],
-                                               self.get_adc_temperature(sensors_values[17:21])))
+        print(" * amb_hex:  {} -> {} C".format(
+            sensors_values[1:5], self.get_ambient_temperature(sensors_values[1:5])))
+        print(" * hum_hex:  {} -> {}".format(
+            sensors_values[5:9], self.get_humidity(sensors_values[5:9])))
+        print(" * asic1_hex:{} -> {} C".format(
+            sensors_values[9:13], self.get_asic_temperature(sensors_values[9:13])))
+        print(" * asic2_hex:{} -> {} C".format(
+            sensors_values[13:17], self.get_asic_temperature(sensors_values[13:17])))
+        print(" * adc_hex:  {} -> {} C".format(
+            sensors_values[17:21], self.get_adc_temperature(sensors_values[17:21])))
 
         if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
             self.vsr1_ambient = self.get_ambient_temperature(ambient_hex)
@@ -1753,7 +1756,7 @@ class HexitecFem():
             logging.error("Error converting ADC temperature: %s" % e)
             return -100
 
-    def _set_hexitec_config(self, filename):
+    def set_hexitec_config(self, filename):
         """Check whether file exists, load parameters from file."""
         filename = self.base_path + filename
         try:
@@ -1762,8 +1765,7 @@ class HexitecFem():
             self.hexitec_config = filename
             logging.debug("hexitec_config: '%s'" % (self.hexitec_config))
         except IOError as e:
-            logging.error("Cannot open provided hexitec file: %s" % e)
-            self._set_status_error("%s" % str(e))
+            self.flag_error("Cannot open provided hexitec file", str(e))
             return
 
         try:
@@ -1772,27 +1774,27 @@ class HexitecFem():
 
             # Recalculate frame rate
             row_s1 = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Row -> S1',
-                                        bit_range=14)
+                                           bit_range=14)
             if row_s1 > -1:
                 self.row_s1 = row_s1
 
             s1_sph = self._extract_integer(self.hexitec_parameters, 'Control-Settings/S1 -> Sph',
-                                        bit_range=6)
+                                           bit_range=6)
             if s1_sph > -1:
                 self.s1_sph = s1_sph
 
             sph_s2 = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Sph -> S2',
-                                        bit_range=6)
+                                           bit_range=6)
             if sph_s2 > -1:
                 self.sph_s2 = sph_s2
 
             bias_level = self._extract_integer(self.hexitec_parameters,
-                                            'Control-Settings/HV_Bias', bit_range=15)
+                                               'Control-Settings/HV_Bias', bit_range=15)
             if bias_level > -1:
                 self.bias_level = bias_level
 
             vsrs_selected = self._extract_integer(self.hexitec_parameters,
-                                                'Control-Settings/VSRS_selected', bit_range=6)
+                                                  'Control-Settings/VSRS_selected', bit_range=6)
             if vsrs_selected > -1:
                 self.vsrs_selected = vsrs_selected
 
@@ -1804,8 +1806,7 @@ class HexitecFem():
             self.enable_selected_vsrs(self.vsrs_selected)
             self.calculate_frame_rate()
         except HexitecFemError as e:
-            logging.error("Key Error: %s" % e)
-            self._set_status_error("%s" % str(e))
+            self.flag_error("INI File Key Error", str(e))
 
     def enable_selected_vsrs(self, vsrs_selected):
         """Populate VSR_ADDRESS according to ini file selection."""
@@ -1848,7 +1849,7 @@ class HexitecFem():
                                valid_range[1]))
                 setting = -1
         except KeyError:
-            logging.warning("Warning: No '%s' Key defined!" % descriptor)
+            raise HexitecFemError("ERROR: No '%s' Key defined!" % descriptor)
         return setting
 
     def convert_aspect_float_to_dac_value(self, number_float):
@@ -1906,7 +1907,9 @@ class HexitecFem():
             setting = bool(distutils.util.strtobool(parameter))
         except ValueError:
             logging.error("ERROR: Invalid choice for %s!" % descriptor)
-            setting = -1
+            raise HexitecFemError("ERROR: Invalid choice for %s!" % descriptor)
+        except KeyError:
+            raise HexitecFemError("Missing Key: '%s'" % descriptor)
         return setting
 
     def _extract_80_bits(self, param, vsr, asic, channel_or_block):  # noqa: C901
@@ -2083,18 +2086,14 @@ class HexitecFem():
                     (vsr2, vsr1) = self.debug_register(self.HEX_ASCII_CODE[msb],
                                                        self.HEX_ASCII_CODE[lsb])
                     print("  * Register: {}{}: VSR2: {}.{} VSR1: {}.{}".format(hex(msb),
-                          hex(lsb)[-1],
-                          chr(vsr2[0]), chr(vsr2[1]),
-                          chr(vsr1[0]), chr(vsr1[1])))
+                          hex(lsb)[-1], chr(vsr2[0]), chr(vsr2[1]), chr(vsr1[0]), chr(vsr1[1])))
                     time.sleep(0.25)
             # for msb in range(16):
             #     for lsb in range(16):
             #         (vsr2, vsr1) = self.debug_register(self.HEX_ASCII_CODE[msb],
             #             self.HEX_ASCII_CODE[lsb])
             #         print(" \t* Register: {}{}: VSR2: {}.{} VSR1: {}.{}".format(hex(msb),
-            #             hex(lsb)[-1],
-            #             chr(vsr2[0]), chr(vsr2[1]),
-            #             chr(vsr1[0]), chr(vsr1[1])))
+            #             hex(lsb)[-1], chr(vsr2[0]), chr(vsr2[1]), chr(vsr1[0]), chr(vsr1[1])))
             #         time.sleep(0.25)
         except Exception as e:
             logging.error("dump_all_registers: {}".format(e))
@@ -2122,7 +2121,7 @@ class HexitecFem():
         # print(" Conv'd to aSp_L: {}".format(hv_lsb))
         return hv_msb, hv_lsb
 
-    def hv_on(self, msg):
+    def hv_on(self):
         """Switch HV on."""
         logging.debug("Enable: [0xE3]")
         self.send_cmd([0xC0, 0xE3])
@@ -2144,7 +2143,7 @@ class HexitecFem():
         self.hv_bias_enabled = True
         logging.debug("HV now ON")
 
-    def hv_off(self, msg):
+    def hv_off(self):
         """Switch HV off."""
         logging.debug("Disable: [0xE2]")
         self.send_cmd([0xC0, 0xE2])
@@ -2155,6 +2154,18 @@ class HexitecFem():
     def environs(self):
         """Readout environmental data."""
         IOLoop.instance().add_callback(self.read_sensors)
+
+    def reset_error(self):
+        """Reset error message."""
+        self._set_status_error("")
+        self._set_status_message("")
+        self.parent.software_state = "Cleared"
+
+    def flag_error(self, message, e):
+        """Place software into error state."""
+        self._set_status_error("{}: {}".format(message, e))
+        logging.error("{}: {}".format(message, e))
+        self.parent.software_state = "Error"
 
 
 class HexitecFemError(Exception):

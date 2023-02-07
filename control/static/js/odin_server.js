@@ -124,6 +124,11 @@ function cancelButtonClicked()
     cancel_data();
 }
 
+function resetButtonClicked()
+{
+    reset_error();
+}
+
 function disconnectButtonClicked()
 {
     disconnect_hardware();
@@ -575,6 +580,17 @@ function collect_data()
 function cancel_data()
 {
     hexitec_endpoint.put({"stop_acq": ""}, 'detector/acquisition')
+    .then(result => {
+        document.querySelector('#odin-control-error').innerHTML = "";
+    })
+    .catch(error => {
+        document.querySelector('#odin-control-error').innerHTML = error.message;
+    });
+}
+
+function reset_error()
+{
+    hexitec_endpoint.put({"reset_error": ""}, 'detector')
     .then(result => {
         document.querySelector('#odin-control-error').innerHTML = "";
     })

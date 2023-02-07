@@ -93,7 +93,7 @@ class RdmaUDP(object):
             self.cmd_no = 0
 
     def __del__(self):
-        """."""
+        """Ensure rdma connection closed."""
         self.socket.close()
 
     def read(self, address, burst_len=1, comment=''):
@@ -224,11 +224,11 @@ class RdmaUDP(object):
         return data_array
 
     def close(self):
-        """."""
+        """Ensure rdma connection closed."""
         self.socket.close()
 
     def setDebug(self, enabled=True):
-        """."""
+        """Set debugging."""
         self.debug = enabled
 
     def uart_rx(self, uart_address):
@@ -248,7 +248,7 @@ class RdmaUDP(object):
         read_value = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer Status (0)')
         buff_level = (read_value[0] & rx_buff_level_mask) >> 8
         rx_d = (read_value[0] & rx_buff_data_mask) >> 16
-        if debug:
+        if debug:   # pragma: no coverage
             print(" RX init_buff_status: {0} (0x{1:08X})".format(read_value[0], read_value[0]))
             print(" RX buff_level: {0} rx_d: {1} (0x{2:X}) [IGNORED - Like tickle script]".format(buff_level, rx_d, rx_d))
         rx_status_masked = (read_value[0] & rx_buff_empty_mask)
@@ -263,7 +263,7 @@ class RdmaUDP(object):
             buff_level = (buffer_status[0] & rx_buff_level_mask) >> 8
             uart_status = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (2)')
             rx_d = (uart_status[0] & rx_buff_data_mask) >> 16
-            if debug:
+            if debug:   # pragma: no coverage
                 print(" RX buffer_status: {0} (0x{1:08X})".format(buffer_status[0], buffer_status[0]))
                 print(" RX buff_level: {0} rx_d: {1} (0x{2:X})".format(buff_level, rx_d, rx_d))
             rx_data.append(rx_d)
@@ -280,7 +280,7 @@ class RdmaUDP(object):
         read_value = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer Status (0)')
         buff_level = (read_value[0] & rx_buff_level_mask) >> 8
         rx_d = (read_value[0] & rx_buff_data_mask) >> 16
-        if debug:
+        if debug:   # pragma: no coverage
             print(" RX init_buff_status: {0} (0x{1:08X})".format(read_value[0], read_value[0]))
             print(" RX buff_level: {0} rx_d: {1} (0x{2:X}) [IGNORED - Like tickle script]".format(buff_level, rx_d, rx_d))
         rx_status_masked = (read_value[0] & rx_buff_empty_mask)
@@ -295,7 +295,7 @@ class RdmaUDP(object):
             buff_level = (buffer_status[0] & rx_buff_level_mask) >> 8
             uart_status = self.read(uart_status_addr, burst_len=1, comment='Read UART Buffer status (2)')
             rx_d = (uart_status[0] & rx_buff_data_mask) >> 16
-            if debug:
+            if debug:   # pragma: no coverage
                 print(" RX buffer_status: {0} (0x{1:08X})".format(buffer_status[0], buffer_status[0]))
                 print(" RX buff_level: {0} rx_d: {1} (0x{2:X})".format(buff_level, rx_d, rx_d))
             rx_data.append(rx_d)
@@ -340,7 +340,7 @@ class RdmaUDP(object):
         for d in cmd:
             vsr_seq.append(d)
         vsr_seq.append(vsr_end_char)
-        if debug:
+        if debug:   # pragma: no coverage
             print("... sending: {}".format(' '.join("0x{0:02X}".format(x) for x in vsr_seq)))
         try:
             # Clear tx ctrl reg:
@@ -351,7 +351,7 @@ class RdmaUDP(object):
                 # Read byte back
                 read_tx_value = self.read(uart_tx_ctrl_addr, burst_len=1, comment="Read TX Buffer")
                 read_tx_value = read_tx_value[0]
-                if debug:
+                if debug:   # pragma: no coverage
                     print(" TX buffer contain: {0} (0x{1:02X})".format(read_tx_value, read_tx_value))
                 write_value = ((read_tx_value & tx_data_mask) | tx_fill_strb_mask)
                 # Write byte with flag(s)
