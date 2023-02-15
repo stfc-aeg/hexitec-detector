@@ -1,0 +1,163 @@
+[
+  {
+      "fr_setup": {
+          "fr_ready_cnxn":"tcp://127.0.0.1:5001",
+          "fr_release_cnxn":"tcp://127.0.0.1:5002"
+      },
+      "meta_endpoint":"tcp://*:5008"
+  },
+  {
+      "plugin": {
+          "load": {
+              "index":"hdf",
+              "name":"FileWriterPlugin",
+              "library":"${INSTALL_PREFIX}/lib/libHdf5Plugin.so"
+          }
+      }
+  },
+  {
+      "plugin": {
+          "load": {
+              "index":"reorder",
+              "name":"HexitecReorderPlugin",
+              "library":"${INSTALL_PREFIX}/lib/libHexitecReorderPlugin.so"
+          }
+      }
+  },
+  {
+      "plugin": {
+          "load": {
+              "index":"discrimination",
+              "name":"HexitecDiscriminationPlugin",
+              "library":"${INSTALL_PREFIX}/lib/libHexitecDiscriminationPlugin.so"
+          }
+      }
+  },
+  {
+      "plugin": {
+          "load": {
+              "index":"histogram",
+              "name":"HexitecHistogramPlugin",
+              "library":"${INSTALL_PREFIX}/lib/libHexitecHistogramPlugin.so"
+          }
+      }
+  },
+  {
+      "plugin": {
+          "connect": {
+              "index":"reorder",
+              "connection":"frame_receiver"
+          }
+      }
+  },
+  {
+      "plugin": {
+          "connect": {
+              "index":"discrimination",
+              "connection":"reorder"
+          }
+      }
+  },
+  {
+      "plugin": {
+          "connect": {
+              "index":"histogram",
+              "connection":"discrimination"
+          }
+      }
+  },
+  {
+      "plugin": {
+          "connect": {
+              "index":"hdf",
+              "connection":"histogram"
+          }
+      }
+  },
+  {
+      "discrimination": {
+          "sensors_layout": "2x6"
+      }
+  },
+  {
+      "reorder": {
+        "sensors_layout": "2x6"
+      }
+  },
+  {
+      "histogram": {
+          "max_frames_received": 10,
+        "sensors_layout": "2x6"
+      }
+  },
+  {
+      "hdf": {
+          "dataset": "processed_frames"
+      }
+  },
+  {
+      "hdf": {
+          "dataset": "raw_frames"
+      }
+  },
+  {
+      "hdf": {
+          "dataset": "summed_spectra"
+      }
+  },
+  {
+      "hdf": {
+          "dataset": "pixel_spectra"
+      }
+  },
+  {
+      "hdf": {
+          "dataset": "spectra_bins"
+      }
+  },
+  {
+      "hdf": {
+          "master":"raw_frames",
+          "dataset": {
+              "processed_frames" : {
+                  "cmd": "create",
+                  "datatype": "float",
+                  "dims": [160, 480],
+                  "chunks": [1, 160, 480],
+                  "compression": "none"
+              },
+              "raw_frames" : {
+                  "cmd": "create",
+                  "datatype": "uint16",
+                  "dims": [160, 480],
+                  "chunks": [1, 160, 480],
+                  "compression": "none"
+              },
+              "spectra_bins" : {
+                  "cmd": "create",
+                  "datatype": "float",
+                  "dims": [800],
+                  "chunks": [1, 800],
+                  "compression": "none"
+              },
+              "pixel_spectra" : {
+                  "cmd": "create",
+                  "datatype": "float",
+                  "dims": [76800, 800],
+                  "chunks": [1, 76800, 800],
+                  "compression": "none"
+              },
+              "summed_spectra" : {
+                  "cmd": "create",
+                  "datatype": "uint64",
+                  "dims": [800],
+                  "chunks": [1, 800],
+                  "compression": "none"
+              }
+          },
+          "frames": 10,
+          "acquisition_id":"2x6_test",
+          "write": true
+      }
+  }
+]

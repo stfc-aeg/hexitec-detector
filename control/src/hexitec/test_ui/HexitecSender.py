@@ -24,7 +24,7 @@ class HexitecSender(object):
     """Produce and transmit specified UDP frames."""
 
     def __init__(self, host, port, frames, rows, columns,
-                 extended_headers, interval, quiet, filename):
+                 size, extended_headers, interval, quiet, filename):
         """Initialise object with command line arguments."""
         self.SOF = 1 << 63
         self.EOF = 1 << 62
@@ -44,6 +44,7 @@ class HexitecSender(object):
         self.NROWS = rows
         self.NCOLS = columns
         self.NPIXELS = self.NROWS * self.NCOLS
+        self.packet_size = size
         self.interval = interval
         self.quiet = quiet
         self.filename = filename
@@ -58,8 +59,8 @@ class HexitecSender(object):
         # Workout number of primary packets, size of trailing packet
 
         totalFrameSize = self.NPIXELS * bytesPerPixel
-        self.primaryPackets = totalFrameSize // 8000
-        self.trailingPacketSize = totalFrameSize % 8000
+        self.primaryPackets = totalFrameSize // self.packet_size
+        self.trailingPacketSize = totalFrameSize % self.packet_size
         self.trailingPackets = 0
         if self.trailingPacketSize > 0:
             self.trailingPackets = 1
@@ -94,7 +95,7 @@ class HexitecSender(object):
         """Build selected header size."""
         if self.extended_headers:
             packet_flags = ((packetCounter << 0) | (packetCounterFlags))
-            header_list = [frame, packet_flags, 0, 0, 0, 0, 0, 0]
+            header_list = [frame, packet_flags]
         else:
             packet_flags = (frame) | ((packetCounter << 32) | (packetCounterFlags << (0)))
             header_list = [packet_flags]
@@ -128,7 +129,7 @@ class HexitecSender(object):
             frameStartTime = time.time()
 
             # Loop over packets within current frame
-            while (packetCounter < (self.primaryPackets + 1)):
+            while (packetCounter < (self.primaryPackets + self.trailingPackets)):
 
                 packetCounterFlags = 0
                 # If this is a start of frame packet, reset frame data and flag(s)
@@ -143,7 +144,7 @@ class HexitecSender(object):
                 # built_integer = int(header).to_bytes(self.HEADER_SIZE, 'little')
 
                 if (packetCounter < self.primaryPackets):
-                    bytesToSend = 8000
+                    bytesToSend = self.packet_size
                 else:
                     bytesToSend = self.trailingPacketSize
 
@@ -206,6 +207,8 @@ if __name__ == '__main__':
                         help='set number of rows in frame')
     parser.add_argument('--columns', '-c', type=int, default=160,
                         help='set number of columns in frame')
+    parser.add_argument('--size', '-s', type=int, default=8000,
+                        help='set packet size')
     parser.add_argument('--interval', '-t', type=float, default=0.01,
                         help="select frame interval in seconds")
     parser.add_argument('--quiet', "-q", action="store_true",

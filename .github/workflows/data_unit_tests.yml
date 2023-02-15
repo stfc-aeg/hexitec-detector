@@ -62,11 +62,11 @@ jobs:
       run: |
         echo "INSTALL_PREFIX is ${INSTALL_PREFIX}"
         cd odin-data/build
-        bin/odinDataTest --json=$INSTALL_PREFIX/test_config/hexitec2x2-average.json
+        bin/odinDataTest --json=$INSTALL_PREFIX/test_config/hexitec2x6-average.json
         echo "Python version:"
         python --version
         pip install numpy
         pip install h5py
         pip install nose
         echo "Check processed_frames dataset is as expected"
-        python ${INSTALL_PREFIX}/test_config/dataset_check.py --filename 2x2_test_000000.h5 
+        python ${INSTALL_PREFIX}/test_config/dataset_check.py --filename 2x6_test_000000.h5 

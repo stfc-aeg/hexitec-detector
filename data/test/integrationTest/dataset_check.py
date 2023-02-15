@@ -18,14 +18,16 @@ class DatasetChecker:
             self.raw = np.array(data_file["raw_frames"])
 
             self.spectra = np.array(data_file["summed_spectra"])
-            # print(self.data)
 
     def check_summed_spectra(self):
 
         expected_spectra = np.zeros(800, dtype=np.uint64)
-        expected_spectra[:5] =  np.array([   0, 8960, 3680,    0,  320], dtype=np.uint64)
+        # These values are not calculated, simply hardcoded matching pixel spectra:
+        # # 2x2:
+        # expected_spectra[:5] = np.array([   0, 8960, 3680,    0,  320], dtype=np.uint64)
+        # 2x6:
+        expected_spectra[:5] = np.array([12180, 50130, 12200,     0,     0], dtype=np.uint64)
         assert_true(np.array_equal(self.spectra[0], expected_spectra))
-
 
     def check_addition_averages(self):
 
@@ -38,7 +40,7 @@ class DatasetChecker:
         # suppose we could just generate what we think the processed frame should be then compare
 
         # pad with a single 0 on each axis, so that we can still look "around" every pixel
-        expected_frame = np.pad(raw_frame, 1, mode='constant')  # expected frame is now shaped (82, 82)
+        expected_frame = np.pad(raw_frame, 1, mode='constant')  # frame now shaped (82, 82)
         cols = expected_frame.shape[1]
         rows = expected_frame.shape[0]
         for i in range(rows):

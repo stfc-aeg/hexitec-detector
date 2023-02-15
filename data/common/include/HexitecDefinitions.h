@@ -37,11 +37,11 @@ namespace Hexitec {
   static const uint16_t pixel_columns_per_sensor = 80;
   static const uint16_t pixel_rows_per_sensor =  80;
 
-  static const size_t primary_packet_size = 8000;
-  static const size_t num_primary_packets[num_sensors] = {1, 6, 19};
-  static const size_t max_primary_packets = 6;
-  static const size_t tail_packet_size[num_sensors]	= {4800, 3200, 1600};
-  static const size_t num_tail_packets 		= 1;
+  static const size_t primary_packet_size = 7680;
+  static const size_t num_primary_packets[num_sensors] = {1, 6, 20};
+  static const size_t max_primary_packets = 20;
+  static const size_t tail_packet_size[num_sensors]	= {4800, 3200, 7680};
+  static const size_t num_tail_packets 		= 0;
 
   static const uint32_t start_of_frame_mask = 1 << 31;
   static const uint32_t end_of_frame_mask   = 1 << 30;
@@ -60,7 +60,6 @@ namespace Hexitec {
     uint64_t frame_number;
     uint32_t packet_number;
     uint32_t packet_flags;
-    uint64_t padding[6];
   } PacketExtendedHeader;
 
   typedef struct

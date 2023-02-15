@@ -221,8 +221,7 @@ namespace FrameProcessor
 
     endPosn = extendedFrameSize - (extendedFrameColumns * directional_distance_)
                 - directional_distance_;
-
-    process_addition(extendedFrame, extendedFrameRows, startPosn, endPosn);
+    process_addition(extendedFrame, extendedFrameColumns, startPosn, endPosn);
 
     /// Copy CS frame (i.e. 82x82) back into original (80x80) frame
     rowPtr = frame;
@@ -241,12 +240,12 @@ namespace FrameProcessor
    * Perform charged sharing algorithm
    *
    * \param[in] extended_frame - Pointer to the image data, surrounded by a frame of zeros
-   * \param[in] extended_frame_rows - Number of rows of the extended frame
+   * \param[in] extended_frame_columns - Number of columns in the extended frame
    * \param[in] start_position - The first pixel in the frame
    * \param[in] end_position - The final pixel in the frame
    */
   void HexitecAdditionPlugin::process_addition(float *extended_frame,
-      int extended_frame_rows, int start_position, int end_position)
+      int extended_frame_columns, int start_position, int end_position)
   {
     float *neighbourPixel = NULL, *currentPixel = extended_frame;
     int rowIndexBegin = (-1*directional_distance_);
@@ -254,7 +253,6 @@ namespace FrameProcessor
     int colIndexBegin = rowIndexBegin;
     int colIndexEnd   = rowIndexEnd;
     float maxValue;
-
     for (int i = start_position; i < end_position;  i++)
     {
       if (extended_frame[i] > 0)
@@ -268,7 +266,7 @@ namespace FrameProcessor
             if ((row == 0) && (column == 0)) // Don't compare pixel against itself
               continue;
 
-            neighbourPixel = (currentPixel + (extended_frame_rows*row)  + column);
+            neighbourPixel = (currentPixel + (extended_frame_columns*row)  + column);
             if (*neighbourPixel > 0)
             {
               if (*neighbourPixel > maxValue)

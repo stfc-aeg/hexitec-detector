@@ -66,7 +66,7 @@ namespace FrameProcessor
       void process_frame(boost::shared_ptr<Frame> frame);
 
       void prepare_charged_sharing(float *input_frame);
-      void process_addition(float *extended_frame, int extended_frame_rows,
+      void process_addition(float *extended_frame, int extended_frame_columns,
                             int start_position, int end_position);
 
       int directional_distance_;

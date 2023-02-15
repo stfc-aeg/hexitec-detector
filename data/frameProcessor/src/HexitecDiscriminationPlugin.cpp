@@ -223,7 +223,7 @@ namespace FrameProcessor
     endPosn = extendedFrameSize - (extendedFrameColumns * directional_distance_)
               - directional_distance_;
 
-    process_discrimination(extendedFrame, extendedFrameRows, startPosn, endPosn);
+    process_discrimination(extendedFrame, extendedFrameColumns, startPosn, endPosn);
 
     /// Copy CS frame (i.e. 82x82) back into original (80x80) frame
     rowPtr = frame;
@@ -241,27 +241,26 @@ namespace FrameProcessor
   /**
    * Perform charged sharing algorithm
    *
-   * \param[in] extendedFrame - Pointer to the image data, surrounded by a frame of zeros
-   * \param[in] extendedFrameRows - Number of rows of the extended frame
-   * \param[in] startPosn - The first pixel in the frame
-   * \param[in] endPosn - The final pixel in the frame
+   * \param[in] extended_frame - Pointer to the image data, surrounded by a frame of zeros
+   * \param[in] extended_frame_columns - Number of columns in the extended frame
+   * \param[in] start_position - The first pixel in the frame
+   * \param[in] end_position - The final pixel in the frame
    */
-  void HexitecDiscriminationPlugin::process_discrimination(float *extendedFrame,
-                                                    int extendedFrameRows, int startPosn,
-                                                    int endPosn)
+  void HexitecDiscriminationPlugin::process_discrimination(float *extended_frame,
+      int extended_frame_columns, int start_position, int end_position)
   {
-    float *neighbourPixel = NULL, *currentPixel = extendedFrame;
+    float *neighbourPixel = NULL, *currentPixel = extended_frame;
     int rowIndexBegin = (-1*directional_distance_);
     int rowIndexEnd   = (directional_distance_+1);
     int colIndexBegin = rowIndexBegin;
     int colIndexEnd   = rowIndexEnd;
     bool bWipePixel = false;
 
-    for (int i = startPosn; i < endPosn;  i++)
+    for (int i = start_position; i < end_position;  i++)
     {
-      if (extendedFrame[i] > 0)
+      if (extended_frame[i] > 0)
       {
-        currentPixel = (&(extendedFrame[i])); // Point at current (non-Zero) pixel
+        currentPixel = (&(extended_frame[i])); // Point at current (non-Zero) pixel
 
         for (int row = rowIndexBegin; row < rowIndexEnd; row++)
         {
@@ -270,7 +269,7 @@ namespace FrameProcessor
             if ((row == 0) && (column == 0)) // Don't compare pixel against itself
               continue;
 
-            neighbourPixel = (currentPixel + (extendedFrameRows*row)  + column);
+            neighbourPixel = (currentPixel + (extended_frame_columns*row)  + column);
 
             // Wipe this pixel if another neighbour was non-Zero
             if (bWipePixel)

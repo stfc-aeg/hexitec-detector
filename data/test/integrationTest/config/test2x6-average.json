@@ -1,0 +1,14 @@
+{
+    "Test":
+    {
+        "output_file": "2x6_test_000000.h5",
+        "frames": "10",
+        "dimensions": "3",
+        "width": "160",
+        "height": "480",
+        "dataset": "processed_frames",
+        "type": "float",
+        "data": {
+        }
+    }
+}

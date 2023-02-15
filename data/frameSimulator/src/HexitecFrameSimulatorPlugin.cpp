@@ -223,7 +223,6 @@ namespace FrameSimulator {
 
         // Allocate buffer for packet data including header
         u_char* head_packet_data = new u_char[Hexitec::primary_packet_size + packet_header_size_];
-        u_char* tail_packet_data = new u_char[Hexitec::tail_packet_size[sensors_config_] + packet_header_size_];
         
         // Loop over specified number of frames to generate packet and frame data
         for (int frame = 0; frame < num_frames; frame++) {
@@ -232,7 +231,7 @@ namespace FrameSimulator {
 
             uint32_t packet_number = 0;
             uint32_t packet_flags = 0;
-            for (int i=0; i < Hexitec::num_primary_packets[sensors_config_]; i++)
+            for (int i=0; i < (Hexitec::num_primary_packets[sensors_config_]-1); i++)
             {
                 // Setup Head Packet Header
                 if (extended_packet_header_)
@@ -277,7 +276,7 @@ namespace FrameSimulator {
             if (extended_packet_header_)
             {
                 Hexitec::PacketExtendedHeader* tail_packet_header = 
-                    reinterpret_cast<Hexitec::PacketExtendedHeader*>(tail_packet_data);
+                    reinterpret_cast<Hexitec::PacketExtendedHeader*>(head_packet_data);
                 packet_flags = Hexitec::end_of_frame_mask;
                 tail_packet_header->frame_number = frame;
                 tail_packet_header->packet_number = packet_number;
@@ -286,25 +285,22 @@ namespace FrameSimulator {
             else
             {
                 Hexitec::PacketHeader* tail_packet_header = 
-                    reinterpret_cast<Hexitec::PacketHeader*>(tail_packet_data);
+                    reinterpret_cast<Hexitec::PacketHeader*>(head_packet_data);
                 packet_flags =
                     (packet_number & Hexitec::packet_number_mask) | Hexitec::end_of_frame_mask;
                 tail_packet_header->frame_number = frame;
                 tail_packet_header->packet_number_flags = packet_flags;
             }
-            // packet_flags = packet_flags | Hexitec::end_of_frame_mask;
 
             // Copy data into Head Packet
-            memcpy((tail_packet_data + packet_header_size_), data_ptr, Hexitec::tail_packet_size[sensors_config_]);
+            memcpy((head_packet_data + packet_header_size_), data_ptr, Hexitec::tail_packet_size[sensors_config_]);
 
             // Pass head packet to Frame Extraction
-            this->extract_frames(tail_packet_data, Hexitec::tail_packet_size[sensors_config_] + packet_header_size_);
+            this->extract_frames(head_packet_data, Hexitec::tail_packet_size[sensors_config_] + packet_header_size_);
         }
 
         delete [] head_packet_data;
-        delete [] tail_packet_data;
         delete [] pixel_data_;
-
     }
 
     /** Parse the number of sensors map configuration string.
