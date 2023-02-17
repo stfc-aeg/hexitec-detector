@@ -673,7 +673,8 @@ class TestDAQ(unittest.TestCase):
                 assert key in self.test_daq.daq.config_ds
                 assert rc_value == 0
 
-    def test_write_metadata_handles_IOError(self):
+    @patch("builtins.open", new_callable=mock_open, read_data="data")
+    def test_write_metadata_handles_IOError(self, mock_file):
         """Test write_metadata handles file reading error."""
         with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"):
             with patch("h5py._hl.group.Group") as h5_group:
@@ -682,15 +683,14 @@ class TestDAQ(unittest.TestCase):
                 meta_group.name = u'/hexitec'
                 param_tree_dict = self.test_daq.daq.parent.param_tree.get('')
 
-                with patch("builtins.open", mock_open(read_data="data")) as mock_file:
-                    mock_file.side_effect = IOError(Mock())
+                mock_file.side_effect = IOError(Mock())
 
-                    with patch("os.path.isfile") as mock_isfile:
-                        mock_isfile.return_value = True
+                with patch("os.path.isfile") as mock_isfile:
+                    mock_isfile.return_value = True
 
-                        rc_value = self.test_daq.daq.write_metadata(meta_group,
-                                                                    param_tree_dict,
-                                                                    hdf_file)
+                    rc_value = self.test_daq.daq.write_metadata(meta_group,
+                                                                param_tree_dict,
+                                                                hdf_file)
                 assert rc_value == -1
 
     def test_write_metadata_handles_exception(self):

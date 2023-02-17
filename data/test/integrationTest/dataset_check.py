@@ -26,7 +26,9 @@ class DatasetChecker:
         # # 2x2:
         # expected_spectra[:5] = np.array([   0, 8960, 3680,    0,  320], dtype=np.uint64)
         # 2x6:
-        expected_spectra[:5] = np.array([12180, 50130, 12200,     0,     0], dtype=np.uint64)
+        expected_spectra[:7] = np.array([300, 3650, 4190, 3640, 1560, 1300,  260], dtype=np.uint64)
+        # print("spectra:  ", self.spectra[0][:24])
+        # print("expected: ", expected_spectra[0:24])
         assert_true(np.array_equal(self.spectra[0], expected_spectra))
 
     def check_addition_averages(self):
@@ -66,6 +68,28 @@ class DatasetChecker:
         expected_frame = expected_frame[1:rows-1, 1:cols-1]
         # we now have what the processed frame SHOULD look like when using Addition Plugin
         assert_equal(processed_frame.shape, expected_frame.shape)
+        # print("processed:", processed_frame.shape)
+        # for i in range(4):
+        #     print(processed_frame[i][:15], processed_frame[i][15:30])
+        # print("expected:", expected_frame.shape)
+        # for i in range(4):
+        #     print(expected_frame[i][:15], expected_frame[i][15:30])
+        # print("raw:", raw_frame.shape)
+        # for i in range(4):
+        #     print(raw_frame[i][:15], raw_frame[i][15:30])
+        cols = expected_frame.shape[1]
+        rows = expected_frame.shape[0]
+        disagree = 0
+        for i in range(rows):
+            for j in range(cols):
+                pf = processed_frame[i, j]
+                ef = expected_frame[i, j]
+                if pf != ef:
+                    disagree += 1
+                    if disagree < 12:
+                        print(" frames differ@ ({}, {}) pf ({}) != ef ({})".format(i, j, pf, ef))
+        if disagree > 0:
+            print("Disagreed: {}".format(disagree))
         assert_true(np.array_equal(processed_frame, expected_frame))
 
 

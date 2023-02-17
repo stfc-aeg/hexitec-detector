@@ -248,17 +248,17 @@ namespace FrameProcessor
       int extended_frame_columns, int start_position, int end_position)
   {
     float *neighbourPixel = NULL, *currentPixel = extended_frame;
+    float *maxPosition = NULL;
     int rowIndexBegin = (-1*directional_distance_);
     int rowIndexEnd   = (directional_distance_+1);
     int colIndexBegin = rowIndexBegin;
     int colIndexEnd   = rowIndexEnd;
-    float maxValue;
     for (int i = start_position; i < end_position;  i++)
     {
       if (extended_frame[i] > 0)
       {
-        maxValue = extended_frame[i];
         currentPixel = (&(extended_frame[i]));
+        maxPosition = (&(extended_frame[i]));
         for (int row = rowIndexBegin; row < rowIndexEnd; row++)
         {
           for (int column = colIndexBegin; column < colIndexEnd; column++)
@@ -269,16 +269,15 @@ namespace FrameProcessor
             neighbourPixel = (currentPixel + (extended_frame_columns*row)  + column);
             if (*neighbourPixel > 0)
             {
-              if (*neighbourPixel > maxValue)
+              if (*neighbourPixel >= *maxPosition)
               {
-                *neighbourPixel += extended_frame[i];
-                maxValue = *neighbourPixel;
-                extended_frame[i] = 0;
+                *neighbourPixel += *maxPosition;
+                *maxPosition = 0;
+                maxPosition = neighbourPixel;
               }
               else
               {
-                extended_frame[i] += *neighbourPixel;
-                maxValue = extended_frame[i];
+                *maxPosition += *neighbourPixel;
                 *neighbourPixel = 0;
               }
             }
