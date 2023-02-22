@@ -84,14 +84,6 @@ namespace FrameProcessor
 
       /** Pixel grid size */
       int pixel_grid_size_;
-
-      // DEBUGGING functions:
-      void print_nonzero_pixels(float *in, int numberRows, int numberColumns);
-      void check_memory(float *float_pointer, int offset);
-      void print_last_row(float *in, int numberRows, int numberCols);
-      int debugFrameCounter;
-      std::ofstream outFile;
-      void writeFile(std::string filePrefix, float *frame);
   };
 
   /**

@@ -6,6 +6,7 @@
  */
 
 #include <HexitecThresholdPlugin.h>
+#include <DebugLevelLogger.h>
 #include "version.h"
 
 namespace FrameProcessor
@@ -25,16 +26,12 @@ namespace FrameProcessor
     logger_ = Logger::getLogger("FP.HexitecThresholdPlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecThresholdPlugin version " <<
-                  this->get_version_long() << " loaded.");
-
-    // Set image_width_, image_height_, image_pixels_
+      this->get_version_long() << " loaded.");
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
-
     thresholds_status_    = false;
     threshold_value_      = 0;
     threshold_per_pixel_  = (uint16_t *) calloc(image_pixels_, sizeof(uint16_t));
-
     /// Set threshold mode to none (initially; 0=none, 1=value, 2=file)
     threshold_mode_ = (ThresholdMode)0;
   }
@@ -45,7 +42,6 @@ namespace FrameProcessor
   HexitecThresholdPlugin::~HexitecThresholdPlugin()
   {
     LOG4CXX_TRACE(logger_, "HexitecThresholdPlugin destructor.");
-
     free(threshold_per_pixel_);
     threshold_per_pixel_ = NULL;
   }
@@ -92,7 +88,8 @@ namespace FrameProcessor
   {
     if (config.has_param(HexitecThresholdPlugin::CONFIG_SENSORS_LAYOUT))
     {
-      sensors_layout_str_= config.get_param<std::string>(HexitecThresholdPlugin::CONFIG_SENSORS_LAYOUT);
+      sensors_layout_str_ =
+        config.get_param<std::string>(HexitecThresholdPlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
       reset_threshold_values();
     }
@@ -123,7 +120,7 @@ namespace FrameProcessor
     {
       threshold_value_ = config.get_param<unsigned int>(
         HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE);
-        LOG4CXX_TRACE(logger_, "Setting threshold value to: " << threshold_value_);
+      LOG4CXX_TRACE(logger_, "Setting threshold value to: " << threshold_value_);
     }
 
     if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE))
@@ -168,7 +165,7 @@ namespace FrameProcessor
   void HexitecThresholdPlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for HexitecThresholdPlugin");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecThresholdPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     int mode = int(threshold_mode_);
     std::string mode_str = determineThresholdMode(mode);
@@ -204,7 +201,6 @@ namespace FrameProcessor
   bool HexitecThresholdPlugin::reset_statistics(void)
   {
     // Nowt to reset..?
-
     return true;
   }
 
@@ -225,8 +221,8 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                        << frame->get_frame_number());
+      LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
+        << frame->get_frame_number());
       this->push(frame);
     }
     else if (dataset.compare(std::string("processed_frames")) == 0)
@@ -245,14 +241,14 @@ namespace FrameProcessor
             break;
           case 1:
             process_threshold_value(static_cast<float *>(input_ptr));
-            LOG4CXX_TRACE(logger_, "Applying threshold value to frame.");
+            LOG4CXX_DEBUG_LEVEL(3, logger_, "Applying threshold value to frame.");
             break;
           case 2:
             process_threshold_file(static_cast<float *>(input_ptr));
-            LOG4CXX_TRACE(logger_, "Applying thresholds from file to frame.");
+            LOG4CXX_DEBUG_LEVEL(3, logger_, "Applying thresholds from file to frame.");
             break;
         }
-        LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
+        LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset <<
                       " dataset, frame number: " << frame->get_frame_number());
         this->push(frame);
       }
@@ -314,7 +310,6 @@ namespace FrameProcessor
   {
     uint16_t defaultValue = 0;
     thresholds_status_ = get_data(threshold_filename, defaultValue);
-
     return thresholds_status_;
   }
 
@@ -330,18 +325,16 @@ namespace FrameProcessor
   {
     int index = 0, thresholdFromFile = 0;
     bool success = false;
-
     /// Count number of floats in file:
     std::ifstream file(filename);
-    int file_values = std::distance(std::istream_iterator<double>(file),
-                                    std::istream_iterator<double>());
+    int file_values =
+      std::distance(std::istream_iterator<double>(file), std::istream_iterator<double>());
     file.close();
 
     if (image_pixels_ != file_values)
     {
       LOG4CXX_ERROR(logger_, "Expected " << image_pixels_ << " values but read " <<
-                    file_values << " values from file: " << filename);
-
+        file_values << " values from file: " << filename);
       LOG4CXX_WARN(logger_, "Using default values instead");
       for (int val = 0; val < image_pixels_; val ++)
       {
@@ -349,24 +342,19 @@ namespace FrameProcessor
       }
       return success;
     }
-
     std::ifstream inFile(filename);
-
     std::string line;
     while(std::getline(inFile, line))
     {
       std::stringstream ss(line);
-
       while( ss >> thresholdFromFile )
       {
         threshold_per_pixel_[index] = thresholdFromFile;
         index++;
       }
     }
-
     inFile.close();
     success = true;
-
     return success;
   }
 

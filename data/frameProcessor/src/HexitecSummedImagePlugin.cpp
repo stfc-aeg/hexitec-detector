@@ -6,6 +6,7 @@
  */
 
 #include <HexitecSummedImagePlugin.h>
+#include <DebugLevelLogger.h>
 #include "version.h"
 
 namespace FrameProcessor
@@ -26,12 +27,9 @@ namespace FrameProcessor
     logger_ = Logger::getLogger("FP.HexitecSummedImagePlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecSummedImagePlugin version " <<
-                  this->get_version_long() << " loaded.");
-
-    // Set image_width_, image_height_, image_pixels_
+      this->get_version_long() << " loaded.");
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
-
     summed_image_ = (uint32_t *) calloc(image_pixels_, sizeof(uint32_t *));
     memset(summed_image_, 0, image_pixels_ * sizeof(uint32_t));
     threshold_lower_ = 0;
@@ -94,29 +92,34 @@ namespace FrameProcessor
   {
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_SENSORS_LAYOUT))
     {
-      sensors_layout_str_= config.get_param<std::string>(HexitecSummedImagePlugin::CONFIG_SENSORS_LAYOUT);
+      sensors_layout_str_ =
+        config.get_param<std::string>(HexitecSummedImagePlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
       reset_summed_image_values();
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER))
     {
-      threshold_lower_ = config.get_param<unsigned int>(HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER);
+      threshold_lower_ =
+        config.get_param<unsigned int>(HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER);
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER))
     {
-      threshold_upper_ = config.get_param<unsigned int>(HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER);
+      threshold_upper_ =
+        config.get_param<unsigned int>(HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER);
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY))
     {
-      image_frequency_ = config.get_param<unsigned int>(HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY);
+      image_frequency_ =
+        config.get_param<unsigned int>(HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY);
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_RESET_IMAGE))
     {
-      reset_image_ = config.get_param<unsigned int>(HexitecSummedImagePlugin::CONFIG_RESET_IMAGE);
+      reset_image_ =
+        config.get_param<unsigned int>(HexitecSummedImagePlugin::CONFIG_RESET_IMAGE);
 
       if (reset_image_ == 1)
       {
@@ -148,7 +151,7 @@ namespace FrameProcessor
   void HexitecSummedImagePlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for HexitecSummedImagePlugin");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecSummedImagePlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/threshold_lower", threshold_lower_);
     status.set_param(get_name() + "/threshold_upper", threshold_upper_);
@@ -163,7 +166,6 @@ namespace FrameProcessor
   bool HexitecSummedImagePlugin::reset_statistics(void)
   {
     // Nowt to reset..?
-
     return true;
   }
 
@@ -176,7 +178,7 @@ namespace FrameProcessor
   {
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data_ptr()));
+      static_cast<const char*>(frame->get_data_ptr()));
 
     // Check datasets name
     FrameMetaData &incoming_frame_meta = frame->meta_data();
@@ -184,8 +186,8 @@ namespace FrameProcessor
     long long frame_number = incoming_frame_meta.get_frame_number();
 
     // Push dataset
-    LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                      << frame_number);
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
+      << frame_number);
     this->push(frame);
 
     if (dataset.compare(std::string("processed_frames")) == 0)
@@ -203,7 +205,6 @@ namespace FrameProcessor
           summed_image_meta.set_dimensions(dims);
           summed_image_meta.set_compression_type(no_compression);
           summed_image_meta.set_data_type(raw_32bit);
-          // summed_image_meta.set_frame_number(images_written_);
           summed_image_meta.set_frame_number(frame_number);
           summed_image_meta.set_dataset_name("summed_images");
 
@@ -228,8 +229,8 @@ namespace FrameProcessor
                                       static_cast<uint32_t *>(output_ptr));
 
           const std::string& dataset_name = summed_image_meta.get_dataset_name();
-          LOG4CXX_TRACE(logger_, "Pushing " << dataset_name << " dataset, frame number: " <<
-                        summed_image_meta.get_frame_number());
+          LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset_name << " dataset, frame number: "
+            << summed_image_meta.get_frame_number());
           this->push(summed_frame);
           images_written_++;
         }
@@ -256,31 +257,12 @@ namespace FrameProcessor
   {
     for (int i=0; i<image_pixels_; i++)
     {
-      // if (i < 15) // DEBUGGING
-      // {
-      //   std::cout << " BEFORE, i = " << std::setw(3) << i << " in[" << std::setw(2) << i << "] = "
-      //             << std::setw(4) << in[i] << " thL: " << threshold_lower_ << " thU: " << threshold_upper_
-      //             << " cond L: " << ((unsigned short)in[i] > threshold_lower_) << " cond U: " 
-      //             << ((unsigned short)in[i] < threshold_upper_) << " L && U: "
-      //             << (((unsigned short)in[i] > threshold_lower_) && ((unsigned short)in[i] < threshold_upper_))
-      //             << " s_i[i]: " << std::setw(4) << summed_image_[i] << " out[i]: " << std::setw(4) << out[i];
-      // }
       if (((uint32_t)in[i] > threshold_lower_) && ((uint32_t)in[i] < threshold_upper_))
       {
         summed_image_[i] += 1;
       }
       // Maintain history from previous frame(s)
       out[i] = summed_image_[i];
-
-      // if (i < 15) // DEBUGGING
-      // {
-      //   if ((in[i] > threshold_lower_) && (in[i] < threshold_upper_))
-      //     std::cout << "  YES!";
-      //   else
-      //     std::cout << "  NOWT!";
-      //   std::cout << "  -=- AFTER " << std::setw(2) << i << " s_i[i]: " << std::setw(4)
-      //             << summed_image_[i] << " out[i]: " << std::setw(4) << out[i] << std::endl;
-      // }
     }
   }
 

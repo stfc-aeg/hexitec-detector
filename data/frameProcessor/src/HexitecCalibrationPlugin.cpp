@@ -6,6 +6,7 @@
  */
 
 #include <HexitecCalibrationPlugin.h>
+#include <DebugLevelLogger.h>
 #include "version.h"
 
 namespace FrameProcessor
@@ -29,7 +30,7 @@ namespace FrameProcessor
     logger_ = Logger::getLogger("FP.HexitecCalibrationPlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecCalibrationPlugin version " <<
-    												this->get_version_long() << " loaded.");
+      this->get_version_long() << " loaded.");
 
     // Set image_width_, image_height_, image_pixels_
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
@@ -40,8 +41,6 @@ namespace FrameProcessor
 
     *gradient_values_ = 1;
     *intercept_values_ = 0;
-    ///
-    debugFrameCounter = 0;
   }
 
   /**
@@ -50,7 +49,6 @@ namespace FrameProcessor
   HexitecCalibrationPlugin::~HexitecCalibrationPlugin()
   {
     LOG4CXX_TRACE(logger_, "HexitecCalibrationPlugin destructor.");
-
     free(gradient_values_);
     free(intercept_values_);
   }
@@ -132,7 +130,7 @@ namespace FrameProcessor
   void HexitecCalibrationPlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for HexitecCalibrationPlugin");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecCalibrationPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/gradients_filename", gradients_filename_);
     status.set_param(get_name() + "/intercepts_filename", intercepts_filename_);
@@ -144,7 +142,6 @@ namespace FrameProcessor
   bool HexitecCalibrationPlugin::reset_statistics(void)
   {
     // Nothing to reset..?
-
     return true;
   }
 
@@ -156,11 +153,11 @@ namespace FrameProcessor
    */
   void HexitecCalibrationPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_TRACE(logger_, "Applying Calibration.");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Applying Calibration.");
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data_ptr()));
+      static_cast<const char*>(frame->get_data_ptr()));
 
     // Check datasets name
     FrameMetaData &incoming_frame_meta = frame->meta_data();
@@ -168,8 +165,8 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: " 
-                                        << frame->get_frame_number());
+      LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
+        << frame->get_frame_number());
       this->push(frame);
     }
     else if (dataset.compare(std::string("processed_frames")) == 0)
@@ -178,17 +175,13 @@ namespace FrameProcessor
       {
         // Define pointer to the input image data
         void* input_ptr = static_cast<void *>(
-            static_cast<char *>(const_cast<void *>(data_ptr)));
-
+          static_cast<char *>(const_cast<void *>(data_ptr)));
         calibrate_pixels(static_cast<float *>(input_ptr));
-
         this->push(frame);
       }
       catch (const std::exception& e)
       {
-        std::stringstream ss;
-        ss << "HEXITEC frame decode failed: " << e.what();
-        LOG4CXX_ERROR(logger_, ss.str());
+        LOG4CXX_ERROR(logger_, "HexitecCalibrationPlugin failed: " << e.what());
       }
 		}
     else
@@ -270,13 +263,13 @@ namespace FrameProcessor
     /// Count number of floats in file:
     std::ifstream   file(filename);
     int file_values = std::distance(std::istream_iterator<double>(file),
-                                std::istream_iterator<double>());
+      std::istream_iterator<double>());
     file.close();
 
     if (image_pixels_ != file_values)
     {
       LOG4CXX_ERROR(logger_, "Expected " << image_pixels_ << " values but read " << file_values
-                          << " values from file: " << filename);
+        << " values from file: " << filename);
 
       LOG4CXX_WARN(logger_, "Using default values instead");
       for (int val = 0; val < image_pixels_; val ++)
@@ -350,24 +343,6 @@ namespace FrameProcessor
     free(intercept_values_);
     gradient_values_ = (float *) calloc(image_pixels_, sizeof(float));
     intercept_values_ = (float *) calloc(image_pixels_, sizeof(float));
-  }
-  
-  //// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
-  void HexitecCalibrationPlugin::writeFile(std::string filePrefix, float *frame)
-  {
-    std::ostringstream hitPixelsStream;
-    hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-    for (int i = 0; i < image_pixels_; i++)
-    {
-      if(frame[i] > 0)
-        hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
-    }
-    std::string hitPixelsString  = hitPixelsStream.str();
-    std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
-        + std::string("_ODIN_Cal_detailed.txt");
-    outFile.open(fname.c_str(), std::ofstream::app);
-    outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
-    outFile.close();
   }
 
 } /* namespace FrameProcessor */

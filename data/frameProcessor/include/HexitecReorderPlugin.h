@@ -103,11 +103,6 @@ namespace FrameProcessor
       int fem_pixels_per_rows_;
       int fem_pixels_per_columns_;
       int fem_total_pixels_;
-
-      /// DEBUGGING:
-      int debugFrameCounter;
-      std::ofstream outFile;
-      void writeFile(std::string filePrefix, float *frame);
   };
 
   /**

@@ -6,6 +6,7 @@
  */
 
 #include <HexitecTemplatePlugin.h>
+#include <DebugLevelLogger.h>
 #include "version.h"
 
 namespace FrameProcessor
@@ -21,7 +22,7 @@ namespace FrameProcessor
     logger_ = Logger::getLogger("FP.HexitecTemplatePlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecTemplatePlugin version " <<
-                  this->get_version_long() << " loaded.");
+      this->get_version_long() << " loaded.");
 
     // Set image_width_, image_height_, image_pixels_
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
@@ -66,7 +67,7 @@ namespace FrameProcessor
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
    * 
-   * - sensors_layout_str_      <=> sensors_layout
+   * - sensors_layout_str_ <=> sensors_layout
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -75,7 +76,8 @@ namespace FrameProcessor
   {
     if (config.has_param(HexitecTemplatePlugin::CONFIG_SENSORS_LAYOUT))
     {
-      sensors_layout_str_= config.get_param<std::string>(HexitecTemplatePlugin::CONFIG_SENSORS_LAYOUT);
+      sensors_layout_str_ =
+        config.get_param<std::string>(HexitecTemplatePlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
     }
   }
@@ -95,7 +97,7 @@ namespace FrameProcessor
   void HexitecTemplatePlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for HexitecTemplatePlugin");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecTemplatePlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
   }
 
@@ -105,7 +107,6 @@ namespace FrameProcessor
   bool HexitecTemplatePlugin::reset_statistics(void)
   {
     // Nowt to reset..?
-
     return true;
   }
 
@@ -117,11 +118,11 @@ namespace FrameProcessor
    */
   void HexitecTemplatePlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_TRACE(logger_, "Applying ... template algorithm???");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Applying ... template algorithm???");
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-        static_cast<const char*>(frame->get_data_ptr()));
+      static_cast<const char*>(frame->get_data_ptr()));
 
     // Check datasets name
     FrameMetaData &incoming_frame_meta = frame->meta_data();
@@ -129,7 +130,7 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
+      LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
                                         << frame->get_frame_number());
       this->push(frame);
     }
@@ -144,8 +145,8 @@ namespace FrameProcessor
         ///TODO: This function do not exist; Design it to match requirements
         // some_function(static_cast<float *>(input_ptr));
 
-        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                          << frame->get_frame_number());
+        LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
+          << frame->get_frame_number());
         this->push(frame);
       }
       catch (const std::exception& e)

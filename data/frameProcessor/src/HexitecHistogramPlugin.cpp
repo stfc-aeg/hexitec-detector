@@ -6,6 +6,7 @@
  */
 
 #include <HexitecHistogramPlugin.h>
+#include <DebugLevelLogger.h>
 #include "version.h"
 
 namespace FrameProcessor
@@ -22,7 +23,6 @@ namespace FrameProcessor
   const std::string HexitecHistogramPlugin::CONFIG_PASS_PROCESSED     = "pass_processed";
   const std::string HexitecHistogramPlugin::CONFIG_PASS_RAW           = "pass_raw";
 
-
   /**
    * The constructor sets up logging used within the class.
    */
@@ -38,7 +38,7 @@ namespace FrameProcessor
     logger_ = Logger::getLogger("FP.HexitecHistogramPlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecHistogramPlugin version " <<
-                  this->get_version_long() << " loaded.");
+      this->get_version_long() << " loaded.");
 
     bin_start_   = 0;
     bin_end_     = 8000;
@@ -50,8 +50,6 @@ namespace FrameProcessor
     parse_sensors_layout_map(sensors_layout_str_);
     end_of_acquisition_processed_ = false;
     initialiseHistograms();
-    ///
-    debugCounter = 0;
   }
 
   /**
@@ -107,7 +105,8 @@ namespace FrameProcessor
     spectra_meta.set_frame_number(0);
     spectra_meta.set_dataset_name("spectra_bins");
 
-    spectra_bins_ = boost::shared_ptr<Frame>(new DataBlockFrame(spectra_meta, number_bins_ * sizeof(float)));
+    spectra_bins_ =
+      boost::shared_ptr<Frame>(new DataBlockFrame(spectra_meta, number_bins_ * sizeof(float)));
 
     // Setup the summed spectra
 
@@ -119,7 +118,8 @@ namespace FrameProcessor
     summed_meta.set_frame_number(0);
     summed_meta.set_dataset_name("summed_spectra");
 
-    summed_spectra_ = boost::shared_ptr<Frame>(new DataBlockFrame(summed_meta, number_bins_ * sizeof(uint64_t)));
+    summed_spectra_ =
+      boost::shared_ptr<Frame>(new DataBlockFrame(summed_meta, number_bins_ * sizeof(uint64_t)));
 
     // Setup the pixel spectra
 
@@ -136,11 +136,12 @@ namespace FrameProcessor
     pixel_meta.set_frame_number(0);
     pixel_meta.set_dataset_name("pixel_spectra");
 
-    pixel_spectra_ = boost::shared_ptr<Frame>(new DataBlockFrame(pixel_meta, image_pixels_ * number_bins_ * sizeof(float)));
+    pixel_spectra_ =
+      boost::shared_ptr<Frame>(new DataBlockFrame(pixel_meta, image_pixels_ * number_bins_ * sizeof(float)));
 
     // Initialise bins
     float currentBin = bin_start_;
-    float *pHxtBin = static_cast<float *>(spectra_bins_->get_data_ptr());	// New implementation
+    float *pHxtBin = static_cast<float *>(spectra_bins_->get_data_ptr());
     for (long i = bin_start_; i < number_bins_; i++, currentBin += bin_width_)
     {
       *pHxtBin = currentBin;
@@ -176,13 +177,15 @@ namespace FrameProcessor
   {
     if (config.has_param(HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT))
     {
-      sensors_layout_str_= config.get_param<std::string>(HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT);
+      sensors_layout_str_=
+        config.get_param<std::string>(HexitecHistogramPlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
     }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_MAX_FRAMES))
     {
-      max_frames_received_ = config.get_param<unsigned int>(HexitecHistogramPlugin::CONFIG_MAX_FRAMES);
+      max_frames_received_ =
+        config.get_param<unsigned int>(HexitecHistogramPlugin::CONFIG_MAX_FRAMES);
     }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_BIN_START))
@@ -204,7 +207,8 @@ namespace FrameProcessor
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_RESET_HISTOS))
     {
-      reset_histograms_ = config.get_param<unsigned int>(HexitecHistogramPlugin::CONFIG_RESET_HISTOS);
+      reset_histograms_ =
+        config.get_param<unsigned int>(HexitecHistogramPlugin::CONFIG_RESET_HISTOS);
 
       if (reset_histograms_ == 1)
       {
@@ -252,7 +256,7 @@ namespace FrameProcessor
   void HexitecHistogramPlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for HexitecHistogramPlugin");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecHistogramPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/max_frames_received", max_frames_received_);
     status.set_param(get_name() + "/bin_start", bin_start_);
@@ -282,7 +286,7 @@ namespace FrameProcessor
   */
   void HexitecHistogramPlugin::process_end_of_acquisition()
   {
-    LOG4CXX_INFO(logger_, "End of acquisition frame received, writing histograms to disk");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "End of acquisition frame received, writing histograms to disk");
     writeHistogramsToDisk();
     histograms_written_ = frames_processed_;
     end_of_acquisition_processed_ = true;
@@ -319,14 +323,14 @@ namespace FrameProcessor
       // Pass raw_frames dataset down the chain, or only to lvframes
       if (pass_raw_)
       {
-        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                          << frame_number);
+        LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
+          << frame_number);
         this->push(frame);
       }
       else
       {
-          LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset to " << lvframes << " only");
-          this->push(lvframes, frame);
+        LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset to " << lvframes);
+        this->push(lvframes, frame);
       }
     }
     else if (dataset.compare(std::string("processed_frames")) == 0)
@@ -350,7 +354,8 @@ namespace FrameProcessor
         else
         {
           // Otherwise, keep passing summed_spectra dataset to lvspectra
-          LOG4CXX_TRACE(logger_, "Pushing " << summed_spectra_->get_meta_data().get_dataset_name() << " dataset to " << lvspectra << " only");
+          LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " <<
+            summed_spectra_->get_meta_data().get_dataset_name() << " dataset to " << lvspectra);
           this->push(lvspectra, summed_spectra_);
         }
 
@@ -361,14 +366,14 @@ namespace FrameProcessor
         if (pass_processed_)
         {
           // Pass on processed_frames dataset unmodified:
-          LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                            << frame_number);
+          LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
+            << frame_number);
           this->push(frame);
         }
         else
         {
-            LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset to " << lvframes << " only");
-            this->push(lvframes, frame);
+          LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset to " << lvframes);
+          this->push(lvframes, frame);
         }
 
         frames_processed_++;
@@ -381,8 +386,8 @@ namespace FrameProcessor
     else
     {
       // Push any other dataset
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                        << frame_number);
+      LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
+        << frame_number);
       this->push(frame);
     }
   }
@@ -400,13 +405,16 @@ namespace FrameProcessor
     }
 
     const std::string& plugin_name = "hdf";
-    LOG4CXX_TRACE(logger_, "Pushing " << spectra_bins_->get_meta_data().get_dataset_name() << " dataset to " << plugin_name << " only");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << spectra_bins_->get_meta_data().get_dataset_name()
+      << " dataset to " << plugin_name);
     this->push(plugin_name, spectra_bins_);
 
-    LOG4CXX_TRACE(logger_, "Pushing " << summed_spectra_->get_meta_data().get_dataset_name() << " dataset to " << plugin_name << " only");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << summed_spectra_->get_meta_data().get_dataset_name()
+      << " dataset to " << plugin_name);
     this->push(plugin_name, summed_spectra_);
 
-    LOG4CXX_TRACE(logger_, "Pushing " << pixel_spectra_->get_meta_data().get_dataset_name() << " dataset to " << plugin_name << " only");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << pixel_spectra_->get_meta_data().get_dataset_name()
+      << " dataset to " << plugin_name);
     this->push(plugin_name, pixel_spectra_);
   }
 

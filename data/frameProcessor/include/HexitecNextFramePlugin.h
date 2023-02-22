@@ -75,12 +75,6 @@ namespace FrameProcessor
       float *last_frame_;
 
       long long last_frame_number_;
-
-      // DEBUGGING functions:
-      int debugFrameCounter;
-      std::ofstream outFile;
-      void writeFile(std::string filePrefix, float *frame);
-
       void reset_last_frame_values();
   };
 

@@ -6,6 +6,7 @@
  */
 
 #include <HexitecReorderPlugin.h>
+#include <DebugLevelLogger.h>
 #include "version.h"
 
 namespace FrameProcessor
@@ -27,13 +28,9 @@ namespace FrameProcessor
     logger_ = Logger::getLogger("FP.HexitecReorderPlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecReorderPlugin version " <<
-                  this->get_version_long() << " loaded.");
-
-    // Set sensors_config_, image_width_, image_height_, image_pixels_
+      this->get_version_long() << " loaded.");
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
-    ///
-    debugFrameCounter = 0;
   }
 
   /**
@@ -86,7 +83,8 @@ namespace FrameProcessor
   {
     if (config.has_param(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT))
     {
-      sensors_layout_str_ = config.get_param<std::string>(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT);
+      sensors_layout_str_ =
+        config.get_param<std::string>(HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
     }
 
@@ -103,7 +101,7 @@ namespace FrameProcessor
     if (config.has_param(HexitecReorderPlugin::CONFIG_FRAME_NUMBER))
     {
       frame_number_ = config.get_param<unsigned int>(HexitecReorderPlugin::CONFIG_FRAME_NUMBER);
-      LOG4CXX_DEBUG(logger_, " *** RESET frame_number to be " << frame_number_);
+      LOG4CXX_DEBUG_LEVEL(1, logger_, "Reset frame_number to be " << frame_number_);
     }
 
   }
@@ -126,7 +124,7 @@ namespace FrameProcessor
   void HexitecReorderPlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for HexitecReorderPlugin");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecReorderPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/packets_lost", packets_lost_);
     status.set_param(get_name() + "/reset_frame_number", reset_frame_number_);
@@ -138,11 +136,9 @@ namespace FrameProcessor
    */
   bool HexitecReorderPlugin::reset_statistics()
   {
-    LOG4CXX_DEBUG(logger_, "Statistics reset requested for Reorder plugin")
-
+    LOG4CXX_DEBUG_LEVEL(1, logger_, "Statistics reset requested for Reorder plugin")
     // Reset packets lost counter
     packets_lost_ = 0;
-
     return true;
   }
 
@@ -153,11 +149,15 @@ namespace FrameProcessor
    */
   void HexitecReorderPlugin::process_lost_packets(boost::shared_ptr<Frame>& frame)
   {
-    const Hexitec::FrameHeader* hdr_ptr = static_cast<const Hexitec::FrameHeader*>(frame->get_data_ptr());
-    Hexitec::SensorConfigNumber sensors_config = static_cast<Hexitec::SensorConfigNumber>(sensors_config_);
+    const Hexitec::FrameHeader* hdr_ptr =
+      static_cast<const Hexitec::FrameHeader*>(frame->get_data_ptr());
+    Hexitec::SensorConfigNumber sensors_config =
+      static_cast<Hexitec::SensorConfigNumber>(sensors_config_);
     if (hdr_ptr->total_packets_received < Hexitec::num_fem_frame_packets(sensors_config)){
-      int packets_lost = Hexitec::num_fem_frame_packets(sensors_config) - hdr_ptr->total_packets_received;
-      LOG4CXX_ERROR(logger_, "Frame number " << hdr_ptr->frame_number << " has dropped " << packets_lost << " packet(s)");
+      int packets_lost =
+        Hexitec::num_fem_frame_packets(sensors_config) - hdr_ptr->total_packets_received;
+      LOG4CXX_ERROR(logger_, "Frame number " << hdr_ptr->frame_number << " has dropped " <<
+        packets_lost << " packet(s)");
       packets_lost_ += packets_lost;
       LOG4CXX_ERROR(logger_, "Total packets lost since startup " << packets_lost_);
     }
@@ -170,11 +170,8 @@ namespace FrameProcessor
    */
   void HexitecReorderPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_TRACE(logger_, "Reordering frame.");
-    LOG4CXX_TRACE(logger_, "Frame size: " << frame->get_data_size());
-
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Received a new frame...");
     Hexitec::FrameHeader* hdr_ptr = static_cast<Hexitec::FrameHeader*>(frame->get_data_ptr());
-
     this->process_lost_packets(frame);
 
     //TODO: Interrim fix: (until F/W amended)
@@ -191,11 +188,10 @@ namespace FrameProcessor
       frame->set_frame_number(hdr_ptr->frame_number);
     }
 
-    LOG4CXX_TRACE(logger_, "Raw frame number: " << hdr_ptr->frame_number);
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Raw frame number: " << hdr_ptr->frame_number);
 
     // Determine the size of the output reordered image
     const std::size_t output_image_size = reordered_image_size();
-    LOG4CXX_TRACE(logger_, "Output image size: " << output_image_size);
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
@@ -204,7 +200,7 @@ namespace FrameProcessor
 
     // Define pointer to the input image data
     void* input_ptr = static_cast<void *>(
-        static_cast<char *>(const_cast<void *>(data_ptr)));
+      static_cast<char *>(const_cast<void *>(data_ptr)));
 
     try
     {
@@ -219,25 +215,24 @@ namespace FrameProcessor
       processed_meta.set_data_type(raw_float);
       processed_meta.set_frame_number(hdr_ptr->frame_number);
 
-      // For processed_frames dataset, reuse existing meta data as only the dataset name will differ
+      // For processed_frames dataset, reuse existing meta data as only dataset name will differ
 
       // Set the dataset name
       processed_meta.set_dataset_name("processed_frames");
 
       boost::shared_ptr<Frame> data_frame;
-      data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(processed_meta,
-        output_image_size));
+      data_frame = boost::shared_ptr<Frame>(new DataBlockFrame(processed_meta, output_image_size));
 
       // Get a pointer to the data buffer in the output frame
       void* output_ptr = data_frame->get_data_ptr();
 
       // Turn unsigned short raw pixel data into float data type
       convert_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
-                                        static_cast<float *>(output_ptr));
+        static_cast<float *>(output_ptr));
 
       const std::string& dataset = processed_meta.get_dataset_name();
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: " <<
-                    data_frame->get_frame_number());
+      LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: " <<
+        data_frame->get_frame_number());
       this->push(data_frame);
 
       // Construct raw data frame
@@ -254,8 +249,8 @@ namespace FrameProcessor
       raw_meta.set_dataset_name("raw_frames");
 
       boost::shared_ptr<Frame> raw_frame;
-      raw_frame = boost::shared_ptr<Frame>(new DataBlockFrame(raw_meta,
-                                                              raw_image_size));
+      raw_frame =
+        boost::shared_ptr<Frame>(new DataBlockFrame(raw_meta, raw_image_size));
 
       // Get a pointer to the data buffer in the output frame
       output_ptr = raw_frame->get_data_ptr();
@@ -264,8 +259,8 @@ namespace FrameProcessor
       copy_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
         static_cast<unsigned short *>(output_ptr));
 
-      LOG4CXX_TRACE(logger_, "Pushing raw_frames dataset, frame number: " <<
-                    raw_frame->get_frame_number());
+      LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing raw_frames dataset, frame number: " <<
+        raw_frame->get_frame_number());
       this->push(raw_frame);
 
       // Manually update frame_number (until fixed in firmware)
@@ -297,7 +292,6 @@ namespace FrameProcessor
   void HexitecReorderPlugin::convert_pixels_without_reordering(unsigned short *in, float *out)
   {
     int index = 0;
-
     for (int i=0; i<image_pixels_; i++)
     {
       // Do not reorder pixels:
@@ -315,7 +309,6 @@ namespace FrameProcessor
   void HexitecReorderPlugin::copy_pixels_without_reordering(unsigned short *in, unsigned short *out)
   {
     int index = 0;
-
     for (int i=0; i<image_pixels_; i++)
     {
       out[i] = (float)in[i];
@@ -371,51 +364,31 @@ namespace FrameProcessor
    * \param[in] sensor_columns - number of sensors in the horizontal plane
    * \return whether elections matches a known configuration
    */
-  bool HexitecReorderPlugin::set_sensors_config(int sensor_rows, int sensor_columns) {
-
-      bool parseOK = false;
-      
-      if ((sensor_rows == 1) && (sensor_columns == 1))
-      {
-          // Single sensor, i.e. 1x1
-          sensors_config_ = Hexitec::sensorConfigOne;
-          parseOK = true;
-      }
-      if (sensor_rows == 2)
-      {
-          if (sensor_columns == 2)
-          {
-              // 2x2
-              sensors_config_ = Hexitec::sensorConfigTwo;
-              parseOK = true;
-          }
-          else if (sensor_columns == 6)
-          {
-              // 2x6
-              sensors_config_ = Hexitec::sensorConfigThree;
-              parseOK = true;
-          }
-      }
-
-      return parseOK;
-  };
-
-  /// Debug function: Takes a file prefix, frame and writes all nonzero pixels to a file
-  void HexitecReorderPlugin::writeFile(std::string filePrefix, float *frame)
+  bool HexitecReorderPlugin::set_sensors_config(int sensor_rows, int sensor_columns)
   {
-    std::ostringstream hitPixelsStream;
-    hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-    for (int i = 0; i < image_pixels_; i++ )
+    bool parseOK = false;
+    if ((sensor_rows == 1) && (sensor_columns == 1))
     {
-      if(frame[i] > 0)
-        hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
+      // Single sensor, i.e. 1x1
+      sensors_config_ = Hexitec::sensorConfigOne;
+      parseOK = true;
     }
-    std::string hitPixelsString  = hitPixelsStream.str();
-    std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
-      + std::string("_ODIN_Reorder_detailed.txt");
-    outFile.open(fname.c_str(), std::ofstream::app);
-    outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
-    outFile.close();
+    if (sensor_rows == 2)
+    {
+      if (sensor_columns == 2)
+      {
+        // 2x2
+        sensors_config_ = Hexitec::sensorConfigTwo;
+        parseOK = true;
+      }
+      else if (sensor_columns == 6)
+      {
+        // 2x6
+        sensors_config_ = Hexitec::sensorConfigThree;
+        parseOK = true;
+      }
+    }
+    return parseOK;
   }
 
 } /* namespace FrameProcessor */

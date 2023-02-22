@@ -6,6 +6,7 @@
  */
 
 #include <HexitecDiscriminationPlugin.h>
+#include <DebugLevelLogger.h>
 #include "version.h"
 
 namespace FrameProcessor
@@ -23,11 +24,9 @@ namespace FrameProcessor
     logger_ = Logger::getLogger("FP.HexitecDiscriminationPlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecDiscriminationPlugin version " <<
-                            this->get_version_long() << " loaded.");
-
-    directional_distance_ = (int)pixel_grid_size_/2;  // Set to 1 for 3x3: 2 for 5x5 pixel grid
-
-    // Set image_width_, image_height_, image_pixels_, number_rows_, number_columns_
+      this->get_version_long() << " loaded.");
+    // Set to 1 for 3x3: 2 for 5x5 pixel grid
+    directional_distance_ = (int)pixel_grid_size_/2;
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
   }
@@ -77,19 +76,19 @@ namespace FrameProcessor
    * \param[in] reply - Reference to the reply IpcMessage object.
    */
   void HexitecDiscriminationPlugin::configure(OdinData::IpcMessage& config,
-                                              OdinData::IpcMessage& reply)
+    OdinData::IpcMessage& reply)
   {
     if (config.has_param(HexitecDiscriminationPlugin::CONFIG_SENSORS_LAYOUT))
     {
       sensors_layout_str_= 
-          config.get_param<std::string>(HexitecDiscriminationPlugin::CONFIG_SENSORS_LAYOUT);
+        config.get_param<std::string>(HexitecDiscriminationPlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
     }
 
     if (config.has_param(HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE))
     {
       pixel_grid_size_ =
-          config.get_param<unsigned int>(HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE);
+        config.get_param<unsigned int>(HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE);
       directional_distance_ = (int)pixel_grid_size_/2;
     }
 
@@ -100,9 +99,9 @@ namespace FrameProcessor
     // Return the configuration of the process plugin
     std::string base_str = get_name() + "/";
     reply.set_param(base_str +
-        HexitecDiscriminationPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
+      HexitecDiscriminationPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
     reply.set_param(base_str +
-        HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE, pixel_grid_size_);
+      HexitecDiscriminationPlugin::CONFIG_PIXEL_GRID_SIZE, pixel_grid_size_);
   }
 
   /**
@@ -114,7 +113,7 @@ namespace FrameProcessor
   void HexitecDiscriminationPlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for HexitecDiscriminationPlugin");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecDiscriminationPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/pixel_grid_size", pixel_grid_size_);
   }
@@ -125,7 +124,6 @@ namespace FrameProcessor
   bool HexitecDiscriminationPlugin::reset_statistics(void)
   {
     // Nowt to reset..?
-
     return true;
   }
 
@@ -136,8 +134,7 @@ namespace FrameProcessor
    */
   void HexitecDiscriminationPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_TRACE(logger_, "Applying CS Discrimination algorithm.");
-
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Applying CS Discrimination algorithm.");
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
       static_cast<const char*>(frame->get_data_ptr()));
@@ -148,8 +145,8 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                        << frame->get_frame_number());
+      LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
+        << frame->get_frame_number());
       this->push(frame);
     }
     else if (dataset.compare(std::string("processed_frames")) == 0)
@@ -163,8 +160,8 @@ namespace FrameProcessor
         // Take Frame object at input_pointer, apply CS Discrimination algorithm
         prepare_charged_sharing(static_cast<float *>(input_ptr));
 
-        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                          << frame->get_frame_number());
+        LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
+          << frame->get_frame_number());
         this->push(frame);
       }
       catch (const std::exception& e)
@@ -192,13 +189,13 @@ namespace FrameProcessor
     int extendedFrameColumns = (number_columns_ + sidePadding);
     int extendedFrameSize    = extendedFrameRows * extendedFrameColumns;
 
-    float  *extendedFrame;
+    float *extendedFrame;
     extendedFrame = (float *) calloc(extendedFrameSize, sizeof(float));
 
     // Copy frame's each row into extendedFrame leaving (directional_distance_ pixel(s))
     // 	padding on each side
     int startPosn = extendedFrameColumns * directional_distance_ + directional_distance_;
-    int endPosn   = extendedFrameSize - (extendedFrameColumns*directional_distance_);
+    int endPosn   = extendedFrameSize -(extendedFrameColumns*directional_distance_);
     int increment = extendedFrameColumns;
     float *rowPtr = frame;
 
@@ -247,7 +244,7 @@ namespace FrameProcessor
    * \param[in] end_position - The final pixel in the frame
    */
   void HexitecDiscriminationPlugin::process_discrimination(float *extended_frame,
-      int extended_frame_columns, int start_position, int end_position)
+    int extended_frame_columns, int start_position, int end_position)
   {
     float *neighbourPixel = NULL, *currentPixel = extended_frame;
     int rowIndexBegin = (-1*directional_distance_);

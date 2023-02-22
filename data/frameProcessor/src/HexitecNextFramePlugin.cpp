@@ -6,6 +6,7 @@
  */
 
 #include <HexitecNextFramePlugin.h>
+#include <DebugLevelLogger.h>
 #include "version.h"
 
 namespace FrameProcessor
@@ -22,15 +23,10 @@ namespace FrameProcessor
     logger_ = Logger::getLogger("FP.HexitecNextFramePlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecNextFramePlugin version " <<
-                  this->get_version_long() << " loaded.");
-
-    // Set image_width_, image_height_, image_pixels_
+      this->get_version_long() << " loaded.");
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
-
     last_frame_ = (float *) calloc(image_pixels_, sizeof(float));
-    ///
-    debugFrameCounter = 0;
   }
 
   /**
@@ -82,7 +78,8 @@ namespace FrameProcessor
   {
     if (config.has_param(HexitecNextFramePlugin::CONFIG_SENSORS_LAYOUT))
     {
-      sensors_layout_str_= config.get_param<std::string>(HexitecNextFramePlugin::CONFIG_SENSORS_LAYOUT);
+      sensors_layout_str_=
+        config.get_param<std::string>(HexitecNextFramePlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
       reset_last_frame_values();
     }
@@ -103,7 +100,7 @@ namespace FrameProcessor
   void HexitecNextFramePlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for HexitecNextFramePlugin");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecNextFramePlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
   }
 
@@ -113,7 +110,6 @@ namespace FrameProcessor
   bool HexitecNextFramePlugin::reset_statistics(void)
   {
     // Nowt to reset..?
-
     return true;
   }
 
@@ -127,7 +123,7 @@ namespace FrameProcessor
   {
     long long current_frame_number = frame->get_frame_number();
 
-    LOG4CXX_TRACE(logger_, "Applying Next Frame algorithm.");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Applying Next Frame algorithm.");
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
@@ -139,8 +135,8 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                        << current_frame_number);
+      LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
+        << current_frame_number);
       this->push(frame);
     }
     else if (dataset.compare(std::string("processed_frames")) == 0)
@@ -154,7 +150,7 @@ namespace FrameProcessor
         // Don't compare current against last frame if not adjacent
         if ((last_frame_number_+1) != current_frame_number)
         {
-          LOG4CXX_TRACE(logger_, "Not correcting current frame; last frame number: " <<
+          LOG4CXX_DEBUG_LEVEL(3, logger_, "Not correcting current frame; last frame number: " <<
                                   last_frame_number_ << " versus current_frame_number: "
                                   << current_frame_number);
         }
@@ -165,8 +161,8 @@ namespace FrameProcessor
           apply_algorithm(static_cast<float *>(input_ptr));
         }
 
-        LOG4CXX_TRACE(logger_, "Pushing " << dataset << " dataset, frame number: "
-                                          << current_frame_number);
+        LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
+          << current_frame_number);
 
         last_frame_number_ = current_frame_number;
 
@@ -254,24 +250,6 @@ namespace FrameProcessor
   {
     free(last_frame_);
     last_frame_ = (float *) calloc(image_pixels_, sizeof(float));
-  }
-
-  //// Debug function: Takes a file prefix and frame, and writes all nonzero pixels to a file
-  void HexitecNextFramePlugin::writeFile(std::string filePrefix, float *frame)
-  {
-    std::ostringstream hitPixelsStream;
-    hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-    for (int i = 0; i < image_pixels_; i++ )
-    {
-      if(frame[i] > 0)
-        hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
-    }
-    std::string hitPixelsString  = hitPixelsStream.str();
-    std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
-        + std::string("_ODIN_Cal_detailed.txt");
-    outFile.open(fname.c_str(), std::ofstream::app);
-    outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
-    outFile.close();
   }
 
 } /* namespace FrameProcessor */

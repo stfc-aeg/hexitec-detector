@@ -90,10 +90,6 @@ namespace FrameProcessor
       std::string intercepts_filename_;
 
       void reset_calibration_values();
-
-      // DEBUGGING functions:
-      int debugFrameCounter;
-      std::ofstream outFile;
       void writeFile(std::string filePrefix, float *frame);
   };
 

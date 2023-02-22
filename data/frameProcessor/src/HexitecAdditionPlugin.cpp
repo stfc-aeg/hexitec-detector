@@ -6,6 +6,7 @@
  */
 
 #include <HexitecAdditionPlugin.h>
+#include <DebugLevelLogger.h>
 #include "version.h"
 
 namespace FrameProcessor
@@ -23,15 +24,11 @@ namespace FrameProcessor
     logger_ = Logger::getLogger("FP.HexitecAdditionPlugin");
     logger_->setLevel(Level::getAll());
     LOG4CXX_TRACE(logger_, "HexitecAdditionPlugin version " <<
-                            this->get_version_long() << " loaded.");
-
-    directional_distance_ = (int)pixel_grid_size_/2;  // Set to 1 for 3x3: 2 for 5x5 pixel grid
-
-    // Set image_width_, image_height_, image_pixels_, number_rows_, number_columns_
+      this->get_version_long() << " loaded.");
+    // Set to 1 for 3x3: 2 for 5x5 pixel grid:
+    directional_distance_ = (int)pixel_grid_size_/2;
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
-    ///
-    debugFrameCounter = 0;
   }
 
   int HexitecAdditionPlugin::get_version_major()
@@ -65,7 +62,6 @@ namespace FrameProcessor
   HexitecAdditionPlugin::~HexitecAdditionPlugin()
   {
     LOG4CXX_TRACE(logger_, "HexitecAdditionPlugin destructor.");
-
   }
 
   /**
@@ -111,7 +107,7 @@ namespace FrameProcessor
   void HexitecAdditionPlugin::status(OdinData::IpcMessage& status)
   {
     // Record the plugin's status items
-    LOG4CXX_DEBUG(logger_, "Status requested for HexitecAdditionPlugin");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecAdditionPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/pixel_grid_size", pixel_grid_size_);
   }
@@ -122,7 +118,6 @@ namespace FrameProcessor
   bool HexitecAdditionPlugin::reset_statistics(void)
   {
     // Nowt to reset..?
-
     return true;
   }
 
@@ -133,11 +128,11 @@ namespace FrameProcessor
    */
   void HexitecAdditionPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_TRACE(logger_, "Applying CS Addition algorithm.");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Applying CS Addition algorithm.");
 
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
-    static_cast<const char*>(frame->get_data_ptr()));
+      static_cast<const char*>(frame->get_data_ptr()));
 
     // Check datasets name
     FrameMetaData &frame_meta = frame->meta_data();
@@ -145,8 +140,8 @@ namespace FrameProcessor
 
     if (dataset.compare(std::string("raw_frames")) == 0)
     {
-      LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-            " dataset, frame number: " << frame->get_frame_number());
+      LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset <<
+        " dataset, frame number: " << frame->get_frame_number());
       this->push(frame);
     }
     else if (dataset.compare(std::string("processed_frames")) == 0)
@@ -160,8 +155,8 @@ namespace FrameProcessor
         // Take Frame object at input_ptr, apply CS Addition algorithm
         prepare_charged_sharing(static_cast<float *>(input_ptr));
 
-        LOG4CXX_TRACE(logger_, "Pushing " << dataset <<
-                  " dataset, frame number: " << frame->get_frame_number());
+        LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset <<
+          " dataset, frame number: " << frame->get_frame_number());
         this->push(frame);
       }
       catch (const std::exception& e)
@@ -196,7 +191,7 @@ namespace FrameProcessor
     // Copy frame's each row into extendedFrame leaving (directional_distance_ pixel(s))
     // 	padding on each side
     int startPosn = extendedFrameColumns * directional_distance_ + directional_distance_;
-    int endPosn   = extendedFrameSize - (extendedFrameColumns*directional_distance_);
+    int endPosn   = extendedFrameSize -(extendedFrameColumns*directional_distance_);
     int increment = extendedFrameColumns;
     float *rowPtr = frame;
 
@@ -245,7 +240,7 @@ namespace FrameProcessor
    * \param[in] end_position - The final pixel in the frame
    */
   void HexitecAdditionPlugin::process_addition(float *extended_frame,
-      int extended_frame_columns, int start_position, int end_position)
+    int extended_frame_columns, int start_position, int end_position)
   {
     float *neighbourPixel = NULL, *currentPixel = extended_frame;
     float *maxPosition = NULL;
@@ -327,87 +322,6 @@ namespace FrameProcessor
 
     // Return the number of valid entries parsed
     return sensors_layout_.size();
-  }
-
-  // DEBUGGING FUNCTIONS:
-  
-  void  HexitecAdditionPlugin::print_nonzero_pixels(float *in, int numberRows, int numberCols)
-  {
-    LOG4CXX_TRACE(logger_, " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-    float pixel = 0.0;
-    int index  = -1;
-    for (int row = 0; row < numberRows; row++ )
-    {
-      for (int col = 0; col < numberCols; col++ )
-      {
-        // /// Print the final 4 lines (so we can check 5x5 grid size)
-        // if ((row > (numberRows-5)))
-        // {
-        index = numberRows*row + col;
-        pixel = in[index];
-        if (pixel > 0.0)
-          LOG4CXX_TRACE(logger_, "" << &(in[index]) << " [" << index << "] I.e. ["
-                                    << row << "][" << col << "] = " << pixel);
-        // }
-      }
-    }
-  }
-
-  void  HexitecAdditionPlugin::print_last_row(float *in, int numberRows, int numberCols)
-  {
-    LOG4CXX_TRACE(logger_, " -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
-    LOG4CXX_TRACE(logger_, "" << in << " &(in[0]) " << &in[0]);
-
-    float pixel = 0.0;
-    int index = -1;
-    for (int row = 0; row < numberRows; row++ )
-    {
-      for (int col = 0; col < numberCols; col++ )
-      {
-        /// Print the final 4 lines (so we can check 5x5 grid size)
-        if ((row > (numberRows-5)))
-        {
-          index = numberRows*row + col;
-          pixel = in[index];
-          if (pixel > 0.0)
-            LOG4CXX_TRACE(logger_, "" << &(in[index]) << " [" << index << "] I.e. [" << row <<
-                "][" << col << "] = " << pixel );
-        }
-        // Print final address
-        if ((row == (numberRows-1)) && (col == (numberCols-1)))
-        {
-          index = numberRows*row + col;
-          LOG4CXX_TRACE(logger_, "" << &(in[index]) << " [" << index << "] I.e. [" << row <<
-              "][" << col << "] = " << pixel );
-        }
-      }
-    }
-  }
-
-  void HexitecAdditionPlugin::check_memory(float *float_pointer, int offset)
-  {
-    LOG4CXX_TRACE(logger_, "\t\t ***\t\t :" << float_pointer << " runs until: "
-        << (float_pointer+offset) << " diff: " << ((float_pointer+offset)-(float_pointer))
-        << " last 3 values: " << *(float_pointer+offset-3) << "  " << *(float_pointer+offset-2)
-        << "  " << *(float_pointer+offset-1));
-  }
-
-  /// Debug function: Takes a file prefix, frame and writes all nonzero pixels to file
-  void HexitecAdditionPlugin::writeFile(std::string filePrefix, float *frame)
-  {
-    std::ostringstream hitPixelsStream;
-    hitPixelsStream << "-------------- frame " << debugFrameCounter << " --------------\n";
-    for (int i = 0; i < image_pixels_; i++ )
-    {
-      if(frame[i] > 0)
-        hitPixelsStream << "Cal[" << i << "] = " << frame[i] << "\n";
-    }
-    std::string hitPixelsString  = hitPixelsStream.str();
-    std::string fname = filePrefix //+ boost::to_string(debugFrameCounter)
-        + std::string("_ODIN_Cal_detailed.txt");
-    outFile.open(fname.c_str(), std::ofstream::app);
-    outFile.write((const char *)hitPixelsString.c_str(), hitPixelsString.length() * sizeof(char));
-    outFile.close();
   }
 
 } /* namespace FrameProcessor */
