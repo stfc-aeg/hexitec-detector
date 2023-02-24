@@ -66,6 +66,8 @@ class HexitecFem():
     # Define timestamp format
     DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
 
+    UART_MAX_RETRIES = 15001
+
     def __init__(self, parent,
                  server_ctrl_ip_addr='10.0.2.2', camera_ctrl_ip_addr='10.0.2.1',
                  server_data_ip_addr='10.0.4.2', camera_data_ip_addr='10.0.4.1'):
@@ -146,6 +148,16 @@ class HexitecFem():
         self.status_error = ""
         self.stop_acquisition = False
 
+        # Replacing 6 VSRs x 7 sensors each, with 6 lists
+        self.ambient_list = [0, 0, 0, 0, 0, 0]
+        self.humidity_list = [0, 0, 0, 0, 0, 0]
+        self.asic1_list = [0, 0, 0, 0, 0, 0]
+        self.asic2_list = [0, 0, 0, 0, 0, 0]
+        self.adc_list = [0, 0, 0, 0, 0, 0]
+        self.hv_list = [0, 0, 0, 0, 0, 0]
+        # TODO: Is sync = LVDS sync?
+        self.sync_list = [0, 0, 0, 0, 0, 0]
+
         self.vsr1_ambient = 0
         self.vsr1_humidity = 0
         self.vsr1_asic1 = 0
@@ -194,7 +206,6 @@ class HexitecFem():
         self.vsr6_hv = 0
         self.vsr6_sync = -1
 
-        # TODO: Placeholder, not yet implemented in hardware
         self.hv_bias_enabled = False
 
         self.read_firmware_version = True
@@ -210,6 +221,11 @@ class HexitecFem():
         self.acquire_time = 0.0
         self.acquire_timestamp = 0
         self.offsets_timestamp = 0
+
+        # Track history of errors
+        self.errors_history = []
+        timestamp = '{}'.format(datetime.now().strftime(HexitecFem.DATE_FORMAT))
+        self.errors_history.append({timestamp: "Initialised OK."})
 
         self.environs_in_progress = False
 
@@ -229,6 +245,7 @@ class HexitecFem():
             "all_data_sent": (lambda: self.all_data_sent, self.set_all_data_sent),
             "frame_rate": (lambda: self.frame_rate, None),
             "health": (lambda: self.health, None),
+            "errors_history": (lambda: self.errors_history, None),
             "status_message": (self._get_status_message, None),
             "status_error": (self._get_status_error, None),
             "number_frames": (self.get_number_frames, self.set_number_frames),
@@ -241,12 +258,20 @@ class HexitecFem():
             "hardware_busy": (lambda: self.hardware_busy, None),
             "firmware_date": (lambda: self.firmware_date, None),
             "firmware_time": (lambda: self.firmware_time, None),
+            # TODO: Verify and implement:
+            "vsr_ambient_list": (lambda: self.ambient_list, None),
+            "vsr_humidity_list": (lambda: self.humidity_list, None),
+            "vsr_asic1_list": (lambda: self.asic1_list, None),
+            "vsr_asic2_list": (lambda: self.asic2_list, None),
+            "vsr_hv_list": (lambda: self.hv_list, None),
+            "vsr_sync_list": (lambda: self.sync_list, None),
+            # TODO: Delete below (53) lines once above verified
             "vsr1_sync": (lambda: self.vsr1_sync, None),
             "vsr2_sync": (lambda: self.vsr2_sync, None),
-            "vsr3_sync": (lambda: self.vsr1_sync, None),
-            "vsr4_sync": (lambda: self.vsr2_sync, None),
-            "vsr5_sync": (lambda: self.vsr1_sync, None),
-            "vsr6_sync": (lambda: self.vsr2_sync, None),
+            "vsr3_sync": (lambda: self.vsr3_sync, None),
+            "vsr4_sync": (lambda: self.vsr4_sync, None),
+            "vsr5_sync": (lambda: self.vsr5_sync, None),
+            "vsr6_sync": (lambda: self.vsr6_sync, None),
             "vsr1_sensors": {
                 "ambient": (lambda: self.vsr1_ambient, None),
                 "humidity": (lambda: self.vsr1_humidity, None),
@@ -354,7 +379,7 @@ class HexitecFem():
         except HexitecFemError as e:
             self.flag_error("Failed to read sensors", str(e))
         except Exception as e:
-            self.flag_error("Uncaught Exception; Reading sensors failed", str(e))
+            self.flag_error("Reading sensors failed", str(e))
         else:
             self.environs_in_progress = False
             self.parent.software_state = "Idle"
@@ -443,7 +468,7 @@ class HexitecFem():
             self.flag_error("Error", str(e))
             self._set_status_message("Is the camera powered?")
         except Exception as e:
-            self.flag_error("Uncaught Exception; Camera connection", str(e))
+            self.flag_error("Camera connection", str(e))
             # Cannot raise error beyond current thread
 
     def power_up_modules(self):
@@ -501,7 +526,7 @@ class HexitecFem():
         except HexitecFemError as e:
             self.flag_error("Failed to initialise camera", str(e))
         except Exception as e:
-            error = "Uncaught Exception; Camera initialisation failed"
+            error = "Camera initialisation failed"
             self.flag_error(error, str(e))
 
     def collect_data(self, msg=None):
@@ -524,7 +549,7 @@ class HexitecFem():
         except HexitecFemError as e:
             self.flag_error("Failed to collect data", str(e))
         except Exception as e:
-            self.flag_error("Uncaught Exception; Data collection failed", str(e))
+            self.flag_error("Data collection failed", str(e))
 
     def disconnect_hardware(self, msg=None):
         """Disconnect camera."""
@@ -544,7 +569,7 @@ class HexitecFem():
         except HexitecFemError as e:
             self.flag_error("Failed to disconnect", str(e))
         except Exception as e:
-            self.flag_error("Uncaught Exception; Disconnection failed", str(e))
+            self.flag_error("Disconnection failed", str(e))
 
     def set_debug(self, debug):
         """Set debug messages on or off."""
@@ -578,14 +603,13 @@ class HexitecFem():
             #         counter, uart_status, tx_buff_full, tx_buff_empty)
             #     print("{0} rx_buff_full: {1:0X} rx_buff_empty: {2:0X} rx_pkt_done: {3:0X}".format(
             #         msg, rx_buff_full, rx_buff_empty, rx_pkt_done))
-            if counter == 15001:
+            if counter == HexitecFem.UART_MAX_RETRIES:
                 logging.error("read_response, UART timed out")
                 raise HexitecFemError("UART read timed out")
         # msg = "{0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X}".format(
         #     counter, uart_status, tx_buff_full, tx_buff_empty)
         # print("{0} rx_buff_full: {1:0X} rx_buff_empty: {2:0X} rx_pkt_done: {3:0X}".format(
         #     msg, rx_buff_full, rx_buff_empty, rx_pkt_done))
-
         response = self.x10g_rdma.uart_rx(0x0)
         # print("R: {}.  ({}). {}".format(
         #     ' '.join("0x{0:02X}".format(x) for x in response), response, counter))
@@ -632,7 +656,7 @@ class HexitecFem():
             raise HexitecFemError("%s; %s" % (e, "No active connection"))
 
     def print_firmware_info(self):  # pragma: no cover
-        """Print info on loaded firmware.
+        """Print info on the aSpect firmware loaded.
 
         0x80: F/W customer ID
         0x81: F/W Project ID
@@ -698,7 +722,7 @@ class HexitecFem():
         except HexitecFemError as e:
             self.flag_error("Failed to collect data", str(e))
         except Exception as e:
-            self.flag_error("Uncaught Exception; Data collection failed", str(e))
+            self.flag_error("Data collection failed", str(e))
 
         # Acquisition interrupted
         self.acquisition_completed = True
@@ -867,7 +891,7 @@ class HexitecFem():
         except HexitecFemError as e:
             self.flag_error("Offsets", str(e))
         except Exception as e:
-            self.flag_error("Uncaught Exception; Failed to collect offsets", str(e))
+            self.flag_error("Failed to collect offsets", str(e))
         self.hardware_busy = False
 
     def load_enables_settings(self, number_registers, address_h, address_l,
@@ -1098,7 +1122,7 @@ class HexitecFem():
             # Flags of interest: locked, +4 to get to the next VSR, etc for all VSRs
             vsr_status_addr = 0x000003E8
             for vsr in self.VSR_ADDRESS:
-                index = vsr - 144
+                index = vsr - self.VSR_ADDRESS[0]
                 vsr_status = self.x10g_rdma.read(vsr_status_addr, burst_len=1,
                                                  comment="Read vsr{}_status".format(index))
                 vsr_status = vsr_status[0]
@@ -1111,6 +1135,8 @@ class HexitecFem():
                     logging.error("VSR{0} incomplete lock! (0x{1:X})".format(index, locked))
                     # raise HexitecFemError("VSR{0} didn't lock! (0x{1:X})".format(index, locked))
                 vsr_status_addr += 4
+                # Record sync status
+                self.sync_list[index] = locked
             self._set_status_message("Initialisation completed. VSRs configured.")
             print(" -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=- ")
             ending = time.time()
@@ -1123,7 +1149,7 @@ class HexitecFem():
         except HexitecFemError as e:
             self.flag_error("Failed to initialise camera", str(e))
         except Exception as e:
-            self.flag_error("Uncaught Exception; Camera initialisation failed", str(e))
+            self.flag_error("Camera initialisation failed", str(e))
         self.hardware_busy = False
 
     def debugging_function(self):  # pragma: no coverage
@@ -1241,7 +1267,6 @@ class HexitecFem():
                                 masked=masked, delay=delayed)     # S1Sph
         self.write_and_response(vsr, 0x30, 0x35, value_005[0], value_005[1],
                                 masked=masked, delay=delayed)     # SphS2
-        # TODO: ADDITIONALLY ADDED, IS THIS NEEDED OR NOT: ??
         self.write_and_response(vsr, 0x30, 0x36, value_006[0], value_006[1], delay=delayed)  # Gain
         # ADC Clock Delay:
         # self.write_and_response(vsr, 0x30, 0x39, value_009[0], value_009[1], delay=delayed)
@@ -1595,6 +1620,8 @@ class HexitecFem():
 
     def read_pwr_voltages(self):
         """Read and convert power data into voltages."""
+        if self.vsr_addr not in self.VSR_ADDRESS:
+            raise HexitecFemError("HV: Invalid VSR address(0x{0:02X})".format(self.vsr_addr))
         self.send_cmd([self.vsr_addr, HexitecFem.READ_PWR_VOLT])
         # sensors_values = self.read_response()
         # sensors_values = sensors_values.strip()
@@ -1613,6 +1640,11 @@ class HexitecFem():
             logging.debug("VSR: %s Power values: %s len: %s" % (format(self.vsr_addr, '#02x'),
                           sensors_values.replace('\r', ''), len(sensors_values)))
 
+        # TODO: Verify below works, remove if/elif/else block
+        index = self.vsr_addr - self.VSR_ADDRESS[0]
+        print("\n 1625, index: {} ({} - {})".format(index, self.vsr_addr, self.VSR_ADDRESS[0]))
+        self.hv_list[index] = self.get_hv_value(sensors_values)
+        # TODO: Soon redundant?
         if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
             self.vsr1_hv = self.get_hv_value(sensors_values)
             # print(" VSR1_HV: {}".format(self.vsr1_hv))
@@ -1652,6 +1684,8 @@ class HexitecFem():
 
     def read_temperatures_humidity_values(self):
         """Read and convert sensor data into temperatures and humidity values."""
+        if self.vsr_addr not in self.VSR_ADDRESS:
+            raise HexitecFemError("Sensors: Invalid VSR address(0x{0:02X})".format(self.vsr_addr))
         self.send_cmd([self.vsr_addr, 0x52])
         read_sensors = self.read_response()
         # print("Received ({0}) from 0x{1:02X}: {2}".format(
@@ -1684,6 +1718,15 @@ class HexitecFem():
         print(" * adc_hex:  {} -> {} C".format(
             sensors_values[17:21], self.get_adc_temperature(sensors_values[17:21])))
 
+        # TODO: Verify below works, remove if/elif/else block
+        index = self.vsr_addr - self.VSR_ADDRESS[0]
+        print("\n 1696, index: {} ({} - {})".format(index, self.vsr_addr, self.VSR_ADDRESS[0]))
+        self.ambient_list[index] = self.get_ambient_temperature(ambient_hex)
+        self.humidity_list[index] = self.get_humidity(humidity_hex)
+        self.asic1_list[index] = self.get_asic_temperature(asic1_hex)
+        self.asic2_list[index] = self.get_asic_temperature(asic2_hex)
+        self.adc_list[index] = self.get_adc_temperature(adc_hex)
+        # TODO: Soon redundant?
         if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
             self.vsr1_ambient = self.get_ambient_temperature(ambient_hex)
             self.vsr1_humidity = self.get_humidity(humidity_hex)
@@ -1803,6 +1846,7 @@ class HexitecFem():
             # print("sph_s2: {} from {}".format(self.sph_s2, sph_s2))
             # print("bias:   {} from {}".format(self.bias_level, bias_level))
             # print(" vsrs: {}".format(self.vsrs_selected))
+            # time.sleep(2)
             self.enable_selected_vsrs(self.vsrs_selected)
             self.calculate_frame_rate()
         except HexitecFemError as e:
@@ -2163,9 +2207,13 @@ class HexitecFem():
 
     def flag_error(self, message, e):
         """Place software into error state."""
-        self._set_status_error("{}: {}".format(message, e))
-        logging.error("{}: {}".format(message, e))
+        error_message = "{}: {}".format(message, e)
+        self._set_status_error(error_message)
+        logging.error(error_message)
         self.parent.software_state = "Error"
+        timestamp = '{}'.format(datetime.now().strftime(HexitecFem.DATE_FORMAT))
+        # Append to errors_history list, dict of keyvalue pair: timestamp, error message
+        self.errors_history.append({timestamp: error_message})
 
 
 class HexitecFemError(Exception):

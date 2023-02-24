@@ -509,7 +509,7 @@ class HexitecDAQ():
                 value[key] = self._convert_values(entry)
         try:
             val = literal_eval(value)
-        except:
+        except Exception:
             val = value
         return str(val) if isinstance(val, type(None)) else val
 
