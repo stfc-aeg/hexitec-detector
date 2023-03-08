@@ -9,6 +9,8 @@
     <title>Hexitec Server</title>
 
     <link href="css/odin-server.css" rel="stylesheet">
+    <!-- Required for displaying error history: -->
+    <link href="css/command-sequencer.css" rel="stylesheet">
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="js/bootstrap-5.1.1-dist/js/bootstrap.min.js"></script>
     <link href="js/bootstrap-5.1.1-dist/css/bootstrap.min.css" rel="stylesheet">
@@ -616,6 +618,31 @@
           </div>  <!-- class="row contflex row-cols-1 row-cols-md-2 g-4">  -->
 
         </div>  <!-- class="container-fluid"-->
+<!-- Logging Display: start -->
+        <div class="container">
+          <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-10">
+              <div class="text-center">
+                <h4>Log Messages</h4>
+              </div>
+              <pre class="pre-scrollable" id="log-messages"></pre>
+            </div>
+            <div class="col-md-1"></div>
+          </div>
+          <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-10">
+              <div class="row mb-2">
+                <div class="col-md-12">
+                  <div class="alert alert-info mb-1 d-none" role="alert" id="command-sequencer-info-alert"></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-1"></div>
+          </div>
+        </div>
+<!-- Logging Display: Ending -->
       </div> <!-- id="visualisation" -->
 
       <!-- <div class="tab-pane fade show active" id="processing" role="tabpanel"> --> <!-- id="processing" -->
@@ -893,6 +920,10 @@
                         <td>HV</td>
                         <td><span id="vsr1_hv">&nbsp;</span>V</td>
                       </tr>
+                      <tr>
+                        <td>Sync</td>
+                        <td><span id="vsr1_sync">&nbsp;</span></td>
+                      </tr>
                     </tbody>
                   </table>
                   <table class="table table-striped" style="width=100%">
@@ -927,6 +958,10 @@
                         <td>HV</td>
                         <td><span id="vsr3_hv">&nbsp;</span>V</td>
                       </tr>
+                      <tr>
+                        <td>Sync</td>
+                        <td><span id="vsr3_sync">&nbsp;</span></td>
+                      </tr>
                     </tbody>
                   </table>
                   <table class="table table-striped" style="width=100%">
@@ -960,6 +995,10 @@
                       <tr>
                         <td>HV</td>
                         <td><span id="vsr5_hv">&nbsp;</span>V</td>
+                      </tr>
+                      <tr>
+                        <td>Sync</td>
+                        <td><span id="vsr5_sync">&nbsp;</span></td>
                       </tr>
                     </tbody>
                   </table>
@@ -1005,6 +1044,10 @@
                         <td>HV</td>
                         <td><span id="vsr2_hv">&nbsp;</span>V</td>
                       </tr>
+                      <tr>
+                        <td>Sync</td>
+                        <td><span id="vsr2_sync">&nbsp;</span></td>
+                      </tr>
                     </tbody>
                   </table>
                   <table class="table table-striped" style="width=100%">
@@ -1039,6 +1082,10 @@
                         <td>HV</td>
                         <td><span id="vsr4_hv">&nbsp;</span>V</td>
                       </tr>
+                      <tr>
+                        <td>Sync</td>
+                        <td><span id="vsr4_sync">&nbsp;</span></td>
+                      </tr>
                     </tbody>
                   </table>
                   <table class="table table-striped" style="width=100%">
@@ -1072,6 +1119,10 @@
                       <tr>
                         <td>HV</td>
                         <td><span id="vsr6_hv">&nbsp;</span>V</td>
+                      </tr>
+                      <tr>
+                        <td>Sync</td>
+                        <td><span id="vsr6_sync">&nbsp;</span></td>
                       </tr>
                     </tbody>
                   </table>
@@ -1262,14 +1313,14 @@
                         <td>Offsets TS</td>
                         <td><span id="offsets_ts" style="float:right">&nbsp;</span></td>
                       </tr>
-                      <tr>
+                      <!-- <tr>
                         <td>vsr1_sync</td>
                         <td><span id="vsr1_sync" style="float:right">&nbsp;</span></td>
                       </tr>
                       <tr>
                         <td>vsr2_sync</td>
                         <td><span id="vsr2_sync" style="float:right">&nbsp;</span></td>
-                      </tr>
+                      </tr> -->
                     </tbody>
                   </table>
 

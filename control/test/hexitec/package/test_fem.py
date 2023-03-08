@@ -124,7 +124,7 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.read_sensors()
             # TODO: Ridiculous time delay or unit test completes before tested fem function
             time.sleep(3.1)
-            error = "Reading sensors failed: "
+            error = "Reading sensors failed"
             # print("UT, {}".format(time.time()))
             assert self.test_fem.fem._get_status_error() == error
 
@@ -138,7 +138,7 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.read_sensors()
             # TODO: Ridiculous time delay or unit test completes before tested fem function
             time.sleep(2.5)
-            error = "Failed to read sensors: "
+            error = "Failed to read sensors"
             assert self.test_fem.fem._get_status_error() == error
             # fake_sleep.stop()
         assert self.test_fem.fem.parent.software_state == "Error"
@@ -224,19 +224,22 @@ class TestFem(unittest.TestCase):
         with patch("hexitec.HexitecFem.IOLoop"):
             self.test_fem.fem.connect = Mock()
             vsrs_selected = 0x3F
+            vsrs_actual = 0x3F - 1
             hvs_selected = 0x3F3F
             self.test_fem.fem.vsrs_selected = vsrs_selected
             self.test_fem.fem.hardware_connected = False
             self.test_fem.fem.x10g_rdma.enable_all_vsrs = Mock()
             self.test_fem.fem.x10g_rdma.power_status = Mock()
-            self.test_fem.fem.x10g_rdma.power_status.side_effect = [vsrs_selected-1, hvs_selected]
+            self.test_fem.fem.x10g_rdma.power_status.side_effect = [vsrs_actual, hvs_selected]
+            self.test_fem.fem.flag_error = Mock()
 
             self.test_fem.fem.x10g_rdma.enable_all_hvs = Mock()
 
-            with pytest.raises(HexitecFemError) as exc_info:
-                self.test_fem.fem.power_up_modules()
-            assert exc_info.type is HexitecFemError
-            assert exc_info.value.args[0] == "Powering VSRs Error, Expected 0x3F not 0x3E"
+            self.test_fem.fem.power_up_modules()
+            expected_value, read_value = vsrs_selected, vsrs_actual
+            message = "Not all VSRs powered up"
+            error = "Expected 0x{0:02X}, got 0x{1:02X}".format(expected_value, read_value)
+            self.test_fem.fem.flag_error.assert_called_with(message, error)
 
     def test_power_up_modules_flags_hvs_unpowered(self):
         """Test function will handle if not all of selected HVs are powered on."""
@@ -244,19 +247,21 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.connect = Mock()
             vsrs_selected = 0x3F
             hvs_selected = 0x3F3F
+            hvs_actual = 0x3F3F - 512
             self.test_fem.fem.vsrs_selected = vsrs_selected
             self.test_fem.fem.hardware_connected = False
             self.test_fem.fem.x10g_rdma.enable_all_vsrs = Mock()
             self.test_fem.fem.x10g_rdma.power_status = Mock()
-            self.test_fem.fem.x10g_rdma.power_status.side_effect = [vsrs_selected, hvs_selected-256]
+            self.test_fem.fem.x10g_rdma.power_status.side_effect = [vsrs_selected, hvs_actual]
+            self.test_fem.fem.flag_error = Mock()
 
             self.test_fem.fem.x10g_rdma.enable_all_hvs = Mock()
 
-            with pytest.raises(HexitecFemError) as exc_info:
-                self.test_fem.fem.power_up_modules()
-            assert exc_info.type is HexitecFemError
-            message = "Expected 0x3F3F not 0x3E3F"
-            assert exc_info.value.args[0] == "VSR(s) HV Error, {}".format(message)
+            self.test_fem.fem.power_up_modules()
+            expected_value, read_value = hvs_selected, hvs_actual
+            message = "Not all VSRs' HV on"
+            error = "Expected 0x{0:02X}, got 0x{1:02X}".format(expected_value, read_value)
+            self.test_fem.fem.flag_error.assert_called_with(message, error)
 
     def test_power_up_modules_flags_socket_error(self):
         """Test function will handle if not all of selected HVs are powered on."""
@@ -302,7 +307,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.acquire_data = Mock()
         self.test_fem.fem.acquire_data.side_effect = AttributeError()
         self.test_fem.fem.collect_data()
-        error = "Data collection failed: "
+        error = "Data collection failed"
         assert self.test_fem.fem.status_error == error
 
     def test_collect_data_works(self):
@@ -346,7 +351,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.cam_disconnect = Mock()
         self.test_fem.fem.cam_disconnect.side_effect = Exception("")
         self.test_fem.fem.disconnect_hardware()
-        error = "Disconnection failed: "
+        error = "Disconnection failed"
         assert self.test_fem.fem.status_error == error
 
     def test_accessor_functions(self):
@@ -907,7 +912,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.send_cmd.side_effect = AttributeError()
         self.test_fem.fem.collect_offsets()
         time.sleep(0.1)
-        error = "Failed to collect offsets: "
+        error = "Failed to collect offsets"
         assert self.test_fem.fem.status_error == error
 
     # # def test_load_pwr_cal_read_enables_handles_defaults(self):
@@ -1665,7 +1670,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.initialise_system = Mock()
         self.test_fem.fem.initialise_system.side_effect = AttributeError()
         self.test_fem.fem.initialise_hardware()
-        error = "Camera initialisation failed: "
+        error = "Camera initialisation failed"
         assert self.test_fem.fem.status_error == error
 
     # @pytest.mark.slow
@@ -1813,7 +1818,7 @@ class TestFem(unittest.TestCase):
         # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
         power_command = [vsr_addr, HexitecFem.READ_PWR_VOLT]
         self.test_fem.fem.send_cmd.assert_has_calls([call(power_command)])
-        assert self.test_fem.fem.vsr1_hv == -6.832187142856924
+        assert self.test_fem.fem.hv_list[0] == -6.832187142856924
 
     # TODO: Shortly redundant
     def test_read_pwr_voltages_vsr2(self):
@@ -1832,7 +1837,7 @@ class TestFem(unittest.TestCase):
         # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
         power_command = [vsr_addr, HexitecFem.READ_PWR_VOLT]
         self.test_fem.fem.send_cmd.assert_has_calls([call(power_command)])
-        assert self.test_fem.fem.vsr2_hv == -7.862202197802162
+        assert self.test_fem.fem.hv_list[1] == -7.862202197802162
 
     # TODO: Shortly redundant
     def test_read_pwr_voltages_vsr3(self):
@@ -1851,7 +1856,7 @@ class TestFem(unittest.TestCase):
         # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
         power_command = [vsr_addr, HexitecFem.READ_PWR_VOLT]
         self.test_fem.fem.send_cmd.assert_has_calls([call(power_command)])
-        assert self.test_fem.fem.vsr3_hv == -1.8694233333332022
+        assert self.test_fem.fem.hv_list[2] == -1.8694233333332022
 
     # TODO: Shortly redundant
     def test_read_pwr_voltages_vsr4(self):
@@ -1870,7 +1875,7 @@ class TestFem(unittest.TestCase):
         # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
         power_command = [vsr_addr, HexitecFem.READ_PWR_VOLT]
         self.test_fem.fem.send_cmd.assert_has_calls([call(power_command)])
-        assert self.test_fem.fem.vsr4_hv == 1.2491343589745156
+        assert self.test_fem.fem.hv_list[3] == 1.2491343589745156
 
     # TODO: Shortly redundant
     def test_read_pwr_voltages_vsr5(self):
@@ -1889,7 +1894,7 @@ class TestFem(unittest.TestCase):
         # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
         power_command = [vsr_addr, HexitecFem.READ_PWR_VOLT]
         self.test_fem.fem.send_cmd.assert_has_calls([call(power_command)])
-        assert self.test_fem.fem.vsr5_hv == -16.354183296703127
+        assert self.test_fem.fem.hv_list[4] == -16.354183296703127
 
     # TODO: Shortly redundant
     def test_read_pwr_voltages_vsr6(self):
@@ -1908,7 +1913,7 @@ class TestFem(unittest.TestCase):
         # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
         power_command = [vsr_addr, HexitecFem.READ_PWR_VOLT]
         self.test_fem.fem.send_cmd.assert_has_calls([call(power_command)])
-        assert self.test_fem.fem.vsr6_hv == -3.746102051281923
+        assert self.test_fem.fem.hv_list[5] == -3.746102051281923
 
     def test_read_pwr_voltages_bad_vsr(self):
         """Test function handles unexpected vsr."""
@@ -1937,33 +1942,6 @@ class TestFem(unittest.TestCase):
         return_value = self.test_fem.fem.get_hv_value("0")
         assert return_value == -1
 
-    def test_read_temperatures_humidity_values_vsr2(self):
-        """Test function handle sensor values ok."""
-        self.test_fem.fem.send_cmd = Mock()
-        # response = "7C00270802A702B002D60F"
-        response = [42, 145, 54, 53, 69, 56, 53, 66, 49, 67, 48, 65, 48, 48, 48, 65, 48, 48, 48,
-                    49, 57, 67, 48, 70, 13]
-        self.test_fem.fem.read_response = Mock(return_value=response)
-        vsr_addr = HexitecFem.VSR_ADDRESS[1]
-        self.test_fem.fem.vsr_addr = vsr_addr
-        self.test_fem.fem.debug = True
-
-        self.test_fem.fem.read_temperatures_humidity_values()
-
-        command = [vsr_addr, 0x52]
-        vsr2_ambient = 23.1090869140625
-        vsr2_humidity = 38.487678339818416
-        vsr2_asic1 = 160    # 42.4375
-        vsr2_asic2 = 160    # 43.0
-        vsr2_adc = 25.75
-
-        self.test_fem.fem.send_cmd.assert_has_calls([call(command)])
-        assert self.test_fem.fem.vsr2_ambient == vsr2_ambient
-        assert self.test_fem.fem.vsr2_humidity == vsr2_humidity
-        assert self.test_fem.fem.vsr2_asic1 == vsr2_asic1
-        assert self.test_fem.fem.vsr2_asic2 == vsr2_asic2
-        assert self.test_fem.fem.vsr2_adc == vsr2_adc
-
     # TODO: Shortly redundant:
     def test_read_temperatures_humidity_values_vsr1(self):
         """Test function handle sensor values ok."""
@@ -1985,11 +1963,38 @@ class TestFem(unittest.TestCase):
         vsr1_adc = 24.6875
 
         self.test_fem.fem.send_cmd.assert_has_calls([call(command)])
-        assert self.test_fem.fem.vsr1_ambient == vsr1_ambient
-        assert self.test_fem.fem.vsr1_humidity == vsr1_humidity
-        assert self.test_fem.fem.vsr1_asic1 == vsr1_asic1
-        assert self.test_fem.fem.vsr1_asic2 == vsr1_asic2
-        assert self.test_fem.fem.vsr1_adc == vsr1_adc
+        assert self.test_fem.fem.ambient_list[0] == vsr1_ambient
+        assert self.test_fem.fem.humidity_list[0] == vsr1_humidity
+        assert self.test_fem.fem.asic1_list[0] == vsr1_asic1
+        assert self.test_fem.fem.asic2_list[0] == vsr1_asic2
+        assert self.test_fem.fem.adc_list[0] == vsr1_adc
+
+    def test_read_temperatures_humidity_values_vsr2(self):
+        """Test function handle sensor values ok."""
+        self.test_fem.fem.send_cmd = Mock()
+        # response = "7C00270802A702B002D60F"
+        response = [42, 145, 54, 53, 69, 56, 53, 66, 49, 67, 48, 65, 48, 48, 48, 65, 48, 48, 48,
+                    49, 57, 67, 48, 70, 13]
+        self.test_fem.fem.read_response = Mock(return_value=response)
+        vsr_addr = HexitecFem.VSR_ADDRESS[1]
+        self.test_fem.fem.vsr_addr = vsr_addr
+        self.test_fem.fem.debug = True
+
+        self.test_fem.fem.read_temperatures_humidity_values()
+
+        command = [vsr_addr, 0x52]
+        vsr2_ambient = 23.1090869140625
+        vsr2_humidity = 38.487678339818416
+        vsr2_asic1 = 160    # 42.4375
+        vsr2_asic2 = 160    # 43.0
+        vsr2_adc = 25.75
+
+        self.test_fem.fem.send_cmd.assert_has_calls([call(command)])
+        assert self.test_fem.fem.ambient_list[1] == vsr2_ambient
+        assert self.test_fem.fem.humidity_list[1] == vsr2_humidity
+        assert self.test_fem.fem.asic1_list[1] == vsr2_asic1
+        assert self.test_fem.fem.asic2_list[1] == vsr2_asic2
+        assert self.test_fem.fem.adc_list[1] == vsr2_adc
 
     # TODO: Shortly redundant:
     def test_read_temperatures_humidity_values_vsr3(self):
@@ -2012,11 +2017,11 @@ class TestFem(unittest.TestCase):
         vsr3_adc = 25.875
 
         self.test_fem.fem.send_cmd.assert_has_calls([call(command)])
-        assert self.test_fem.fem.vsr3_ambient == vsr3_ambient
-        assert self.test_fem.fem.vsr3_humidity == vsr3_humidity
-        assert self.test_fem.fem.vsr3_asic1 == vsr3_asic1
-        assert self.test_fem.fem.vsr3_asic2 == vsr3_asic2
-        assert self.test_fem.fem.vsr3_adc == vsr3_adc
+        assert self.test_fem.fem.ambient_list[2] == vsr3_ambient
+        assert self.test_fem.fem.humidity_list[2] == vsr3_humidity
+        assert self.test_fem.fem.asic1_list[2] == vsr3_asic1
+        assert self.test_fem.fem.asic2_list[2] == vsr3_asic2
+        assert self.test_fem.fem.adc_list[2] == vsr3_adc
 
     # TODO: Shortly redundant:
     def test_read_temperatures_humidity_values_vsr4(self):
@@ -2039,11 +2044,11 @@ class TestFem(unittest.TestCase):
         vsr4_adc = 25.8125
 
         self.test_fem.fem.send_cmd.assert_has_calls([call(command)])
-        assert self.test_fem.fem.vsr4_ambient == vsr4_ambient
-        assert self.test_fem.fem.vsr4_humidity == vsr4_humidity
-        assert self.test_fem.fem.vsr4_asic1 == vsr4_asic1
-        assert self.test_fem.fem.vsr4_asic2 == vsr4_asic2
-        assert self.test_fem.fem.vsr4_adc == vsr4_adc
+        assert self.test_fem.fem.ambient_list[3] == vsr4_ambient
+        assert self.test_fem.fem.humidity_list[3] == vsr4_humidity
+        assert self.test_fem.fem.asic1_list[3] == vsr4_asic1
+        assert self.test_fem.fem.asic2_list[3] == vsr4_asic2
+        assert self.test_fem.fem.adc_list[3] == vsr4_adc
 
     # TODO: Shortly redundant:
     def test_read_temperatures_humidity_values_vsr5(self):
@@ -2066,11 +2071,11 @@ class TestFem(unittest.TestCase):
         vsr5_adc = 26.25
 
         self.test_fem.fem.send_cmd.assert_has_calls([call(command)])
-        assert self.test_fem.fem.vsr5_ambient == vsr5_ambient
-        assert self.test_fem.fem.vsr5_humidity == vsr5_humidity
-        assert self.test_fem.fem.vsr5_asic1 == vsr5_asic1
-        assert self.test_fem.fem.vsr5_asic2 == vsr5_asic2
-        assert self.test_fem.fem.vsr5_adc == vsr5_adc
+        assert self.test_fem.fem.ambient_list[4] == vsr5_ambient
+        assert self.test_fem.fem.humidity_list[4] == vsr5_humidity
+        assert self.test_fem.fem.asic1_list[4] == vsr5_asic1
+        assert self.test_fem.fem.asic2_list[4] == vsr5_asic2
+        assert self.test_fem.fem.adc_list[4] == vsr5_adc
 
     # TODO: Shortly redundant:
     def test_read_temperatures_humidity_values_vsr6(self):
@@ -2093,11 +2098,11 @@ class TestFem(unittest.TestCase):
         vsr6_adc = 26.0
 
         self.test_fem.fem.send_cmd.assert_has_calls([call(command)])
-        assert self.test_fem.fem.vsr6_ambient == vsr6_ambient
-        assert self.test_fem.fem.vsr6_humidity == vsr6_humidity
-        assert self.test_fem.fem.vsr6_asic1 == vsr6_asic1
-        assert self.test_fem.fem.vsr6_asic2 == vsr6_asic2
-        assert self.test_fem.fem.vsr6_adc == vsr6_adc
+        assert self.test_fem.fem.ambient_list[5] == vsr6_ambient
+        assert self.test_fem.fem.humidity_list[5] == vsr6_humidity
+        assert self.test_fem.fem.asic1_list[5] == vsr6_asic1
+        assert self.test_fem.fem.asic2_list[5] == vsr6_asic2
+        assert self.test_fem.fem.adc_list[5] == vsr6_adc
 
     def test_read_temperatures_humidity_values_bad_vsr(self):
         """Test function handle misconfigured VSR."""
@@ -2366,28 +2371,21 @@ class TestFem(unittest.TestCase):
 
     def test_convert_to_aspect_format(self):
         """Test function works."""
-        value = 0
-        expected_value = 48, 48
-        encoded_h, encoded_l = self.test_fem.fem.convert_to_aspect_format(value)
-        assert (encoded_h, encoded_l) == (expected_value)
-
-        value = 5
-        expected_value = 48, 53
-        encoded_h, encoded_l = self.test_fem.fem.convert_to_aspect_format(value)
-        assert (encoded_h, encoded_l) == (expected_value)
-
-        value = 137
-        expected_value = 56, 57
-        encoded_h, encoded_l = self.test_fem.fem.convert_to_aspect_format(value)
-        assert (encoded_h, encoded_l) == (expected_value)
-
-        value = 255
-        expected_value = 70, 70
-        encoded_h, encoded_l = self.test_fem.fem.convert_to_aspect_format(value)
-        assert (encoded_h, encoded_l) == (expected_value)
-
-        #  *** convert_to_aspect_format(24) -> 49, 56
-        #  *** convert_to_aspect_format(1) -> 48, 49
+        test_cases = [
+            # (input, output1, output2)
+            (0, 48, 48),
+            (5, 48, 53),
+            (137, 56, 57),
+            (255, 70, 70),
+            (366, 49, 54),
+            (666, 50, 57),
+            (1666, 54, 56),
+            (3865, 70, 49)
+        ]
+        for avalue, expected_1, expected_2 in test_cases:
+            with self.subTest(f"{avalue} -> {expected_1}, {expected_2}"):
+                self.assertEqual((expected_1, expected_2),
+                                 self.test_fem.fem.convert_to_aspect_format(avalue))
 
     def test_translate_to_normal_hex(self):
         """Test function work OK.
@@ -2484,3 +2482,9 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem._set_status_message("Some Error")
         self.test_fem.fem.reset_error()
         assert self.test_fem.fem._get_status_error() == ""
+
+    def test_create_timestamp(self):
+        """Test function works ok."""
+        timestamp = '{}'.format(datetime.now().strftime(HexitecFem.DATE_FORMAT))
+        ts = self.test_fem.fem.create_timestamp()
+        assert timestamp[:-4] == ts[:-4]

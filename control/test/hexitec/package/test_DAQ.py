@@ -635,7 +635,8 @@ class TestDAQ(unittest.TestCase):
                     'JobGuid': '392c51f4-48c1-49ae-a1a6-2998093e7bc1'},
                 'Information': {'@xmlns:xsi': 'none',
                                 'JobGuid': '392c51f4-48c1-49ae-a1a6-2998093e7bc1'},
-                'list_list': [["String"]]}
+                'list_list': [["String"]],
+                'log_messages': []}
         param_tree_dict = self.test_daq.daq._flatten_dict(param_tree_dict)
         import h5py
         with h5py.File("/tmp/dummy.h5", "w") as hdf_file:
@@ -643,12 +644,16 @@ class TestDAQ(unittest.TestCase):
 
     def test_save_dict_contents_to_group_handle_mangled_format(self):
         """Test save_dict_contents_to_file handles mangled meta format."""
-        param_tree_dict = {'list_list': [["String"]]}
+        key = 'list_list'
+        value = [["String"]]
+        param_tree_dict = {key: value}
         param_tree_dict = self.test_daq.daq._flatten_dict(param_tree_dict)
         import h5py
         with h5py.File("/tmp/dummy.h5", "w") as hdf_file:
             self.test_daq.daq.save_dict_contents_to_file(hdf_file, '/', param_tree_dict)
-            assert self.test_daq.daq.parent.fem.status_error == "Error parsing Meta"
+            error = "No conversion path for dtype: dtype('<U6')"
+            message = "Parsing key: /{} value: {}: {}".format(key, value, error)
+            assert self.test_daq.daq.parent.fem.status_error == message
 
     def test_write_metadata_works(self):
         """Test write_metadata function."""

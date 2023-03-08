@@ -36,17 +36,8 @@ class HexitecFem():
     # Thread executor used for functions handling rdma transactions
     thread_executor = futures.ThreadPoolExecutor(max_workers=1)
 
-    IMAGE = [
-        "LOG HDF5 FILE",
-        "LOG BIN FILE",
-        "STREAM DATA",
-        "NETWORK PACKETS ONLY"
-    ]
-
-    # VSR_ADDRESS = [0x90]
+    # VSRs values taken from INI file
     VSR_ADDRESS = range(0x90, 0x96, 1)
-
-    SENSORS_READOUT_OK = 7
 
     HEX_ASCII_CODE = [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
                       0x41, 0x42, 0x43, 0x44, 0x45, 0x46]
@@ -148,63 +139,14 @@ class HexitecFem():
         self.status_error = ""
         self.stop_acquisition = False
 
-        # Replacing 6 VSRs x 7 sensors each, with 6 lists
+        # 6 VSRs x 7 sensors each, 7 lists with sensor data
         self.ambient_list = [0, 0, 0, 0, 0, 0]
         self.humidity_list = [0, 0, 0, 0, 0, 0]
         self.asic1_list = [0, 0, 0, 0, 0, 0]
         self.asic2_list = [0, 0, 0, 0, 0, 0]
         self.adc_list = [0, 0, 0, 0, 0, 0]
         self.hv_list = [0, 0, 0, 0, 0, 0]
-        # TODO: Is sync = LVDS sync?
         self.sync_list = [0, 0, 0, 0, 0, 0]
-
-        self.vsr1_ambient = 0
-        self.vsr1_humidity = 0
-        self.vsr1_asic1 = 0
-        self.vsr1_asic2 = 0
-        self.vsr1_adc = 0
-        self.vsr1_hv = 0
-        self.vsr1_sync = -1
-
-        self.vsr2_ambient = 0
-        self.vsr2_humidity = 0
-        self.vsr2_asic1 = 0
-        self.vsr2_asic2 = 0
-        self.vsr2_adc = 0
-        self.vsr2_hv = 0
-        self.vsr2_sync = -1
-
-        self.vsr3_ambient = 0
-        self.vsr3_humidity = 0
-        self.vsr3_asic1 = 0
-        self.vsr3_asic2 = 0
-        self.vsr3_adc = 0
-        self.vsr3_hv = 0
-        self.vsr3_sync = -1
-
-        self.vsr4_ambient = 0
-        self.vsr4_humidity = 0
-        self.vsr4_asic1 = 0
-        self.vsr4_asic2 = 0
-        self.vsr4_adc = 0
-        self.vsr4_hv = 0
-        self.vsr4_sync = -1
-
-        self.vsr5_ambient = 0
-        self.vsr5_humidity = 0
-        self.vsr5_asic1 = 0
-        self.vsr5_asic2 = 0
-        self.vsr5_adc = 0
-        self.vsr5_hv = 0
-        self.vsr5_sync = -1
-
-        self.vsr6_ambient = 0
-        self.vsr6_humidity = 0
-        self.vsr6_asic1 = 0
-        self.vsr6_asic2 = 0
-        self.vsr6_adc = 0
-        self.vsr6_hv = 0
-        self.vsr6_sync = -1
 
         self.hv_bias_enabled = False
 
@@ -224,8 +166,11 @@ class HexitecFem():
 
         # Track history of errors
         self.errors_history = []
-        timestamp = '{}'.format(datetime.now().strftime(HexitecFem.DATE_FORMAT))
-        self.errors_history.append({timestamp: "Initialised OK."})
+        timestamp = self.create_timestamp()
+        self.errors_history.append([timestamp, "Initialised OK."])
+        self.last_message_timestamp = ''
+        self.log_messages = [timestamp, "initialised OK"]
+        # self.log_messages_deque = deque(maxlen=250)
 
         self.environs_in_progress = False
 
@@ -246,6 +191,8 @@ class HexitecFem():
             "frame_rate": (lambda: self.frame_rate, None),
             "health": (lambda: self.health, None),
             "errors_history": (lambda: self.errors_history, None),
+            'log_messages': (lambda: self.log_messages, None),
+            'last_message_timestamp': (lambda: self.last_message_timestamp, self.get_log_messsages),
             "status_message": (self._get_status_message, None),
             "status_error": (self._get_status_error, None),
             "number_frames": (self.get_number_frames, self.set_number_frames),
@@ -263,63 +210,9 @@ class HexitecFem():
             "vsr_humidity_list": (lambda: self.humidity_list, None),
             "vsr_asic1_list": (lambda: self.asic1_list, None),
             "vsr_asic2_list": (lambda: self.asic2_list, None),
+            "vsr_adc_list": (lambda: self.adc_list, None),
             "vsr_hv_list": (lambda: self.hv_list, None),
-            "vsr_sync_list": (lambda: self.sync_list, None),
-            # TODO: Delete below (53) lines once above verified
-            "vsr1_sync": (lambda: self.vsr1_sync, None),
-            "vsr2_sync": (lambda: self.vsr2_sync, None),
-            "vsr3_sync": (lambda: self.vsr3_sync, None),
-            "vsr4_sync": (lambda: self.vsr4_sync, None),
-            "vsr5_sync": (lambda: self.vsr5_sync, None),
-            "vsr6_sync": (lambda: self.vsr6_sync, None),
-            "vsr1_sensors": {
-                "ambient": (lambda: self.vsr1_ambient, None),
-                "humidity": (lambda: self.vsr1_humidity, None),
-                "asic1": (lambda: self.vsr1_asic1, None),
-                "asic2": (lambda: self.vsr1_asic2, None),
-                "adc": (lambda: self.vsr1_adc, None),
-                "hv": (lambda: self.vsr1_hv, None),
-            },
-            "vsr2_sensors": {
-                "ambient": (lambda: self.vsr2_ambient, None),
-                "humidity": (lambda: self.vsr2_humidity, None),
-                "asic1": (lambda: self.vsr2_asic1, None),
-                "asic2": (lambda: self.vsr2_asic2, None),
-                "adc": (lambda: self.vsr2_adc, None),
-                "hv": (lambda: self.vsr2_hv, None),
-            },
-            "vsr3_sensors": {
-                "ambient": (lambda: self.vsr3_ambient, None),
-                "humidity": (lambda: self.vsr3_humidity, None),
-                "asic1": (lambda: self.vsr3_asic1, None),
-                "asic2": (lambda: self.vsr3_asic2, None),
-                "adc": (lambda: self.vsr3_adc, None),
-                "hv": (lambda: self.vsr3_hv, None),
-            },
-            "vsr4_sensors": {
-                "ambient": (lambda: self.vsr4_ambient, None),
-                "humidity": (lambda: self.vsr4_humidity, None),
-                "asic1": (lambda: self.vsr4_asic1, None),
-                "asic2": (lambda: self.vsr4_asic2, None),
-                "adc": (lambda: self.vsr4_adc, None),
-                "hv": (lambda: self.vsr4_hv, None),
-            },
-            "vsr5_sensors": {
-                "ambient": (lambda: self.vsr5_ambient, None),
-                "humidity": (lambda: self.vsr5_humidity, None),
-                "asic1": (lambda: self.vsr5_asic1, None),
-                "asic2": (lambda: self.vsr5_asic2, None),
-                "adc": (lambda: self.vsr5_adc, None),
-                "hv": (lambda: self.vsr5_hv, None),
-            },
-            "vsr6_sensors": {
-                "ambient": (lambda: self.vsr6_ambient, None),
-                "humidity": (lambda: self.vsr6_humidity, None),
-                "asic1": (lambda: self.vsr6_asic1, None),
-                "asic2": (lambda: self.vsr6_asic2, None),
-                "adc": (lambda: self.vsr6_adc, None),
-                "hv": (lambda: self.vsr6_hv, None),
-            }
+            "vsr_sync_list": (lambda: self.sync_list, None)
         }
         self.waited = 0.0
 
@@ -383,6 +276,7 @@ class HexitecFem():
         else:
             self.environs_in_progress = False
             self.parent.software_state = "Idle"
+            self._set_status_message("VSRs sensors read")
 
     def disconnect(self):
         """Disconnect hardware connection."""
@@ -469,7 +363,7 @@ class HexitecFem():
             self._set_status_message("Is the camera powered?")
         except Exception as e:
             self.flag_error("Camera connection", str(e))
-            # Cannot raise error beyond current thread
+            # Cannot raise Exception beyond current thread
 
     def power_up_modules(self):
         """Power up and enable VSRs."""
@@ -485,22 +379,22 @@ class HexitecFem():
             # Ensure selected VSR(s) were switched on
             read_value = read_value & expected_value
             if (read_value == expected_value):
-                logging.debug(" Power OK: 0x{0:08X}".format(read_value))
+                logging.debug("Power OK: 0x{0:08X}".format(read_value))
             else:
-                message = "Expected 0x{0:02X} not 0x{1:02X}".format(expected_value, read_value)
-                logging.error("Not all VSRs powered up, {}".format(message))
-                raise HexitecFemError("Powering VSRs Error, {}".format(message))
+                message = "Not all VSRs powered up"
+                error = "Expected 0x{0:02X}, got 0x{1:02X}".format(expected_value, read_value)
+                self.flag_error(message, error)
             # Switch HV on
             self.x10g_rdma.enable_all_hvs()
             expected_value = (self.vsrs_selected << 8) | self.vsrs_selected
             read_value = self.x10g_rdma.power_status()
             read_value = read_value & expected_value
             if (read_value == expected_value):
-                logging.debug(" HV OK: 0x{0:08X}".format(read_value))
+                logging.debug("HV OK: 0x{0:08X}".format(read_value))
             else:
-                message = "Expected 0x{0:02X} not 0x{1:02X}".format(expected_value, read_value)
-                logging.error("Not all VSRs' HV on, {}".format(message))
-                raise HexitecFemError("VSR(s) HV Error, {}".format(message))
+                message = "Not all VSRs' HV on"
+                error = "Expected 0x{0:02X}, got 0x{1:02X}".format(expected_value, read_value)
+                self.flag_error(message, error)
             # print("\n FAKE initialisation\n")
             powering_delay = 10  # 1
             logging.debug("VSRs enabled; Waiting {} seconds".format(powering_delay))
@@ -544,7 +438,6 @@ class HexitecFem():
             self.hardware_busy = True
             self.parent.software_state = "Acquiring"
             self._set_status_message("Acquiring data..")
-            print("\n fem.collect_data()")
             self.acquire_data()
         except HexitecFemError as e:
             self.flag_error("Failed to collect data", str(e))
@@ -674,7 +567,7 @@ class HexitecFem():
         """Acquire data, poll fem for completion and read out fem monitors."""
         try:
             logging.info("Initiate Data Capture")
-            self.acquire_start_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
+            self.acquire_start_time = self.create_timestamp()
 
             # TODO: Placeholder for triggering daq
 
@@ -731,7 +624,7 @@ class HexitecFem():
     def acquire_data_completed(self):
         """Reset variables and read out Firmware monitors post data transfer."""
         # print("\n fem.acquire_data_completed()")
-        self.acquire_stop_time = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
+        self.acquire_stop_time = self.create_timestamp()
 
         if self.stop_acquisition:
             logging.info("Cancelling Acquisition..")
@@ -850,7 +743,7 @@ class HexitecFem():
                 vsrs_register_89 = self.read_receive_from_all(
                     HexitecFem.READ_REG_VALUE, 0x38, 0x39)
                 dc_captured = self.are_capture_dc_ready(vsrs_register_89)
-                if self.debug:
+                if self.debug:   # pragma: no coverage
                     logging.debug("Register 0x89: {0}, Done? {1} Timing: {2:2.5} s".format(
                         vsrs_register_89, dc_captured, time.time() - poll_beginning))
                 if time.time() - poll_beginning > timeout:
@@ -879,7 +772,7 @@ class HexitecFem():
             self._set_status_message("Offsets collections operation completed.")
             self.parent.software_state = "Idle"
             # Timestamp when offsets collected
-            self.offsets_timestamp = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
+            self.offsets_timestamp = self.create_timestamp()
             # # String format can be turned into millisecond format:
             # date_time = datetime.strptime(self.offsets_timestamp, HexitecFem.DATE_FORMAT)
             # ts = date_time.timestamp() * 1000
@@ -1123,17 +1016,16 @@ class HexitecFem():
             vsr_status_addr = 0x000003E8
             for vsr in self.VSR_ADDRESS:
                 index = vsr - self.VSR_ADDRESS[0]
-                vsr_status = self.x10g_rdma.read(vsr_status_addr, burst_len=1,
-                                                 comment="Read vsr{}_status".format(index))
+                vsr_status = self.x10g_rdma.read(
+                    vsr_status_addr, burst_len=1, comment="Read vsr{}_status".format(index))
                 vsr_status = vsr_status[0]
                 locked = vsr_status & 0xFF
-                # print("vsr{0}_status 0x{1:08X} = 0x{2:08X}. Locked? 0x{3:X}".format(
-                #     index, vsr_status_addr, vsr_status, locked))
                 if (locked == 0xFF):
                     logging.debug("VSR{0} Locked (0x{1:X})".format(index, locked))
                 else:
-                    logging.error("VSR{0} incomplete lock! (0x{1:X})".format(index, locked))
-                    # raise HexitecFemError("VSR{0} didn't lock! (0x{1:X})".format(index, locked))
+                    message = "VSR{0} Error".format(index)
+                    error = "Incomplete lock (0x{0:X})".format(locked)
+                    self.flag_error(message, error)
                 vsr_status_addr += 4
                 # Record sync status
                 self.sync_list[index] = locked
@@ -1625,46 +1517,24 @@ class HexitecFem():
         self.send_cmd([self.vsr_addr, HexitecFem.READ_PWR_VOLT])
         # sensors_values = self.read_response()
         # sensors_values = sensors_values.strip()
-        read_sensors = self.read_response()
-        # print("Received ({}) from UART: {}".format(len(read_sensors),
-        # ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
-        read_sensors = read_sensors[1:]  # Omit start of sequence char, matches existing 2x2 source
+        vsrs_values = self.read_response()
+        # print("Received ({}) from UART: {}".format(len(vsrs_values),
+        # ' '.join("0x{0:02X}".format(x) for x in vsrs_values)))
+        vsrs_values = vsrs_values[1:]  # Omit start of sequence char, matches existing 2x2 source
         # Turn list of integers into ASCII string
-        sensors_values = self.convert_list_to_string(read_sensors)
+        sensors_values = self.convert_list_to_string(vsrs_values)
         if len(sensors_values) != 50:
             logging.warning("VSR 0x{0:X}: Received incomplete power data".format(self.vsr_addr))
             return None
         # print(" ASCII string: {}".format(sensors_values))
 
-        if self.debug:
+        if self.debug:   # pragma: no coverage
             logging.debug("VSR: %s Power values: %s len: %s" % (format(self.vsr_addr, '#02x'),
                           sensors_values.replace('\r', ''), len(sensors_values)))
 
         # TODO: Verify below works, remove if/elif/else block
         index = self.vsr_addr - self.VSR_ADDRESS[0]
-        print("\n 1625, index: {} ({} - {})".format(index, self.vsr_addr, self.VSR_ADDRESS[0]))
         self.hv_list[index] = self.get_hv_value(sensors_values)
-        # TODO: Soon redundant?
-        if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
-            self.vsr1_hv = self.get_hv_value(sensors_values)
-            # print(" VSR1_HV: {}".format(self.vsr1_hv))
-        elif (self.vsr_addr == HexitecFem.VSR_ADDRESS[1]):
-            self.vsr2_hv = self.get_hv_value(sensors_values)
-            # print(" VSR2_hv: {}".format(self.vsr2_hv))
-        elif (self.vsr_addr == HexitecFem.VSR_ADDRESS[2]):
-            self.vsr3_hv = self.get_hv_value(sensors_values)
-            # print(" VSR3_hv: {}".format(self.vsr3_hv))
-        elif (self.vsr_addr == HexitecFem.VSR_ADDRESS[3]):
-            self.vsr4_hv = self.get_hv_value(sensors_values)
-            # print(" VSR4_hv: {}".format(self.vsr4_hv))
-        elif (self.vsr_addr == HexitecFem.VSR_ADDRESS[4]):
-            self.vsr5_hv = self.get_hv_value(sensors_values)
-            # print(" VSR5_hv: {}".format(self.vsr5_hv))
-        elif (self.vsr_addr == HexitecFem.VSR_ADDRESS[5]):
-            self.vsr6_hv = self.get_hv_value(sensors_values)
-            # print(" VSR6_hv: {}".format(self.vsr6_hv))
-        else:
-            logging.warning("VSR 0x{0:X}: Didn't expect power readout(!)".format(self.vsr_addr))
 
     def get_hv_value(self, sensors_values):
         """Take the full string of voltages and extract the HV value."""
@@ -1687,18 +1557,18 @@ class HexitecFem():
         if self.vsr_addr not in self.VSR_ADDRESS:
             raise HexitecFemError("Sensors: Invalid VSR address(0x{0:02X})".format(self.vsr_addr))
         self.send_cmd([self.vsr_addr, 0x52])
-        read_sensors = self.read_response()
+        vsrs_values = self.read_response()
         # print("Received ({0}) from 0x{1:02X}: {2}".format(
-        # len(read_sensors), self.vsr_addr, ' '.join("0x{0:02X}".format(x) for x in read_sensors)))
-        if len(read_sensors) != 25:
+        # len(vsrs_values), self.vsr_addr, ' '.join("0x{0:02X}".format(x) for x in vsrs_values)))
+        if len(vsrs_values) != 25:
             logging.warning("VSR 0x{0:X}: Received incomplete environ data".format(self.vsr_addr))
             return None
-        read_sensors = read_sensors[1:]  # Omit start of sequence char, matches existing 2x2 source
+        vsrs_values = vsrs_values[1:]  # Omit start of sequence char, matches existing 2x2 source
         # Turn list of integers into ASCII string
-        sensors_values = self.convert_list_to_string(read_sensors)
+        sensors_values = self.convert_list_to_string(vsrs_values)
         # print(" ASCII string: {}".format(sensors_values))
 
-        if self.debug:
+        if self.debug:   # pragma: no coverage
             logging.debug("VSR: %s sensors_values: %s len: %s" % (format(self.vsr_addr, '#02x'),
                           sensors_values, len(sensors_values)))
 
@@ -1707,65 +1577,24 @@ class HexitecFem():
         asic1_hex = sensors_values[9:13]
         asic2_hex = sensors_values[13:17]
         adc_hex = sensors_values[17:21]
-        print(" * amb_hex:  {} -> {} C".format(
-            sensors_values[1:5], self.get_ambient_temperature(sensors_values[1:5])))
-        print(" * hum_hex:  {} -> {}".format(
-            sensors_values[5:9], self.get_humidity(sensors_values[5:9])))
-        print(" * asic1_hex:{} -> {} C".format(
-            sensors_values[9:13], self.get_asic_temperature(sensors_values[9:13])))
-        print(" * asic2_hex:{} -> {} C".format(
-            sensors_values[13:17], self.get_asic_temperature(sensors_values[13:17])))
-        print(" * adc_hex:  {} -> {} C".format(
-            sensors_values[17:21], self.get_adc_temperature(sensors_values[17:21])))
+        # print(" * amb_hex:  {} -> {} C".format(
+        #     sensors_values[1:5], self.get_ambient_temperature(sensors_values[1:5])))
+        # print(" * hum_hex:  {} -> {}".format(
+        #     sensors_values[5:9], self.get_humidity(sensors_values[5:9])))
+        # print(" * asic1_hex:{} -> {} C".format(
+        #     sensors_values[9:13], self.get_asic_temperature(sensors_values[9:13])))
+        # print(" * asic2_hex:{} -> {} C".format(
+        #     sensors_values[13:17], self.get_asic_temperature(sensors_values[13:17])))
+        # print(" * adc_hex:  {} -> {} C".format(
+        #     sensors_values[17:21], self.get_adc_temperature(sensors_values[17:21])))
 
         # TODO: Verify below works, remove if/elif/else block
         index = self.vsr_addr - self.VSR_ADDRESS[0]
-        print("\n 1696, index: {} ({} - {})".format(index, self.vsr_addr, self.VSR_ADDRESS[0]))
         self.ambient_list[index] = self.get_ambient_temperature(ambient_hex)
         self.humidity_list[index] = self.get_humidity(humidity_hex)
         self.asic1_list[index] = self.get_asic_temperature(asic1_hex)
         self.asic2_list[index] = self.get_asic_temperature(asic2_hex)
         self.adc_list[index] = self.get_adc_temperature(adc_hex)
-        # TODO: Soon redundant?
-        if (self.vsr_addr == HexitecFem.VSR_ADDRESS[0]):
-            self.vsr1_ambient = self.get_ambient_temperature(ambient_hex)
-            self.vsr1_humidity = self.get_humidity(humidity_hex)
-            self.vsr1_asic1 = self.get_asic_temperature(asic1_hex)
-            self.vsr1_asic2 = self.get_asic_temperature(asic2_hex)
-            self.vsr1_adc = self.get_adc_temperature(adc_hex)
-        elif (self.vsr_addr == HexitecFem.VSR_ADDRESS[1]):
-            self.vsr2_ambient = self.get_ambient_temperature(ambient_hex)
-            self.vsr2_humidity = self.get_humidity(humidity_hex)
-            self.vsr2_asic1 = self.get_asic_temperature(asic1_hex)
-            self.vsr2_asic2 = self.get_asic_temperature(asic2_hex)
-            self.vsr2_adc = self.get_adc_temperature(adc_hex)
-        elif (self.vsr_addr == HexitecFem.VSR_ADDRESS[2]):
-            self.vsr3_ambient = self.get_ambient_temperature(ambient_hex)
-            self.vsr3_humidity = self.get_humidity(humidity_hex)
-            self.vsr3_asic1 = self.get_asic_temperature(asic1_hex)
-            self.vsr3_asic2 = self.get_asic_temperature(asic2_hex)
-            self.vsr3_adc = self.get_adc_temperature(adc_hex)
-        elif (self.vsr_addr == HexitecFem.VSR_ADDRESS[3]):
-            self.vsr4_ambient = self.get_ambient_temperature(ambient_hex)
-            self.vsr4_humidity = self.get_humidity(humidity_hex)
-            self.vsr4_asic1 = self.get_asic_temperature(asic1_hex)
-            self.vsr4_asic2 = self.get_asic_temperature(asic2_hex)
-            self.vsr4_adc = self.get_adc_temperature(adc_hex)
-        elif (self.vsr_addr == HexitecFem.VSR_ADDRESS[4]):
-            self.vsr5_ambient = self.get_ambient_temperature(ambient_hex)
-            self.vsr5_humidity = self.get_humidity(humidity_hex)
-            self.vsr5_asic1 = self.get_asic_temperature(asic1_hex)
-            self.vsr5_asic2 = self.get_asic_temperature(asic2_hex)
-            self.vsr5_adc = self.get_adc_temperature(adc_hex)
-        elif (self.vsr_addr == HexitecFem.VSR_ADDRESS[5]):
-            self.vsr6_ambient = self.get_ambient_temperature(ambient_hex)
-            self.vsr6_humidity = self.get_humidity(humidity_hex)
-            self.vsr6_asic1 = self.get_asic_temperature(asic1_hex)
-            self.vsr6_asic2 = self.get_asic_temperature(asic2_hex)
-            self.vsr6_adc = self.get_adc_temperature(adc_hex)
-        else:
-            logging.warning("VSR 0x%s: Sensor data temporarily unavailable" %
-                            format(self.vsr_addr, '02x'))
 
     def get_ambient_temperature(self, hex_val):
         """Calculate ambient temperature."""
@@ -2205,15 +2034,40 @@ class HexitecFem():
         self._set_status_message("")
         self.parent.software_state = "Cleared"
 
-    def flag_error(self, message, e):
+    def flag_error(self, message, e=None):
         """Place software into error state."""
-        error_message = "{}: {}".format(message, e)
+        error_message = "{}".format(message)
+        if e:
+            error_message += ": {}".format(e)
         self._set_status_error(error_message)
         logging.error(error_message)
         self.parent.software_state = "Error"
-        timestamp = '{}'.format(datetime.now().strftime(HexitecFem.DATE_FORMAT))
-        # Append to errors_history list, dict of keyvalue pair: timestamp, error message
-        self.errors_history.append({timestamp: error_message})
+        timestamp = self.create_timestamp()
+        # Append to errors_history list, nested list of timestamp, error message
+        self.errors_history.append([timestamp, error_message])
+
+    def create_timestamp(self):
+        """Returns timestamp of now."""
+        return '{}'.format(datetime.now().strftime(HexitecFem.DATE_FORMAT))
+
+    def get_log_messsages(self, last_message_timestamp):
+        """This method gets the log messages that are appended to the log message deque by the
+        log function, and adds them to the log_messages variable. If a last message timestamp is
+        provided, it will only get the subsequent log messages if there are any, otherwise it will
+        get all of the messages from the deque.
+        """
+        logs = []
+        if self.last_message_timestamp != "":
+            # Display any new message
+            for index, (timestamp, log_message) in enumerate(self.errors_history):
+                if timestamp > last_message_timestamp:
+                    logs = self.errors_history[index:]
+                    break
+        else:
+            logs = self.errors_history
+            self.last_message_timestamp = self.create_timestamp()
+
+        self.log_messages = [(str(timestamp), log_message) for timestamp, log_message in logs]
 
 
 class HexitecFemError(Exception):

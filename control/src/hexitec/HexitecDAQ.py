@@ -259,31 +259,26 @@ class HexitecDAQ():
         fr_status = self.get_adapter_status("fr")
         fp_status = self.get_adapter_status("fp")
         if self.are_processes_connected(fr_status) is False:
-            self.parent.fem._set_status_error("Frame Receiver(s) not connected!")
-            logging.error("Cannot start Acquisition: Frame Receiver(s) not found")
+            self.parent.fem.flag_error("Frame Receiver(s) not connected!")
             self.in_error = True
             return False
         elif self.are_processes_configured(fr_status, "fr") is False:
-            self.parent.fem._set_status_error("Frame Receiver(s) not configured!")
-            logging.error("Frame Receiver(s) not configured!")
+            self.parent.fem.flag_error("Frame Receiver(s) not configured!")
             self.in_error = True
             return False
         elif self.are_buffers_available(fr_status) is False:
-            self.parent.fem._set_status_error("FR buffers not empty!")
-            logging.error("FR buffers not all empty")
+            self.parent.fem.flag_error("FR buffers not empty!")
             self.in_error = True
             return False
         else:
             logging.debug("Frame Receiver(s) connected and configured")
 
         if self.are_processes_connected(fp_status) is False:
-            self.parent.fem._set_status_error("Frame Processor(s) not connected!")
-            logging.error("Cannot Start Acquisition: Frame Processor(s) not found")
+            self.parent.fem.flag_error("Frame Processor(s) not connected!")
             self.in_error = True
             return False
         elif self.are_processes_configured(fp_status, "fp") is False:
-            self.parent.fem._set_status_error("Frame Processor(s) not configured!")
-            logging.error("Frame Processor(s) not configured!")
+            self.parent.fem.flag_error("Frame Processor(s) not configured!")
             self.in_error = True
             return False
         else:
@@ -403,8 +398,7 @@ class HexitecDAQ():
                 self.hdf_retry += 1
                 return
             else:
-                logging.error("Stop Acquisition timed out, H5 file still open")
-                self.parent.fem._set_status_error("DAQ timed out, file didn't close")
+                self.parent.fem.flag_error("DAQ timed out, file didn't close")
         self.hdf_retry = 0
         self.daq_stop_time = '%s' % (datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
         self.set_file_writing(False)
@@ -451,7 +445,7 @@ class HexitecDAQ():
             self.hdf_retry = 0
             self.in_progress = False
             self.daq_ready = True
-            self.parent.fem._set_status_error("Error reopening HDF file: %s" % e)
+            self.parent.fem.flag_error("Error reopening HDF file: %s" % e)
             return
 
         error_code = 0
@@ -470,7 +464,7 @@ class HexitecDAQ():
             self.parent.fem._set_status_message("Meta data added to {}".format(
                 self.hdf_file_location))
         else:
-            self.parent.fem._set_status_error("Meta data writer unable to access file(s)!")
+            self.parent.fem.flag_error("Meta data writer unable to access file(s)!")
 
         hdf_file.close()
         self.in_progress = False
@@ -494,16 +488,23 @@ class HexitecDAQ():
                 self.save_dict_contents_to_file(hdf_file, path + key + '/', item)
             else:
                 try:
+                    # Do not include errors, log messages (see error log for such details)
+                    if key == "errors_history" or key == "log_messages":
+                        continue
                     hdf_file[path + key] = item
-                except TypeError as error:
+                except TypeError as e:
                     logging.error("Error: {} Parsing key: {}{} value: {}".format(
-                        error, path, key, item))
-                    self.parent.fem._set_status_error("Error parsing Meta")
+                        e, path, key, item))
+                    self.parent.fem.flag_error("Parsing key: {}{} value: {}".format(
+                        path, key, item), str(e))
 
     def _convert_values(self, value):
         """Convert values to correct Python types."""
         if isinstance(value, list):
-            value = [self._convert_values(v) for v in value]
+            if len(value) == 0:
+                value = ["(empty)"]
+            else:
+                value = [self._convert_values(v) for v in value]
         elif isinstance(value, dict):
             for key, entry in value.items():
                 value[key] = self._convert_values(entry)
@@ -1024,8 +1025,7 @@ class HexitecDAQ():
         status_code = response.status_code
         if (status_code != 200):
             error = "Error {} deleting existing datasets in fp adapter".format(status_code)
-            logging.error(error)
-            self.parent.fem._set_status_error(error)
+            self.parent.fem.flag_error(error)
 
         # Delete any existing datasets
         command = "config/plugin"
@@ -1034,9 +1034,8 @@ class HexitecDAQ():
         response = self.adapters["fp"].put(command, request)
         status_code = response.status_code
         if (status_code != 200):
-            error = "Error {} deleting existing datasets in fp adapter".format(status_code)
-            logging.error(error)
-            self.parent.fem._set_status_error(error)
+            error = "Error {} disconnecting plugins from fp adapter".format(status_code)
+            self.parent.fem.flag_error(error)
 
         self.extra_datasets = []
         self.master_dataset = "spectra_bins"
@@ -1065,26 +1064,21 @@ class HexitecDAQ():
 
             command = "config/store/" + str(index)    # Configure using strings
             request = ApiAdapterRequest(store_string, content_type="application/json")
-            # command = "config/config_file/" + str(index)   # file
-            # request = ApiAdapterRequest(store_config, content_type="application/json")  # File
 
             response = self.adapters["fp"].put(command, request)
             status_code = response.status_code
             if (status_code != 200):
-                error = "Error {} parsing store json in fp adapter".format(status_code)
-                logging.error(error)
-                self.parent.fem._set_status_error(error)
+                error = "Error {} storing plugins config in fp adapter".format(status_code)
+                self.parent.fem.flag_error(error)
 
             command = "config/execute/" + str(index)  # Configure using strings
             request = ApiAdapterRequest(execute_string, content_type="application/json")
-            # request = ApiAdapterRequest(execute_config, content_type="application/json")  # File
 
             response = self.adapters["fp"].put(command, request)
             status_code = response.status_code
             if (status_code != 200):
-                error = "Error {} parsing execute json in fp adapter".format(status_code)
-                logging.error(error)
-                self.parent.fem._set_status_error(error)
+                error = "Error {} loading plugins config in fp adapter".format(status_code)
+                self.parent.fem.flag_error(error)
 
         # Allow FP time to process above PUT requests before configuring plugin settings
         IOLoop.instance().call_later(0.4, self.submit_configuration)

@@ -468,13 +468,15 @@ class Hexitec():
                 json.dump(config, f)
         except Exception as e:
             self.fem.flag_error("Saving Odin config", str(e))
-            raise HexitecError(e)
 
     def load_odin(self, msg):
         """Load Odin's settings from file."""
         try:
             with open(self.odin_config_file, "r") as f:
+                print("\n *** adp.load_Odin()")
+                # print(" exists? {}".format(os.stat(self.odin_config_file)))
                 config = json.load(f)
+                print(" ({}) config = {}".format(type(config), config))
                 self.fem.hexitec_config = config["fem/hexitec_config"]
                 self.daq.file_name = config["daq/file_name"]
                 self.daq.file_dir = config["daq/file_dir"]
@@ -507,10 +509,8 @@ class Hexitec():
                 self.duration_enable = config["duration_enable"]
         except FileNotFoundError as e:
             self.fem.flag_error("Loading Odin config - file missing", str(e))
-            raise HexitecError(e)
         except JSONDecodeError as e:
             self.fem.flag_error("Loading Odin config - Bad json?", str(e))
-            raise HexitecError(e)
 
     def set_duration_enable(self, duration_enable):
         """Set duration enable, calculating number of frames accordingly."""

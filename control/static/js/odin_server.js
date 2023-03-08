@@ -1,7 +1,12 @@
+const ALERT_ID = {
+    'sequencer_info': '#command-sequencer-info-alert',
+};
+
 api_version = '0.1';
 const hexitec_url = '/api/' + api_version + '/hexitec/';
 
 let hexitec_endpoint;
+let last_message_timestamp = '';
 
 // Vars added for Odin-Data
 var raw_data_enable = false;
@@ -235,6 +240,7 @@ function poll_fem()
     // Check whether odin_server is running
     hexitec_endpoint.get_url(hexitec_url + 'detector')
     .then(result => {
+        display_log_messages();
         // Clear any previous error
         document.querySelector('#odin-control-error').innerHTML = "";
         software_state = result["detector"]["software_state"];
@@ -424,54 +430,20 @@ function poll_fem()
                 document.querySelector('#odin-control-error').innerHTML = status;
             }
 
-            document.querySelector('#vsr1_humidity').innerHTML = fem["vsr1_sensors"]["humidity"].toFixed(2);
-            document.querySelector('#vsr1_ambient').innerHTML = fem["vsr1_sensors"]["ambient"].toFixed(2);
-            document.querySelector('#vsr1_asic1').innerHTML = fem["vsr1_sensors"]["asic1"].toFixed(2);
-            document.querySelector('#vsr1_asic2').innerHTML = fem["vsr1_sensors"]["asic2"].toFixed(2);
-            document.querySelector('#vsr1_adc').innerHTML = fem["vsr1_sensors"]["adc"].toFixed(2);
-            document.querySelector('#vsr1_hv').innerHTML = fem["vsr1_sensors"]["hv"].toFixed(3);
-            document.querySelector('#vsr1_sync').innerHTML = fem["vsr1_sync"];
-
-            document.querySelector('#vsr2_humidity').innerHTML = fem["vsr2_sensors"]["humidity"].toFixed(2);
-            document.querySelector('#vsr2_ambient').innerHTML = fem["vsr2_sensors"]["ambient"].toFixed(2);
-            document.querySelector('#vsr2_asic1').innerHTML = fem["vsr2_sensors"]["asic1"].toFixed(2);
-            document.querySelector('#vsr2_asic2').innerHTML = fem["vsr2_sensors"]["asic2"].toFixed(2);
-            document.querySelector('#vsr2_adc').innerHTML = fem["vsr2_sensors"]["adc"].toFixed(2);
-            document.querySelector('#vsr2_hv').innerHTML = fem["vsr2_sensors"]["hv"].toFixed(3);
-            document.querySelector('#vsr2_sync').innerHTML = fem["vsr2_sync"];
-
-            document.querySelector('#vsr3_humidity').innerHTML = fem["vsr3_sensors"]["humidity"].toFixed(2);
-            document.querySelector('#vsr3_ambient').innerHTML = fem["vsr3_sensors"]["ambient"].toFixed(2);
-            document.querySelector('#vsr3_asic1').innerHTML = fem["vsr3_sensors"]["asic1"].toFixed(2);
-            document.querySelector('#vsr3_asic2').innerHTML = fem["vsr3_sensors"]["asic2"].toFixed(2);
-            document.querySelector('#vsr3_adc').innerHTML = fem["vsr3_sensors"]["adc"].toFixed(2);
-            document.querySelector('#vsr3_hv').innerHTML = fem["vsr3_sensors"]["hv"].toFixed(3);
-            // document.querySelector('#vsr3_sync').innerHTML = fem["vsr3_sync"];
-
-            document.querySelector('#vsr4_humidity').innerHTML = fem["vsr4_sensors"]["humidity"].toFixed(2);
-            document.querySelector('#vsr4_ambient').innerHTML = fem["vsr4_sensors"]["ambient"].toFixed(2);
-            document.querySelector('#vsr4_asic1').innerHTML = fem["vsr4_sensors"]["asic1"].toFixed(2);
-            document.querySelector('#vsr4_asic2').innerHTML = fem["vsr4_sensors"]["asic2"].toFixed(2);
-            document.querySelector('#vsr4_adc').innerHTML = fem["vsr4_sensors"]["adc"].toFixed(2);
-            document.querySelector('#vsr4_hv').innerHTML = fem["vsr4_sensors"]["hv"].toFixed(3);
-            // document.querySelector('#vsr4_sync').innerHTML = fem["vsr4_sync"];
-
-            document.querySelector('#vsr5_humidity').innerHTML = fem["vsr5_sensors"]["humidity"].toFixed(2);
-            document.querySelector('#vsr5_ambient').innerHTML = fem["vsr5_sensors"]["ambient"].toFixed(2);
-            document.querySelector('#vsr5_asic1').innerHTML = fem["vsr5_sensors"]["asic1"].toFixed(2);
-            document.querySelector('#vsr5_asic2').innerHTML = fem["vsr5_sensors"]["asic2"].toFixed(2);
-            document.querySelector('#vsr5_adc').innerHTML = fem["vsr5_sensors"]["adc"].toFixed(2);
-            document.querySelector('#vsr5_hv').innerHTML = fem["vsr5_sensors"]["hv"].toFixed(3);
-            // document.querySelector('#vsr5_sync').innerHTML = fem["vsr5_sync"];
-
-            document.querySelector('#vsr6_humidity').innerHTML = fem["vsr6_sensors"]["humidity"].toFixed(2);
-            document.querySelector('#vsr6_ambient').innerHTML = fem["vsr6_sensors"]["ambient"].toFixed(2);
-            document.querySelector('#vsr6_asic1').innerHTML = fem["vsr6_sensors"]["asic1"].toFixed(2);
-            document.querySelector('#vsr6_asic2').innerHTML = fem["vsr6_sensors"]["asic2"].toFixed(2);
-            document.querySelector('#vsr6_adc').innerHTML = fem["vsr6_sensors"]["adc"].toFixed(2);
-            document.querySelector('#vsr6_hv').innerHTML = fem["vsr6_sensors"]["hv"].toFixed(3);
-            // document.querySelector('#vsr6_sync').innerHTML = fem["vsr6_sync"];
-
+            // Update VSRs sensor data (plus sync status)
+            var numVSRs = fem["vsr_humidity_list"].length;
+            let idx = 0;
+            for (var i = 0; i < numVSRs; i++) {
+                idx = i + 1;
+                // console.log("       [" + i + "] = " + fem['vsr_humidity_list'][i]);
+                document.querySelector('#vsr'+idx+'_humidity').innerHTML = fem["vsr_humidity_list"][i].toFixed(2);
+                document.querySelector('#vsr'+idx+'_ambient').innerHTML = fem["vsr_ambient_list"][i].toFixed(2);
+                document.querySelector('#vsr'+idx+'_asic1').innerHTML = fem["vsr_asic1_list"][i].toFixed(2);
+                document.querySelector('#vsr'+idx+'_asic2').innerHTML = fem["vsr_asic2_list"][i].toFixed(2);
+                document.querySelector('#vsr'+idx+'_adc').innerHTML = fem["vsr_adc_list"][i].toFixed(2);
+                document.querySelector('#vsr'+idx+'_hv').innerHTML = fem["vsr_hv_list"][i].toFixed(2);
+                document.querySelector('#vsr'+idx+'_sync').innerHTML = fem["vsr_sync_list"][i];
+            }
             /// To be implemented: system_health - true=fem OK, false=fem bad
 
             // Traffic "light" green/red to indicate system good/bad
@@ -1388,4 +1360,67 @@ function showTime()
     timeString += minutes;
     timeString += seconds;
     return timeString;
+}
+
+/**
+ * This function displays the log messages that are returned by the backend in the
+ * pre-scrollable element and scrolls down to the bottom of it. It stores the
+ * timestamp of the last message so that it can tell the backend which messages it
+ * needs to get next. All log messages are returned if the last_message_timestamp is
+ * empty and this normally happens when the page is reloaded.
+ */
+function display_log_messages() {
+    get_log_messages()
+    .then(result => {
+        // console.log("result: " + JSON.stringify(result.fem.log_messages, null, 4))
+        log_messages = result.fem.log_messages;
+        if (!is_empty_object(log_messages)) {
+            last_message_timestamp = log_messages[log_messages.length - 1][0];
+            // console.log("pre-loop");
+            // console.log("log_messages: " + JSON.stringify(log_messages, null, 4));
+            // console.log("   " + log_messages[0]);
+            // console.log("   " + log_messages[1]);
+            pre_scrollable = document.querySelector('#log-messages');
+            for (log_message in log_messages) {
+                // console.log("log_messages[log_message][0]: i.e. log_messages['" + log_message + "'][0] : " + log_messages[log_message][0]);
+                // console.log("log_messages[log_message][1]: i.e. log_messages['" + log_message + "'][1] : " + log_messages[log_message][1]);
+                timestamp = log_messages[log_message][0];
+                timestamp = timestamp.substr(0, timestamp.length - 3);
+                pre_scrollable.innerHTML += 
+                    `<span style="color:#007bff">${timestamp}</span> ${log_messages[log_message][1]}<br>`;
+                pre_scrollable.scrollTop = pre_scrollable.scrollHeight;
+            }
+        }
+    })
+    .catch(error => {
+        alert_message = 'A problem occurred while trying to get log messages: ' + error.message;
+        display_alert(ALERT_ID['sequencer_info'], alert_message);
+    });
+}
+
+/**
+ * This function gets the log messages from the backend.
+ */
+function get_log_messages() {
+    return hexitec_endpoint.put({ 'last_message_timestamp': last_message_timestamp }, 'detector/fem')
+        .then(hexitec_endpoint.get_url(hexitec_url + 'detector/fem/log_messages')
+    );
+}
+
+/**
+ * This function replicates the equivalent jQuery isEmptyObject, returning true if the
+ * object passed as an parameter is empty.
+ */
+function is_empty_object(obj) {
+    return Object.keys(obj).length === 0;
+}
+
+/**
+ * This function displays the alert and the given alert message by removing
+ * the d-none class from the div(s).
+ */
+function display_alert(alert_id, alert_message) {
+    let alert_elem = document.querySelector(alert_id);
+    alert_elem.innerHTML = alert_message;
+    alert_elem.classList.remove('d-none');
 }

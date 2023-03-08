@@ -4,7 +4,7 @@ Test Cases for HexitecAdapter, Hexitec in hexitec.HexitecDAQ, hexitec.Hexitec.
 Christian Angelsen, STFC Detector Systems Software Group
 """
 
-from hexitec.adapter import HexitecAdapter, Hexitec, HexitecDetectorDefaults, HexitecError
+from hexitec.adapter import HexitecAdapter, Hexitec, HexitecDetectorDefaults
 from odin.adapters.parameter_tree import ParameterTreeError
 
 from json.decoder import JSONDecodeError
@@ -419,9 +419,9 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         with patch('json.dump') as mock_dump:
             mock_dump.side_effect = Exception()
-            with pytest.raises(HexitecError) as exc_info:
-                self.test_adapter.detector.save_odin("")
-            assert exc_info.type is HexitecError
+            self.test_adapter.detector.save_odin("")
+            m = "Saving Odin config"
+            self.test_adapter.detector.fem.flag_error.assert_called_with(m, "")
 
     def test_load_odin(self):
         """Test function works ok."""
@@ -435,9 +435,9 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         with patch('json.load') as mock_load:
             mock_load.side_effect = FileNotFoundError()
-            with pytest.raises(HexitecError) as exc_info:
-                self.test_adapter.detector.load_odin("")
-            assert exc_info.type is HexitecError
+            self.test_adapter.detector.load_odin("")
+            m = "Loading Odin config - file missing"
+            self.test_adapter.detector.fem.flag_error.assert_called_with(m, "")
 
     def test_load_odin_handles_json_decode_error(self):
         """Test function handles JSONDecodeError."""
@@ -446,9 +446,10 @@ class TestDetector(unittest.TestCase):
             doc = """{"plugin":{"disc": "all"}},{"exec":{"index": "fake.json"}}]"""
             e_msg = "Fake Exception"
             mock_load.side_effect = JSONDecodeError(e_msg, doc, 0)
-            with pytest.raises(HexitecError) as exc_info:
-                self.test_adapter.detector.load_odin("")
-            assert exc_info.type is HexitecError
+            self.test_adapter.detector.load_odin("")
+            m = "Loading Odin config - Bad json?"
+            e = "Fake Exception: line 1 column 1 (char 0)"
+            self.test_adapter.detector.fem.flag_error.assert_called_with(m, e)
 
     def test_set_duration_enable_true(self):
         """Test function can update duration enable to True."""
