@@ -572,100 +572,120 @@ if __name__ == '__main__':  # noqa: C901
     beginning = time.time()
     try:
         VSR_ADDRESS = range(0x90, 0x96)
-        hxt.x10g_rdma.enable_all_vsrs()     # Switches all VSRs on
+        VSR_ADDRESS = [0x90, 0x92, 0x93, 0x94, 0x95]
+        # VSR_ADDRESS = [0x92]
+        # hxt.x10g_rdma.enable_all_vsrs()     # Switches all VSRs on
+        # # hxt.x10g_rdma.disable_all_vsrs()     # Switches all VSRs on
 
-        # VSR_ADDRESS = [0x90]
-        # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
+        # # _slot = 6
+        # # VSR_ADDRESS = [0x90]
+        # # hxt.x10g_rdma.enable_vsr(_slot)  # Switches a single VSR on
 
-        # read_value = hxt.x10g_rdma.power_status()
-        # expected_value = 0x3F   # 0x1
-        # if (read_value == expected_value):
-        #     print(" OK Power: 0x{0:08X}".format(read_value))
-        # else:
-        #     print(" !! Power: 0x{0:08X}".format(read_value))
-        this_delay = 10
-        print("VSR(s) powered; Waiting {} seconds".format(this_delay))
-        time.sleep(this_delay)
+        # # # # read_value = hxt.x10g_rdma.power_status()
+        # # # # expected_value = 0x3F   # 0x1
+        # # # # if (read_value == expected_value):
+        # # # #     print(" OK Power: 0x{0:08X}".format(read_value))
+        # # # # else:
+        # # # #     print(" !! Power: 0x{0:08X}".format(read_value))
+        # this_delay = 10
+        # print("VSR(s) powered; Waiting {} seconds".format(this_delay))
+        # time.sleep(this_delay)
 
-        # Send to UART: 0x90 0xE3
-        # ... sending: 0x23 0x90 0xE3 0x0D
-        print("Send E3 to all..")
-        hxt.x10g_rdma.uart_tx([0xFF, 0xE3])
-        print("Wait 5 sec")
-        time.sleep(5)
+        # # Send to UART: 0x90 0xE3
+        # # ... sending: 0x23 0x90 0xE3 0x0D
+        # print("Send E3 to all..")
+        # hxt.x10g_rdma.uart_tx([0xFF, 0xE3])
+        # print("Wait 5 sec")
+        # time.sleep(5)
 
-        # Execute equivalent of VSR1_Configure.txt:
-        for vsr in VSR_ADDRESS:
-            print(" --- Initialising VSR 0x{0:X} ---".format(vsr))
-            hxt.initialise_vsr(vsr)
-            # Check PLLs locked
-            bPolling = True
-            time_taken = 0
-            while bPolling:
-                r89_list, r89_value = hxt.read_register89(vsr)
-                LSB = ord(r89_value[1])
-                # Is PLL locked? (bit1 high)
-                if LSB & 2:
-                    bPolling = False
+        # print("Sending WHOIS Command..")
+        # # print(" ------ WHOIS Reply ------")
+        # hxt.x10g_rdma.uart_tx([0xFF, 0xF7])
+        # time.sleep(1)
+        # read_sensors = hxt.x10g_rdma.uart_rx(0x0)
+        # # read_sensors = read_sensors[:-2]
+        # print("Slot: {} Replies: {} {} (read_sensors: {})".format(
+        #     _slot, hex(read_sensors[0]), hex(read_sensors[1]),
+        #     read_sensors))
+        # sys.exit(0)
+        fails = 0
+        which_ones = []
+        while True:
+            print(f"Fails: {fails} Culprits: {which_ones}")
+            # Execute equivalent of VSR1_Configure.txt:
+            for vsr in VSR_ADDRESS:
+                print(" --- Initialising VSR 0x{0:X} ---".format(vsr))
+                hxt.initialise_vsr(vsr)
+                # Check PLLs locked
+                bPolling = True
+                time_taken = 0
+                while bPolling:
+                    r89_list, r89_value = hxt.read_register89(vsr)
+                    LSB = ord(r89_value[1])
+                    # Is PLL locked? (bit1 high)
+                    if LSB & 2:
+                        bPolling = False
+                    else:
+                        # print(" R.89: {} {}".format(r89_value, r89_value[1], ord(r89_value[1])))
+                        time.sleep(0.2)
+                        time_taken += 0.2
+                    if time_taken > 3.0:
+                        print(" *** VSR{} PLL still disabled! ***".format(vsr-144))
+                        bPolling = False
+                        # raise HexitecFemError("Timed out polling VSR{} register 0x89; PLL remains disabled".format(vsr-144))
+            ending = time.time()
+            print("That took: {}".format(ending - beginning))
+
+            print("set re_EN_TRAINING '1'")
+            # training_en_mask = 0x10
+            hxt.x10g_rdma.write(0x00000020, 0x10, burst_len=1, comment="Enabling training")
+
+            print("Waiting 0.2 seconds..")
+            time.sleep(0.2)
+
+            print("set re_EN_TRAINING '0'")
+            # training_en_mask = 0x00
+            hxt.x10g_rdma.write(0x00000020, 0x00, burst_len=1, comment="Enabling training")
+
+            vsr_status_addr = 0x000003E8  # Flags of interest: locked, +4 to get to the next VSR, et cetera for all VSRs
+            for vsr in VSR_ADDRESS:
+                index = vsr - 144
+                vsr_status = hxt.x10g_rdma.read(vsr_status_addr, burst_len=1, comment="Read vsr{}_status".format(index))
+                vsr_status = vsr_status[0]
+                locked = vsr_status & 0xFF
+                # print("vsr{0}_status 0x{1:08X} = 0x{2:08X}. Locked? 0x{3:X}".format(index, vsr_status_addr, vsr_status, locked))
+                if (locked == 0xFF):
+                    print("VSR{0} Locked (0x{1:X})".format(vsr-143, locked))
                 else:
-                    # print(" R.89: {} {}".format(r89_value, r89_value[1], ord(r89_value[1])))
-                    time.sleep(0.2)
-                    time_taken += 0.2
-                if time_taken > 3.0:
-                    print(" *** VSR{} PLL still disabled! ***".format(vsr-144))
-                    bPolling = False
-                    # raise HexitecFemError("Timed out polling VSR{} register 0x89; PLL remains disabled".format(vsr-144))
-        ending = time.time()
-        print("That took: {}".format(ending - beginning))
+                    print("VSR{0} incomplete lock! (0x{1:X}) ****".format(vsr-143, locked))
+                    # raise HexitecFemError("VSR{0} failed to lock! (0x{1:X})".format(vsr-143, locked))
+                    fails += 1
+                    which_ones.append( "{0}".format(vsr-143))
+                vsr_status_addr += 4
 
-        print("set re_EN_TRAINING '1'")
-        # training_en_mask = 0x10
-        hxt.x10g_rdma.write(0x00000020, 0x10, burst_len=1, comment="Enabling training")
+            reg07 = []
+            reg89 = []
+            # print("VSR Row S1: (High, Low). S1Sph  SphS2:  adc clk delay: . FVAL/LVAL:  VCAL2, (H, L) ")
+            # print("VSR Row S1: (H, L). S1Sph  SphS2:  adc clk dly: . FVAL/LVAL:  VCAL2, (H, L) Gain")
+            for vsr in VSR_ADDRESS:
+                # hxt.readout_vsr_register(vsr, "Column Read  Enable ASIC1", 0x36, 0x31)
+                # hxt.readout_vsr_register(vsr, "Column Read  Enable ASIC2", 0x43, 0x32)
+                # hxt.readout_vsr_register(vsr, "Column Power Enable ASIC1", 0x34, 0x44)
+                # hxt.readout_vsr_register(vsr, "Column Power Enable ASIC2", 0x41, 0x45)
+                # hxt.readout_vsr_register(vsr, "Column Calib Enable ASIC1", 0x35, 0x37)
+                # hxt.readout_vsr_register(vsr, "Column Calib Enable ASIC2", 0x42, 0x38)
 
-        print("Waiting 0.2 seconds..")
-        time.sleep(0.2)
+                # hxt.readout_vsr_register(vsr, "Row    Read  Enable ASIC1", 0x34, 0x33)
+                # hxt.readout_vsr_register(vsr, "Row    Read  Enable ASIC2", 0x41, 0x34)
+                # hxt.readout_vsr_register(vsr, "Row    Power Enable ASIC1", 0x32, 0x46)
+                # hxt.readout_vsr_register(vsr, "Row    Power Enable ASIC2", 0x39, 0x30)
+                # hxt.readout_vsr_register(vsr, "Row    Calib Enable ASIC1", 0x33, 0x39)
+                # hxt.readout_vsr_register(vsr, "Row    Calib Enable ASIC2", 0x39, 0x41)
 
-        print("set re_EN_TRAINING '0'")
-        # training_en_mask = 0x00
-        hxt.x10g_rdma.write(0x00000020, 0x00, burst_len=1, comment="Enabling training")
-
-        vsr_status_addr = 0x000003E8  # Flags of interest: locked, +4 to get to the next VSR, et cetera for all VSRs
-        for vsr in VSR_ADDRESS:
-            index = vsr - 144
-            vsr_status = hxt.x10g_rdma.read(vsr_status_addr, burst_len=1, comment="Read vsr{}_status".format(index))
-            vsr_status = vsr_status[0]
-            locked = vsr_status & 0xFF
-            # print("vsr{0}_status 0x{1:08X} = 0x{2:08X}. Locked? 0x{3:X}".format(index, vsr_status_addr, vsr_status, locked))
-            if (locked == 0xFF):
-                print("VSR{0} Locked (0x{1:X})".format(vsr-143, locked))
-            else:
-                print("VSR{0} incomplete lock! (0x{1:X})".format(vsr-143, locked))
-                # raise HexitecFemError("VSR{0} failed to lock! (0x{1:X})".format(vsr-143, locked))
-            vsr_status_addr += 4
-
-        reg07 = []
-        reg89 = []
-        # print("VSR Row S1: (High, Low). S1Sph  SphS2:  adc clk delay: . FVAL/LVAL:  VCAL2, (H, L) ")
-        # print("VSR Row S1: (H, L). S1Sph  SphS2:  adc clk dly: . FVAL/LVAL:  VCAL2, (H, L) Gain")
-        for vsr in VSR_ADDRESS:
-            # hxt.readout_vsr_register(vsr, "Column Read  Enable ASIC1", 0x36, 0x31)
-            # hxt.readout_vsr_register(vsr, "Column Read  Enable ASIC2", 0x43, 0x32)
-            # hxt.readout_vsr_register(vsr, "Column Power Enable ASIC1", 0x34, 0x44)
-            # hxt.readout_vsr_register(vsr, "Column Power Enable ASIC2", 0x41, 0x45)
-            # hxt.readout_vsr_register(vsr, "Column Calib Enable ASIC1", 0x35, 0x37)
-            # hxt.readout_vsr_register(vsr, "Column Calib Enable ASIC2", 0x42, 0x38)
-
-            # hxt.readout_vsr_register(vsr, "Row    Read  Enable ASIC1", 0x34, 0x33)
-            # hxt.readout_vsr_register(vsr, "Row    Read  Enable ASIC2", 0x41, 0x34)
-            # hxt.readout_vsr_register(vsr, "Row    Power Enable ASIC1", 0x32, 0x46)
-            # hxt.readout_vsr_register(vsr, "Row    Power Enable ASIC2", 0x39, 0x30)
-            # hxt.readout_vsr_register(vsr, "Row    Calib Enable ASIC1", 0x33, 0x39)
-            # hxt.readout_vsr_register(vsr, "Row    Calib Enable ASIC2", 0x39, 0x41)
-
-            r7_list, r7_value = hxt.read_register07(vsr)
-            reg07.append(r7_value)
-            r89_list, r89_value = hxt.read_register89(vsr)
-            reg89.append(r89_value)
+                r7_list, r7_value = hxt.read_register07(vsr)
+                reg07.append(r7_value)
+                r89_list, r89_value = hxt.read_register89(vsr)
+                reg89.append(r89_value)
 
 #             s1_high_resp, s1_high_reply = hxt.read_and_response(vsr, 0x30, 0x33)
 #             s1_low_resp, s1_low_reply = hxt.read_and_response(vsr, 0x30, 0x32)
@@ -698,5 +718,7 @@ if __name__ == '__main__':  # noqa: C901
 
     except (socket.error, struct.error, HexitecFemError) as e:
         print(" *** Caught Exception: {} ***".format(e))
+    except Exception as e:
+        print(" Exception: {}".format(e))
 
     hxt.disconnect()

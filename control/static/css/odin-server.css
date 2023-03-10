@@ -3,12 +3,12 @@ body {
 }
 
 .odin-server {
-    padding: 40px 15px;
+    padding: 4px 5px;
     text-align: center;
 }
 
 .overall-table {
-    padding: 40px 15px;
+    padding: 4px 5px;
     white-space: nowrap;
     text-align: left;
 }

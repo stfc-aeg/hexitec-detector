@@ -346,11 +346,11 @@ if __name__ == '__main__':  # pragma: no cover
         sys.exit(-1)
 
     try:
-        # VSR_ADDRESS = [0x90, 0x92, 0x93, 0x94, 0x95]
+        VSR_ADDRESS = [0x90, 0x92, 0x93, 0x94, 0x95]
         # VSR_ADDRESS = [0x90, 0x91, 0x92, 0x93, 0x94, 0x95]
         # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
         print("Switch on VSRs..")
-        VSR_ADDRESS = range(0x90, 0x96, 1)
+        # VSR_ADDRESS = range(0x90, 0x96, 1)
         hxt.x10g_rdma.enable_all_vsrs()   # Switches on all VSR
 
         expected_value = 0x3F

@@ -404,6 +404,7 @@ if __name__ == '__main__':  # pragma: no cover
         # VSR_ADDRESS = [0x90]
         # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
         VSR_ADDRESS = range(0x90, 0x96, 1)
+        # VSR_ADDRESS = [0x90, 0x92, 0x93, 0x94, 0x95]
         hxt.x10g_rdma.enable_all_vsrs()   # Switches on all VSR
 
         print(" Power status: {0:X}".format(hxt.x10g_rdma.power_status()))
