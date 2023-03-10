@@ -57,7 +57,7 @@ class HexitecSanityChecker():
         """Connect to the 10 G UDP control channel."""
         self.x10g_rdma = RdmaUDP(self.local_ip, self.local_port,
                                  self.rdma_ip, self.rdma_port,
-                                 9000, 1, self.debug,
+                                 9000, 2, self.debug,
                                  unique_cmd_no)
         self.x10g_rdma.setDebug(self.debug)
         self.x10g_rdma.ack = False  # True
@@ -346,7 +346,8 @@ if __name__ == '__main__':  # pragma: no cover
         sys.exit(-1)
 
     try:
-        # VSR_ADDRESS = [0x90]
+        # VSR_ADDRESS = [0x90, 0x92, 0x93, 0x94, 0x95]
+        # VSR_ADDRESS = [0x90, 0x91, 0x92, 0x93, 0x94, 0x95]
         # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
         print("Switch on VSRs..")
         VSR_ADDRESS = range(0x90, 0x96, 1)
@@ -422,11 +423,16 @@ if __name__ == '__main__':  # pragma: no cover
                     (scratch1234[1] << 32) + scratch1234[0]
         hxt.compare("Write Scratch Registers 1-4", int_value, new_value)
 
+        # Reset all 4 scratch register values
+        new_value = 0x44444444333333332222222211111111
+        hxt.x10g_rdma.write(0x8030, new_value, burst_len=4, comment="Set Scratch Reg1234 value")
+        hxt.x10g_rdma.read(0x00008030, burst_len=4, comment='Read Scratch Reg 1234')
+
         print(" ------ Environmental Data ------")
         # Request and receive environmental data #
         the_start = time.time()
         print(" ambient:          humidity:         asic1:             asic2:          adc: ")
-        for index in range(0x90, 0x96):
+        for index in VSR_ADDRESS:
             # print("Calling uart_tx([0x{0:X}, 0x52])".format(index), flush=True)
             hxt.x10g_rdma.uart_tx([index, 0x52])
             hxt.await_uart_ready()

@@ -149,12 +149,8 @@ class RdmaUDP(object):
                 decoded_str = ' '.join("0x{0:X}".format(x) for x in decoded)
                 print("R decoded: {0}. \"{1}\"".format(decoded_str, comment))
         except socket.error as e:
-            msg = " *** Read (R) Error: {0}. burst_len: {1:X} cmd_no: ".format(e, burst_len)
-            print("{0}{1:0X} op_code: {2:0X} address: 0x{3:0X} comment: \"{4}\" ***".format(
-                msg, self.cmd_no, op_code, address, comment))
             raise socket.error(e)
         except struct.error as e:
-            print(" *** Read Ack Error: {} ***".format(e))
             raise struct.error(e)
         return data
 
@@ -358,9 +354,10 @@ class RdmaUDP(object):
         debug = False   # True
         uart_tx_ctrl_addr = uart_tx_ctrl_offset
         # Check that UART buffer is empty (1 = empty, 0 = has data)
-        is_tx_buff_empty, is_rx_buff_empty = self.check_tx_rx_buffs_empty()
-        # print(" uart_tx, is_tx_buff_empty: {} , is_rx_buff_empty: {}".format(
-        #     is_tx_buff_empty, is_rx_buff_empty))
+        try:
+            is_tx_buff_empty, is_rx_buff_empty = self.check_tx_rx_buffs_empty()
+        except HexitecRdmaError as e:
+            raise HexitecRdmaError("uart_tx: {}".format(e))
         if is_tx_buff_empty == 0:
             raise Exception("uart_tx: TX Buffer NOT empty!")
 
@@ -425,7 +422,7 @@ class RdmaUDP(object):
             is_rx_buff_empty = (uart_status & rx_buff_empty_mask) >> 3
             is_rx_pkt_done = (uart_status & rx_pkt_done_mask) >> 4
         except Exception as e:
-            print(" *** read_uart_status error: {} ***".format(e))
+            raise HexitecRdmaError("read_uart_status: {}".format(e))
         return uart_status, is_tx_buff_full, is_tx_buff_empty, is_rx_buff_full, \
             is_rx_buff_empty, is_rx_pkt_done
 
@@ -443,8 +440,9 @@ class RdmaUDP(object):
             # print(" *** Check_tx_RX_buffs_empty: {0:X}".format(uart_status))
             is_tx_buff_empty = (uart_status & tx_buff_empty_mask) >> 1
             is_rx_buff_empty = (uart_status & rx_buff_empty_mask) >> 3
+            # print(" *** tx: {} rx: {}".format(is_tx_buff_empty, is_rx_buff_empty))
         except Exception as e:
-            print(" *** check_tx_buff_empty error: {} ***".format(e))
+            raise HexitecRdmaError("check_tx_rx_buffs_empty: {}".format(e))
         return is_tx_buff_empty, is_rx_buff_empty
 
     def enable_vsr_or_hv(self, vsr_number, bit_mask):   # pragma: no coverage
@@ -615,3 +613,9 @@ class RdmaUDP(object):
     def negative_module_mask(self, module):
         """Bit manipulation for VSR/HV control functions."""
         return ~(1 << (module - 1)) | (1 << (module + 8 - 1))
+
+
+class HexitecRdmaError(Exception):
+    """Simple exception class to wrap exceptions."""
+
+    pass

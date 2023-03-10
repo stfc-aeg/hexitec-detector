@@ -5,7 +5,7 @@ Christian Angelsen, STFC Detector Systems Software Group
 """
 
 from socket import error as socket_error
-from hexitec.RdmaUDP import RdmaUDP
+from hexitec.RdmaUDP import RdmaUDP, HexitecRdmaError
 
 import pytest
 import struct
@@ -242,6 +242,17 @@ class TestRdmaUDP():
 #         test_rdma.rdma.read.assert_called_with(address, burst_len=1, comment='Read UART Status')
 #         assert returned_values == expected_values
 
+    def test_read_uart_status_handles_exception(self, test_rdma):
+        """Test function works ok."""
+        e = "Oops"
+        test_rdma.rdma.read = Mock()
+        test_rdma.rdma.read.side_effect = Exception(e)
+        msg = "read_uart_status: {}".format(e)
+        with pytest.raises(HexitecRdmaError) as exc_info:
+            test_rdma.rdma.read_uart_status()
+        assert exc_info.type is HexitecRdmaError
+        assert exc_info.value.args[0] == msg
+
     def test_close(self, test_rdma):
         """Test socket's closed."""
         test_rdma.rdma.socket.close = Mock()
@@ -280,6 +291,16 @@ class TestRdmaUDP():
         test_rdma.rdma.uart_tx([0x30, 0x31, 0x31, 0x31])
         # assert data == [1, 3, 9, 11, 18]
         test_rdma.rdma.check_tx_rx_buffs_empty.assert_called()
+
+    def test_uart_tx_handles_buffs_exception(self, test_rdma):
+        """Test function handles check_tx_rx_buffs_empty() throwing exception."""
+        e = "Artificial"
+        test_rdma.rdma.check_tx_rx_buffs_empty = Mock()
+        test_rdma.rdma.check_tx_rx_buffs_empty.side_effect = Exception(e)
+        with pytest.raises(Exception) as exc_info:
+            test_rdma.rdma.uart_tx([])
+        assert exc_info.type is Exception
+        assert exc_info.value.args[0] == e
 
     def test_uart_tx_handles_nonempty_tx_buffer(self, test_rdma):
         """Test function handles if TX buffer not empty."""
@@ -340,16 +361,27 @@ class TestRdmaUDP():
         assert exc_info.type is struct.error
         assert str(exc_info.value.args[0]) == e
 
-    def test_check_tx_rx_buffs_empty_handles_exception(self, test_rdma):
-        """Test function handles Exception."""
+    def test_check_tx_rx_buffs_empty(self, test_rdma):
+        """Test function works okay."""
         uart_status_offset = 0x10
         test_rdma.rdma.read = Mock()
-        test_rdma.rdma.read.side_effect = Exception("fake")
+        test_rdma.rdma.read.side_effect = [[10]]
         is_tx_buff_empty, is_rx_buff_empty = test_rdma.rdma.check_tx_rx_buffs_empty()
-        assert is_tx_buff_empty == 0
-        assert is_rx_buff_empty == 0
+        assert is_tx_buff_empty == 1
+        assert is_rx_buff_empty == 1
         test_rdma.rdma.read.assert_called_with(
             uart_status_offset, burst_len=1, comment="Read UART Status")
+
+    def test_check_tx_rx_buffs_empty_handles_exception(self, test_rdma):
+        """Test function handles Exception."""
+        e = "fake"
+        test_rdma.rdma.read = Mock()
+        test_rdma.rdma.read.side_effect = Exception(e)
+        msg = "check_tx_buff_empty: {}".format(e)
+        with pytest.raises(HexitecRdmaError) as exc_info:
+            test_rdma.rdma.check_tx_rx_buffs_empty()
+            assert exc_info.type is HexitecRdmaError
+            assert exc_info.value.args[0] == msg
 
     # def test_enable_all_vsrs(self, vsr_number, bit_mask):
     #     """Test function enables all VSRs."""

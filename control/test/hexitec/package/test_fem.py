@@ -39,13 +39,6 @@ class FemTestFixture(object):
                 """
         }
 
-        # FPGA base addresses
-        self.rdma_addr = {
-            "receiver": 0xC0000000,
-            "frm_gate": 0xD0000000,
-            "reset_monitor": 0x90000000
-        }
-
         with patch("hexitec.HexitecDAQ.ParameterTree"):
             self.adapter = HexitecAdapter(**self.options)
             self.detector = self.adapter.hexitec  # shortcut, makes assert lines shorter

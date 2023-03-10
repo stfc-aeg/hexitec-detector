@@ -84,20 +84,6 @@ class HexitecFem():
         self.server_ctrl_ip_addr = server_ctrl_ip_addr
         self.camera_ctrl_ip_addr = camera_ctrl_ip_addr
 
-        # FPGA base addresses
-        self.rdma_addr = {
-            "receiver": 0xC0000000,
-            "frm_gate": 0xD0000000,
-            "reset_monitor": 0x90000000
-        }
-
-        self.image_size_x = 0x100
-        self.image_size_y = 0x100
-        self.image_size_p = 0x8
-        self.image_size_f = 0x8
-
-        self.strm_mtu = 8000
-
         self.vsr_addr = HexitecFem.VSR_ADDRESS[0]
 
         self.number_frames = 10

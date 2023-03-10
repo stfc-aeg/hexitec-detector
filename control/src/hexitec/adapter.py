@@ -473,7 +473,7 @@ class Hexitec():
         """Load Odin's settings from file."""
         try:
             with open(self.odin_config_file, "r") as f:
-                print("\n *** adp.load_Odin()")
+                print("\n adp.load_Odin()")
                 # print(" exists? {}".format(os.stat(self.odin_config_file)))
                 config = json.load(f)
                 print(" ({}) config = {}".format(type(config), config))
