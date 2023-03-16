@@ -401,21 +401,21 @@ if __name__ == '__main__':  # pragma: no cover
     hxt.connect()
     beginning = time.time()
     try:
-        # VSR_ADDRESS = [0x90]
+        VSR_ADDRESS = [0x90]
         # hxt.x10g_rdma.enable_vsr(1)  # Switches a single VSR on
-        VSR_ADDRESS = range(0x90, 0x96, 1)
-        # VSR_ADDRESS = [0x90, 0x92, 0x93, 0x94, 0x95]
-        hxt.x10g_rdma.enable_all_vsrs()   # Switches on all VSR
+        # VSR_ADDRESS = range(0x90, 0x96, 1)
+        # # VSR_ADDRESS = [0x90, 0x92, 0x93, 0x94, 0x95]
+        # hxt.x10g_rdma.enable_all_vsrs()   # Switches on all VSR
 
-        print(" Power status: {0:X}".format(hxt.x10g_rdma.power_status()))
-        this_delay = 10
-        print("VSR(s) enabled; Waiting {} seconds".format(this_delay))
-        time.sleep(this_delay)
+        # print(" Power status: {0:X}".format(hxt.x10g_rdma.power_status()))
+        # this_delay = 10
+        # print("VSR(s) enabled; Waiting {} seconds".format(this_delay))
+        # time.sleep(this_delay)
 
-        print("Init modules (Send 0xE3..)")
-        hxt.x10g_rdma.uart_tx([0xFF, 0xE3])
-        print("Wait 5 sec")
-        time.sleep(5)
+        # print("Init modules (Send 0xE3..)")
+        # hxt.x10g_rdma.uart_tx([0xFF, 0xE3])
+        # print("Wait 5 sec")
+        # time.sleep(5)
 
         # print("uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done")
         # Execute equivalent of VSR1_Configure.txt:
