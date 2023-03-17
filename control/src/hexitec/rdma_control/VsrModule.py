@@ -7,10 +7,14 @@
 
 .. important::
 
-   Requires memory mapped :obj:`dict` imported from :mod:`rdma_control.RDMA_REGISTERS` and helper functions
-   imported from :mod:`rdma_control.rdma_register_helpers`.
+   Requires memory mapped :obj:`dict` imported from the following modules:
+    - :mod:`rdma_control.RDMA_REGISTERS`,
+    - :mod:`rdma_control.VSR_FPGA_REGISTERS`
+   Also requires the corresponding helper functions imported from :mod:`rdma_control.rdma_register_helpers` to access
+   and modify the dictionary entries defining the registers.
 
-   :mod:`rdma_control.RDMA_REGISTERS` is generated from XML2VHDL output, regenerated at FPGA synthesis time. Please
+   :mod:`rdma_control.RDMA_REGISTERS` and :mod:`rdma_control.VSR_FPGA_REGISTERS` are generated from
+   `XML2VHDL` output, regenerated at FPGA synthesis time. Please
    ensure the latest version is used in conjunction with :mod:`rdma_control.RdmaUdp` to ensure compatibility with the
    register map in the current FPGA bitstream.
 
@@ -60,55 +64,69 @@ def get_vsr_cmd_char(code):
         return 0x23
 
 
-class VsrModule(object):
-    """Class for describing and controlling a VSR module.
+class VsrAssembly(object):
+    """Class for globally controlling all VSR modules on a Hexitec assembly.
 
     .. important::
 
-       Requires memory mapped :obj:`dict` imported from :mod:`rdma_control.RDMA_REGISTERS` and helper functions
-       imported from :mod:`rdma_control.rdma_register_helpers`.
+       Requires memory mapped :obj:`dict` imported from the following modules:
+        - :mod:`rdma_control.RDMA_REGISTERS`,
+        - :mod:`rdma_control.VSR_FPGA_REGISTERS`
+       Also requires the corresponding helper functions imported from :mod:`rdma_control.rdma_register_helpers` to access
+       and modify the dictionary entries defining the registers.
 
-       :mod:`rdma_control.RDMA_REGISTERS` is generated from XML2VHDL output, regenerated at FPGA synthesis time. Please
+       :mod:`rdma_control.RDMA_REGISTERS` and :mod:`rdma_control.VSR_FPGA_REGISTERS` are generated from
+       `XML2VHDL` output, regenerated at FPGA synthesis time. Please
        ensure the latest version is used in conjunction with :mod:`rdma_control.RdmaUdp` to ensure compatibility with the
        register map in the current FPGA bitstream.
 
     .. warning::
 
-       Not supplying a :attr:`addr_mapping` :obj:`dict`, :obj:`VsrModule` will perform a :meth:`VsrModule.lookup` to
+       Not supplying a :attr:`addr_mapping` :obj:`dict`, :class:`VsrAssembly` will perform a :meth:`VsrAssembly.lookup` to
        determine the configuration of the attached system. This is a time-consuming operation so should be avoided
        whenever possible by supplying a pre-determined configuration matching the target system.
 
     Args:
         rdma_ctrl_iface (:obj:`rdma_control.RdmaUdp`): A configured connection to communicate with the `RDMA` `UDP`
             Ethernet interface.
-        slot (:obj:`int`, optional): Slot index, indexed from '1', of the VSR module. Default: `1`.
-        addr_mapping (:obj:`dict`): Key/value pairs cross-referencing :attr:`slot` with hardware address of the
-            corresponding VSR module. Default: `None`. If an address mapping is not supplied the :obj:`VsrModule` will
-            perform a :meth:`VsrModule.lookup` to determine the configuration of the attached system.
+        slot (:obj:`int`, optional): Slot should only be set via child class(es). Leave set to `0`. Default: `0`.
+        addr_mapping (:obj:`dict`, optional): Key/value pairs cross-referencing :attr:`slot` with hardware address of the
+            corresponding VSR module. Default: `None`. If an address mapping is not supplied the :obj:`VsrAssembly` will
+            perform a :meth:`VsrAssembly.lookup` to determine the configuration of the attached system.
 
     Attributes:
-        slot (:obj:`int`): Slot index, indexed from `1`.
         addr_mapping (:obj:`dict`): A copy of the address mapping configuration, either provided or determined at
             initialisation.
+        slot (:obj:`int`): Slot number. Set to '0' for global addressing and control.
         addr (:obj:`int`): Hardware address of VSR module, hard-coded on each VSR module.
 
     """
-    def __init__(self, rdma_ctrl_iface, slot=1, addr_mapping=None):
+    def __init__(self, rdma_ctrl_iface, slot=0, addr_mapping=None):
         self._rdma_ctrl_iface = rdma_ctrl_iface
+        self.slot = slot
         if addr_mapping is None:
             self.addr_mapping = self.lookup(init_time=15)
         else:
             self.addr_mapping = addr_mapping
-        self.slot = int(slot) if isinstance(slot, str) else slot
         self.addr = self.get_addr()
         self._adc_enabled_flag = False
         self._dac_enabled_flag = False
 
+
+    def __del__(self):
+        print(f"(Slot: {self.slot} address: 0x{self.addr:X}) Wrapping up,  disabling modules/HV")
+        self.hv_disable()
+        self.disable_module()
+
+
     def get_slot(self):
         """Returns the slot number, hosting the VSR module.
 
-        Positional location of the VSR module (indexed from '1'). Used by the host FPGA to control power and high-voltage,
-        and to determine which :mod:`rdma_control.RDMA_REGISTERS` to associate with the VSR module.
+        .. note::
+
+           :attr:`slot` = 0 has a special meaning, where :attr:`addr` will be set to the VSR broadcast address.
+           Otherwise, positional location of the VSR module (indexed from '1'). Used by the host FPGA to control power
+           and high-voltage, and to determine which :mod:`rdma_control.RDMA_REGISTERS` to associate with the VSR module.
 
         Returns:
             :obj:`int`:
@@ -119,12 +137,16 @@ class VsrModule(object):
     def get_addr(self):
         """Returns the hardware address of the VSR.
 
-        Physical VSR address, hard-coded onto the VSR module.
+        .. note::
+
+            :attr:`slot` = `0` has a special meaning, where :attr:`addr` will be set to the VSR broadcast address.
+            Otherwise, the physical VSR address, hard-coded onto the VSR module.
 
         Returns:
             :obj:`int`:
         """
-        return self.addr_mapping[self.slot]
+        addr = get_vsr_cmd_char("bcast") if self.slot == 0 else self.addr_mapping[self.slot]
+        return addr
 
 
     def _uart_write(self, vsr_a, vsr_cmd, wr_d, cmd_no=0):
@@ -186,11 +208,10 @@ class VsrModule(object):
         return hv_status if hv else vsr_status
 
 
-    def get_module_status(self, all_vsrs=False, cmd_no=0):
+    def get_module_status(self, cmd_no=0):
         """Returns status of VSR enable signals for the selected VSR(s).
 
         Args:
-            all_vsrs (:obj:`bool`, optional): Report on all VSR modules. Default: `False`.
             cmd_no (:obj:`int`, optional): command number to insert into the RDMA header. Useful for debugging RDMA
                 commands. Default: `0`.
 
@@ -198,14 +219,14 @@ class VsrModule(object):
             :obj:`list`: Status of requested VSR enable signal(s), represented as :obj:`str` with the values `"ENABLED"
             or `"DISABLED"`.
         """
+        all_vsrs = True if self.slot == 0 else False
         return self._get_status(hv=False, all_vsrs=all_vsrs, cmd_no=cmd_no)
 
 
-    def get_hv_status(self, all_vsrs=False, cmd_no=0):
+    def get_hv_status(self, cmd_no=0):
         """Returns status of high-voltage enable signals for the selected VSR(s).
 
         Args:
-            all_vsrs (:obj:`bool`, optional): Report on all VSR modules. Default: `False`.
             cmd_no (:obj:`int`, optional): command number to insert into the RDMA header. Useful for debugging RDMA
                 commands. Default: `0`.
 
@@ -213,6 +234,7 @@ class VsrModule(object):
             :obj:`list`: Status of requested VSR enable signal(s), represented as :obj:`str` with the values `"ENABLED"
             or `"DISABLED"`.
         """
+        all_vsrs = True if self.slot == 0 else False
         return self._get_status(hv=True, all_vsrs=all_vsrs, cmd_no=cmd_no)
 
 
@@ -356,7 +378,8 @@ class VsrModule(object):
         Returns:
             :obj:`int`: The value `1` on success, `0` on failure.
         """
-        return self._ctrl(all_vsrs=False, op="enable", init_time=15, cmd_no=0)
+        all_vsrs = True if self.slot == 0 else False
+        return self._ctrl(all_vsrs=all_vsrs, op="enable", init_time=15, cmd_no=0)
 
 
     def hv_enable(self):
@@ -365,7 +388,8 @@ class VsrModule(object):
         Returns:
             :obj:`int`: The value `1` on success, `0` on failure.
         """
-        return self._ctrl(all_vsrs=False, op="hv_enable", init_time=0, cmd_no=0)
+        all_vsrs = True if self.slot == 0 else False
+        return self._ctrl(all_vsrs=all_vsrs, op="hv_enable", init_time=0, cmd_no=0)
 
 
     def disable_module(self):
@@ -374,7 +398,8 @@ class VsrModule(object):
         Returns:
             :obj:`int`: The value `1` on success, `0` on failure.
         """
-        return self._ctrl(all_vsrs=False, op="disable", init_time=0, cmd_no=0)
+        all_vsrs = True if self.slot == 0 else False
+        return self._ctrl(all_vsrs=all_vsrs, op="disable", init_time=0, cmd_no=0)
 
 
     def hv_disable(self):
@@ -383,7 +408,8 @@ class VsrModule(object):
         Returns:
             :obj:`int`: The value `1` on success, `0` on failure.
         """
-        return self._ctrl(all_vsrs=False, op="hv_disable", init_time=0, cmd_no=0)
+        all_vsrs = True if self.slot == 0 else False
+        return self._ctrl(all_vsrs=all_vsrs, op="hv_disable", init_time=0, cmd_no=0)
 
 
     def enable_vsr(self, init_time=15, cmd_no=0):
@@ -403,7 +429,7 @@ class VsrModule(object):
             Nothing.
         """
         vsr_d = list()  # empty VSR data list to pass to: :meth:`_vsr_uart_write()`
-        self._uart_write(get_vsr_cmd_char("bcast"), get_vsr_cmd_char("enable"), vsr_d, cmd_no=cmd_no)
+        self._uart_write(self.addr, get_vsr_cmd_char("enable"), vsr_d, cmd_no=cmd_no)
         time.sleep(init_time)
 
 
@@ -418,7 +444,7 @@ class VsrModule(object):
             Nothing.
         """
         vsr_d = list()  # empty VSR data list to pass to: :meth:`_vsr_uart_write()`
-        self._uart_write(get_vsr_cmd_char("bcast"), get_vsr_cmd_char("disable"), vsr_d, cmd_no=cmd_no)
+        self._uart_write(self.addr, get_vsr_cmd_char("disable"), vsr_d, cmd_no=cmd_no)
 
 
     def _ctrl_converters(self, adc=False, dac=False, cmd_no=0):
@@ -573,17 +599,61 @@ class VsrModule(object):
         Returns:
             :obj:`list` of :obj:`int`: Parses :attr:`rx_d` by removing the start of response; address; and end character.
         """
+        # d = rx_d
         if rx_d[0] == get_vsr_cmd_char("resp"):
             rx_d = rx_d[1:]
         if rx_d[0] == self.addr:
             rx_d = rx_d[1:]
         if rx_d[-1] == get_vsr_cmd_char("end"):
             rx_d = rx_d[:-2]
+        # print(" _check_uart_response, changes   {}  into  {}".format(d, rx_d))
         return rx_d
 
 
     def _convert_from_ascii(self, d):
         return int("".join([chr(c) for c in d]), 16)
+
+
+class VsrModule(VsrAssembly):
+    """A child class, which inherits methods and attributes from :class:`rdma_control.VsrAssembly`. Used for describing and controlling individual VSR modules.
+
+    .. important::
+
+       Requires memory mapped :obj:`dict` imported from the following modules:
+        - :mod:`rdma_control.RDMA_REGISTERS`,
+        - :mod:`rdma_control.VSR_FPGA_REGISTERS`
+       Also requires the corresponding helper functions imported from :mod:`rdma_control.rdma_register_helpers` to access
+       and modify the dictionary entries defining the registers.
+
+       :mod:`rdma_control.RDMA_REGISTERS` and :mod:`rdma_control.VSR_FPGA_REGISTERS` are generated from
+       `XML2VHDL` output, regenerated at FPGA synthesis time. Please
+       ensure the latest version is used in conjunction with :mod:`rdma_control.RdmaUdp` to ensure compatibility with the
+       register map in the current FPGA bitstream.
+
+    .. warning::
+
+       Not supplying a :attr:`addr_mapping` :obj:`dict`, :class:`VsrModule` will perform a :meth:`VsrModule.lookup` to
+       determine the configuration of the attached system. This is a time-consuming operation so should be avoided
+       whenever possible by supplying a pre-determined configuration matching the target system.
+
+    Args:
+        rdma_ctrl_iface (:obj:`rdma_control.RdmaUdp`): A configured connection to communicate with the `RDMA` `UDP`
+            Ethernet interface.
+        slot (:obj:`int`, optional): Slot index, indexed from `1`, of the VSR module. Default: `1`.
+        addr_mapping (:obj:`dict`, optional): Key/value pairs cross-referencing :attr:`slot` with hardware address of the
+            corresponding VSR module. Default: `None`. If an address mapping is not supplied the :obj:`VsrModule` will
+            perform a :meth:`VsrModule.lookup` to determine the configuration of the attached system.
+
+    Attributes:
+        addr_mapping (:obj:`dict`): A copy of the address mapping configuration, either provided or determined at
+            initialisation.
+        slot (:obj:`int`): Slot number for corresponding VSR module, indexed from '1'.
+        addr (:obj:`int`): Hardware address of VSR module, hard-coded on each VSR module.
+
+
+    """
+    def __init__(self, rdma_ctrl_iface, slot=1, addr_mapping=None):
+        super().__init__(rdma_ctrl_iface, slot=slot, addr_mapping=addr_mapping)
 
 
     def _get_env_sensors(self, cmd_no=0):
@@ -656,12 +726,31 @@ class VsrModule(object):
         """
         return self._get_env_sensors(cmd_no=cmd_no)[4]
 
+    def _read_response(self, cmd_no=0):
+        """Monitors UART Status, reads response once available."""
+        # print("uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done")
+        counter = 0
+        rx_pkt_done = 0
+        while not rx_pkt_done:
+            _, _, _, _, _, rx_pkt_done = self._rdma_ctrl_iface.read_uart_status()
+            # uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, \
+            #     rx_pkt_done = self._rdma_ctrl_iface.read_uart_status()
+            # print("     {0:X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X} counter: {6}".format(
+            #     uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done, counter))
+            counter += 1
+            if counter == 15001:
+                print("   boom!")
+                break
+        response = self._rdma_ctrl_iface.uart_read(cmd_no=cmd_no)
+        # print("... receiving: {} ({})".format(' '.join("0x{0:02X}".format(x) for x in response), counter))
+        return response
+
     def _read_vsr_register(self, reg_addr_h, reg_addr_l, cmd_no=0):
-        """Reads the specified register address.
+        """Reads the specified VSR register address.
 
         Args:
-            adc (:obj:`bool`, optional): State to set the ADC. `True` is enabled, `False` is disabled. Default: `False`.
-            dac (:obj:`bool`, optional): State to set the DAC. `True` is enabled, `False` is disabled. Default: `False`.
+            reg_addr_h (:obj:`int`): VSR register MSB address.
+            reg_addr_l (:obj:`int`): VSR register LSB address.
             cmd_no (:obj:`int`, optional): command number to insert into the RDMA header. Useful for debugging RDMA
                 commands. Default: `0`.
 
@@ -669,15 +758,14 @@ class VsrModule(object):
             :obj:`int`:  `1` on success, `0` on failure.
         """
         self._uart_write(self.addr, get_vsr_cmd_char("read_vsr"), [reg_addr_h, reg_addr_l], cmd_no=cmd_no)
-        time.sleep(0.125)
-        resp = self._rdma_ctrl_iface.uart_read(cmd_no=cmd_no)
-        time.sleep(0.125)
+        resp = self._read_response(cmd_no)
+
         # print(f" DBG1:  {resp}")
-        # resp = self._check_uart_response(resp)
-        # Calling _check_uart_response turns: 
-        #  DBG1:  [42, 144, 70, 70, 13] into:
-        #  DBG2:  [70]
-        # print(f" DBG2:  {resp}")
+        # resp_d = self._check_uart_response(resp)
+        # # Calling _check_uart_response turns: 
+        # #  DBG1:  [42, 144, 70, 70, 13] into:
+        # #  DBG2:  [70]
+        # print(f" DBG2:  {resp_d}")
         reply = resp[2:-1]                                      # Omit start char, vsr address and end char
         reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
         # print(f" DBG1:  {resp}")

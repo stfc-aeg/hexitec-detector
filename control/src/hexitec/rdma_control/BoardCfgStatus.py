@@ -171,7 +171,7 @@ class BoardCfgStatus(object):
            these registers without impacting design functionality.
 
         Args:
-            size (:obj:`int`0): Number of consecutive scratch resisters to read from. Default: `4`.
+            size (:obj:`int`): Number of consecutive scratch resisters to read from. Default: `4`.
 
         Returns:
             :obj:`list` of :obj:`int`: where each element of the :obj:`list` is the corresponding value from the

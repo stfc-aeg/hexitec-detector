@@ -24,12 +24,8 @@ class ConstantsSupportedMmaps(object):
         'hexitec_2x6',
         'qsfp_1',
         'qsfp_2',
+        'vsr_fpga_regs_v0_5',
         ]
-
-generated_xml_path = "../../../../src/vhdl/generated/"
-top_generated_xml_fname = "hex2x6_ic_memory_map_output.xml"
-generated_output_path = "./"
-generated_output_fname = "RDMA_REGISTERS.py"
 
 def generate_fheader():
     """Function to add standard header to generated python file.
@@ -47,7 +43,7 @@ def generate_fheader():
     fheader.append(f"# Licensed under the BSD 3-Clause license. See LICENSE file in the project root for details.")
     fheader.append("")
     fheader.append("# *** This file was AUTO-GENERATED. Modifications to this file will be overwritten. ***")
-    fheader.append('"""RDMA register dictionaries extracted from XML2VHDL memory-map generation."""')
+    fheader.append('"""Register dictionaries extracted from XML2VHDL formatted `xml` memory-map generation output file."""')
     return fheader
 
 
@@ -456,20 +452,25 @@ class MMapRegister(object):
             self.is_bit = True if self.nof_bits == 1 else False
 
 
-def load_memory_maps():
+def load_memory_maps(input_file):
     """Function to load supported memory maps from XML2VHDL generated output XML file.
 
     See :class:`rdma_control.RdmaXml2Vhdl.ConstantsSupportedMmaps` for supported memory maps.
 
     """
     supported_mmaps = ConstantsSupportedMmaps()
-    generated_xml_output = pathlib.Path.cwd() / generated_xml_path / top_generated_xml_fname
-    xml_output = ET.parse(str(generated_xml_output.resolve()))
+    xml_output = ET.parse(str(input_file.resolve()))
     top_level = xml_output.getroot()
     registers = list()
 
     for node in top_level:
-        node_id = node.attrib['absolute_id'].split('.')[1]
+        try:
+            node_id = node.attrib['absolute_id'].split('.')[1]
+            print(f"node_id = {node_id}")
+        except KeyError as e:
+            print(e)
+            [print(f"    [{k}]: {v}") for k, v in node.attrib.items()]
+            input()
         if node_id in supported_mmaps.MEMORY_MAPS:
             for child in node:
                 child_id = ('_'.join(child.attrib['absolute_id'].split('.')[1:])).upper()
@@ -516,11 +517,19 @@ def mmapobj2dict(mmapobj):
     return new_dict
 
 
-def export_decl_file():
+def export_decl_file(input_file, output_file):
+    """Exports python file declaring dictionary descriptions of registers extracted from XML input file.
+
+    Args:
+        input_file(:obj:`pathlib`): Full path, including filename, of the `xml` file to parse registers from.
+        output_file(:obj:`pathlib`): Full path, including filename, of the `py` file to export.
+
+        Returns:
+            Nothing.
+    """
     pp = pprint.PrettyPrinter(indent=2)
-    generated_py_output = pathlib.Path.cwd() / generated_output_path / generated_output_fname
-    registers = load_memory_maps()
-    with generated_py_output.open(mode="w") as fp:
+    registers = load_memory_maps(input_file)
+    with output_file.open(mode="w") as fp:
         [fp.write(f"{line}\n") for line in generate_fheader()]
         for reg in registers:
             reg_declaration = f"{reg.name} = {pp.pformat(mmapobj2dict(reg))}"
@@ -530,4 +539,19 @@ def export_decl_file():
 
 
 if __name__ == '__main__':
-    export_decl_file()
+
+    generated_xml_path = "../../../../src/vhdl/generated/"
+    top_generated_xml_fname = "hex2x6_ic_memory_map_output.xml"
+    generated_output_path = "./"
+    generated_output_fname = "RDMA_REGISTERS.py"
+    generated_mmap_xml_output = pathlib.Path.cwd() / generated_xml_path / top_generated_xml_fname
+    generated_rdma_py_output = pathlib.Path.cwd() / generated_output_path / generated_output_fname
+    export_decl_file(input_file=generated_mmap_xml_output, output_file=generated_rdma_py_output)
+
+    generated_xml_path = "../../../../src/xml/"
+    top_generated_xml_fname = "vsr_fpga_regs_v0_5_memory_map.xml"
+    generated_output_path = "./"
+    generated_output_fname = "VSR_FPGA_REGISTERS.py"
+    generated_vsr_fpga_reg_xml_output = pathlib.Path.cwd() / generated_xml_path / top_generated_xml_fname
+    generated_vsr_fpga_reg_py_output = pathlib.Path.cwd() / generated_output_path / generated_output_fname
+    export_decl_file(input_file=generated_vsr_fpga_reg_xml_output, output_file=generated_vsr_fpga_reg_py_output)

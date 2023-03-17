@@ -413,7 +413,6 @@ class RdmaUDP(object):
         is_rx_pkt_done = 0
         uart_status = (0, )
         try:
-            # self.write(uart_tx_ctrl_addr, deassert_all, burst_len=1, comment="Wr TX Deass't All")
             uart_status = self.read(uart_status_offset, burst_len=1, comment="Read UART Status")
             uart_status = uart_status[0]
             is_tx_buff_full = uart_status & tx_buff_full_mask

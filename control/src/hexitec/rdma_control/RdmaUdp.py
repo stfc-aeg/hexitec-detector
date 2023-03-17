@@ -25,11 +25,17 @@ except ModuleNotFoundError:
     from RDMA_REGISTERS import *
     from rdma_register_helpers import *
 
+# TODO Temporarily defined here, move elsewhere: ???
+tx_buff_full_mask = 0x1
+tx_buff_empty_mask = 0x2
+rx_buff_full_mask = 0x4
+rx_buff_empty_mask = 0x8
+rx_pkt_done_mask = 0x10
 
 def _errorResponse(e, msg, etype="socket", address=0, burst_len=1, op_code=0, cmd_no=0, comment="", data=""):
     print(f"[ERROR] *** {msg} ***:")
     print(f"    OP Code: 0x{op_code:02X} | Address: 0x{address:08X} | Burst Length: {burst_len} | CMD No: {cmd_no:02X} <{comment}>")
-    if data is not "":
+    if data != "":
         print(f"         Data: {data}")
     print("")
     print(f"{e}")
@@ -41,7 +47,7 @@ def _errorResponse(e, msg, etype="socket", address=0, burst_len=1, op_code=0, cm
 
 def _debugMsg(msg, address=0, burst_len=1, op_code=0, cmd_no=0, comment="", data=""):
     print(f"[DEBUG]: {msg}: 0x{op_code:02X} | Address: 0x{address:08X} | Burst Length: {burst_len} | CMD No: 0x{cmd_no:02X} | {comment}")
-    if data is not "":
+    if data != "":
         print(f"         Data: {data}")
 
 
@@ -467,6 +473,33 @@ class RdmaUDP(object):
                                 burst_len=1, cmd_no=cmd_no,
                                 comment=HEXITEC_2X6_UART_TX_CTRL['description'])
 
+    def read_uart_status(self):
+        """Poll the UART reg (0x10)."""
+        cmd_no = 0
+        op_code = get_rdma_opcode("read")
+        address = HEXITEC_2X6_UART_STATUS['addr']
+        burst_len = 1
+        comment = HEXITEC_2X6_UART_STATUS['description']
+        is_tx_buff_full = 0
+        is_tx_buff_empty = 0
+        is_rx_buff_full = 0
+        is_rx_buff_empty = 0
+        is_rx_pkt_done = 0
+        uart_status = (0, )
+        try:
+            uart_status = self.udp_rdma_read(address,
+                                             burst_len=burst_len, cmd_no=cmd_no,
+                                             comment=comment)[0]
+            is_tx_buff_full = uart_status & tx_buff_full_mask
+            is_tx_buff_empty = (uart_status & tx_buff_empty_mask) >> 1
+            is_rx_buff_full = (uart_status & rx_buff_full_mask) >> 2
+            is_rx_buff_empty = (uart_status & rx_buff_empty_mask) >> 3
+            is_rx_pkt_done = (uart_status & rx_pkt_done_mask) >> 4
+        except Exception as e:
+            _errorResponse(e, "Read failed", address=address,
+                           burst_len=burst_len, op_code=op_code, cmd_no=cmd_no, comment=comment)
+        return uart_status, is_tx_buff_full, is_tx_buff_empty, is_rx_buff_full, \
+            is_rx_buff_empty, is_rx_pkt_done
 
     def _iic_read_fifo(self, size, idx=1, cmd_no=0):
         """Read `N` words from IIC Rx FIFO.
