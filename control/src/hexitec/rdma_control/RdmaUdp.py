@@ -501,6 +501,22 @@ class RdmaUDP(object):
         return uart_status, is_tx_buff_full, is_tx_buff_empty, is_rx_buff_full, \
             is_rx_buff_empty, is_rx_pkt_done
 
+    def toggle_training(self, reg_value):
+        """Toggle Training (UART Register 0x20) on then off."""
+        cmd_no = 0
+        op_code = get_rdma_opcode("write")
+        address = HEXITEC_2X6_VSR_DATA_CTRL['addr']
+        burst_len = 1
+        comment = HEXITEC_2X6_VSR_DATA_CTRL['description']
+        uart_status = (0, )
+        try:
+            self.udp_rdma_write(address, reg_value,
+                                burst_len=burst_len, cmd_no=cmd_no,
+                                comment=comment)
+        except Exception as e:
+            _errorResponse(e, "Write failed", address=address,
+                           burst_len=burst_len, op_code=op_code, cmd_no=cmd_no, comment=comment)
+
     def _iic_read_fifo(self, size, idx=1, cmd_no=0):
         """Read `N` words from IIC Rx FIFO.
 

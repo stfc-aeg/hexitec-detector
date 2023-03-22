@@ -52,6 +52,8 @@ def get_vsr_cmd_char(code):
         return 0xF7
     elif code.lower() == "get_env":
         return 0x52
+    elif code.lower() == "send_reg_value":
+        return 0x40
     elif code.lower() == "read_vsr":
         return 0x41
     elif code.lower() == "enable":
@@ -114,7 +116,7 @@ class VsrAssembly(object):
 
 
     def __del__(self):
-        print(f"(Slot: {self.slot} address: 0x{self.addr:X}) Wrapping up,  disabling modules/HV")
+        print(f"(Slot: {self.slot} address: 0x{self.addr:X}) Wrapping up, disabling modules/HV")
         self.hv_disable()
         self.disable_module()
 
@@ -816,3 +818,109 @@ class VsrModule(VsrAssembly):
                 address_l = 0x30
         return most_significant, least_significant
 
+    ### Functions for supporting fem.initialise_vsr() ###
+
+    # TODO Desperately in need of refractoring..
+    def send_cmd(self, cmd):
+        """Send a command string to the microcontroller."""
+        # print("Send to UART: {}  ({})".format(' '.join("0x{0:02X}".format(x) for x in cmd), cmd))
+        # self.x10g_rdma.uart_tx(cmd)
+        num_cmd = len(cmd)
+        # print("  send_cmd() is very brittle! cmd? = {}".format(num_cmd))
+        # TODO Improve dirty hack?
+        if num_cmd == 5:
+            # Ordinary start, vsr_address, vsr_value format
+            vsr_cmd_char, address_h, address_l, value_h, value_l = cmd
+            self._uart_write(self.addr, vsr_cmd_char,
+                            [address_h, address_l, value_h, value_l], cmd_no=0)
+        else:
+            # write_dac_values special case (21 entries)
+            vsr_cmd_char = cmd[0]
+            self._uart_write(self.addr, vsr_cmd_char,
+                            cmd[1:], cmd_no=0)
+        # self._uart_write(self.addr, get_vsr_cmd_char("send_reg_value"),
+        #                  [address_h, address_l, value_h, value_l], cmd_no=cmd_no)
+
+    def read_and_response(self, address_h, address_l, delay=False, cmd_no=0):
+        """Send a read and read the reply."""
+        self._uart_write(self.addr, get_vsr_cmd_char("read_vsr"), [address_h, address_l], cmd_no=cmd_no)
+        resp = self._read_response(cmd_no)
+        # print(f" RaR DBG1:  {resp}")
+        # resp_d = self._check_uart_response(resp)
+        # # Calling _check_uart_response turns:
+        # #  DBG1:  [42, 144, 70, 70, 13] into:
+        # #  DBG2:  [70]
+        # print(f"RaR DBG2:  {resp_d}")
+        reply = resp[2:-1]                                      # Omit start char, vsr address and end char
+        reply = "{}".format(''.join([chr(x) for x in reply]))   # Turn list of integers into ASCII string
+        return resp, reply
+
+    def write_and_response(self, address_h, address_l, value_h, value_l,
+                           masked=True, delay=False, cmd_no=0):
+        """Write value_h, value_l to address_h, address_l, if not masked
+        then register value overwritten."""
+        resp, reply = self.read_and_response(address_h, address_l)
+        resp = resp[2:-1]   # Extract payload
+        if masked:
+            value_h, value_l = self.mask_aspect_encoding(value_h, value_l, resp)
+        # print("   WaR Write: {} {} {} {} {}".format(vsr, address_h, address_l, value_h, value_l))
+
+        self._uart_write(self.addr, get_vsr_cmd_char("send_reg_value"),
+                         [address_h, address_l, value_h, value_l], cmd_no=cmd_no)
+        resp = self._read_response(cmd_no)
+        reply = resp[4:-1]  # Omit start char, vsr & register addresses, and end char
+        # Turn list of integers into ASCII string
+        reply = "{}".format(''.join([chr(x) for x in reply]))
+        # print(" WR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
+        if ((resp[4] != value_h) or (resp[5] != value_l)):
+            print("H? {} L? {}".format(resp[4] == value_h, resp[5] == value_l))
+            print("WaR. reply: {} (resp: {}) VS H: {} L: {}".format(reply, resp, value_h, value_l))
+            print("WaR. (resp: {} {}) VS H: {} L: {}".format(resp[4], resp[5], value_h, value_l))
+            raise RdmaError("Readback value did not match written!")
+        return resp, reply
+
+    def translate_to_normal_hex(self, value):
+        """Translate Aspect encoding into 0-F equivalent scale."""
+        if value not in self.HEX_ASCII_CODE:
+            raise RdmaError("Invalid Hexadecimal value {0:X}".format(value))
+        if value < 0x3A:
+            value -= 0x30
+        else:
+            value -= 0x37
+        return value
+
+    def mask_aspect_encoding(self, value_h, value_l, resp):
+        """Mask values honouring aspect encoding.
+
+        Aspect: 0x30 = 1, 0x31 = 1, .., 0x39 = 9, 0x41 = A, 0x42 = B, .., 0x46 = F.
+        Therefore increase values between 0x39 and 0x41 by 7 to match aspect's legal range.
+        I.e. 0x39 | 0x32 = 0x3B, + 7 = 0x42.
+        """
+        value_h = self.translate_to_normal_hex(value_h)
+        value_l = self.translate_to_normal_hex(value_l)
+        resp[0] = self.translate_to_normal_hex(resp[0])
+        resp[1] = self.translate_to_normal_hex(resp[1])
+        masked_h = value_h | resp[0]
+        masked_l = value_l | resp[1]
+        # print("h: {0:X} r: {1:X} = {2:X} masked: {3:X} I.e. {4:X}".format(
+        #     value_h, resp[0], value_h | resp[0], masked_h, self.HEX_ASCII_CODE[masked_h]))
+        # print("l: {0:X} r: {1:X} = {2:X} masked: {3:X} I.e. {4:X}".format(
+        #     value_l, resp[1], value_l | resp[1], masked_l, self.HEX_ASCII_CODE[masked_l]))
+        return self.HEX_ASCII_CODE[masked_h], self.HEX_ASCII_CODE[masked_l]
+
+    def toggle_lvds_training(self):
+        """Enable LVDS training by toggling the relevant register on then off."""
+        self._rdma_ctrl_iface.toggle_training(0x10)
+        time.sleep(0.2)
+        self._rdma_ctrl_iface.toggle_training(0x0)
+
+    # TODO CONSTANTS, move these?
+
+    HEX_ASCII_CODE = [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
+                      0x41, 0x42, 0x43, 0x44, 0x45, 0x46]
+
+
+class RdmaError(Exception):
+    """Simple exception class for RdmaUDP to wrap lower-level exceptions."""
+
+    pass
