@@ -572,21 +572,21 @@ if __name__ == '__main__':  # noqa: C901
     beginning = time.time()
     try:
         VSR_ADDRESS = range(0x90, 0x96)
-        VSR_ADDRESS = [0x90, 0x92, 0x93, 0x94, 0x95]
+        # VSR_ADDRESS = [0x90, 0x92, 0x93, 0x94, 0x95]
         # VSR_ADDRESS = [0x92]
-        # hxt.x10g_rdma.enable_all_vsrs()     # Switches all VSRs on
-        # # hxt.x10g_rdma.disable_all_vsrs()     # Switches all VSRs on
+        hxt.x10g_rdma.enable_all_vsrs()     # Switches all VSRs on
+        # hxt.x10g_rdma.disable_all_vsrs()     # Switches all VSRs on
 
-        # # _slot = 6
-        # # VSR_ADDRESS = [0x90]
-        # # hxt.x10g_rdma.enable_vsr(_slot)  # Switches a single VSR on
+        # _slot = 6
+        # VSR_ADDRESS = [0x90]
+        # hxt.x10g_rdma.enable_vsr(_slot)  # Switches a single VSR on
 
-        # # # # read_value = hxt.x10g_rdma.power_status()
-        # # # # expected_value = 0x3F   # 0x1
-        # # # # if (read_value == expected_value):
-        # # # #     print(" OK Power: 0x{0:08X}".format(read_value))
-        # # # # else:
-        # # # #     print(" !! Power: 0x{0:08X}".format(read_value))
+        # # # read_value = hxt.x10g_rdma.power_status()
+        # # # expected_value = 0x3F   # 0x1
+        # # # if (read_value == expected_value):
+        # # #     print(" OK Power: 0x{0:08X}".format(read_value))
+        # # # else:
+        # # #     print(" !! Power: 0x{0:08X}".format(read_value))
         # this_delay = 10
         # print("VSR(s) powered; Waiting {} seconds".format(this_delay))
         # time.sleep(this_delay)
@@ -604,13 +604,14 @@ if __name__ == '__main__':  # noqa: C901
         # time.sleep(1)
         # read_sensors = hxt.x10g_rdma.uart_rx(0x0)
         # # read_sensors = read_sensors[:-2]
-        # print("Slot: {} Replies: {} {} (read_sensors: {})".format(
-        #     _slot, hex(read_sensors[0]), hex(read_sensors[1]),
+        # print("         Replies: {} {} (read_sensors: {})".format(
+        #     hex(read_sensors[0]), hex(read_sensors[1]),
         #     read_sensors))
         # sys.exit(0)
         fails = 0
         which_ones = []
-        while True:
+        # while True:
+        if 1:
             print(f"Fails: {fails} Culprits: {which_ones}")
             # Execute equivalent of VSR1_Configure.txt:
             for vsr in VSR_ADDRESS:

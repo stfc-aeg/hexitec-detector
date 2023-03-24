@@ -22,11 +22,13 @@
 import time
 
 try:
-    from rdma_control.RDMA_REGISTERS import *
-    from rdma_control.rdma_register_helpers import *
+    # print(" *****************************************************************************************hexitec.VSR module**********")
+    from hexitec.RDMA_REGISTERS import *
+    from hexitec.rdma_register_helpers import *
 except ModuleNotFoundError:
-    from RDMA_REGISTERS import *
-    from rdma_register_helpers import *
+    print(" *** VsrModule import FAILURE")
+    # from RDMA_REGISTERS import *
+    # from rdma_register_helpers import *
 
 
 def get_vsr_cmd_char(code):
@@ -50,8 +52,6 @@ def get_vsr_cmd_char(code):
         return 0xFF
     elif code.lower() == "whois":
         return 0xF7
-    elif code.lower() == "get_pwr":
-        return 0x50
     elif code.lower() == "get_env":
         return 0x52
     elif code.lower() == "send_reg_value":
@@ -118,9 +118,9 @@ class VsrAssembly(object):
 
 
     def __del__(self):
-        print(f"(Slot: {self.slot} address: 0x{self.addr:X}) Wrapping up, NOT disabling modules/HV")
-        # self.hv_disable()
-        # self.disable_module()
+        print(f"(Slot: {self.slot} address: 0x{self.addr:X}) Wrapping up, disabling modules/HV")
+        self.hv_disable()
+        self.disable_module()
 
 
     def get_slot(self):
@@ -164,7 +164,7 @@ class VsrAssembly(object):
         for d in wr_d:
             wr_cmd.append(d)
         wr_cmd.append(get_vsr_cmd_char("end"))
-        # print(f"[DEBUG]: MR' VsrMod._uart_write: {[ hex(c) for c in wr_cmd ]}")
+        # print(f"[DEBUG]: HXT'VsrMod._uart_write: {[ hex(c) for c in wr_cmd ]}")
         self._rdma_ctrl_iface.uart_write(wr_cmd, cmd_no=cmd_no)
 
 
@@ -353,8 +353,8 @@ class VsrAssembly(object):
             vsr_status = vsr_status | en_mask
             vsr_ctrl_reg = set_field(HEXITEC_2X6_VSR_CTRL, "VSR_EN", vsr_ctrl_reg, vsr_status)
             self._rdma_ctrl_iface.udp_rdma_write(HEXITEC_2X6_VSR_CTRL['addr'], [vsr_ctrl_reg])
-            print(f"[INFO]: Waiting {init_time} second(s) for VSR(s) to initialise...")
-            time.sleep(init_time)
+            print(f"[INFO]: NOT! Waiting {init_time} second(s) for VSR(s) to initialise...")
+            # time.sleep(init_time)
         elif op.lower() == "hv_enable":
             vsr_status = decode_field(HEXITEC_2X6_VSR_CTRL, "HV_EN", vsr_ctrl_reg)
             vsr_status = vsr_status | en_mask
@@ -434,7 +434,7 @@ class VsrAssembly(object):
         """
         vsr_d = list()  # empty VSR data list to pass to: :meth:`_vsr_uart_write()`
         self._uart_write(self.addr, get_vsr_cmd_char("enable"), vsr_d, cmd_no=cmd_no)
-        time.sleep(init_time)
+        # time.sleep(init_time)
 
 
     def disable_vsr(self, cmd_no=0):
@@ -663,7 +663,7 @@ class VsrModule(VsrAssembly):
     def _get_env_sensors(self, cmd_no=0):
         vsr_d = list()  # empty VSR data list to pass to: self.uart_write()
         self._uart_write(self.addr, get_vsr_cmd_char("get_env"), vsr_d, cmd_no=cmd_no)
-        time.sleep(5)
+        time.sleep(1)
         resp = self._rdma_ctrl_iface.uart_read(cmd_no=cmd_no)
         resp = self._check_uart_response(resp)
         calc_ambient_temp = round(((self._convert_from_ascii(resp[0:4]) / 2**16) * 175.72) - 46.85, 3)
@@ -672,25 +672,7 @@ class VsrModule(VsrAssembly):
         calc_asic2_temp = round(self._convert_from_ascii(resp[12:16]) * 0.0625, 2)
         calc_adc_temp = round(self._convert_from_ascii(resp[16:20]) * 0.0625, 2)
         return calc_ambient_temp, calc_humidity, calc_asic1_temp, calc_asic2_temp, calc_adc_temp
-        # return f"{calc_ambient_temp}°C", f"{calc_humidity}%", f"{calc_asic1_temp}°C", f"{calc_asic2_temp}°C", f"{calc_adc_temp}°C"
 
-    def _get_power_sensors(self, cmd_no=0):
-        vsr_d = list()  # empty VSR data list to pass to: self.uart_write()
-        self._uart_write(self.addr, get_vsr_cmd_char("get_pwr"), vsr_d, cmd_no=cmd_no)
-        time.sleep(0.5)
-        resp = self._rdma_ctrl_iface.uart_read(cmd_no=cmd_no)
-        sensors_values = self._check_uart_response(resp)
-        print("raw power: ", sensors_values)
-        print("converted: ", self._convert_from_ascii(sensors_values[0:4]))
-        print("         : ", sensors_values[36:40]) 
-        # reference_voltage = int(sensors_values[36:40], 16) * (2.048 / 4095)
-        # u1 = int(sensors_values[0:4], 16) * (reference_voltage / 2**12)
-        # hv_monitoring_voltage = u1 * 1621.65 - 1043.22 + 56
-        # print("monitor:  ", hv_monitoring_voltage)
-
-        # calc_ambient_temp = round(((self._convert_from_ascii(resp[0:4]) / 2**16) * 175.72) - 46.85, 3)
-        # return calc_ambient_temp
-        # return f"{calc_ambient_temp}°C", f"{calc_humidity}%", f"{calc_asic1_temp}°C", f"{calc_asic2_temp}°C", f"{calc_adc_temp}°C"
 
     def get_temperature(self, cmd_no=0):
         """Gets the current temperature of the VSR module.
@@ -754,15 +736,18 @@ class VsrModule(VsrAssembly):
         counter = 0
         rx_pkt_done = 0
         while not rx_pkt_done:
-            _, _, _, _, _, rx_pkt_done = self._rdma_ctrl_iface.read_uart_status()
-            # uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, \
-            #     rx_pkt_done = self._rdma_ctrl_iface.read_uart_status()
-            # print("     {0:X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X} counter: {6}".format(
-            #     uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done, counter))
+            # _, _, _, _, _, rx_pkt_done = self._rdma_ctrl_iface.read_uart_status()
+            uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, \
+                rx_pkt_done = self._rdma_ctrl_iface.read_uart_status()
+            # if (counter % 10) == 0:
+            #     print(" *VM {0:X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X} counter: {6}".format(
+            #         uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done, counter))
             counter += 1
             if counter == 15001:
-                print("   boom!")
+                raise Exception("VsrMod: {0:0X} UART read timed out".format(self.addr))
                 break
+        # print(" *VM {0:X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X} counter: {6}".format(
+        #     uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done, counter))
         response = self._rdma_ctrl_iface.uart_read(cmd_no=cmd_no)
         # print("... receiving: {} ({})".format(' '.join("0x{0:02X}".format(x) for x in response), counter))
         return response
@@ -843,7 +828,7 @@ class VsrModule(VsrAssembly):
     # TODO Desperately in need of refractoring..
     def send_cmd(self, cmd):
         """Send a command string to the microcontroller."""
-        # print(" VsrMod Send to UART: {}  ({})".format(' '.join("0x{0:02X}".format(x) for x in cmd), cmd))
+        # print(" *VM Send to UART: {}  ({})".format(' '.join("0x{0:02X}".format(x) for x in cmd), cmd))
         # self.x10g_rdma.uart_tx(cmd)
         num_cmd = len(cmd)
         # print("  send_cmd() is very brittle! cmd? = {}".format(num_cmd))
@@ -865,7 +850,7 @@ class VsrModule(VsrAssembly):
         """Send a read and read the reply."""
         self._uart_write(self.addr, get_vsr_cmd_char("read_vsr"), [address_h, address_l], cmd_no=cmd_no)
         resp = self._read_response(cmd_no)
-        # print(f" RaR DBG1:  {resp}")
+        # print(f" *VM RaR DBG1:  {resp}")
         # resp_d = self._check_uart_response(resp)
         # # Calling _check_uart_response turns:
         # #  DBG1:  [42, 144, 70, 70, 13] into:
@@ -879,11 +864,13 @@ class VsrModule(VsrAssembly):
                            masked=True, delay=False, cmd_no=0):
         """Write value_h, value_l to address_h, address_l, if not masked
         then register value overwritten."""
+        # arg = "0x{0:02X} 0x{1:02X} 0x{2:02X} 0x{3:02X})".format(address_h, address_l, value_h, value_l)
+        # print(" *VM VsrModule.write_and_response({})".format(arg))
         resp, reply = self.read_and_response(address_h, address_l)
         resp = resp[2:-1]   # Extract payload
         if masked:
             value_h, value_l = self.mask_aspect_encoding(value_h, value_l, resp)
-        # print("   WaR Write: {} {} {} {} {}".format(vsr, address_h, address_l, value_h, value_l))
+        # print("   WaR Write: {} {} {} {} {}".format(None, address_h, address_l, value_h, value_l))
 
         self._uart_write(self.addr, get_vsr_cmd_char("send_reg_value"),
                          [address_h, address_l, value_h, value_l], cmd_no=cmd_no)

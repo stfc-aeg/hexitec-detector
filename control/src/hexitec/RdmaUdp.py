@@ -18,12 +18,12 @@
 import socket
 import struct
 
+print("can you see this?")
 try:
-    from rdma_control.RDMA_REGISTERS import *
-    from rdma_control.rdma_register_helpers import *
+    from hexitec.RDMA_REGISTERS import *
+    from hexitec.rdma_register_helpers import *
 except ModuleNotFoundError:
-    from RDMA_REGISTERS import *
-    from rdma_register_helpers import *
+    print(" *** RDMAUDP import FAILURE")
 
 # TODO Temporarily defined here, move elsewhere: ???
 tx_buff_full_mask = 0x1
@@ -207,13 +207,11 @@ class RdmaUDP(object):
 
     def __del__(self):
         """Ensure connection safely closed."""
-        # print(" *** RDMAUDP.__delete__()")
         self.close()
 
 
     def close(self):
         """Safely close `UDP` socket connection."""
-        # print(" *** RDMAUDP.close()")
         self.socket.close()
 
 
@@ -439,7 +437,7 @@ class RdmaUDP(object):
         Returns:
             Nothing.
         """
-        # print(f" MR'RdU uart_write({wr_d}) ")
+        # print(f" HxtRdU uart_write({wr_d}) ")
         # queue each byte in the UART Tx FIFO
         for b in wr_d:
             # load TX_DATA and set TX_FILL_STRB
