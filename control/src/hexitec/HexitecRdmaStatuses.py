@@ -50,7 +50,7 @@ def fem_enable_adc(vsr):
     print("Write ADC register")     # 90 53 16 09   ;Write ADC Register
     vsr.send_cmd([0x53, 0x31, 0x36, 0x30, 0x39])  # Works just as the one below
     vsr._read_response()
-    # self.write_and_response(self.vsr_addr, 0x31, 0x36, 0x30, 0x39)
+    # self.write_and_response(vsr.addr, 0x31, 0x36, 0x30, 0x39)
 
 
 # Copied in from HexitecFem
