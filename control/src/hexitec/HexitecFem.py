@@ -689,8 +689,8 @@ class HexitecFem():
     def read_receive_from_all(self, op_command, register_h, register_l):  # pragma: no coverage
         """Read and receive from all VSRs."""
         reply = []
-        for VSR in self.VSR_ADDRESS:
-            self.send_cmd([VSR, op_command, register_h, register_l])
+        for vsr in self.vsr_list:
+            self.send_cmd([vsr.addr, op_command, register_h, register_l])
             resp = self.read_response()
             resp = resp[2:-1]
             resp = self.convert_list_to_string(resp)
@@ -701,8 +701,8 @@ class HexitecFem():
     def write_receive_to_all(self, op_command, register_h, register_l,
                              value_h, value_l):  # pragma: no coverage
         """Write and receive to all VSRs."""
-        for VSR in self.VSR_ADDRESS:
-            self.send_cmd([VSR, op_command, register_h, register_l, value_h, value_l])
+        for vsr in self.vsr_list:
+            self.send_cmd([vsr.addr, op_command, register_h, register_l, value_h, value_l])
             self.read_response()
 
     # TODO: Revisit and unit test:
@@ -842,8 +842,9 @@ class HexitecFem():
         for a, b in resp_list:
             read_list.append(a)
             read_list.append(b)
+        # Confirm read back values match written values
         if not (write_list == read_list):
-            # Check again:
+            # Disagreed. Check again:
             resp_list, reply_list = self.block_read_and_response(vsr, number_registers,
                                                                  address_h, address_l)
             read_list = []

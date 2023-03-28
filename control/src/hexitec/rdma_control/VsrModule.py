@@ -34,8 +34,8 @@ def get_vsr_cmd_char(code):
 
         Args:
             code (:obj:`str`): from:
-                `"start"`, `"end"`, `"resp"`, `"bcast"`, `"whois"`, `"get_env"`, '"enable"', '"disable"',
-                `"adc_dac_ctrl"`.
+                `"start"`, `"end"`, `"resp"`, `"bcast"`, `"whois"`, '"get_pwr"', `"get_env"`,
+                '"send_reg_value"', '"read_vsr"', '"enable"', '"disable"', `"adc_dac_ctrl"`.
 
         Returns:
             :obj:`int`: cmd/character to place in VSR UART command sequences, can also be used to validate command responses.
@@ -663,7 +663,7 @@ class VsrModule(VsrAssembly):
     def _get_env_sensors(self, cmd_no=0):
         vsr_d = list()  # empty VSR data list to pass to: self.uart_write()
         self._uart_write(self.addr, get_vsr_cmd_char("get_env"), vsr_d, cmd_no=cmd_no)
-        time.sleep(5)
+        time.sleep(1)
         resp = self._rdma_ctrl_iface.uart_read(cmd_no=cmd_no)
         resp = self._check_uart_response(resp)
         calc_ambient_temp = round(((self._convert_from_ascii(resp[0:4]) / 2**16) * 175.72) - 46.85, 3)

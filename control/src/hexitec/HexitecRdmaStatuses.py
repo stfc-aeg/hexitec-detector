@@ -28,6 +28,103 @@ except ModuleNotFoundError:
     # from RDMA_REGISTERS import *
 
 
+def write_receive_to_all(vsr_list, op_command, register_h, register_l,
+                         value_h, value_l):  # pragma: no coverage
+    """Write and receive to all VSRs."""
+    for vsr in vsr_list:
+        vsr.send_cmd([op_command, register_h, register_l, value_h, value_l])
+        vsr._read_response()
+
+
+def convert_list_to_string(int_list):
+    r"""Convert list of integer into ASCII string.
+
+    I.e. integer_list = [42, 144, 70, 70, 13], returns '*\x90FF\r'
+    """
+    return "{}".format(''.join([chr(x) for x in int_list]))
+
+
+def read_receive_from_all(vsr_list, op_command, register_h, register_l):  # pragma: no coverage
+    """Read and receive from all VSRs."""
+    reply = []
+    for vsr in vsr_list:
+        vsr.send_cmd([op_command, register_h, register_l])
+        resp = vsr._read_response()
+        resp = convert_list_to_string(resp)
+        resp = resp[2:-1]
+        reply.append(resp)
+    return reply
+
+
+def are_capture_dc_ready(vsrs_register_89):  # pragma: no coverage
+    """Check status of Register 89, bit 0: Capture DC ready."""
+    vsrs_ready = True
+    for vsr in vsrs_register_89:
+        dc_capture_ready = ord(vsr[1]) & 1
+        if not dc_capture_ready:
+            vsrs_ready = False
+    return vsrs_ready
+
+
+def collect_offsets(vsr_list):
+    """Run collect offsets sequence.
+
+    Stop state machine, gathers offsets, calculats average picture, re-starts state machine.
+    """
+    # 1. System is fully initialised (Done already)
+
+    # 2. Stop the state machine
+
+    write_receive_to_all(vsr_list, 0x43, 0x30, 0x31, 0x30, 0x31)
+
+    # 3. Set reg 0x24 to 0x22
+
+    print("Gathering offsets..")
+    # Send reg value; Register 0x24, bits5,1: disable VCAL, capture average picture:
+    write_receive_to_all(vsr_list, 0x40, 0x32, 0x34, 0x32, 0x32)
+
+    # 4. Start the state machine
+
+    write_receive_to_all(vsr_list, 0x42, 0x30, 0x31, 0x30, 0x31)
+
+    # 5. Wait > 8192 * frame time (~1 second, @ 9118.87Hz)
+
+    expected_duration = 8192 / 9118.87
+    timeout = (expected_duration * 1.2) + 1
+    # print(" *** expected: {} timeout: {}".format(expected_duration, timeout))
+    poll_beginning = time.time()
+    print("Collecting dark images..")
+    dc_captured = False
+    while not dc_captured:
+        vsrs_register_89 = read_receive_from_all(vsr_list, 0x41, 0x38, 0x39)
+        # print(" *** vsrs_register_89: ", vsrs_register_89)
+        dc_captured = are_capture_dc_ready(vsrs_register_89)
+        if 0:   # pragma: no coverage
+            print("Register 0x89: {0}, Done? {1} Timing: {2:2.5} s".format(
+                vsrs_register_89, dc_captured, time.time() - poll_beginning))
+        if time.time() - poll_beginning > timeout:
+            raise Exception("Dark images timed out. R.89: {}".format(
+                vsrs_register_89))
+
+    # 6. Stop state machine
+    write_receive_to_all(vsr_list, 0x43, 0x30, 0x31, 0x30, 0x31)
+
+    # 7. Set reg 0x24 to 0x28
+
+    print("Offsets collected")
+    # Send reg value; Register 0x24, bits5,3: disable VCAL, enable spectroscopic mode:
+    write_receive_to_all(vsr_list, 0x40, 0x32, 0x34, 0x32, 0x38)
+
+    # 8. Start state machine
+
+    write_receive_to_all(vsr_list, 0x42, 0x30, 0x31, 0x30, 0x31)
+
+    print("Ensure VCAL remains on")
+    write_receive_to_all(vsr_list, 0x43, 0x32, 0x34, 0x32, 0x30)
+
+    print("Offsets collections operation completed.")
+
+
 # Copied in from HexitecFem
 def fem_enable_adc(vsr):
     """Enable the ADCs."""
@@ -298,11 +395,6 @@ if __name__ == '__main__':  # pragma: no cover
     vsr_list.append(vsr_5)
     vsr_6 = VsrModule(Hex2x6CtrlRdma, slot=6, addr_mapping=vsr_addr_mapping)
     vsr_list.append(vsr_6)
-    # TODO Switches off all VSRs - Verified
-    # print("Switching OFF all VSRs..")
-    # success = vsr_1._ctrl(True, op="disable")
-    # if not success:
-    #     print("Failed to disable all VSRs")
 
     # TODO Initialisation - Verified
     number_registers = 1
@@ -395,27 +487,14 @@ if __name__ == '__main__':  # pragma: no cover
     the_stop = time.time()
     print(f"Initialisation took: {the_stop - the_start}")
 
-    #     reg07 = []
-    #     reg89 = []
-    #     for vsr in VSR_ADDRESS:
-    #         (address_h, address_l) = (0x30, 0x37)
-    # #         r7_list, r7_value = hxt.read_register07(vsr)
-    # #         reg07.append(r7_value)
-    #         (address_h, address_l) = (0x38, 0x39)
-    #         r89_list, r89_value = hxt.read_register89(vsr)
-    #         reg89.append(r89_value)
-    #         s1_low_resp, s1_low_reply = hxt.read_and_response(vsr, 0x30, 0x32)
-    #         s1_high_resp, s1_high_reply = hxt.read_and_response(vsr, 0x30, 0x33)
-    #         sph_resp, sph_reply = hxt.read_and_response(vsr, 0x30, 0x34)
-    #         s2_resp, s2_reply = hxt.read_and_response(vsr, 0x30, 0x35)
-    #         print("VSR{} Row S1: 0x{}{}. S1Sph : 0x{}. SphS2 : 0x{}".format(
-    #             vsr-143, s1_high_reply, s1_low_reply, sph_reply, s2_reply))
+    # TODO Collect offsets - Verified
+    collect_offsets(vsr_list)
 
-    #     print(" All vsrs, reg07: {}".format(reg07))
-    #     print("           reg89: {}".format(reg89))
-
-    # except (socket.error, struct.error) as e:
-    #     print(" *** Caught Exception: {} ***".format(e))
+    # TODO Switches off all VSRs - Verified
+    # print("Switching OFF all VSRs..")
+    # success = vsr_1._ctrl(True, op="disable")
+    # if not success:
+    #     print("Failed to disable all VSRs")
 
     # # TODO Readout Read, Power, Calibration Enables - Verified
     # rpc_start = time.time()
