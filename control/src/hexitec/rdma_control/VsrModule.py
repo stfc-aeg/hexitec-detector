@@ -20,6 +20,7 @@
 
 """
 import time
+import sys
 
 try:
     from rdma_control.RDMA_REGISTERS import *
@@ -673,21 +674,14 @@ class VsrModule(VsrAssembly):
         calc_asic2_temp = round(self._convert_from_ascii(resp[12:16]) * 0.0625, 2)
         calc_adc_temp = round(self._convert_from_ascii(resp[16:20]) * 0.0625, 2)
         return calc_ambient_temp, calc_humidity, calc_asic1_temp, calc_asic2_temp, calc_adc_temp
-        # return f"{calc_ambient_temp}°C", f"{calc_humidity}%", f"{calc_asic1_temp}°C", f"{calc_asic2_temp}°C", f"{calc_adc_temp}°C"
 
     def _get_power_sensors(self, cmd_no=0):
-        vsr_d = list()  # empty VSR data list to pass to: self.uart_write()
+        vsr_d = list()
         self._uart_write(self.addr, get_vsr_cmd_char("get_pwr"), vsr_d, cmd_no=cmd_no)
-        time.sleep(0.5)
-        resp = self._rdma_ctrl_iface.uart_read(cmd_no=cmd_no)
+        resp = self._read_response(cmd_no)
         sensors_values = self._check_uart_response(resp)
         hv_value = self.get_hv_value(sensors_values, None)
-        print("VSR{} HV       : {}".format(self.addr-143, round(hv_value, 2)))
-        # print("         : ", sensors_values[36:40]) 
-        # reference_voltage = int(sensors_values[36:40], 16) * (2.048 / 4095)
-        # u1 = int(sensors_values[0:4], 16) * (reference_voltage / 2**12)
-        # hv_monitoring_voltage = u1 * 1621.65 - 1043.22 + 56
-        # print("monitor:  ", hv_monitoring_voltage)
+        return hv_value
 
     def get_hv_value(self, sensors_values, vsr):
         """Take the full string of voltages and extract the HV value."""

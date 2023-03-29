@@ -6,6 +6,7 @@ Christian Angelsen, STFC Detector Systems Software Group, 2023.
 
 import time
 import os.path
+import sys
 
 try:
     from hexitec.rdma_control.RdmaUdp import RdmaUDP
@@ -377,11 +378,6 @@ if __name__ == '__main__':  # pragma: no cover
     if not success:
         print("Failed to enable VSRs HV!")
 
-    # reg_addr_h, reg_addr_l = 0x36, 0x31
-    # print("Testing reading vsr register {0:X} {1:X}".format(reg_addr_h, reg_addr_l))
-    # reply = vsr_1._read_vsr_register(reg_addr_h, reg_addr_l)
-    # print(f"  {reply}")
-
     vsr_list = []
     # vsr_1 = VsrModule(Hex2x6CtrlRdma, slot=1, addr_mapping=vsr_addr_mapping)
     vsr_list.append(vsr_1)
@@ -395,6 +391,12 @@ if __name__ == '__main__':  # pragma: no cover
     vsr_list.append(vsr_5)
     vsr_6 = VsrModule(Hex2x6CtrlRdma, slot=6, addr_mapping=vsr_addr_mapping)
     vsr_list.append(vsr_6)
+
+    # TODO Readout HV voltages - Verified
+    for idx in range(1):
+        print(" -=-=-=-=-=-=-=-=-=-=-")
+        for vsr in vsr_list:
+            print(f" VSR{vsr.addr-143} HV: {round(vsr._get_power_sensors(), 2)}")
 
     # TODO Initialisation - Verified
     number_registers = 1
@@ -440,39 +442,7 @@ if __name__ == '__main__':  # pragma: no cover
                                   data=0x10, burst_len=1, cmd_no=0x0,
                                   comment=HEXITEC_2X6_VSR_DATA_CTRL['description'])
 
-    # # TODO HEXITEC_2X6_VSRx_STATUS - Long-winded - Verified
-    # index = 1
-    # locked = Hex2x6CtrlRdma.udp_rdma_read(address=HEXITEC_2X6_VSR0_STATUS['addr'],
-    #                                       burst_len=1, cmd_no=0,
-    #                                       comment=HEXITEC_2X6_VSR0_STATUS['description'])[0]
-    # print(f" VSR{index} locked? 0x{locked:X}")
-    # index += 1
-    # locked = Hex2x6CtrlRdma.udp_rdma_read(address=HEXITEC_2X6_VSR1_STATUS['addr'],
-    #                                       burst_len=1, cmd_no=0,
-    #                                       comment=HEXITEC_2X6_VSR1_STATUS['description'])[0]
-    # print(f" VSR{index} locked? 0x{locked:X}")
-    # index += 1
-    # locked = Hex2x6CtrlRdma.udp_rdma_read(address=HEXITEC_2X6_VSR2_STATUS['addr'],
-    #                                       burst_len=1, cmd_no=0,
-    #                                       comment=HEXITEC_2X6_VSR2_STATUS['description'])[0]
-    # print(f" VSR{index} locked? 0x{locked:X}")
-    # index += 1
-    # locked = Hex2x6CtrlRdma.udp_rdma_read(address=HEXITEC_2X6_VSR3_STATUS['addr'],
-    #                                       burst_len=1, cmd_no=0,
-    #                                       comment=HEXITEC_2X6_VSR3_STATUS['description'])[0]
-    # print(f" VSR{index} locked? 0x{locked:X}")
-    # index += 1
-    # locked = Hex2x6CtrlRdma.udp_rdma_read(address=HEXITEC_2X6_VSR4_STATUS['addr'],
-    #                                       burst_len=1, cmd_no=0,
-    #                                       comment=HEXITEC_2X6_VSR4_STATUS['description'])[0]
-    # print(f" VSR{index} locked? 0x{locked:X}")
-    # index += 1
-    # locked = Hex2x6CtrlRdma.udp_rdma_read(address=HEXITEC_2X6_VSR5_STATUS['addr'],
-    #                                       burst_len=1, cmd_no=0,
-    #                                       comment=HEXITEC_2X6_VSR5_STATUS['description'])[0]
-    # print(f" VSR{index} locked? 0x{locked:X} - Comment: {HEXITEC_2X6_VSR5_STATUS['description']}")
-
-    # TODO HEXITEC_2X6_VSRx_STATUS - More concise.. - Verified
+    # TODO HEXITEC_2X6_VSRx_STATUS - Verified
     vsr_status_addr = HEXITEC_2X6_VSR0_STATUS['addr']
     for vsr in vsr_list:
         index = vsr.addr - 144

@@ -261,14 +261,14 @@ class HexitecFem():
             #     self.firmware_time = "{0:.2}:{1:.2}:{2:.4}".format(fw_time[0:2], fw_time[2:4],
             #                                                        fw_time[4:6])
             #     self.read_firmware_version = False
-            # beginning = time.time()
+            beginning = time.time()
             self.environs_in_progress = True
             self.parent.software_state = "Environs"
             for vsr in self.vsr_list:
                 self.read_temperatures_humidity_values(vsr)
-            #     self.read_pwr_voltages(vsr)  # pragma: no cover
-            # ending = time.time()
-            # print(" Environmental data took: {}".format(ending - beginning))
+                self.read_pwr_voltages(vsr)  # pragma: no cover
+            ending = time.time()
+            print(" Environmental data took: {}".format(ending - beginning))
         except HexitecFemError as e:
             self.flag_error("Failed to read sensors", str(e))
         except Exception as e:
@@ -1530,42 +1530,8 @@ class HexitecFem():
         """Read and convert power data into voltages."""
         if vsr.addr not in self.VSR_ADDRESS:
             raise HexitecFemError("HV: Invalid VSR address(0x{0:02X})".format(vsr.addr))
-        self.send_cmd([vsr.addr, HexitecFem.READ_PWR_VOLT])
-        # sensors_values = self.read_response()
-        # sensors_values = sensors_values.strip()
-        vsrs_values = self.read_response()
-        # print("Received ({}) from UART: {}".format(len(vsrs_values),
-        # ' '.join("0x{0:02X}".format(x) for x in vsrs_values)))
-        vsrs_values = vsrs_values[1:]  # Omit start of sequence char, matches existing 2x2 source
-        # Turn list of integers into ASCII string
-        sensors_values = self.convert_list_to_string(vsrs_values)
-        if len(sensors_values) != 50:
-            logging.warning("VSR 0x{0:X}: Received incomplete power data".format(vsr.addr))
-            return None
-        # print(" ASCII string: {}".format(sensors_values))
-
-        if self.debug:   # pragma: no coverage
-            logging.debug("VSR: %s Power values: %s len: %s" % (format(vsr.addr, '#02x'),
-                          sensors_values.replace('\r', ''), len(sensors_values)))
-
         index = vsr.addr - self.VSR_ADDRESS[0]
-        self.hv_list[index] = self.get_hv_value(sensors_values, vsr)
-
-    def get_hv_value(self, sensors_values, vsr):
-        """Take the full string of voltages and extract the HV value."""
-        try:
-            # Calculate V10, the 3.3V reference voltage
-            reference_voltage = int(sensors_values[37:41], 16) * (2.048 / 4095)
-            # Calculate HV rails
-            u1 = int(sensors_values[1:5], 16) * (reference_voltage / 2**12)
-            # Apply conversion gain # Added 56V following HV tests
-            hv_monitoring_voltage = u1 * 1621.65 - 1043.22 + 56
-            # print("hv value: {}\n\n".format(hv_monitoring_voltage))
-            return hv_monitoring_voltage
-        except ValueError as e:
-            logging.error("VSR %s: Error obtaining HV value: %s" %
-                          (format(vsr.addr, '#02x'), e))
-            return -1
+        self.hv_list[index] = vsr._get_power_sensors()
 
     def read_temperatures_humidity_values(self, vsr):
         """Read and convert sensor data into temperatures and humidity values."""

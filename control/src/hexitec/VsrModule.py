@@ -664,8 +664,7 @@ class VsrModule(VsrAssembly):
     def _get_env_sensors(self, cmd_no=0):
         vsr_d = list()  # empty VSR data list to pass to: self.uart_write()
         self._uart_write(self.addr, get_vsr_cmd_char("get_env"), vsr_d, cmd_no=cmd_no)
-        time.sleep(1)
-        resp = self._rdma_ctrl_iface.uart_read(cmd_no=cmd_no)
+        resp = self._read_response(cmd_no=cmd_no)
         resp = self._check_uart_response(resp)
         calc_ambient_temp = round(((self._convert_from_ascii(resp[0:4]) / 2**16) * 175.72) - 46.85, 3)
         calc_humidity = round(((self._convert_from_ascii(resp[4:8]) / 2**16) * 125) + 6, 3)
@@ -674,24 +673,28 @@ class VsrModule(VsrAssembly):
         calc_adc_temp = round(self._convert_from_ascii(resp[16:20]) * 0.0625, 2)
         return calc_ambient_temp, calc_humidity, calc_asic1_temp, calc_asic2_temp, calc_adc_temp
 
-
     def _get_power_sensors(self, cmd_no=0):
         vsr_d = list()  # empty VSR data list to pass to: self.uart_write()
         self._uart_write(self.addr, get_vsr_cmd_char("get_pwr"), vsr_d, cmd_no=cmd_no)
-        time.sleep(0.5)
-        resp = self._rdma_ctrl_iface.uart_read(cmd_no=cmd_no)
+        resp = self._read_response(cmd_no)
         sensors_values = self._check_uart_response(resp)
-        print("raw power: ", sensors_values)
-        print("converted: ", self._convert_from_ascii(sensors_values[0:4]))
-        print("         : ", sensors_values[36:40]) 
-        # reference_voltage = int(sensors_values[36:40], 16) * (2.048 / 4095)
-        # u1 = int(sensors_values[0:4], 16) * (reference_voltage / 2**12)
-        # hv_monitoring_voltage = u1 * 1621.65 - 1043.22 + 56
-        # print("monitor:  ", hv_monitoring_voltage)
+        hv_value = self.get_hv_value(sensors_values, None)
+        return hv_value
 
-        # calc_ambient_temp = round(((self._convert_from_ascii(resp[0:4]) / 2**16) * 175.72) - 46.85, 3)
-        # return calc_ambient_temp
-        # return f"{calc_ambient_temp}°C", f"{calc_humidity}%", f"{calc_asic1_temp}°C", f"{calc_asic2_temp}°C", f"{calc_adc_temp}°C"
+    def get_hv_value(self, sensors_values, vsr):
+        """Take the full string of voltages and extract the HV value."""
+        try:
+            # Calculate V10, the 3.3V reference voltage
+            reference_voltage = self._convert_from_ascii(sensors_values[36:40]) * (2.048 / 4095)
+            # Calculate HV rails
+            u1 = self._convert_from_ascii(sensors_values[:4]) * (reference_voltage / 2**12)
+            # Apply conversion gain # Added 56V following HV tests
+            hv_monitoring_voltage = u1 * 1621.65 - 1043.22 + 56
+            return hv_monitoring_voltage
+        except ValueError as e:
+            print("VSR %s: Error obtaining HV value: %s" %
+                          (format(vsr, '#02x'), e))
+            return -1
 
     def get_temperature(self, cmd_no=0):
         """Gets the current temperature of the VSR module.
