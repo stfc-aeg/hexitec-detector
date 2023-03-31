@@ -5,52 +5,7 @@
 # Licensed under the BSD 3-Clause license. See LICENSE file in the project root for details.
 
 # *** This file was AUTO-GENERATED. Modifications to this file will be overwritten. ***
-"""RDMA register dictionaries extracted from XML2VHDL memory-map generation."""
-HEXITEC_2X6_PRODUCT_ID = { 'addr': 0,
-  'description': 'aSpect product ID register',
-  'fields': [ { 'description': 'coVersion',
-                'is_bit': False,
-                'mask': 255,
-                'name': 'VERSION',
-                'nof_bits': 8,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'coProduct',
-                'is_bit': False,
-                'mask': 1048320,
-                'name': 'PRODUCT',
-                'nof_bits': 12,
-                'reset_value': '0x0',
-                'shiftr': 8},
-              { 'description': 'coCustomer',
-                'is_bit': False,
-                'mask': 4293918720,
-                'name': 'CUSTOMER',
-                'nof_bits': 12,
-                'reset_value': '0x0',
-                'shiftr': 20}],
-  'mask': 4294967295,
-  'name': 'HEXITEC_2X6_PRODUCT_ID',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`HEXITEC_2X6_PRODUCT_ID`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-7: VERSION
-      8-19: PRODUCT
-      20-31: CUSTOMER
-   }
-
-"""
-
+"""Register dictionaries extracted from XML2VHDL formatted `xml` memory-map generation output file."""
 HEXITEC_2X6_READBACK = { 'addr': 4,
   'description': 'Readback register',
   'fields': [ { 'description': '100MHz FPGA Clock locked',
@@ -135,7 +90,26 @@ HEXITEC_2X6_READBACK = { 'addr': 4,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_READBACK`.
+""":const:`HEXITEC_2X6_READBACK` generated from `XML2VHDL` output.
+
+=================  ======================================  ===============  ==============  ===============
+**Register**
+**Name:**          HEXITEC_2X6_READBACK
+**Address:**       ``0x0000_0004``
+**Description:**   Readback register
+**Bit Fields**     **Description**                         **Mask**         **Permission**  **Reset Value**
+FPGA_CLK_LOCKED    100MHz FPGA Clock locked                ``0x0000_0001``  Read/Write      ``0x0000_0000``
+FMC_REFCLK_LOCKED  156.25MHz FMC Reference Clock locked    ``0x0000_0002``  Read/Write      ``0x0000_0000``
+QPLL_LOCKED_B116   Bank 116 QPLL locked (FMC QSFP1)        ``0x0000_0004``  Read/Write      ``0x0000_0000``
+QPLL_LOCKED_B115   Bank 115 QPLL locked (FMC QSFP2)        ``0x0000_0008``  Read/Write      ``0x0000_0000``
+FMC_QSFP1_MODPRES  FMC QSFP1 module present (active-high)  ``0x0000_0010``  Read/Write      ``0x0000_0000``
+FMC_QSFP2_MODPRES  FMC QSFP2 module present (active-high)  ``0x0000_0020``  Read/Write      ``0x0000_0000``
+FMC_QSFP1_LANE_UP  FMC QSFP1 lane up (PCS Block Lock)      ``0x0000_0F00``  Read/Write      ``0x0000_0000``
+FMC_QSFP2_LANE_UP  FMC QSFP2 lane up (PCS Block Lock)      ``0x0000_F000``  Read/Write      ``0x0000_0000``
+SMB1_IN            SMB In 1                                ``0x0001_0000``  Read/Write      ``0x0000_0000``
+SMB3_IN            SMB In 3                                ``0x0002_0000``  Read/Write      ``0x0000_0000``
+SMB5_IN            SMB In 5                                ``0x0004_0000``  Read/Write      ``0x0000_0000``
+=================  ======================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -151,13 +125,13 @@ HEXITEC_2X6_READBACK = { 'addr': 4,
       3: QPLL_LOCKED_B115 [ rotate = 270 ]
       4: FMC_QSFP1_MODPRES [ rotate = 270 ]
       5: FMC_QSFP2_MODPRES [ rotate = 270 ]
-      6-7: [ color = lightgrey ]
+      6-7:  [ rotate = 270, color = lightgrey ]
       8-11: FMC_QSFP1_LANE_UP
       12-15: FMC_QSFP2_LANE_UP
       16: SMB1_IN [ rotate = 270 ]
       17: SMB3_IN [ rotate = 270 ]
       18: SMB5_IN [ rotate = 270 ]
-      19-31: [ color = lightgrey ]
+      19-31:  [ color = lightgrey ]
    }
 
 """
@@ -183,7 +157,17 @@ HEXITEC_2X6_CLK_CTRL = { 'addr': 8,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_CLK_CTRL`.
+""":const:`HEXITEC_2X6_CLK_CTRL` generated from `XML2VHDL` output.
+
+================  ======================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_CLK_CTRL
+**Address:**      ``0x0000_0008``
+**Description:**  Clock control register
+**Bit Fields**    **Description**         **Mask**         **Permission**  **Reset Value**
+CLK_EN            Clock enable            ``0x0000_0001``  Read/Write      ``0x0000_0000``
+CLK_RST           Main clock reset        ``0x0000_0002``  Read/Write      ``0x0000_0000``
+================  ======================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -195,36 +179,7 @@ HEXITEC_2X6_CLK_CTRL = { 'addr': 8,
 
       0: CLK_EN [ rotate = 270 ]
       1: CLK_RST [ rotate = 270 ]
-      2: [ color = lightgrey ]
-      3: [ color = lightgrey ]
-      4: [ color = lightgrey ]
-      5: [ color = lightgrey ]
-      6: [ color = lightgrey ]
-      7: [ color = lightgrey ]
-      8: [ color = lightgrey ]
-      9: [ color = lightgrey ]
-      10: [ color = lightgrey ]
-      11: [ color = lightgrey ]
-      12: [ color = lightgrey ]
-      13: [ color = lightgrey ]
-      14: [ color = lightgrey ]
-      15: [ color = lightgrey ]
-      16: [ color = lightgrey ]
-      17: [ color = lightgrey ]
-      18: [ color = lightgrey ]
-      19: [ color = lightgrey ]
-      20: [ color = lightgrey ]
-      21: [ color = lightgrey ]
-      22: [ color = lightgrey ]
-      23: [ color = lightgrey ]
-      24: [ color = lightgrey ]
-      25: [ color = lightgrey ]
-      26: [ color = lightgrey ]
-      27: [ color = lightgrey ]
-      28: [ color = lightgrey ]
-      29: [ color = lightgrey ]
-      30: [ color = lightgrey ]
-      31: [ color = lightgrey ]
+      2-31:  [ color = lightgrey ]
    }
 
 """
@@ -264,7 +219,19 @@ HEXITEC_2X6_UART_TX_CTRL = { 'addr': 12,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_UART_TX_CTRL`.
+""":const:`HEXITEC_2X6_UART_TX_CTRL` generated from `XML2VHDL` output.
+
+================  ==========================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_UART_TX_CTRL
+**Address:**      ``0x0000_000C``
+**Description:**  UART send control register
+**Bit Fields**    **Description**             **Mask**         **Permission**  **Reset Value**
+TX_BUFF_RST       Send buffer reset           ``0x0000_0001``  Read/Write      ``0x0000_0000``
+TX_FILL_STRB      Fill send buffer strobe     ``0x0000_0002``  Read/Write      ``0x0000_0000``
+TX_BUFF_STRB      Send buffer strobe          ``0x0000_0004``  Read/Write      ``0x0000_0000``
+TX_DATA           Data to send via UART       ``0x0000_FF00``  Read/Write      ``0x0000_0000``
+================  ==========================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -277,9 +244,9 @@ HEXITEC_2X6_UART_TX_CTRL = { 'addr': 12,
       0: TX_BUFF_RST [ rotate = 270 ]
       1: TX_FILL_STRB [ rotate = 270 ]
       2: TX_BUFF_STRB [ rotate = 270 ]
-      3-7: [ color = lightgrey ]
+      3-7:  [ color = lightgrey ]
       8-15: TX_DATA
-      16-31: [ color = lightgrey ]
+      16-31:  [ color = lightgrey ]
    }
 
 """
@@ -340,7 +307,22 @@ HEXITEC_2X6_UART_STATUS = { 'addr': 16,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_UART_STATUS`.
+""":const:`HEXITEC_2X6_UART_STATUS` generated from `XML2VHDL` output.
+
+================  ============================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_UART_STATUS
+**Address:**      ``0x0000_0010``
+**Description:**  UART status register
+**Bit Fields**    **Description**               **Mask**         **Permission**  **Reset Value**
+TX_BUFF_FULL      Send buffer full flag         ``0x0000_0001``  Read/Write      ``0x0000_0000``
+TX_BUFF_EMTY      Send buffer empty flag        ``0x0000_0002``  Read/Write      ``0x0000_0000``
+RX_BUFF_FULL      Receive buffer full flag      ``0x0000_0004``  Read/Write      ``0x0000_0000``
+RX_BUFF_EMTY      Receive buffer empty flag     ``0x0000_0008``  Read/Write      ``0x0000_0000``
+RX_PKT_DONE       Receive packet complete flag  ``0x0000_0010``  Read/Write      ``0x0000_0000``
+RX_BUFF_LEVEL     Receive buffer level          ``0x0000_FF00``  Read/Write      ``0x0000_0000``
+RX_DATA           Received data from UART       ``0x00FF_0000``  Read/Write      ``0x0000_0000``
+================  ============================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -355,10 +337,10 @@ HEXITEC_2X6_UART_STATUS = { 'addr': 16,
       2: RX_BUFF_FULL [ rotate = 270 ]
       3: RX_BUFF_EMTY [ rotate = 270 ]
       4: RX_PKT_DONE [ rotate = 270 ]
-      5-7: [ color = lightgrey ]
+      5-7:  [ rotate = 270, color = lightgrey ]
       8-15: RX_BUFF_LEVEL
       16-23: RX_DATA
-      24-31: [ color = lightgrey ]
+      24-31:  [ color = lightgrey ]
    }
 
 """
@@ -384,7 +366,17 @@ HEXITEC_2X6_UART_RX_CTRL = { 'addr': 20,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_UART_RX_CTRL`.
+""":const:`HEXITEC_2X6_UART_RX_CTRL` generated from `XML2VHDL` output.
+
+================  =============================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_UART_RX_CTRL
+**Address:**      ``0x0000_0014``
+**Description:**  UART receive control register
+**Bit Fields**    **Description**                **Mask**         **Permission**  **Reset Value**
+RX_BUFF_RST       Recieve buffer reset           ``0x0000_0001``  Read/Write      ``0x0000_0000``
+RX_BUFF_STRB      Recieve buffer strobe          ``0x0000_0002``  Read/Write      ``0x0000_0000``
+================  =============================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -396,36 +388,7 @@ HEXITEC_2X6_UART_RX_CTRL = { 'addr': 20,
 
       0: RX_BUFF_RST [ rotate = 270 ]
       1: RX_BUFF_STRB [ rotate = 270 ]
-      2: [ color = lightgrey ]
-      3: [ color = lightgrey ]
-      4: [ color = lightgrey ]
-      5: [ color = lightgrey ]
-      6: [ color = lightgrey ]
-      7: [ color = lightgrey ]
-      8: [ color = lightgrey ]
-      9: [ color = lightgrey ]
-      10: [ color = lightgrey ]
-      11: [ color = lightgrey ]
-      12: [ color = lightgrey ]
-      13: [ color = lightgrey ]
-      14: [ color = lightgrey ]
-      15: [ color = lightgrey ]
-      16: [ color = lightgrey ]
-      17: [ color = lightgrey ]
-      18: [ color = lightgrey ]
-      19: [ color = lightgrey ]
-      20: [ color = lightgrey ]
-      21: [ color = lightgrey ]
-      22: [ color = lightgrey ]
-      23: [ color = lightgrey ]
-      24: [ color = lightgrey ]
-      25: [ color = lightgrey ]
-      26: [ color = lightgrey ]
-      27: [ color = lightgrey ]
-      28: [ color = lightgrey ]
-      29: [ color = lightgrey ]
-      30: [ color = lightgrey ]
-      31: [ color = lightgrey ]
+      2-31:  [ color = lightgrey ]
    }
 
 """
@@ -451,7 +414,17 @@ HEXITEC_2X6_VSR_CTRL = { 'addr': 24,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_VSR_CTRL`.
+""":const:`HEXITEC_2X6_VSR_CTRL` generated from `XML2VHDL` output.
+
+================  ====================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_VSR_CTRL
+**Address:**      ``0x0000_0018``
+**Description:**  VSR control register
+**Bit Fields**    **Description**       **Mask**         **Permission**  **Reset Value**
+VSR_EN            VSR enable            ``0x0000_003F``  Read/Write      ``0x0000_0000``
+HV_EN             High Voltage enable   ``0x0000_3F00``  Read/Write      ``0x0000_0000``
+================  ====================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -462,9 +435,9 @@ HEXITEC_2X6_VSR_CTRL = { 'addr': 24,
       scale_interval = 8
 
       0-5: VSR_EN
-      6-7: [ color = lightgrey ]
+      6-7:  [ rotate = 270, color = lightgrey ]
       8-13: HV_EN
-      14-31: [ color = lightgrey ]
+      14-31:  [ color = lightgrey ]
    }
 
 """
@@ -497,7 +470,18 @@ HEXITEC_2X6_VSR_MODE_CTRL = { 'addr': 28,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_VSR_MODE_CTRL`.
+""":const:`HEXITEC_2X6_VSR_MODE_CTRL` generated from `XML2VHDL` output.
+
+================  =========================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_VSR_MODE_CTRL
+**Address:**      ``0x0000_001C``
+**Description:**  VSR mode control register
+**Bit Fields**    **Description**            **Mask**         **Permission**  **Reset Value**
+SM_EN             SM enable                  ``0x0000_0001``  Read/Write      ``0x0000_0000``
+SYNCMODE_EN       Syncmode enable            ``0x0000_0002``  Read/Write      ``0x0000_0000``
+TRAINING_SEL      Training pattern select    ``0x0000_1000``  Read/Write      ``0x0000_0000``
+================  =========================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -509,27 +493,9 @@ HEXITEC_2X6_VSR_MODE_CTRL = { 'addr': 28,
 
       0: SM_EN [ rotate = 270 ]
       1: SYNCMODE_EN [ rotate = 270 ]
-      2-11: [ color = lightgrey ]
+      2-11:  [ color = lightgrey ]
       12: TRAINING_SEL [ rotate = 270 ]
-      13: [ color = lightgrey ]
-      14: [ color = lightgrey ]
-      15: [ color = lightgrey ]
-      16: [ color = lightgrey ]
-      17: [ color = lightgrey ]
-      18: [ color = lightgrey ]
-      19: [ color = lightgrey ]
-      20: [ color = lightgrey ]
-      21: [ color = lightgrey ]
-      22: [ color = lightgrey ]
-      23: [ color = lightgrey ]
-      24: [ color = lightgrey ]
-      25: [ color = lightgrey ]
-      26: [ color = lightgrey ]
-      27: [ color = lightgrey ]
-      28: [ color = lightgrey ]
-      29: [ color = lightgrey ]
-      30: [ color = lightgrey ]
-      31: [ color = lightgrey ]
+      13-31:  [ color = lightgrey ]
    }
 
 """
@@ -569,7 +535,19 @@ HEXITEC_2X6_VSR_DATA_CTRL = { 'addr': 32,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_VSR_DATA_CTRL`.
+""":const:`HEXITEC_2X6_VSR_DATA_CTRL` generated from `XML2VHDL` output.
+
+================  =========================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_VSR_DATA_CTRL
+**Address:**      ``0x0000_0020``
+**Description:**  VSR data control register
+**Bit Fields**    **Description**            **Mask**         **Permission**  **Reset Value**
+DATA_EN           Data enable                ``0x0000_0001``  Read/Write      ``0x0000_0000``
+TRAINING_EN       Training enable            ``0x0000_0010``  Read/Write      ``0x0000_0000``
+SYNTH_DATA_EN     Synth data enable          ``0x0000_0100``  Read/Write      ``0x0000_0000``
+TRAINING_PATTERN  Training pattern           ``0xFFFF_0000``  Read/Write      ``0x0000_0000``
+================  =========================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -580,11 +558,11 @@ HEXITEC_2X6_VSR_DATA_CTRL = { 'addr': 32,
       scale_interval = 8
 
       0: DATA_EN [ rotate = 270 ]
-      1-3: [ color = lightgrey ]
+      1-3:  [ rotate = 270, color = lightgrey ]
       4: TRAINING_EN [ rotate = 270 ]
-      5-7: [ color = lightgrey ]
+      5-7:  [ rotate = 270, color = lightgrey ]
       8: SYNTH_DATA_EN [ rotate = 270 ]
-      9-15: [ color = lightgrey ]
+      9-15:  [ color = lightgrey ]
       16-31: TRAINING_PATTERN
    }
 
@@ -598,7 +576,16 @@ HEXITEC_2X6_SMB_CFG = { 'addr': 36,
   'nof_bits': 3,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_SMB_CFG`.
+""":const:`HEXITEC_2X6_SMB_CFG` generated from `XML2VHDL` output.
+
+================  ==========================
+**Register**
+**Name:**         HEXITEC_2X6_SMB_CFG
+**Address:**      ``0x0000_0024``
+**Description:**  SMB configuration register
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ==========================
 
 .. packetdiag::
 
@@ -608,8 +595,8 @@ HEXITEC_2X6_SMB_CFG = { 'addr': 36,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-2: HEXITEC_2X6_SMB_CFG [ rotate = 270 ]
-      3-31: [ color = lightgrey ]
+      0-2: SMB_CFG [ rotate = 270 ]
+      3-31:  [ color = lightgrey ]
    }
 
 """
@@ -642,7 +629,18 @@ HEXITEC_2X6_TIG_CTRL = { 'addr': 40,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_TIG_CTRL`.
+""":const:`HEXITEC_2X6_TIG_CTRL` generated from `XML2VHDL` output.
+
+================  =====================================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_TIG_CTRL
+**Address:**      ``0x0000_0028``
+**Description:**  Test Image Generator control register
+**Bit Fields**    **Description**                        **Mask**         **Permission**  **Reset Value**
+TIG_RST           Test Image Generator reset             ``0x0000_0001``  Read/Write      ``0x0000_0000``
+TIG_EN            Test Image Generator enable            ``0x0000_0002``  Read/Write      ``0x0000_0000``
+TIG_MODE          Test Image Generator mode              ``0x0000_0700``  Read/Write      ``0x0000_0000``
+================  =====================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -654,9 +652,9 @@ HEXITEC_2X6_TIG_CTRL = { 'addr': 40,
 
       0: TIG_RST [ rotate = 270 ]
       1: TIG_EN [ rotate = 270 ]
-      2-7: [ color = lightgrey ]
+      2-7:  [ color = lightgrey ]
       8-10: TIG_MODE [ rotate = 270 ]
-      11-31: [ color = lightgrey ]
+      11-31:  [ color = lightgrey ]
    }
 
 """
@@ -669,7 +667,16 @@ HEXITEC_2X6_TIG_ROWS = { 'addr': 44,
   'nof_bits': 24,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_TIG_ROWS`.
+""":const:`HEXITEC_2X6_TIG_ROWS` generated from `XML2VHDL` output.
+
+================  ==================================
+**Register**
+**Name:**         HEXITEC_2X6_TIG_ROWS
+**Address:**      ``0x0000_002C``
+**Description:**  Test Image Generator rows register
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ==================================
 
 .. packetdiag::
 
@@ -679,8 +686,8 @@ HEXITEC_2X6_TIG_ROWS = { 'addr': 44,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-23: HEXITEC_2X6_TIG_ROWS
-      24-31: [ color = lightgrey ]
+      0-23: TIG_ROWS
+      24-31:  [ color = lightgrey ]
    }
 
 """
@@ -693,7 +700,16 @@ HEXITEC_2X6_TIG_COLS = { 'addr': 48,
   'nof_bits': 24,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_TIG_COLS`.
+""":const:`HEXITEC_2X6_TIG_COLS` generated from `XML2VHDL` output.
+
+================  =====================================
+**Register**
+**Name:**         HEXITEC_2X6_TIG_COLS
+**Address:**      ``0x0000_0030``
+**Description:**  Test Image Generator columns register
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  =====================================
 
 .. packetdiag::
 
@@ -703,8 +719,8 @@ HEXITEC_2X6_TIG_COLS = { 'addr': 48,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-23: HEXITEC_2X6_TIG_COLS
-      24-31: [ color = lightgrey ]
+      0-23: TIG_COLS
+      24-31:  [ color = lightgrey ]
    }
 
 """
@@ -717,7 +733,16 @@ HEXITEC_2X6_TIG_LBCLKS = { 'addr': 52,
   'nof_bits': 24,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_TIG_LBCLKS`.
+""":const:`HEXITEC_2X6_TIG_LBCLKS` generated from `XML2VHDL` output.
+
+================  ====================================
+**Register**
+**Name:**         HEXITEC_2X6_TIG_LBCLKS
+**Address:**      ``0x0000_0034``
+**Description:**  Test Image Generator lbclks register
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ====================================
 
 .. packetdiag::
 
@@ -727,8 +752,8 @@ HEXITEC_2X6_TIG_LBCLKS = { 'addr': 52,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-23: HEXITEC_2X6_TIG_LBCLKS
-      24-31: [ color = lightgrey ]
+      0-23: TIG_LBCLKS
+      24-31:  [ color = lightgrey ]
    }
 
 """
@@ -741,7 +766,16 @@ HEXITEC_2X6_TIG_FBCLKS = { 'addr': 56,
   'nof_bits': 24,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_TIG_FBCLKS`.
+""":const:`HEXITEC_2X6_TIG_FBCLKS` generated from `XML2VHDL` output.
+
+================  ====================================
+**Register**
+**Name:**         HEXITEC_2X6_TIG_FBCLKS
+**Address:**      ``0x0000_0038``
+**Description:**  Test Image Generator fbclks register
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ====================================
 
 .. packetdiag::
 
@@ -751,8 +785,8 @@ HEXITEC_2X6_TIG_FBCLKS = { 'addr': 56,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-23: HEXITEC_2X6_TIG_FBCLKS
-      24-31: [ color = lightgrey ]
+      0-23: TIG_FBCLKS
+      24-31:  [ color = lightgrey ]
    }
 
 """
@@ -771,7 +805,16 @@ HEXITEC_2X6_UDP_CORE_CTRL = { 'addr': 64,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_UDP_CORE_CTRL`.
+""":const:`HEXITEC_2X6_UDP_CORE_CTRL` generated from `XML2VHDL` output.
+
+================  ============================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_UDP_CORE_CTRL
+**Address:**      ``0x0000_0040``
+**Description:**  UDP Core control register
+**Bit Fields**    **Description**               **Mask**         **Permission**  **Reset Value**
+USE_EXT_ADDRS     Use fixed external addresses  ``0x0000_00FF``  Read/Write      ``0x0000_0000``
+================  ============================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -782,7 +825,7 @@ HEXITEC_2X6_UDP_CORE_CTRL = { 'addr': 64,
       scale_interval = 8
 
       0-7: USE_EXT_ADDRS
-      8-31: [ color = lightgrey ]
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -801,7 +844,16 @@ HEXITEC_2X6_TEST_CTRL = { 'addr': 68,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_TEST_CTRL`.
+""":const:`HEXITEC_2X6_TEST_CTRL` generated from `XML2VHDL` output.
+
+================  ===========================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_TEST_CTRL
+**Address:**      ``0x0000_0044``
+**Description:**  Board test control register
+**Bit Fields**    **Description**              **Mask**         **Permission**  **Reset Value**
+UART_LOOPBACK_EN  UART loopback enable         ``0x0000_0001``  Read/Write      ``0x0000_0000``
+================  ===========================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -812,37 +864,7 @@ HEXITEC_2X6_TEST_CTRL = { 'addr': 68,
       scale_interval = 8
 
       0: UART_LOOPBACK_EN [ rotate = 270 ]
-      1: [ color = lightgrey ]
-      2: [ color = lightgrey ]
-      3: [ color = lightgrey ]
-      4: [ color = lightgrey ]
-      5: [ color = lightgrey ]
-      6: [ color = lightgrey ]
-      7: [ color = lightgrey ]
-      8: [ color = lightgrey ]
-      9: [ color = lightgrey ]
-      10: [ color = lightgrey ]
-      11: [ color = lightgrey ]
-      12: [ color = lightgrey ]
-      13: [ color = lightgrey ]
-      14: [ color = lightgrey ]
-      15: [ color = lightgrey ]
-      16: [ color = lightgrey ]
-      17: [ color = lightgrey ]
-      18: [ color = lightgrey ]
-      19: [ color = lightgrey ]
-      20: [ color = lightgrey ]
-      21: [ color = lightgrey ]
-      22: [ color = lightgrey ]
-      23: [ color = lightgrey ]
-      24: [ color = lightgrey ]
-      25: [ color = lightgrey ]
-      26: [ color = lightgrey ]
-      27: [ color = lightgrey ]
-      28: [ color = lightgrey ]
-      29: [ color = lightgrey ]
-      30: [ color = lightgrey ]
-      31: [ color = lightgrey ]
+      1-31:  [ color = lightgrey ]
    }
 
 """
@@ -896,7 +918,21 @@ HEXITEC_2X6_HEADER_CTRL = { 'addr': 256,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_HEADER_CTRL`.
+""":const:`HEXITEC_2X6_HEADER_CTRL` generated from `XML2VHDL` output.
+
+===================  ==============================================  ===============  ==============  ===============
+**Register**
+**Name:**            HEXITEC_2X6_HEADER_CTRL
+**Address:**         ``0x0000_0100``
+**Description:**     Hexitc header control register
+**Bit Fields**       **Description**                                 **Mask**         **Permission**  **Reset Value**
+FRAME_COUNTER_LOAD   Load preload frame number into frame counter    ``0x0000_0001``  Read/Write      ``0x0000_0000``
+PACKET_COUNTER_LOAD  Load preload packet number into packet counter  ``0x0000_0002``  Read/Write      ``0x0000_0000``
+FRAME_COUNTER_RST    Reset frame number counter                      ``0x0000_0004``  Read/Write      ``0x0000_0000``
+PACKET_COUNTER_RST   Reset packet number counter                     ``0x0000_0008``  Read/Write      ``0x0000_0000``
+RUN_GENERATOR        Restart the frame generator                     ``0x4000_0000``  Read/Write      ``0x0000_0000``
+READOUT_ENABLE       Readout enable                                  ``0x8000_0000``  Read/Write      ``0x0000_0000``
+===================  ==============================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -910,7 +946,7 @@ HEXITEC_2X6_HEADER_CTRL = { 'addr': 256,
       1: PACKET_COUNTER_LOAD [ rotate = 270 ]
       2: FRAME_COUNTER_RST [ rotate = 270 ]
       3: PACKET_COUNTER_RST [ rotate = 270 ]
-      4-29: [ color = lightgrey ]
+      4-29:  [ color = lightgrey ]
       30: RUN_GENERATOR [ rotate = 270 ]
       31: READOUT_ENABLE [ rotate = 270 ]
    }
@@ -931,7 +967,16 @@ HEXITEC_2X6_HEADER_STATUS = { 'addr': 260,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_HEADER_STATUS`.
+""":const:`HEXITEC_2X6_HEADER_STATUS` generated from `XML2VHDL` output.
+
+================  ==============================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_HEADER_STATUS
+**Address:**      ``0x0000_0104``
+**Description:**  Hexitec header status register
+**Bit Fields**    **Description**                 **Mask**         **Permission**  **Reset Value**
+READOUT_LANE      Current readout lane            ``0x0000_0003``  Read/Write      ``0x0000_0000``
+================  ==============================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -942,7 +987,7 @@ HEXITEC_2X6_HEADER_STATUS = { 'addr': 260,
       scale_interval = 8
 
       0-1: READOUT_LANE [ rotate = 270 ]
-      2-31: [ color = lightgrey ]
+      2-31:  [ color = lightgrey ]
    }
 
 """
@@ -955,7 +1000,16 @@ HEXITEC_2X6_FRAME_PRELOAD_LOWER = { 'addr': 272,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_FRAME_PRELOAD_LOWER`.
+""":const:`HEXITEC_2X6_FRAME_PRELOAD_LOWER` generated from `XML2VHDL` output.
+
+================  =================================
+**Register**
+**Name:**         HEXITEC_2X6_FRAME_PRELOAD_LOWER
+**Address:**      ``0x0000_0110``
+**Description:**  Frame number preload value [31:0]
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  =================================
 
 .. packetdiag::
 
@@ -965,7 +1019,7 @@ HEXITEC_2X6_FRAME_PRELOAD_LOWER = { 'addr': 272,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: HEXITEC_2X6_FRAME_PRELOAD_LOWER
+      0-31: FRAME_PRELOAD_LOWER
    }
 
 """
@@ -978,7 +1032,16 @@ HEXITEC_2X6_FRAME_PRELOAD_UPPER = { 'addr': 276,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_FRAME_PRELOAD_UPPER`.
+""":const:`HEXITEC_2X6_FRAME_PRELOAD_UPPER` generated from `XML2VHDL` output.
+
+================  ==================================
+**Register**
+**Name:**         HEXITEC_2X6_FRAME_PRELOAD_UPPER
+**Address:**      ``0x0000_0114``
+**Description:**  Frame number preload value [63:32]
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ==================================
 
 .. packetdiag::
 
@@ -988,7 +1051,7 @@ HEXITEC_2X6_FRAME_PRELOAD_UPPER = { 'addr': 276,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: HEXITEC_2X6_FRAME_PRELOAD_UPPER
+      0-31: FRAME_PRELOAD_UPPER
    }
 
 """
@@ -1001,7 +1064,16 @@ HEXITEC_2X6_PACKET_PRELOAD_LOWER = { 'addr': 280,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_PACKET_PRELOAD_LOWER`.
+""":const:`HEXITEC_2X6_PACKET_PRELOAD_LOWER` generated from `XML2VHDL` output.
+
+================  ===================================
+**Register**
+**Name:**         HEXITEC_2X6_PACKET_PRELOAD_LOWER
+**Address:**      ``0x0000_0118``
+**Description:**  Packet number preload value [31:0]]
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ===================================
 
 .. packetdiag::
 
@@ -1011,7 +1083,7 @@ HEXITEC_2X6_PACKET_PRELOAD_LOWER = { 'addr': 280,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: HEXITEC_2X6_PACKET_PRELOAD_LOWER
+      0-31: PACKET_PRELOAD_LOWER
    }
 
 """
@@ -1024,7 +1096,16 @@ HEXITEC_2X6_PACKET_PRELOAD_UPPER = { 'addr': 284,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_PACKET_PRELOAD_UPPER`.
+""":const:`HEXITEC_2X6_PACKET_PRELOAD_UPPER` generated from `XML2VHDL` output.
+
+================  ===================================
+**Register**
+**Name:**         HEXITEC_2X6_PACKET_PRELOAD_UPPER
+**Address:**      ``0x0000_011C``
+**Description:**  Packet number preload value [63:32]
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ===================================
 
 .. packetdiag::
 
@@ -1034,7 +1115,7 @@ HEXITEC_2X6_PACKET_PRELOAD_UPPER = { 'addr': 284,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: HEXITEC_2X6_PACKET_PRELOAD_UPPER
+      0-31: PACKET_PRELOAD_UPPER
    }
 
 """
@@ -1047,7 +1128,16 @@ HEXITEC_2X6_FRAME_NUMBER_LOWER = { 'addr': 288,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_FRAME_NUMBER_LOWER`.
+""":const:`HEXITEC_2X6_FRAME_NUMBER_LOWER` generated from `XML2VHDL` output.
+
+================  ==============================
+**Register**
+**Name:**         HEXITEC_2X6_FRAME_NUMBER_LOWER
+**Address:**      ``0x0000_0120``
+**Description:**  frame number counter [31:0]
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ==============================
 
 .. packetdiag::
 
@@ -1057,7 +1147,7 @@ HEXITEC_2X6_FRAME_NUMBER_LOWER = { 'addr': 288,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: HEXITEC_2X6_FRAME_NUMBER_LOWER
+      0-31: FRAME_NUMBER_LOWER
    }
 
 """
@@ -1070,7 +1160,16 @@ HEXITEC_2X6_FRAME_NUMBER_UPPER = { 'addr': 292,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_FRAME_NUMBER_UPPER`.
+""":const:`HEXITEC_2X6_FRAME_NUMBER_UPPER` generated from `XML2VHDL` output.
+
+================  ==============================
+**Register**
+**Name:**         HEXITEC_2X6_FRAME_NUMBER_UPPER
+**Address:**      ``0x0000_0124``
+**Description:**  frame number counter [63:32]
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ==============================
 
 .. packetdiag::
 
@@ -1080,7 +1179,7 @@ HEXITEC_2X6_FRAME_NUMBER_UPPER = { 'addr': 292,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: HEXITEC_2X6_FRAME_NUMBER_UPPER
+      0-31: FRAME_NUMBER_UPPER
    }
 
 """
@@ -1093,7 +1192,16 @@ HEXITEC_2X6_PACKET_NUMBER_LOWER = { 'addr': 296,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_PACKET_NUMBER_LOWER`.
+""":const:`HEXITEC_2X6_PACKET_NUMBER_LOWER` generated from `XML2VHDL` output.
+
+================  ===============================
+**Register**
+**Name:**         HEXITEC_2X6_PACKET_NUMBER_LOWER
+**Address:**      ``0x0000_0128``
+**Description:**  packet number counter [31:0]
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ===============================
 
 .. packetdiag::
 
@@ -1103,7 +1211,7 @@ HEXITEC_2X6_PACKET_NUMBER_LOWER = { 'addr': 296,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: HEXITEC_2X6_PACKET_NUMBER_LOWER
+      0-31: PACKET_NUMBER_LOWER
    }
 
 """
@@ -1116,7 +1224,16 @@ HEXITEC_2X6_PACKET_NUMBER_UPPER = { 'addr': 300,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_PACKET_NUMBER_UPPER`.
+""":const:`HEXITEC_2X6_PACKET_NUMBER_UPPER` generated from `XML2VHDL` output.
+
+================  ===============================
+**Register**
+**Name:**         HEXITEC_2X6_PACKET_NUMBER_UPPER
+**Address:**      ``0x0000_012C``
+**Description:**  packet number counter [63:32]
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ===============================
 
 .. packetdiag::
 
@@ -1126,7 +1243,7 @@ HEXITEC_2X6_PACKET_NUMBER_UPPER = { 'addr': 300,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: HEXITEC_2X6_PACKET_NUMBER_UPPER
+      0-31: PACKET_NUMBER_UPPER
    }
 
 """
@@ -1145,7 +1262,16 @@ HEXITEC_2X6_VSR0_STATUS = { 'addr': 1000,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_VSR0_STATUS`.
+""":const:`HEXITEC_2X6_VSR0_STATUS` generated from `XML2VHDL` output.
+
+================  =======================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_VSR0_STATUS
+**Address:**      ``0x0000_03E8``
+**Description:**  VSR 0 status register
+**Bit Fields**    **Description**          **Mask**         **Permission**  **Reset Value**
+LOCKED            locked                   ``0x0000_00FF``  Read/Write      ``0x0000_0000``
+================  =======================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1156,7 +1282,7 @@ HEXITEC_2X6_VSR0_STATUS = { 'addr': 1000,
       scale_interval = 8
 
       0-7: LOCKED
-      8-31: [ color = lightgrey ]
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1175,7 +1301,16 @@ HEXITEC_2X6_VSR1_STATUS = { 'addr': 1004,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_VSR1_STATUS`.
+""":const:`HEXITEC_2X6_VSR1_STATUS` generated from `XML2VHDL` output.
+
+================  =======================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_VSR1_STATUS
+**Address:**      ``0x0000_03EC``
+**Description:**  VSR 1 status register
+**Bit Fields**    **Description**          **Mask**         **Permission**  **Reset Value**
+LOCKED            locked                   ``0x0000_00FF``  Read/Write      ``0x0000_0000``
+================  =======================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1186,7 +1321,7 @@ HEXITEC_2X6_VSR1_STATUS = { 'addr': 1004,
       scale_interval = 8
 
       0-7: LOCKED
-      8-31: [ color = lightgrey ]
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1205,7 +1340,16 @@ HEXITEC_2X6_VSR2_STATUS = { 'addr': 1008,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_VSR2_STATUS`.
+""":const:`HEXITEC_2X6_VSR2_STATUS` generated from `XML2VHDL` output.
+
+================  =======================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_VSR2_STATUS
+**Address:**      ``0x0000_03F0``
+**Description:**  VSR 2 status register
+**Bit Fields**    **Description**          **Mask**         **Permission**  **Reset Value**
+LOCKED            locked                   ``0x0000_00FF``  Read/Write      ``0x0000_0000``
+================  =======================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1216,7 +1360,7 @@ HEXITEC_2X6_VSR2_STATUS = { 'addr': 1008,
       scale_interval = 8
 
       0-7: LOCKED
-      8-31: [ color = lightgrey ]
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1235,7 +1379,16 @@ HEXITEC_2X6_VSR3_STATUS = { 'addr': 1012,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_VSR3_STATUS`.
+""":const:`HEXITEC_2X6_VSR3_STATUS` generated from `XML2VHDL` output.
+
+================  =======================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_VSR3_STATUS
+**Address:**      ``0x0000_03F4``
+**Description:**  VSR 3 status register
+**Bit Fields**    **Description**          **Mask**         **Permission**  **Reset Value**
+LOCKED            locked                   ``0x0000_00FF``  Read/Write      ``0x0000_0000``
+================  =======================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1246,7 +1399,7 @@ HEXITEC_2X6_VSR3_STATUS = { 'addr': 1012,
       scale_interval = 8
 
       0-7: LOCKED
-      8-31: [ color = lightgrey ]
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1265,7 +1418,16 @@ HEXITEC_2X6_VSR4_STATUS = { 'addr': 1016,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_VSR4_STATUS`.
+""":const:`HEXITEC_2X6_VSR4_STATUS` generated from `XML2VHDL` output.
+
+================  =======================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_VSR4_STATUS
+**Address:**      ``0x0000_03F8``
+**Description:**  VSR 4 status register
+**Bit Fields**    **Description**          **Mask**         **Permission**  **Reset Value**
+LOCKED            locked                   ``0x0000_00FF``  Read/Write      ``0x0000_0000``
+================  =======================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1276,7 +1438,7 @@ HEXITEC_2X6_VSR4_STATUS = { 'addr': 1016,
       scale_interval = 8
 
       0-7: LOCKED
-      8-31: [ color = lightgrey ]
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1295,7 +1457,16 @@ HEXITEC_2X6_VSR5_STATUS = { 'addr': 1020,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_VSR5_STATUS`.
+""":const:`HEXITEC_2X6_VSR5_STATUS` generated from `XML2VHDL` output.
+
+================  =======================  ===============  ==============  ===============
+**Register**
+**Name:**         HEXITEC_2X6_VSR5_STATUS
+**Address:**      ``0x0000_03FC``
+**Description:**  VSR 5 status register
+**Bit Fields**    **Description**          **Mask**         **Permission**  **Reset Value**
+LOCKED            locked                   ``0x0000_00FF``  Read/Write      ``0x0000_0000``
+================  =======================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1306,7 +1477,7 @@ HEXITEC_2X6_VSR5_STATUS = { 'addr': 1020,
       scale_interval = 8
 
       0-7: LOCKED
-      8-31: [ color = lightgrey ]
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1340,7 +1511,18 @@ BOARD_BUILD_INFO_SRC_VERSION = { 'addr': 32768,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_SRC_VERSION`.
+""":const:`BOARD_BUILD_INFO_SRC_VERSION` generated from `XML2VHDL` output.
+
+================  ================================================================  ===============  ==============  ===============
+**Register**
+**Name:**         BOARD_BUILD_INFO_SRC_VERSION
+**Address:**      ``0x0000_8000``
+**Description:**  Source code version in hex readable form [major].[minor].[micro]
+**Bit Fields**    **Description**                                                   **Mask**         **Permission**  **Reset Value**
+MICRO             3 digit hex readable micro                                        ``0x0000_0FFF``  Read-Only       \-\-\-
+MINOR             3 digit hex readable minor                                        ``0x00FF_F000``  Read-Only       \-\-\-
+MAJOR             2 digit hex readable major                                        ``0xFF00_0000``  Read-Only       \-\-\-
+================  ================================================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1366,7 +1548,16 @@ BOARD_BUILD_INFO_GIT_HASH = { 'addr': 32772,
   'nof_bits': 32,
   'reset_value': None,
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_GIT_HASH`.
+""":const:`BOARD_BUILD_INFO_GIT_HASH` generated from `XML2VHDL` output.
+
+================  ===============================================================================
+**Register**
+**Name:**         BOARD_BUILD_INFO_GIT_HASH
+**Address:**      ``0x0000_8004``
+**Description:**  Abbreviated Git hash for commit where bit-stream was compiled (padded to 32bit)
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ===============================================================================
 
 .. packetdiag::
 
@@ -1376,7 +1567,7 @@ BOARD_BUILD_INFO_GIT_HASH = { 'addr': 32772,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_GIT_HASH
+      0-31: GIT_HASH
    }
 
 """
@@ -1409,7 +1600,18 @@ BOARD_BUILD_INFO_BUILD_DATE = { 'addr': 32776,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_BUILD_DATE`.
+""":const:`BOARD_BUILD_INFO_BUILD_DATE` generated from `XML2VHDL` output.
+
+================  ====================================================  ===============  ==============  ===============
+**Register**
+**Name:**         BOARD_BUILD_INFO_BUILD_DATE
+**Address:**      ``0x0000_8008``
+**Description:**  Build date in hex readable form [year]-[month]-[day]
+**Bit Fields**    **Description**                                       **Mask**         **Permission**  **Reset Value**
+DAY               2 digit hex readable day                              ``0x0000_00FF``  Read-Only       \-\-\-
+MONTH             2 digit hex readable month                            ``0x0000_FF00``  Read-Only       \-\-\-
+YEAR              4 digit hex readable year                             ``0xFFFF_0000``  Read-Only       \-\-\-
+================  ====================================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1454,7 +1656,18 @@ BOARD_BUILD_INFO_BUILD_TIME = { 'addr': 32780,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_BUILD_TIME`.
+""":const:`BOARD_BUILD_INFO_BUILD_TIME` generated from `XML2VHDL` output.
+
+================  =========================================================  ===============  ==============  ===============
+**Register**
+**Name:**         BOARD_BUILD_INFO_BUILD_TIME
+**Address:**      ``0x0000_800C``
+**Description:**  Build time in hex readable form [hour]:[minute]:[seconds]
+**Bit Fields**    **Description**                                            **Mask**         **Permission**  **Reset Value**
+SECONDS           2 digit hex readable seconds                               ``0x0000_00FF``  Read-Only       \-\-\-
+MINUTE            2 digit hex readable minute                                ``0x0000_FF00``  Read-Only       \-\-\-
+HOUR              2 digit hex readable hour                                  ``0x00FF_0000``  Read-Only       \-\-\-
+================  =========================================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1467,7 +1680,7 @@ BOARD_BUILD_INFO_BUILD_TIME = { 'addr': 32780,
       0-7: SECONDS
       8-15: MINUTE
       16-23: HOUR
-      24-31: [ color = lightgrey ]
+      24-31:  [ color = lightgrey ]
    }
 
 """
@@ -1480,7 +1693,16 @@ BOARD_BUILD_INFO_DNA_0 = { 'addr': 32784,
   'nof_bits': 32,
   'reset_value': None,
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_DNA_0`.
+""":const:`BOARD_BUILD_INFO_DNA_0` generated from `XML2VHDL` output.
+
+================  =================================
+**Register**
+**Name:**         BOARD_BUILD_INFO_DNA_0
+**Address:**      ``0x0000_8010``
+**Description:**  Unique FPGA device DNA ID [31..0]
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  =================================
 
 .. packetdiag::
 
@@ -1490,7 +1712,7 @@ BOARD_BUILD_INFO_DNA_0 = { 'addr': 32784,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_DNA_0
+      0-31: DNA_0
    }
 
 """
@@ -1503,7 +1725,16 @@ BOARD_BUILD_INFO_DNA_1 = { 'addr': 32788,
   'nof_bits': 32,
   'reset_value': None,
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_DNA_1`.
+""":const:`BOARD_BUILD_INFO_DNA_1` generated from `XML2VHDL` output.
+
+================  ==================================
+**Register**
+**Name:**         BOARD_BUILD_INFO_DNA_1
+**Address:**      ``0x0000_8014``
+**Description:**  Unique FPGA device DNA ID [63..32]
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ==================================
 
 .. packetdiag::
 
@@ -1513,7 +1744,7 @@ BOARD_BUILD_INFO_DNA_1 = { 'addr': 32788,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_DNA_1
+      0-31: DNA_1
    }
 
 """
@@ -1526,7 +1757,16 @@ BOARD_BUILD_INFO_DNA_2 = { 'addr': 32792,
   'nof_bits': 32,
   'reset_value': None,
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_DNA_2`.
+""":const:`BOARD_BUILD_INFO_DNA_2` generated from `XML2VHDL` output.
+
+================  ==================================
+**Register**
+**Name:**         BOARD_BUILD_INFO_DNA_2
+**Address:**      ``0x0000_8018``
+**Description:**  Unique FPGA device DNA ID [95..64]
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ==================================
 
 .. packetdiag::
 
@@ -1536,7 +1776,7 @@ BOARD_BUILD_INFO_DNA_2 = { 'addr': 32792,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_DNA_2
+      0-31: DNA_2
    }
 
 """
@@ -1550,7 +1790,16 @@ BOARD_BUILD_INFO_RSV_DNA_3 = { 'addr': 32796,
   'nof_bits': 32,
   'reset_value': None,
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_RSV_DNA_3`.
+""":const:`BOARD_BUILD_INFO_RSV_DNA_3` generated from `XML2VHDL` output.
+
+================  =================================================================
+**Register**
+**Name:**         BOARD_BUILD_INFO_RSV_DNA_3
+**Address:**      ``0x0000_801C``
+**Description:**  Unique FPGA device DNA ID Reserved for future expansion [127..96]
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  =================================================================
 
 .. packetdiag::
 
@@ -1560,7 +1809,7 @@ BOARD_BUILD_INFO_RSV_DNA_3 = { 'addr': 32796,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_RSV_DNA_3
+      0-31: RSV_DNA_3 [ color = lightgrey ]
    }
 
 """
@@ -1579,7 +1828,16 @@ BOARD_BUILD_INFO_DNA_STATUS = { 'addr': 32800,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_DNA_STATUS`.
+""":const:`BOARD_BUILD_INFO_DNA_STATUS` generated from `XML2VHDL` output.
+
+================  ===========================  ===============  ==============  ===============
+**Register**
+**Name:**         BOARD_BUILD_INFO_DNA_STATUS
+**Address:**      ``0x0000_8020``
+**Description:**  DNA status register
+**Bit Fields**    **Description**              **Mask**         **Permission**  **Reset Value**
+VALID             FPGA DNA valid               ``0x0000_0001``  Read-Only       \-\-\-
+================  ===========================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1590,37 +1848,7 @@ BOARD_BUILD_INFO_DNA_STATUS = { 'addr': 32800,
       scale_interval = 8
 
       0: VALID [ rotate = 270 ]
-      1: [ color = lightgrey ]
-      2: [ color = lightgrey ]
-      3: [ color = lightgrey ]
-      4: [ color = lightgrey ]
-      5: [ color = lightgrey ]
-      6: [ color = lightgrey ]
-      7: [ color = lightgrey ]
-      8: [ color = lightgrey ]
-      9: [ color = lightgrey ]
-      10: [ color = lightgrey ]
-      11: [ color = lightgrey ]
-      12: [ color = lightgrey ]
-      13: [ color = lightgrey ]
-      14: [ color = lightgrey ]
-      15: [ color = lightgrey ]
-      16: [ color = lightgrey ]
-      17: [ color = lightgrey ]
-      18: [ color = lightgrey ]
-      19: [ color = lightgrey ]
-      20: [ color = lightgrey ]
-      21: [ color = lightgrey ]
-      22: [ color = lightgrey ]
-      23: [ color = lightgrey ]
-      24: [ color = lightgrey ]
-      25: [ color = lightgrey ]
-      26: [ color = lightgrey ]
-      27: [ color = lightgrey ]
-      28: [ color = lightgrey ]
-      29: [ color = lightgrey ]
-      30: [ color = lightgrey ]
-      31: [ color = lightgrey ]
+      1-31:  [ color = lightgrey ]
    }
 
 """
@@ -1634,7 +1862,16 @@ BOARD_BUILD_INFO_SCRATCH_1 = { 'addr': 32816,
   'nof_bits': 32,
   'reset_value': '0x11111111',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_SCRATCH_1`.
+""":const:`BOARD_BUILD_INFO_SCRATCH_1` generated from `XML2VHDL` output.
+
+================  ======================================================================================
+**Register**
+**Name:**         BOARD_BUILD_INFO_SCRATCH_1
+**Address:**      ``0x0000_8030``
+**Description:**  Scratch register 1 to test register read writes with no impact to design functionality
+**Permission:**   Read/Write
+**Reset Value:**  ``0x1111_1111``
+================  ======================================================================================
 
 .. packetdiag::
 
@@ -1644,7 +1881,7 @@ BOARD_BUILD_INFO_SCRATCH_1 = { 'addr': 32816,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_SCRATCH_1
+      0-31: SCRATCH_1
    }
 
 """
@@ -1658,7 +1895,16 @@ BOARD_BUILD_INFO_SCRATCH_2 = { 'addr': 32820,
   'nof_bits': 32,
   'reset_value': '0x22222222',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_SCRATCH_2`.
+""":const:`BOARD_BUILD_INFO_SCRATCH_2` generated from `XML2VHDL` output.
+
+================  ======================================================================================
+**Register**
+**Name:**         BOARD_BUILD_INFO_SCRATCH_2
+**Address:**      ``0x0000_8034``
+**Description:**  Scratch register 2 to test register read writes with no impact to design functionality
+**Permission:**   Read/Write
+**Reset Value:**  ``0x2222_2222``
+================  ======================================================================================
 
 .. packetdiag::
 
@@ -1668,7 +1914,7 @@ BOARD_BUILD_INFO_SCRATCH_2 = { 'addr': 32820,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_SCRATCH_2
+      0-31: SCRATCH_2
    }
 
 """
@@ -1682,7 +1928,16 @@ BOARD_BUILD_INFO_SCRATCH_3 = { 'addr': 32824,
   'nof_bits': 32,
   'reset_value': '0x33333333',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_SCRATCH_3`.
+""":const:`BOARD_BUILD_INFO_SCRATCH_3` generated from `XML2VHDL` output.
+
+================  ======================================================================================
+**Register**
+**Name:**         BOARD_BUILD_INFO_SCRATCH_3
+**Address:**      ``0x0000_8038``
+**Description:**  Scratch register 3 to test register read writes with no impact to design functionality
+**Permission:**   Read/Write
+**Reset Value:**  ``0x3333_3333``
+================  ======================================================================================
 
 .. packetdiag::
 
@@ -1692,7 +1947,7 @@ BOARD_BUILD_INFO_SCRATCH_3 = { 'addr': 32824,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_SCRATCH_3
+      0-31: SCRATCH_3
    }
 
 """
@@ -1706,7 +1961,16 @@ BOARD_BUILD_INFO_SCRATCH_4 = { 'addr': 32828,
   'nof_bits': 32,
   'reset_value': '0x44444444',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_SCRATCH_4`.
+""":const:`BOARD_BUILD_INFO_SCRATCH_4` generated from `XML2VHDL` output.
+
+================  ======================================================================================
+**Register**
+**Name:**         BOARD_BUILD_INFO_SCRATCH_4
+**Address:**      ``0x0000_803C``
+**Description:**  Scratch register 4 to test register read writes with no impact to design functionality
+**Permission:**   Read/Write
+**Reset Value:**  ``0x4444_4444``
+================  ======================================================================================
 
 .. packetdiag::
 
@@ -1716,20 +1980,29 @@ BOARD_BUILD_INFO_SCRATCH_4 = { 'addr': 32828,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_SCRATCH_4
+      0-31: SCRATCH_4
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_1 = { 'addr': 32832,
-  'description': 'ACSII description field 1',
+UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER = { 'addr': 131072,
+  'description': 'Source MAC Address Lower',
   'fields': [],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_1',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER',
   'nof_bits': 32,
-  'reset_value': None,
+  'reset_value': '0x00000201',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_1`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER
+**Address:**      ``0x0002_0000``
+**Description:**  Source MAC Address Lower
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0201``
+================  ================================================
 
 .. packetdiag::
 
@@ -1739,20 +2012,29 @@ BOARD_BUILD_INFO_ASCII_DESCR_1 = { 'addr': 32832,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_1
+      0-31: SRC_MAC_ADDR_LOWER
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_2 = { 'addr': 32836,
-  'description': 'ACSII description field 2',
+UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER = { 'addr': 131076,
+  'description': 'Source MAC Address Upper',
   'fields': [],
-  'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_2',
-  'nof_bits': 32,
-  'reset_value': None,
+  'mask': 65535,
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER',
+  'nof_bits': 16,
+  'reset_value': '0x6200',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_2`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER
+**Address:**      ``0x0002_0004``
+**Description:**  Source MAC Address Upper
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_6200``
+================  ================================================
 
 .. packetdiag::
 
@@ -1762,20 +2044,30 @@ BOARD_BUILD_INFO_ASCII_DESCR_2 = { 'addr': 32836,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_2
+      0-15: SRC_MAC_ADDR_UPPER
+      16-31:  [ color = lightgrey ]
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_3 = { 'addr': 32840,
-  'description': 'ACSII description field 3',
+UDP_CORE_0_0_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER = { 'addr': 131084,
+  'description': 'Destination MAC Address Lower',
   'fields': [],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_3',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER',
   'nof_bits': 32,
-  'reset_value': None,
+  'reset_value': '0x00000FF00',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_3`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER
+**Address:**      ``0x0002_000C``
+**Description:**  Destination MAC Address Lower
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_FF00``
+================  ================================================
 
 .. packetdiag::
 
@@ -1785,20 +2077,29 @@ BOARD_BUILD_INFO_ASCII_DESCR_3 = { 'addr': 32840,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_3
+      0-31: DST_MAC_ADDR_LOWER
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_4 = { 'addr': 32844,
-  'description': 'ACSII description field 4',
+UDP_CORE_0_0_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER = { 'addr': 131088,
+  'description': 'Destination MAC Address Upper',
   'fields': [],
-  'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_4',
-  'nof_bits': 32,
-  'reset_value': None,
+  'mask': 65535,
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER',
+  'nof_bits': 16,
+  'reset_value': '0x6200',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_4`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER
+**Address:**      ``0x0002_0010``
+**Description:**  Destination MAC Address Upper
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_6200``
+================  ================================================
 
 .. packetdiag::
 
@@ -1808,20 +2109,30 @@ BOARD_BUILD_INFO_ASCII_DESCR_4 = { 'addr': 32844,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_4
+      0-15: DST_MAC_ADDR_UPPER
+      16-31:  [ color = lightgrey ]
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_5 = { 'addr': 32848,
-  'description': 'ACSII description field 5',
+UDP_CORE_0_0_UDP_CORE_CONTROL_DST_IP_ADDR = { 'addr': 131108,
+  'description': 'UDP Destination IP Address',
   'fields': [],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_5',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_DST_IP_ADDR',
   'nof_bits': 32,
-  'reset_value': None,
+  'reset_value': '0xC0A80201',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_5`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_DST_IP_ADDR` generated from `XML2VHDL` output.
+
+================  =========================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_DST_IP_ADDR
+**Address:**      ``0x0002_0024``
+**Description:**  UDP Destination IP Address
+**Permission:**   Read/Write
+**Reset Value:**  ``0xC0A8_0201``
+================  =========================================
 
 .. packetdiag::
 
@@ -1831,20 +2142,29 @@ BOARD_BUILD_INFO_ASCII_DESCR_5 = { 'addr': 32848,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_5
+      0-31: DST_IP_ADDR
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_6 = { 'addr': 32852,
-  'description': 'ACSII description field 6',
+UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_IP_ADDR = { 'addr': 131112,
+  'description': 'UDP Source IP Address',
   'fields': [],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_6',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_IP_ADDR',
   'nof_bits': 32,
-  'reset_value': None,
+  'reset_value': '0xC0A8020B',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_6`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_IP_ADDR` generated from `XML2VHDL` output.
+
+================  =========================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_IP_ADDR
+**Address:**      ``0x0002_0028``
+**Description:**  UDP Source IP Address
+**Permission:**   Read/Write
+**Reset Value:**  ``0xC0A8_020B``
+================  =========================================
 
 .. packetdiag::
 
@@ -1854,20 +2174,43 @@ BOARD_BUILD_INFO_ASCII_DESCR_6 = { 'addr': 32852,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_6
+      0-31: SRC_IP_ADDR
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_7 = { 'addr': 32856,
-  'description': 'ACSII description field 7',
-  'fields': [],
+UDP_CORE_0_0_UDP_CORE_CONTROL_UDP_PORTS = { 'addr': 131116,
+  'description': 'UDP Ports',
+  'fields': [ { 'description': 'UDP Source Port',
+                'is_bit': False,
+                'mask': 65535,
+                'name': 'SRC_PORT',
+                'nof_bits': 16,
+                'reset_value': '0xf0d0',
+                'shiftr': 0},
+              { 'description': 'UDP Destination Port',
+                'is_bit': False,
+                'mask': 4294901760,
+                'name': 'DST_PORT',
+                'nof_bits': 16,
+                'reset_value': '0xf0d1',
+                'shiftr': 16}],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_7',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_UDP_PORTS',
   'nof_bits': 32,
-  'reset_value': None,
+  'reset_value': '0x0',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_7`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_UDP_PORTS` generated from `XML2VHDL` output.
+
+================  =======================================  ===============  ==============  ===============
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_UDP_PORTS
+**Address:**      ``0x0002_002C``
+**Description:**  UDP Ports
+**Bit Fields**    **Description**                          **Mask**         **Permission**  **Reset Value**
+SRC_PORT          UDP Source Port                          ``0x0000_FFFF``  Read/Write      ``0x0000_F0D0``
+DST_PORT          UDP Destination Port                     ``0xFFFF_0000``  Read/Write      ``0x0000_F0D1``
+================  =======================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1877,20 +2220,154 @@ BOARD_BUILD_INFO_ASCII_DESCR_7 = { 'addr': 32856,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_7
+      0-15: SRC_PORT
+      16-31: DST_PORT
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_8 = { 'addr': 32860,
-  'description': 'ACSII description field 8',
-  'fields': [],
+UDP_CORE_0_0_UDP_CORE_CONTROL_FILTER_CONTROL = { 'addr': 131128,
+  'description': 'Controls the level of filtering in the UDP core Rx',
+  'fields': [ { 'description': 'Enables Broadcast Recieving',
+                'is_bit': True,
+                'mask': 1,
+                'name': 'BROADCAST_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 0},
+              { 'description': 'Enables ARPs',
+                'is_bit': True,
+                'mask': 2,
+                'name': 'ARP_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 1},
+              { 'description': 'Enables Pings',
+                'is_bit': True,
+                'mask': 4,
+                'name': 'PING_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 2},
+              { 'description': 'Enable Passing of Unsupported Ethernet Packets',
+                'is_bit': True,
+                'mask': 256,
+                'name': 'PASS_UNS_ETHTYPE',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 8},
+              { 'description': 'Enable Passing of Unsupported IPv4 Packets',
+                'is_bit': True,
+                'mask': 512,
+                'name': 'PASS_UNS_IPV4',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 9},
+              { 'description': 'Check Dest MAC address Field Of Incoming '
+                               'Packet',
+                'is_bit': True,
+                'mask': 65536,
+                'name': 'DST_MAC_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 16},
+              { 'description': 'Check Source MAC address Field Of Incoming '
+                               'Packet',
+                'is_bit': True,
+                'mask': 131072,
+                'name': 'SRC_MAC_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 17},
+              { 'description': 'Check Dest IP address Field Of Incoming Packet',
+                'is_bit': True,
+                'mask': 262144,
+                'name': 'DST_IP_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 18},
+              { 'description': 'Check Source IP address Field Of Incoming '
+                               'Packet',
+                'is_bit': True,
+                'mask': 524288,
+                'name': 'SRC_IP_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 19},
+              { 'description': 'Check Dest UDP Port Field Of Incoming Packet',
+                'is_bit': True,
+                'mask': 1048576,
+                'name': 'DST_PORT_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 20},
+              { 'description': 'Check Source UDP Port Field Of Incoming Packet',
+                'is_bit': True,
+                'mask': 2097152,
+                'name': 'SRC_PORT_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 21},
+              { 'description': 'Reset Packet Counts',
+                'is_bit': True,
+                'mask': 4194304,
+                'name': 'PACKET_COUNT_RST_N',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 22},
+              { 'description': 'Remove The Header From Incoming Unsupported '
+                               'IPv4 Data',
+                'is_bit': True,
+                'mask': 16777216,
+                'name': 'STRIP_UNS_PRO',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 24},
+              { 'description': 'Remove The Header From Incoming Unsupported '
+                               'Ethernet Data',
+                'is_bit': True,
+                'mask': 33554432,
+                'name': 'STRIP_UNS_ETH',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 25},
+              { 'description': 'Check Received Packets Total IP Length and Cut '
+                               'off Extra Padding',
+                'is_bit': True,
+                'mask': 67108864,
+                'name': 'CHK_IP_LENGTH',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 26}],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_8',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_FILTER_CONTROL',
   'nof_bits': 32,
-  'reset_value': None,
+  'reset_value': '0x0',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_8`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_FILTER_CONTROL` generated from `XML2VHDL` output.
+
+==================  ================================================================  ===============  ==============  ===============
+**Register**
+**Name:**           UDP_CORE_0_0_UDP_CORE_CONTROL_FILTER_CONTROL
+**Address:**        ``0x0002_0038``
+**Description:**    Controls the level of filtering in the UDP core Rx
+**Bit Fields**      **Description**                                                   **Mask**         **Permission**  **Reset Value**
+BROADCAST_EN        Enables Broadcast Recieving                                       ``0x0000_0001``  Read/Write      ``0x0000_0001``
+ARP_EN              Enables ARPs                                                      ``0x0000_0002``  Read/Write      ``0x0000_0001``
+PING_EN             Enables Pings                                                     ``0x0000_0004``  Read/Write      ``0x0000_0001``
+PASS_UNS_ETHTYPE    Enable Passing of Unsupported Ethernet Packets                    ``0x0000_0100``  Read/Write      ``0x0000_0001``
+PASS_UNS_IPV4       Enable Passing of Unsupported IPv4 Packets                        ``0x0000_0200``  Read/Write      ``0x0000_0001``
+DST_MAC_CHK_EN      Check Dest MAC address Field Of Incoming Packet                   ``0x0001_0000``  Read/Write      ``0x0000_0001``
+SRC_MAC_CHK_EN      Check Source MAC address Field Of Incoming Packet                 ``0x0002_0000``  Read/Write      ``0x0000_0000``
+DST_IP_CHK_EN       Check Dest IP address Field Of Incoming Packet                    ``0x0004_0000``  Read/Write      ``0x0000_0001``
+SRC_IP_CHK_EN       Check Source IP address Field Of Incoming Packet                  ``0x0008_0000``  Read/Write      ``0x0000_0000``
+DST_PORT_CHK_EN     Check Dest UDP Port Field Of Incoming Packet                      ``0x0010_0000``  Read/Write      ``0x0000_0000``
+SRC_PORT_CHK_EN     Check Source UDP Port Field Of Incoming Packet                    ``0x0020_0000``  Read/Write      ``0x0000_0000``
+PACKET_COUNT_RST_N  Reset Packet Counts                                               ``0x0040_0000``  Read/Write      ``0x0000_0001``
+STRIP_UNS_PRO       Remove The Header From Incoming Unsupported IPv4 Data             ``0x0100_0000``  Read/Write      ``0x0000_0001``
+STRIP_UNS_ETH       Remove The Header From Incoming Unsupported Ethernet Data         ``0x0200_0000``  Read/Write      ``0x0000_0001``
+CHK_IP_LENGTH       Check Received Packets Total IP Length and Cut off Extra Padding  ``0x0400_0000``  Read/Write      ``0x0000_0001``
+==================  ================================================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1900,20 +2377,106 @@ BOARD_BUILD_INFO_ASCII_DESCR_8 = { 'addr': 32860,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_8
+      0: BROADCAST_EN [ rotate = 270 ]
+      1: ARP_EN [ rotate = 270 ]
+      2: PING_EN [ rotate = 270 ]
+      3-7:  [ color = lightgrey ]
+      8: PASS_UNS_ETHTYPE [ rotate = 270 ]
+      9: PASS_UNS_IPV4 [ rotate = 270 ]
+      10-15:  [ color = lightgrey ]
+      16: DST_MAC_CHK_EN [ rotate = 270 ]
+      17: SRC_MAC_CHK_EN [ rotate = 270 ]
+      18: DST_IP_CHK_EN [ rotate = 270 ]
+      19: SRC_IP_CHK_EN [ rotate = 270 ]
+      20: DST_PORT_CHK_EN [ rotate = 270 ]
+      21: SRC_PORT_CHK_EN [ rotate = 270 ]
+      22: PACKET_COUNT_RST_N [ rotate = 270 ]
+      23:  [ rotate = 270, color = lightgrey ]
+      24: STRIP_UNS_PRO [ rotate = 270 ]
+      25: STRIP_UNS_ETH [ rotate = 270 ]
+      26: CHK_IP_LENGTH [ rotate = 270 ]
+      27-31:  [ color = lightgrey ]
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_9 = { 'addr': 32864,
-  'description': 'ACSII description field 9',
-  'fields': [],
+UDP_CORE_0_0_UDP_CORE_CONTROL_CONTROL = { 'addr': 131144,
+  'description': 'UDP Core Control Register',
+  'fields': [ { 'description': 'Use Fixed Packet Size In Tx For Outgoing '
+                               'Packets - Currently Unused',
+                'is_bit': True,
+                'mask': 8,
+                'name': 'FIXED_PKT_SIZE',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 3},
+              { 'description': 'Set UDP Checksum to Zero - Currently Unused',
+                'is_bit': True,
+                'mask': 16,
+                'name': 'UDP_CHECKSUM_ZERO',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 4},
+              { 'description': 'LUT Mode Enable - Use To Set Dst Addresses Of '
+                               'Outgoing UDP Packets From LUT',
+                'is_bit': True,
+                'mask': 32,
+                'name': 'LUT_MODE',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 5},
+              { 'description': 'Use Bits 15:0 of tuser for destination UDP '
+                               'port of outgoing packets',
+                'is_bit': True,
+                'mask': 64,
+                'name': 'TUSER_DST_PRT',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 6},
+              { 'description': 'Use Bits 31:16 of tuser for source UDP port of '
+                               'outgoing packets',
+                'is_bit': True,
+                'mask': 128,
+                'name': 'TUSER_SRC_PRT',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 7},
+              { 'description': 'Soft Reset - Currently Unused',
+                'is_bit': True,
+                'mask': 32768,
+                'name': 'RESET_N',
+                'nof_bits': 1,
+                'reset_value': '0x1',
+                'shiftr': 15},
+              { 'description': 'UDP Length For Fixed Packet Length - Currently '
+                               'Unused',
+                'is_bit': False,
+                'mask': 4294901760,
+                'name': 'UDP_LENGTH',
+                'nof_bits': 16,
+                'reset_value': '0x0008',
+                'shiftr': 16}],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_9',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_CONTROL',
   'nof_bits': 32,
-  'reset_value': None,
+  'reset_value': '0x0',
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_9`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_CONTROL` generated from `XML2VHDL` output.
+
+=================  ===========================================================================  ===============  ==============  ===============
+**Register**
+**Name:**          UDP_CORE_0_0_UDP_CORE_CONTROL_CONTROL
+**Address:**       ``0x0002_0048``
+**Description:**   UDP Core Control Register
+**Bit Fields**     **Description**                                                              **Mask**         **Permission**  **Reset Value**
+FIXED_PKT_SIZE     Use Fixed Packet Size In Tx For Outgoing Packets - Currently Unused          ``0x0000_0008``  Read/Write      ``0x0000_0000``
+UDP_CHECKSUM_ZERO  Set UDP Checksum to Zero - Currently Unused                                  ``0x0000_0010``  Read/Write      ``0x0000_0001``
+LUT_MODE           LUT Mode Enable - Use To Set Dst Addresses Of Outgoing UDP Packets From LUT  ``0x0000_0020``  Read/Write      ``0x0000_0000``
+TUSER_DST_PRT      Use Bits 15:0 of tuser for destination UDP port of outgoing packets          ``0x0000_0040``  Read/Write      ``0x0000_0000``
+TUSER_SRC_PRT      Use Bits 31:16 of tuser for source UDP port of outgoing packets              ``0x0000_0080``  Read/Write      ``0x0000_0000``
+RESET_N            Soft Reset - Currently Unused                                                ``0x0000_8000``  Read/Write      ``0x0000_0001``
+UDP_LENGTH         UDP Length For Fixed Packet Length - Currently Unused                        ``0xFFFF_0000``  Read/Write      ``0x0000_0008``
+=================  ===========================================================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1923,20 +2486,37 @@ BOARD_BUILD_INFO_ASCII_DESCR_9 = { 'addr': 32864,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_9
+      0-2:  [ rotate = 270, color = lightgrey ]
+      3: FIXED_PKT_SIZE [ rotate = 270 ]
+      4: UDP_CHECKSUM_ZERO [ rotate = 270 ]
+      5: LUT_MODE [ rotate = 270 ]
+      6: TUSER_DST_PRT [ rotate = 270 ]
+      7: TUSER_SRC_PRT [ rotate = 270 ]
+      8-14:  [ color = lightgrey ]
+      15: RESET_N [ rotate = 270 ]
+      16-31: UDP_LENGTH
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_10 = { 'addr': 32868,
-  'description': 'ACSII description field 10',
+UDP_CORE_0_0_UDP_CORE_CONTROL_UDP_COUNT = { 'addr': 131148,
+  'description': 'Counter For Valid UDP Packets',
   'fields': [],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_10',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_UDP_COUNT',
   'nof_bits': 32,
   'reset_value': None,
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_10`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_UDP_COUNT` generated from `XML2VHDL` output.
+
+================  =======================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_UDP_COUNT
+**Address:**      ``0x0002_004C``
+**Description:**  Counter For Valid UDP Packets
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  =======================================
 
 .. packetdiag::
 
@@ -1946,20 +2526,29 @@ BOARD_BUILD_INFO_ASCII_DESCR_10 = { 'addr': 32868,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_10
+      0-31: UDP_COUNT
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_11 = { 'addr': 32872,
-  'description': 'ACSII description field 11',
+UDP_CORE_0_0_UDP_CORE_CONTROL_PING_COUNT = { 'addr': 131152,
+  'description': 'Counter For Valid Ping Packets',
   'fields': [],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_11',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_PING_COUNT',
   'nof_bits': 32,
   'reset_value': None,
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_11`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_PING_COUNT` generated from `XML2VHDL` output.
+
+================  ========================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_PING_COUNT
+**Address:**      ``0x0002_0050``
+**Description:**  Counter For Valid Ping Packets
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ========================================
 
 .. packetdiag::
 
@@ -1969,20 +2558,29 @@ BOARD_BUILD_INFO_ASCII_DESCR_11 = { 'addr': 32872,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_11
+      0-31: PING_COUNT
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_12 = { 'addr': 32876,
-  'description': 'ACSII description field 12',
+UDP_CORE_0_0_UDP_CORE_CONTROL_ARP_COUNT = { 'addr': 131156,
+  'description': 'Counter For Valid ARP Packets Detected In Filter',
   'fields': [],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_12',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_ARP_COUNT',
   'nof_bits': 32,
   'reset_value': None,
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_12`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_ARP_COUNT` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_ARP_COUNT
+**Address:**      ``0x0002_0054``
+**Description:**  Counter For Valid ARP Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ================================================
 
 .. packetdiag::
 
@@ -1992,20 +2590,29 @@ BOARD_BUILD_INFO_ASCII_DESCR_12 = { 'addr': 32876,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_12
+      0-31: ARP_COUNT
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_13 = { 'addr': 32880,
-  'description': 'ACSII description field 13',
+UDP_CORE_0_0_UDP_CORE_CONTROL_UNS_ETYPE_COUNT = { 'addr': 131160,
+  'description': 'Counter Unsupported Etype Packets Detected In Filter',
   'fields': [],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_13',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_UNS_ETYPE_COUNT',
   'nof_bits': 32,
   'reset_value': None,
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_13`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_UNS_ETYPE_COUNT` generated from `XML2VHDL` output.
+
+================  ====================================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_UNS_ETYPE_COUNT
+**Address:**      ``0x0002_0058``
+**Description:**  Counter Unsupported Etype Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ====================================================
 
 .. packetdiag::
 
@@ -2015,20 +2622,29 @@ BOARD_BUILD_INFO_ASCII_DESCR_13 = { 'addr': 32880,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_13
+      0-31: UNS_ETYPE_COUNT
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_14 = { 'addr': 32884,
-  'description': 'ACSII description field 14',
+UDP_CORE_0_0_UDP_CORE_CONTROL_UNS_PRO_COUNT = { 'addr': 131164,
+  'description': 'Counter Unsupported Protocol Packets Detected In Filter',
   'fields': [],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_14',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_UNS_PRO_COUNT',
   'nof_bits': 32,
   'reset_value': None,
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_14`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_UNS_PRO_COUNT` generated from `XML2VHDL` output.
+
+================  =======================================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_UNS_PRO_COUNT
+**Address:**      ``0x0002_005C``
+**Description:**  Counter Unsupported Protocol Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  =======================================================
 
 .. packetdiag::
 
@@ -2038,20 +2654,29 @@ BOARD_BUILD_INFO_ASCII_DESCR_14 = { 'addr': 32884,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_14
+      0-31: UNS_PRO_COUNT
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_15 = { 'addr': 32888,
-  'description': 'ACSII description field 15',
+UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_MAC_COUNT = { 'addr': 131168,
+  'description': 'Counter For Dropped Mac Addr Packets Detected In Filter',
   'fields': [],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_15',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_MAC_COUNT',
   'nof_bits': 32,
   'reset_value': None,
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_15`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_MAC_COUNT` generated from `XML2VHDL` output.
+
+================  =======================================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_MAC_COUNT
+**Address:**      ``0x0002_0060``
+**Description:**  Counter For Dropped Mac Addr Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  =======================================================
 
 .. packetdiag::
 
@@ -2061,20 +2686,29 @@ BOARD_BUILD_INFO_ASCII_DESCR_15 = { 'addr': 32888,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_15
+      0-31: DROPPED_MAC_COUNT
    }
 
 """
 
-BOARD_BUILD_INFO_ASCII_DESCR_16 = { 'addr': 32892,
-  'description': 'ACSII description field 16',
+UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_IP_COUNT = { 'addr': 131172,
+  'description': 'Counter For Dropped IP Addr Packets Detected In Filter',
   'fields': [],
   'mask': 4294967295,
-  'name': 'BOARD_BUILD_INFO_ASCII_DESCR_16',
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_IP_COUNT',
   'nof_bits': 32,
   'reset_value': None,
   'shiftr': 0}
-""":const:`BOARD_BUILD_INFO_ASCII_DESCR_16`.
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_IP_COUNT` generated from `XML2VHDL` output.
+
+================  ======================================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_IP_COUNT
+**Address:**      ``0x0002_0064``
+**Description:**  Counter For Dropped IP Addr Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ======================================================
 
 .. packetdiag::
 
@@ -2084,7 +2718,1612 @@ BOARD_BUILD_INFO_ASCII_DESCR_16 = { 'addr': 32892,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: BOARD_BUILD_INFO_ASCII_DESCR_16
+      0-31: DROPPED_IP_COUNT
+   }
+
+"""
+
+UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_PORT_COUNT = { 'addr': 131176,
+  'description': 'Counter For Dropped Port Addr Packets Detected In Filter',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_PORT_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_PORT_COUNT` generated from `XML2VHDL` output.
+
+================  ========================================================
+**Register**
+**Name:**         UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_PORT_COUNT
+**Address:**      ``0x0002_0068``
+**Description:**  Counter For Dropped Port Addr Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ========================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: DROPPED_PORT_COUNT
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER = { 'addr': 139264,
+  'description': 'Source MAC Address Lower',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER',
+  'nof_bits': 32,
+  'reset_value': '0x00000201',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER
+**Address:**      ``0x0002_2000``
+**Description:**  Source MAC Address Lower
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0201``
+================  ================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: SRC_MAC_ADDR_LOWER
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER = { 'addr': 139268,
+  'description': 'Source MAC Address Upper',
+  'fields': [],
+  'mask': 65535,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER',
+  'nof_bits': 16,
+  'reset_value': '0x6200',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER
+**Address:**      ``0x0002_2004``
+**Description:**  Source MAC Address Upper
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_6200``
+================  ================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-15: SRC_MAC_ADDR_UPPER
+      16-31:  [ color = lightgrey ]
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER = { 'addr': 139276,
+  'description': 'Destination MAC Address Lower',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER',
+  'nof_bits': 32,
+  'reset_value': '0x00000FF00',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER
+**Address:**      ``0x0002_200C``
+**Description:**  Destination MAC Address Lower
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_FF00``
+================  ================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: DST_MAC_ADDR_LOWER
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER = { 'addr': 139280,
+  'description': 'Destination MAC Address Upper',
+  'fields': [],
+  'mask': 65535,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER',
+  'nof_bits': 16,
+  'reset_value': '0x6200',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER
+**Address:**      ``0x0002_2010``
+**Description:**  Destination MAC Address Upper
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_6200``
+================  ================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-15: DST_MAC_ADDR_UPPER
+      16-31:  [ color = lightgrey ]
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_DST_IP_ADDR = { 'addr': 139300,
+  'description': 'UDP Destination IP Address',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_DST_IP_ADDR',
+  'nof_bits': 32,
+  'reset_value': '0xC0A80201',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_DST_IP_ADDR` generated from `XML2VHDL` output.
+
+================  =========================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_DST_IP_ADDR
+**Address:**      ``0x0002_2024``
+**Description:**  UDP Destination IP Address
+**Permission:**   Read/Write
+**Reset Value:**  ``0xC0A8_0201``
+================  =========================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: DST_IP_ADDR
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_IP_ADDR = { 'addr': 139304,
+  'description': 'UDP Source IP Address',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_IP_ADDR',
+  'nof_bits': 32,
+  'reset_value': '0xC0A8020B',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_IP_ADDR` generated from `XML2VHDL` output.
+
+================  =========================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_IP_ADDR
+**Address:**      ``0x0002_2028``
+**Description:**  UDP Source IP Address
+**Permission:**   Read/Write
+**Reset Value:**  ``0xC0A8_020B``
+================  =========================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: SRC_IP_ADDR
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_UDP_PORTS = { 'addr': 139308,
+  'description': 'UDP Ports',
+  'fields': [ { 'description': 'UDP Source Port',
+                'is_bit': False,
+                'mask': 65535,
+                'name': 'SRC_PORT',
+                'nof_bits': 16,
+                'reset_value': '0xf0d0',
+                'shiftr': 0},
+              { 'description': 'UDP Destination Port',
+                'is_bit': False,
+                'mask': 4294901760,
+                'name': 'DST_PORT',
+                'nof_bits': 16,
+                'reset_value': '0xf0d1',
+                'shiftr': 16}],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_UDP_PORTS',
+  'nof_bits': 32,
+  'reset_value': '0x0',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_UDP_PORTS` generated from `XML2VHDL` output.
+
+================  =======================================  ===============  ==============  ===============
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_UDP_PORTS
+**Address:**      ``0x0002_202C``
+**Description:**  UDP Ports
+**Bit Fields**    **Description**                          **Mask**         **Permission**  **Reset Value**
+SRC_PORT          UDP Source Port                          ``0x0000_FFFF``  Read/Write      ``0x0000_F0D0``
+DST_PORT          UDP Destination Port                     ``0xFFFF_0000``  Read/Write      ``0x0000_F0D1``
+================  =======================================  ===============  ==============  ===============
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-15: SRC_PORT
+      16-31: DST_PORT
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_FILTER_CONTROL = { 'addr': 139320,
+  'description': 'Controls the level of filtering in the UDP core Rx',
+  'fields': [ { 'description': 'Enables Broadcast Recieving',
+                'is_bit': True,
+                'mask': 1,
+                'name': 'BROADCAST_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 0},
+              { 'description': 'Enables ARPs',
+                'is_bit': True,
+                'mask': 2,
+                'name': 'ARP_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 1},
+              { 'description': 'Enables Pings',
+                'is_bit': True,
+                'mask': 4,
+                'name': 'PING_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 2},
+              { 'description': 'Enable Passing of Unsupported Ethernet Packets',
+                'is_bit': True,
+                'mask': 256,
+                'name': 'PASS_UNS_ETHTYPE',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 8},
+              { 'description': 'Enable Passing of Unsupported IPv4 Packets',
+                'is_bit': True,
+                'mask': 512,
+                'name': 'PASS_UNS_IPV4',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 9},
+              { 'description': 'Check Dest MAC address Field Of Incoming '
+                               'Packet',
+                'is_bit': True,
+                'mask': 65536,
+                'name': 'DST_MAC_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 16},
+              { 'description': 'Check Source MAC address Field Of Incoming '
+                               'Packet',
+                'is_bit': True,
+                'mask': 131072,
+                'name': 'SRC_MAC_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 17},
+              { 'description': 'Check Dest IP address Field Of Incoming Packet',
+                'is_bit': True,
+                'mask': 262144,
+                'name': 'DST_IP_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 18},
+              { 'description': 'Check Source IP address Field Of Incoming '
+                               'Packet',
+                'is_bit': True,
+                'mask': 524288,
+                'name': 'SRC_IP_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 19},
+              { 'description': 'Check Dest UDP Port Field Of Incoming Packet',
+                'is_bit': True,
+                'mask': 1048576,
+                'name': 'DST_PORT_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 20},
+              { 'description': 'Check Source UDP Port Field Of Incoming Packet',
+                'is_bit': True,
+                'mask': 2097152,
+                'name': 'SRC_PORT_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 21},
+              { 'description': 'Reset Packet Counts',
+                'is_bit': True,
+                'mask': 4194304,
+                'name': 'PACKET_COUNT_RST_N',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 22},
+              { 'description': 'Remove The Header From Incoming Unsupported '
+                               'IPv4 Data',
+                'is_bit': True,
+                'mask': 16777216,
+                'name': 'STRIP_UNS_PRO',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 24},
+              { 'description': 'Remove The Header From Incoming Unsupported '
+                               'Ethernet Data',
+                'is_bit': True,
+                'mask': 33554432,
+                'name': 'STRIP_UNS_ETH',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 25},
+              { 'description': 'Check Received Packets Total IP Length and Cut '
+                               'off Extra Padding',
+                'is_bit': True,
+                'mask': 67108864,
+                'name': 'CHK_IP_LENGTH',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 26}],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_FILTER_CONTROL',
+  'nof_bits': 32,
+  'reset_value': '0x0',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_FILTER_CONTROL` generated from `XML2VHDL` output.
+
+==================  ================================================================  ===============  ==============  ===============
+**Register**
+**Name:**           UDP_CORE_0_1_UDP_CORE_CONTROL_FILTER_CONTROL
+**Address:**        ``0x0002_2038``
+**Description:**    Controls the level of filtering in the UDP core Rx
+**Bit Fields**      **Description**                                                   **Mask**         **Permission**  **Reset Value**
+BROADCAST_EN        Enables Broadcast Recieving                                       ``0x0000_0001``  Read/Write      ``0x0000_0001``
+ARP_EN              Enables ARPs                                                      ``0x0000_0002``  Read/Write      ``0x0000_0001``
+PING_EN             Enables Pings                                                     ``0x0000_0004``  Read/Write      ``0x0000_0001``
+PASS_UNS_ETHTYPE    Enable Passing of Unsupported Ethernet Packets                    ``0x0000_0100``  Read/Write      ``0x0000_0001``
+PASS_UNS_IPV4       Enable Passing of Unsupported IPv4 Packets                        ``0x0000_0200``  Read/Write      ``0x0000_0001``
+DST_MAC_CHK_EN      Check Dest MAC address Field Of Incoming Packet                   ``0x0001_0000``  Read/Write      ``0x0000_0001``
+SRC_MAC_CHK_EN      Check Source MAC address Field Of Incoming Packet                 ``0x0002_0000``  Read/Write      ``0x0000_0000``
+DST_IP_CHK_EN       Check Dest IP address Field Of Incoming Packet                    ``0x0004_0000``  Read/Write      ``0x0000_0001``
+SRC_IP_CHK_EN       Check Source IP address Field Of Incoming Packet                  ``0x0008_0000``  Read/Write      ``0x0000_0000``
+DST_PORT_CHK_EN     Check Dest UDP Port Field Of Incoming Packet                      ``0x0010_0000``  Read/Write      ``0x0000_0000``
+SRC_PORT_CHK_EN     Check Source UDP Port Field Of Incoming Packet                    ``0x0020_0000``  Read/Write      ``0x0000_0000``
+PACKET_COUNT_RST_N  Reset Packet Counts                                               ``0x0040_0000``  Read/Write      ``0x0000_0001``
+STRIP_UNS_PRO       Remove The Header From Incoming Unsupported IPv4 Data             ``0x0100_0000``  Read/Write      ``0x0000_0001``
+STRIP_UNS_ETH       Remove The Header From Incoming Unsupported Ethernet Data         ``0x0200_0000``  Read/Write      ``0x0000_0001``
+CHK_IP_LENGTH       Check Received Packets Total IP Length and Cut off Extra Padding  ``0x0400_0000``  Read/Write      ``0x0000_0001``
+==================  ================================================================  ===============  ==============  ===============
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0: BROADCAST_EN [ rotate = 270 ]
+      1: ARP_EN [ rotate = 270 ]
+      2: PING_EN [ rotate = 270 ]
+      3-7:  [ color = lightgrey ]
+      8: PASS_UNS_ETHTYPE [ rotate = 270 ]
+      9: PASS_UNS_IPV4 [ rotate = 270 ]
+      10-15:  [ color = lightgrey ]
+      16: DST_MAC_CHK_EN [ rotate = 270 ]
+      17: SRC_MAC_CHK_EN [ rotate = 270 ]
+      18: DST_IP_CHK_EN [ rotate = 270 ]
+      19: SRC_IP_CHK_EN [ rotate = 270 ]
+      20: DST_PORT_CHK_EN [ rotate = 270 ]
+      21: SRC_PORT_CHK_EN [ rotate = 270 ]
+      22: PACKET_COUNT_RST_N [ rotate = 270 ]
+      23:  [ rotate = 270, color = lightgrey ]
+      24: STRIP_UNS_PRO [ rotate = 270 ]
+      25: STRIP_UNS_ETH [ rotate = 270 ]
+      26: CHK_IP_LENGTH [ rotate = 270 ]
+      27-31:  [ color = lightgrey ]
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_IFG = { 'addr': 139328,
+  'description': 'Used To Add Extra Delay Between Packets In Tx Path',
+  'fields': [],
+  'mask': 65535,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_IFG',
+  'nof_bits': 16,
+  'reset_value': '0x0000',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_IFG` generated from `XML2VHDL` output.
+
+================  ==================================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_IFG
+**Address:**      ``0x0002_2040``
+**Description:**  Used To Add Extra Delay Between Packets In Tx Path
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ==================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-15: IFG
+      16-31:  [ color = lightgrey ]
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_CONTROL = { 'addr': 139336,
+  'description': 'UDP Core Control Register',
+  'fields': [ { 'description': 'Use Fixed Packet Size In Tx For Outgoing '
+                               'Packets - Currently Unused',
+                'is_bit': True,
+                'mask': 8,
+                'name': 'FIXED_PKT_SIZE',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 3},
+              { 'description': 'Set UDP Checksum to Zero - Currently Unused',
+                'is_bit': True,
+                'mask': 16,
+                'name': 'UDP_CHECKSUM_ZERO',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 4},
+              { 'description': 'LUT Mode Enable - Use To Set Dst Addresses Of '
+                               'Outgoing UDP Packets From LUT',
+                'is_bit': True,
+                'mask': 32,
+                'name': 'LUT_MODE',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 5},
+              { 'description': 'Use Bits 15:0 of tuser for destination UDP '
+                               'port of outgoing packets',
+                'is_bit': True,
+                'mask': 64,
+                'name': 'TUSER_DST_PRT',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 6},
+              { 'description': 'Use Bits 31:16 of tuser for source UDP port of '
+                               'outgoing packets',
+                'is_bit': True,
+                'mask': 128,
+                'name': 'TUSER_SRC_PRT',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 7},
+              { 'description': 'Soft Reset - Currently Unused',
+                'is_bit': True,
+                'mask': 32768,
+                'name': 'RESET_N',
+                'nof_bits': 1,
+                'reset_value': '0x1',
+                'shiftr': 15},
+              { 'description': 'UDP Length For Fixed Packet Length - Currently '
+                               'Unused',
+                'is_bit': False,
+                'mask': 4294901760,
+                'name': 'UDP_LENGTH',
+                'nof_bits': 16,
+                'reset_value': '0x0008',
+                'shiftr': 16}],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_CONTROL',
+  'nof_bits': 32,
+  'reset_value': '0x0',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_CONTROL` generated from `XML2VHDL` output.
+
+=================  ===========================================================================  ===============  ==============  ===============
+**Register**
+**Name:**          UDP_CORE_0_1_UDP_CORE_CONTROL_CONTROL
+**Address:**       ``0x0002_2048``
+**Description:**   UDP Core Control Register
+**Bit Fields**     **Description**                                                              **Mask**         **Permission**  **Reset Value**
+FIXED_PKT_SIZE     Use Fixed Packet Size In Tx For Outgoing Packets - Currently Unused          ``0x0000_0008``  Read/Write      ``0x0000_0000``
+UDP_CHECKSUM_ZERO  Set UDP Checksum to Zero - Currently Unused                                  ``0x0000_0010``  Read/Write      ``0x0000_0001``
+LUT_MODE           LUT Mode Enable - Use To Set Dst Addresses Of Outgoing UDP Packets From LUT  ``0x0000_0020``  Read/Write      ``0x0000_0000``
+TUSER_DST_PRT      Use Bits 15:0 of tuser for destination UDP port of outgoing packets          ``0x0000_0040``  Read/Write      ``0x0000_0000``
+TUSER_SRC_PRT      Use Bits 31:16 of tuser for source UDP port of outgoing packets              ``0x0000_0080``  Read/Write      ``0x0000_0000``
+RESET_N            Soft Reset - Currently Unused                                                ``0x0000_8000``  Read/Write      ``0x0000_0001``
+UDP_LENGTH         UDP Length For Fixed Packet Length - Currently Unused                        ``0xFFFF_0000``  Read/Write      ``0x0000_0008``
+=================  ===========================================================================  ===============  ==============  ===============
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-2:  [ rotate = 270, color = lightgrey ]
+      3: FIXED_PKT_SIZE [ rotate = 270 ]
+      4: UDP_CHECKSUM_ZERO [ rotate = 270 ]
+      5: LUT_MODE [ rotate = 270 ]
+      6: TUSER_DST_PRT [ rotate = 270 ]
+      7: TUSER_SRC_PRT [ rotate = 270 ]
+      8-14:  [ color = lightgrey ]
+      15: RESET_N [ rotate = 270 ]
+      16-31: UDP_LENGTH
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_UDP_COUNT = { 'addr': 139340,
+  'description': 'Counter For Valid UDP Packets',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_UDP_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_UDP_COUNT` generated from `XML2VHDL` output.
+
+================  =======================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_UDP_COUNT
+**Address:**      ``0x0002_204C``
+**Description:**  Counter For Valid UDP Packets
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  =======================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: UDP_COUNT
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_PING_COUNT = { 'addr': 139344,
+  'description': 'Counter For Valid Ping Packets',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_PING_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_PING_COUNT` generated from `XML2VHDL` output.
+
+================  ========================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_PING_COUNT
+**Address:**      ``0x0002_2050``
+**Description:**  Counter For Valid Ping Packets
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ========================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: PING_COUNT
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_ARP_COUNT = { 'addr': 139348,
+  'description': 'Counter For Valid ARP Packets Detected In Filter',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_ARP_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_ARP_COUNT` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_ARP_COUNT
+**Address:**      ``0x0002_2054``
+**Description:**  Counter For Valid ARP Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: ARP_COUNT
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_UNS_ETYPE_COUNT = { 'addr': 139352,
+  'description': 'Counter Unsupported Etype Packets Detected In Filter',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_UNS_ETYPE_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_UNS_ETYPE_COUNT` generated from `XML2VHDL` output.
+
+================  ====================================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_UNS_ETYPE_COUNT
+**Address:**      ``0x0002_2058``
+**Description:**  Counter Unsupported Etype Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ====================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: UNS_ETYPE_COUNT
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_UNS_PRO_COUNT = { 'addr': 139356,
+  'description': 'Counter Unsupported Protocol Packets Detected In Filter',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_UNS_PRO_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_UNS_PRO_COUNT` generated from `XML2VHDL` output.
+
+================  =======================================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_UNS_PRO_COUNT
+**Address:**      ``0x0002_205C``
+**Description:**  Counter Unsupported Protocol Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  =======================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: UNS_PRO_COUNT
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_MAC_COUNT = { 'addr': 139360,
+  'description': 'Counter For Dropped Mac Addr Packets Detected In Filter',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_MAC_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_MAC_COUNT` generated from `XML2VHDL` output.
+
+================  =======================================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_MAC_COUNT
+**Address:**      ``0x0002_2060``
+**Description:**  Counter For Dropped Mac Addr Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  =======================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: DROPPED_MAC_COUNT
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_IP_COUNT = { 'addr': 139364,
+  'description': 'Counter For Dropped IP Addr Packets Detected In Filter',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_IP_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_IP_COUNT` generated from `XML2VHDL` output.
+
+================  ======================================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_IP_COUNT
+**Address:**      ``0x0002_2064``
+**Description:**  Counter For Dropped IP Addr Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ======================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: DROPPED_IP_COUNT
+   }
+
+"""
+
+UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_PORT_COUNT = { 'addr': 139368,
+  'description': 'Counter For Dropped Port Addr Packets Detected In Filter',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_PORT_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_PORT_COUNT` generated from `XML2VHDL` output.
+
+================  ========================================================
+**Register**
+**Name:**         UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_PORT_COUNT
+**Address:**      ``0x0002_2068``
+**Description:**  Counter For Dropped Port Addr Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ========================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: DROPPED_PORT_COUNT
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER = { 'addr': 147456,
+  'description': 'Source MAC Address Lower',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER',
+  'nof_bits': 32,
+  'reset_value': '0x00000201',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER
+**Address:**      ``0x0002_4000``
+**Description:**  Source MAC Address Lower
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0201``
+================  ================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: SRC_MAC_ADDR_LOWER
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER = { 'addr': 147460,
+  'description': 'Source MAC Address Upper',
+  'fields': [],
+  'mask': 65535,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER',
+  'nof_bits': 16,
+  'reset_value': '0x6200',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER
+**Address:**      ``0x0002_4004``
+**Description:**  Source MAC Address Upper
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_6200``
+================  ================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-15: SRC_MAC_ADDR_UPPER
+      16-31:  [ color = lightgrey ]
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER = { 'addr': 147468,
+  'description': 'Destination MAC Address Lower',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER',
+  'nof_bits': 32,
+  'reset_value': '0x00000FF00',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER
+**Address:**      ``0x0002_400C``
+**Description:**  Destination MAC Address Lower
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_FF00``
+================  ================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: DST_MAC_ADDR_LOWER
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER = { 'addr': 147472,
+  'description': 'Destination MAC Address Upper',
+  'fields': [],
+  'mask': 65535,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER',
+  'nof_bits': 16,
+  'reset_value': '0x6200',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER
+**Address:**      ``0x0002_4010``
+**Description:**  Destination MAC Address Upper
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_6200``
+================  ================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-15: DST_MAC_ADDR_UPPER
+      16-31:  [ color = lightgrey ]
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_DST_IP_ADDR = { 'addr': 147492,
+  'description': 'UDP Destination IP Address',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_DST_IP_ADDR',
+  'nof_bits': 32,
+  'reset_value': '0xC0A80201',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_DST_IP_ADDR` generated from `XML2VHDL` output.
+
+================  =========================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_DST_IP_ADDR
+**Address:**      ``0x0002_4024``
+**Description:**  UDP Destination IP Address
+**Permission:**   Read/Write
+**Reset Value:**  ``0xC0A8_0201``
+================  =========================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: DST_IP_ADDR
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_IP_ADDR = { 'addr': 147496,
+  'description': 'UDP Source IP Address',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_IP_ADDR',
+  'nof_bits': 32,
+  'reset_value': '0xC0A8020B',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_IP_ADDR` generated from `XML2VHDL` output.
+
+================  =========================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_IP_ADDR
+**Address:**      ``0x0002_4028``
+**Description:**  UDP Source IP Address
+**Permission:**   Read/Write
+**Reset Value:**  ``0xC0A8_020B``
+================  =========================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: SRC_IP_ADDR
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_UDP_PORTS = { 'addr': 147500,
+  'description': 'UDP Ports',
+  'fields': [ { 'description': 'UDP Source Port',
+                'is_bit': False,
+                'mask': 65535,
+                'name': 'SRC_PORT',
+                'nof_bits': 16,
+                'reset_value': '0xf0d0',
+                'shiftr': 0},
+              { 'description': 'UDP Destination Port',
+                'is_bit': False,
+                'mask': 4294901760,
+                'name': 'DST_PORT',
+                'nof_bits': 16,
+                'reset_value': '0xf0d1',
+                'shiftr': 16}],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_UDP_PORTS',
+  'nof_bits': 32,
+  'reset_value': '0x0',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_UDP_PORTS` generated from `XML2VHDL` output.
+
+================  =======================================  ===============  ==============  ===============
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_UDP_PORTS
+**Address:**      ``0x0002_402C``
+**Description:**  UDP Ports
+**Bit Fields**    **Description**                          **Mask**         **Permission**  **Reset Value**
+SRC_PORT          UDP Source Port                          ``0x0000_FFFF``  Read/Write      ``0x0000_F0D0``
+DST_PORT          UDP Destination Port                     ``0xFFFF_0000``  Read/Write      ``0x0000_F0D1``
+================  =======================================  ===============  ==============  ===============
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-15: SRC_PORT
+      16-31: DST_PORT
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_FILTER_CONTROL = { 'addr': 147512,
+  'description': 'Controls the level of filtering in the UDP core Rx',
+  'fields': [ { 'description': 'Enables Broadcast Recieving',
+                'is_bit': True,
+                'mask': 1,
+                'name': 'BROADCAST_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 0},
+              { 'description': 'Enables ARPs',
+                'is_bit': True,
+                'mask': 2,
+                'name': 'ARP_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 1},
+              { 'description': 'Enables Pings',
+                'is_bit': True,
+                'mask': 4,
+                'name': 'PING_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 2},
+              { 'description': 'Enable Passing of Unsupported Ethernet Packets',
+                'is_bit': True,
+                'mask': 256,
+                'name': 'PASS_UNS_ETHTYPE',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 8},
+              { 'description': 'Enable Passing of Unsupported IPv4 Packets',
+                'is_bit': True,
+                'mask': 512,
+                'name': 'PASS_UNS_IPV4',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 9},
+              { 'description': 'Check Dest MAC address Field Of Incoming '
+                               'Packet',
+                'is_bit': True,
+                'mask': 65536,
+                'name': 'DST_MAC_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 16},
+              { 'description': 'Check Source MAC address Field Of Incoming '
+                               'Packet',
+                'is_bit': True,
+                'mask': 131072,
+                'name': 'SRC_MAC_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 17},
+              { 'description': 'Check Dest IP address Field Of Incoming Packet',
+                'is_bit': True,
+                'mask': 262144,
+                'name': 'DST_IP_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 18},
+              { 'description': 'Check Source IP address Field Of Incoming '
+                               'Packet',
+                'is_bit': True,
+                'mask': 524288,
+                'name': 'SRC_IP_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 19},
+              { 'description': 'Check Dest UDP Port Field Of Incoming Packet',
+                'is_bit': True,
+                'mask': 1048576,
+                'name': 'DST_PORT_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 20},
+              { 'description': 'Check Source UDP Port Field Of Incoming Packet',
+                'is_bit': True,
+                'mask': 2097152,
+                'name': 'SRC_PORT_CHK_EN',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 21},
+              { 'description': 'Reset Packet Counts',
+                'is_bit': True,
+                'mask': 4194304,
+                'name': 'PACKET_COUNT_RST_N',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 22},
+              { 'description': 'Remove The Header From Incoming Unsupported '
+                               'IPv4 Data',
+                'is_bit': True,
+                'mask': 16777216,
+                'name': 'STRIP_UNS_PRO',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 24},
+              { 'description': 'Remove The Header From Incoming Unsupported '
+                               'Ethernet Data',
+                'is_bit': True,
+                'mask': 33554432,
+                'name': 'STRIP_UNS_ETH',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 25},
+              { 'description': 'Check Received Packets Total IP Length and Cut '
+                               'off Extra Padding',
+                'is_bit': True,
+                'mask': 67108864,
+                'name': 'CHK_IP_LENGTH',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 26}],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_FILTER_CONTROL',
+  'nof_bits': 32,
+  'reset_value': '0x0',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_FILTER_CONTROL` generated from `XML2VHDL` output.
+
+==================  ================================================================  ===============  ==============  ===============
+**Register**
+**Name:**           UDP_CORE_0_2_UDP_CORE_CONTROL_FILTER_CONTROL
+**Address:**        ``0x0002_4038``
+**Description:**    Controls the level of filtering in the UDP core Rx
+**Bit Fields**      **Description**                                                   **Mask**         **Permission**  **Reset Value**
+BROADCAST_EN        Enables Broadcast Recieving                                       ``0x0000_0001``  Read/Write      ``0x0000_0001``
+ARP_EN              Enables ARPs                                                      ``0x0000_0002``  Read/Write      ``0x0000_0001``
+PING_EN             Enables Pings                                                     ``0x0000_0004``  Read/Write      ``0x0000_0001``
+PASS_UNS_ETHTYPE    Enable Passing of Unsupported Ethernet Packets                    ``0x0000_0100``  Read/Write      ``0x0000_0001``
+PASS_UNS_IPV4       Enable Passing of Unsupported IPv4 Packets                        ``0x0000_0200``  Read/Write      ``0x0000_0001``
+DST_MAC_CHK_EN      Check Dest MAC address Field Of Incoming Packet                   ``0x0001_0000``  Read/Write      ``0x0000_0001``
+SRC_MAC_CHK_EN      Check Source MAC address Field Of Incoming Packet                 ``0x0002_0000``  Read/Write      ``0x0000_0000``
+DST_IP_CHK_EN       Check Dest IP address Field Of Incoming Packet                    ``0x0004_0000``  Read/Write      ``0x0000_0001``
+SRC_IP_CHK_EN       Check Source IP address Field Of Incoming Packet                  ``0x0008_0000``  Read/Write      ``0x0000_0000``
+DST_PORT_CHK_EN     Check Dest UDP Port Field Of Incoming Packet                      ``0x0010_0000``  Read/Write      ``0x0000_0000``
+SRC_PORT_CHK_EN     Check Source UDP Port Field Of Incoming Packet                    ``0x0020_0000``  Read/Write      ``0x0000_0000``
+PACKET_COUNT_RST_N  Reset Packet Counts                                               ``0x0040_0000``  Read/Write      ``0x0000_0001``
+STRIP_UNS_PRO       Remove The Header From Incoming Unsupported IPv4 Data             ``0x0100_0000``  Read/Write      ``0x0000_0001``
+STRIP_UNS_ETH       Remove The Header From Incoming Unsupported Ethernet Data         ``0x0200_0000``  Read/Write      ``0x0000_0001``
+CHK_IP_LENGTH       Check Received Packets Total IP Length and Cut off Extra Padding  ``0x0400_0000``  Read/Write      ``0x0000_0001``
+==================  ================================================================  ===============  ==============  ===============
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0: BROADCAST_EN [ rotate = 270 ]
+      1: ARP_EN [ rotate = 270 ]
+      2: PING_EN [ rotate = 270 ]
+      3-7:  [ color = lightgrey ]
+      8: PASS_UNS_ETHTYPE [ rotate = 270 ]
+      9: PASS_UNS_IPV4 [ rotate = 270 ]
+      10-15:  [ color = lightgrey ]
+      16: DST_MAC_CHK_EN [ rotate = 270 ]
+      17: SRC_MAC_CHK_EN [ rotate = 270 ]
+      18: DST_IP_CHK_EN [ rotate = 270 ]
+      19: SRC_IP_CHK_EN [ rotate = 270 ]
+      20: DST_PORT_CHK_EN [ rotate = 270 ]
+      21: SRC_PORT_CHK_EN [ rotate = 270 ]
+      22: PACKET_COUNT_RST_N [ rotate = 270 ]
+      23:  [ rotate = 270, color = lightgrey ]
+      24: STRIP_UNS_PRO [ rotate = 270 ]
+      25: STRIP_UNS_ETH [ rotate = 270 ]
+      26: CHK_IP_LENGTH [ rotate = 270 ]
+      27-31:  [ color = lightgrey ]
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_CONTROL = { 'addr': 147528,
+  'description': 'UDP Core Control Register',
+  'fields': [ { 'description': 'Use Fixed Packet Size In Tx For Outgoing '
+                               'Packets - Currently Unused',
+                'is_bit': True,
+                'mask': 8,
+                'name': 'FIXED_PKT_SIZE',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 3},
+              { 'description': 'Set UDP Checksum to Zero - Currently Unused',
+                'is_bit': True,
+                'mask': 16,
+                'name': 'UDP_CHECKSUM_ZERO',
+                'nof_bits': 1,
+                'reset_value': '1',
+                'shiftr': 4},
+              { 'description': 'LUT Mode Enable - Use To Set Dst Addresses Of '
+                               'Outgoing UDP Packets From LUT',
+                'is_bit': True,
+                'mask': 32,
+                'name': 'LUT_MODE',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 5},
+              { 'description': 'Use Bits 15:0 of tuser for destination UDP '
+                               'port of outgoing packets',
+                'is_bit': True,
+                'mask': 64,
+                'name': 'TUSER_DST_PRT',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 6},
+              { 'description': 'Use Bits 31:16 of tuser for source UDP port of '
+                               'outgoing packets',
+                'is_bit': True,
+                'mask': 128,
+                'name': 'TUSER_SRC_PRT',
+                'nof_bits': 1,
+                'reset_value': '0',
+                'shiftr': 7},
+              { 'description': 'Soft Reset - Currently Unused',
+                'is_bit': True,
+                'mask': 32768,
+                'name': 'RESET_N',
+                'nof_bits': 1,
+                'reset_value': '0x1',
+                'shiftr': 15},
+              { 'description': 'UDP Length For Fixed Packet Length - Currently '
+                               'Unused',
+                'is_bit': False,
+                'mask': 4294901760,
+                'name': 'UDP_LENGTH',
+                'nof_bits': 16,
+                'reset_value': '0x0008',
+                'shiftr': 16}],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_CONTROL',
+  'nof_bits': 32,
+  'reset_value': '0x0',
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_CONTROL` generated from `XML2VHDL` output.
+
+=================  ===========================================================================  ===============  ==============  ===============
+**Register**
+**Name:**          UDP_CORE_0_2_UDP_CORE_CONTROL_CONTROL
+**Address:**       ``0x0002_4048``
+**Description:**   UDP Core Control Register
+**Bit Fields**     **Description**                                                              **Mask**         **Permission**  **Reset Value**
+FIXED_PKT_SIZE     Use Fixed Packet Size In Tx For Outgoing Packets - Currently Unused          ``0x0000_0008``  Read/Write      ``0x0000_0000``
+UDP_CHECKSUM_ZERO  Set UDP Checksum to Zero - Currently Unused                                  ``0x0000_0010``  Read/Write      ``0x0000_0001``
+LUT_MODE           LUT Mode Enable - Use To Set Dst Addresses Of Outgoing UDP Packets From LUT  ``0x0000_0020``  Read/Write      ``0x0000_0000``
+TUSER_DST_PRT      Use Bits 15:0 of tuser for destination UDP port of outgoing packets          ``0x0000_0040``  Read/Write      ``0x0000_0000``
+TUSER_SRC_PRT      Use Bits 31:16 of tuser for source UDP port of outgoing packets              ``0x0000_0080``  Read/Write      ``0x0000_0000``
+RESET_N            Soft Reset - Currently Unused                                                ``0x0000_8000``  Read/Write      ``0x0000_0001``
+UDP_LENGTH         UDP Length For Fixed Packet Length - Currently Unused                        ``0xFFFF_0000``  Read/Write      ``0x0000_0008``
+=================  ===========================================================================  ===============  ==============  ===============
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-2:  [ rotate = 270, color = lightgrey ]
+      3: FIXED_PKT_SIZE [ rotate = 270 ]
+      4: UDP_CHECKSUM_ZERO [ rotate = 270 ]
+      5: LUT_MODE [ rotate = 270 ]
+      6: TUSER_DST_PRT [ rotate = 270 ]
+      7: TUSER_SRC_PRT [ rotate = 270 ]
+      8-14:  [ color = lightgrey ]
+      15: RESET_N [ rotate = 270 ]
+      16-31: UDP_LENGTH
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_UDP_COUNT = { 'addr': 147532,
+  'description': 'Counter For Valid UDP Packets',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_UDP_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_UDP_COUNT` generated from `XML2VHDL` output.
+
+================  =======================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_UDP_COUNT
+**Address:**      ``0x0002_404C``
+**Description:**  Counter For Valid UDP Packets
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  =======================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: UDP_COUNT
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_PING_COUNT = { 'addr': 147536,
+  'description': 'Counter For Valid Ping Packets',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_PING_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_PING_COUNT` generated from `XML2VHDL` output.
+
+================  ========================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_PING_COUNT
+**Address:**      ``0x0002_4050``
+**Description:**  Counter For Valid Ping Packets
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ========================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: PING_COUNT
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_ARP_COUNT = { 'addr': 147540,
+  'description': 'Counter For Valid ARP Packets Detected In Filter',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_ARP_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_ARP_COUNT` generated from `XML2VHDL` output.
+
+================  ================================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_ARP_COUNT
+**Address:**      ``0x0002_4054``
+**Description:**  Counter For Valid ARP Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: ARP_COUNT
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_UNS_ETYPE_COUNT = { 'addr': 147544,
+  'description': 'Counter Unsupported Etype Packets Detected In Filter',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_UNS_ETYPE_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_UNS_ETYPE_COUNT` generated from `XML2VHDL` output.
+
+================  ====================================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_UNS_ETYPE_COUNT
+**Address:**      ``0x0002_4058``
+**Description:**  Counter Unsupported Etype Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ====================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: UNS_ETYPE_COUNT
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_UNS_PRO_COUNT = { 'addr': 147548,
+  'description': 'Counter Unsupported Protocol Packets Detected In Filter',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_UNS_PRO_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_UNS_PRO_COUNT` generated from `XML2VHDL` output.
+
+================  =======================================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_UNS_PRO_COUNT
+**Address:**      ``0x0002_405C``
+**Description:**  Counter Unsupported Protocol Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  =======================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: UNS_PRO_COUNT
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_MAC_COUNT = { 'addr': 147552,
+  'description': 'Counter For Dropped Mac Addr Packets Detected In Filter',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_MAC_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_MAC_COUNT` generated from `XML2VHDL` output.
+
+================  =======================================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_MAC_COUNT
+**Address:**      ``0x0002_4060``
+**Description:**  Counter For Dropped Mac Addr Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  =======================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: DROPPED_MAC_COUNT
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_IP_COUNT = { 'addr': 147556,
+  'description': 'Counter For Dropped IP Addr Packets Detected In Filter',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_IP_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_IP_COUNT` generated from `XML2VHDL` output.
+
+================  ======================================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_IP_COUNT
+**Address:**      ``0x0002_4064``
+**Description:**  Counter For Dropped IP Addr Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ======================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: DROPPED_IP_COUNT
+   }
+
+"""
+
+UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_PORT_COUNT = { 'addr': 147560,
+  'description': 'Counter For Dropped Port Addr Packets Detected In Filter',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_PORT_COUNT',
+  'nof_bits': 32,
+  'reset_value': None,
+  'shiftr': 0}
+""":const:`UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_PORT_COUNT` generated from `XML2VHDL` output.
+
+================  ========================================================
+**Register**
+**Name:**         UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_PORT_COUNT
+**Address:**      ``0x0002_4068``
+**Description:**  Counter For Dropped Port Addr Packets Detected In Filter
+**Permission:**   Read-Only
+**Reset Value:**  \-\-\-
+================  ========================================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: DROPPED_PORT_COUNT
    }
 
 """
@@ -2110,7 +4349,17 @@ QSFP_1_GIE = { 'addr': 524316,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`QSFP_1_GIE`.
+""":const:`QSFP_1_GIE` generated from `XML2VHDL` output.
+
+================  =======================  ===============  ==============  ===============
+**Register**
+**Name:**         QSFP_1_GIE
+**Address:**      ``0x0008_001C``
+**Description:**  Global interrupt enable
+**Bit Fields**    **Description**          **Mask**         **Permission**  **Reset Value**
+RSV_0             Reserved                 ``0x7FFF_FFFF``  Read/Write      ``0x0000_0000``
+GIE               Global interrupt enable  ``0x8000_0000``  Read/Write      ``0x0000_0000``
+================  =======================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -2122,192 +4371,6 @@ QSFP_1_GIE = { 'addr': 524316,
 
       0-30: RSV_0 [ color = lightgrey ]
       31: GIE [ rotate = 270 ]
-   }
-
-"""
-
-QSFP_1_ISR = { 'addr': 524320,
-  'description': 'Interrupt Status Register',
-  'fields': [ { 'description': 'Arbitration lost',
-                'is_bit': True,
-                'mask': 1,
-                'name': 'INT_0',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Tx error/slave Tx complete',
-                'is_bit': True,
-                'mask': 2,
-                'name': 'INT_1',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 1},
-              { 'description': 'Tx FIFO empty',
-                'is_bit': True,
-                'mask': 4,
-                'name': 'INT_2',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 2},
-              { 'description': 'Rx FIFO full',
-                'is_bit': True,
-                'mask': 8,
-                'name': 'INT_3',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 3},
-              { 'description': 'IIC bus is not ready',
-                'is_bit': True,
-                'mask': 16,
-                'name': 'INT_4',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 4},
-              { 'description': 'Addressed as slave',
-                'is_bit': True,
-                'mask': 32,
-                'name': 'INT_5',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 5},
-              { 'description': 'Not addressed as slave',
-                'is_bit': True,
-                'mask': 64,
-                'name': 'INT_6',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 6},
-              { 'description': 'Tx FIFO half empty',
-                'is_bit': True,
-                'mask': 128,
-                'name': 'INT_7',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 7},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967040,
-                'name': 'RSV_0',
-                'nof_bits': 24,
-                'reset_value': '0x0',
-                'shiftr': 8}],
-  'mask': 4294967295,
-  'name': 'QSFP_1_ISR',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_1_ISR`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0: INT_0 [ rotate = 270 ]
-      1: INT_1 [ rotate = 270 ]
-      2: INT_2 [ rotate = 270 ]
-      3: INT_3 [ rotate = 270 ]
-      4: INT_4 [ rotate = 270 ]
-      5: INT_5 [ rotate = 270 ]
-      6: INT_6 [ rotate = 270 ]
-      7: INT_7 [ rotate = 270 ]
-      8-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_1_IER = { 'addr': 524328,
-  'description': 'Interrupt Enable Register',
-  'fields': [ { 'description': 'Arbitration lost',
-                'is_bit': True,
-                'mask': 1,
-                'name': 'INT_0',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Tx error/slave Tx complete',
-                'is_bit': True,
-                'mask': 2,
-                'name': 'INT_1',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 1},
-              { 'description': 'Tx FIFO empty',
-                'is_bit': True,
-                'mask': 4,
-                'name': 'INT_2',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 2},
-              { 'description': 'Rx FIFO full',
-                'is_bit': True,
-                'mask': 8,
-                'name': 'INT_3',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 3},
-              { 'description': 'IIC bus is not ready',
-                'is_bit': True,
-                'mask': 16,
-                'name': 'INT_4',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 4},
-              { 'description': 'Addressed as slave',
-                'is_bit': True,
-                'mask': 32,
-                'name': 'INT_5',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 5},
-              { 'description': 'Not addressed as slave',
-                'is_bit': True,
-                'mask': 64,
-                'name': 'INT_6',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 6},
-              { 'description': 'Tx FIFO half empty',
-                'is_bit': True,
-                'mask': 128,
-                'name': 'INT_7',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 7},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967040,
-                'name': 'RSV_0',
-                'nof_bits': 24,
-                'reset_value': '0x0',
-                'shiftr': 8}],
-  'mask': 4294967295,
-  'name': 'QSFP_1_IER',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_1_IER`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0: INT_0 [ rotate = 270 ]
-      1: INT_1 [ rotate = 270 ]
-      2: INT_2 [ rotate = 270 ]
-      3: INT_3 [ rotate = 270 ]
-      4: INT_4 [ rotate = 270 ]
-      5: INT_5 [ rotate = 270 ]
-      6: INT_6 [ rotate = 270 ]
-      7: INT_7 [ rotate = 270 ]
-      8-31: RSV_0 [ color = lightgrey ]
    }
 
 """
@@ -2333,7 +4396,17 @@ QSFP_1_SOFTR = { 'addr': 524352,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`QSFP_1_SOFTR`.
+""":const:`QSFP_1_SOFTR` generated from `XML2VHDL` output.
+
+================  ===================  ===============  ==============  ===============
+**Register**
+**Name:**         QSFP_1_SOFTR
+**Address:**      ``0x0008_0040``
+**Description:**  Soft Reset Register
+**Bit Fields**    **Description**      **Mask**         **Permission**  **Reset Value**
+RKEY              Reset key: 0xA       ``0x0000_000F``  Read/Write      ``0x0000_0000``
+RSV_0             Reserved             ``0xFFFF_FFF0``  Read/Write      ``0x0000_0000``
+================  ===================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -2412,7 +4485,23 @@ QSFP_1_CTRL_REG = { 'addr': 524544,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`QSFP_1_CTRL_REG`.
+""":const:`QSFP_1_CTRL_REG` generated from `XML2VHDL` output.
+
+================  ========================  ===============  ==============  ===============
+**Register**
+**Name:**         QSFP_1_CTRL_REG
+**Address:**      ``0x0008_0100``
+**Description:**  Control Register
+**Bit Fields**    **Description**           **Mask**         **Permission**  **Reset Value**
+EN                AXI IIC enable            ``0x0000_0001``  Read/Write      ``0x0000_0000``
+RX_FIFO_RESET     Tx FIFO reset             ``0x0000_0002``  Read/Write      ``0x0000_0000``
+MSMS              Master/Slave mode select  ``0x0000_0004``  Read/Write      ``0x0000_0000``
+TX                Tx/Rx mode select         ``0x0000_0008``  Read/Write      ``0x0000_0000``
+TXAK              Tx acknowledge enable     ``0x0000_0010``  Read/Write      ``0x0000_0000``
+RSTA              Repeat start              ``0x0000_0020``  Read/Write      ``0x0000_0000``
+GC_EN             General call enable       ``0x0000_0040``  Read/Write      ``0x0000_0000``
+RSV_0             Reserved                  ``0xFFFF_FF80``  Read/Write      ``0x0000_0000``
+================  ========================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -2504,7 +4593,24 @@ QSFP_1_STAT_REG = { 'addr': 524548,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`QSFP_1_STAT_REG`.
+""":const:`QSFP_1_STAT_REG` generated from `XML2VHDL` output.
+
+================  =========================  ===============  ==============  ===============
+**Register**
+**Name:**         QSFP_1_STAT_REG
+**Address:**      ``0x0008_0104``
+**Description:**  Status Register
+**Bit Fields**    **Description**            **Mask**         **Permission**  **Reset Value**
+AGBC              Addressed by general call  ``0x0000_0001``  Read/Write      ``0x0000_0000``
+AAS               Addressed as slave         ``0x0000_0002``  Read/Write      ``0x0000_0000``
+BB                Bus busy                   ``0x0000_0004``  Read/Write      ``0x0000_0000``
+SRW               Slave read/write           ``0x0000_0008``  Read/Write      ``0x0000_0000``
+TX_FIFO_FULL      Tx FIFO full               ``0x0000_0010``  Read/Write      ``0x0000_0000``
+RX_FIFO_FULL      Rx FIFO full               ``0x0000_0020``  Read/Write      ``0x0000_0000``
+RX_FIFO_EMPTY     Rx FIFO empty              ``0x0000_0040``  Read/Write      ``0x0000_0000``
+TX_FIFO_EMPTY     Tx FIFO empty              ``0x0000_0080``  Read/Write      ``0x0000_0000``
+RSV_0             Reserved                   ``0xFFFF_FF00``  Read/Write      ``0x0000_0000``
+================  =========================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -2562,7 +4668,19 @@ QSFP_1_TX_FIFO = { 'addr': 524552,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`QSFP_1_TX_FIFO`.
+""":const:`QSFP_1_TX_FIFO` generated from `XML2VHDL` output.
+
+================  ===============  ===============  ==============  ===============
+**Register**
+**Name:**         QSFP_1_TX_FIFO
+**Address:**      ``0x0008_0108``
+**Description:**  Tx FIFO
+**Bit Fields**    **Description**  **Mask**         **Permission**  **Reset Value**
+TX_DATA           Tx data          ``0x0000_00FF``  Read/Write      ``0x0000_0000``
+START             Start            ``0x0000_0100``  Read/Write      ``0x0000_0000``
+STOP              Stop             ``0x0000_0200``  Read/Write      ``0x0000_0000``
+RSV_0             Reserved         ``0xFFFF_FC00``  Read/Write      ``0x0000_0000``
+================  ===============  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -2601,7 +4719,17 @@ QSFP_1_RX_FIFO = { 'addr': 524556,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`QSFP_1_RX_FIFO`.
+""":const:`QSFP_1_RX_FIFO` generated from `XML2VHDL` output.
+
+================  ===============  ===============  ==============  ===============
+**Register**
+**Name:**         QSFP_1_RX_FIFO
+**Address:**      ``0x0008_010C``
+**Description:**  Rx FIFO
+**Bit Fields**    **Description**  **Mask**         **Permission**  **Reset Value**
+RX_DATA           Rx data          ``0x0000_00FF``  Read/Write      ``0x0000_0000``
+RSV_0             Reserved         ``0xFFFF_FF00``  Read/Write      ``0x0000_0000``
+================  ===============  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -2613,52 +4741,6 @@ QSFP_1_RX_FIFO = { 'addr': 524556,
 
       0-7: RX_DATA
       8-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_1_ADR = { 'addr': 524560,
-  'description': 'Slave Address Register',
-  'fields': [ { 'description': 'Reserved',
-                'is_bit': True,
-                'mask': 1,
-                'name': 'RSV_0',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Slave address',
-                'is_bit': False,
-                'mask': 224,
-                'name': 'SLAVE_ADDR',
-                'nof_bits': 3,
-                'reset_value': '0x0',
-                'shiftr': 5},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967040,
-                'name': 'RSV_1',
-                'nof_bits': 24,
-                'reset_value': '0x0',
-                'shiftr': 8}],
-  'mask': 4294967295,
-  'name': 'QSFP_1_ADR',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_1_ADR`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0: RSV_0 [ rotate = 270, color = lightgrey ]
-      1-4: [ color = lightgrey ]
-      5-7: SLAVE_ADDR [ rotate = 270 ]
-      8-31: RSV_1 [ color = lightgrey ]
    }
 
 """
@@ -2684,7 +4766,17 @@ QSFP_1_TX_FIFO_OCY = { 'addr': 524564,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`QSFP_1_TX_FIFO_OCY`.
+""":const:`QSFP_1_TX_FIFO_OCY` generated from `XML2VHDL` output.
+
+================  ==========================  ===============  ==============  ===============
+**Register**
+**Name:**         QSFP_1_TX_FIFO_OCY
+**Address:**      ``0x0008_0114``
+**Description:**  Tx FIFO Occupancy Register
+**Bit Fields**    **Description**             **Mask**         **Permission**  **Reset Value**
+TX_OCY            Tx FIFO occupancy           ``0x0000_000F``  Read/Write      ``0x0000_0000``
+RSV_0             Reserved                    ``0xFFFF_FFF0``  Read/Write      ``0x0000_0000``
+================  ==========================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -2721,7 +4813,17 @@ QSFP_1_RX_FIFO_OCY = { 'addr': 524568,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`QSFP_1_RX_FIFO_OCY`.
+""":const:`QSFP_1_RX_FIFO_OCY` generated from `XML2VHDL` output.
+
+================  ==========================  ===============  ==============  ===============
+**Register**
+**Name:**         QSFP_1_RX_FIFO_OCY
+**Address:**      ``0x0008_0118``
+**Description:**  Rx FIFO Occupancy Register
+**Bit Fields**    **Description**             **Mask**         **Permission**  **Reset Value**
+RX_OCY            Rx FIFO occupancy           ``0x0000_000F``  Read/Write      ``0x0000_0000``
+RSV_0             Reserved                    ``0xFFFF_FFF0``  Read/Write      ``0x0000_0000``
+================  ==========================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -2733,45 +4835,6 @@ QSFP_1_RX_FIFO_OCY = { 'addr': 524568,
 
       0-3: RX_OCY
       4-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_1_TEN_ADR = { 'addr': 524572,
-  'description': 'Slave 10-bit Address Register',
-  'fields': [ { 'description': 'The MSBs pf the 10bit address when in slave '
-                               'mode',
-                'is_bit': False,
-                'mask': 7,
-                'name': 'MSB_SLAVE_ADDR',
-                'nof_bits': 3,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967264,
-                'name': 'RSV_0',
-                'nof_bits': 27,
-                'reset_value': '0x0',
-                'shiftr': 5}],
-  'mask': 4294967295,
-  'name': 'QSFP_1_TEN_ADR',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_1_TEN_ADR`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-2: MSB_SLAVE_ADDR [ rotate = 270 ]
-      3-4: [ color = lightgrey ]
-      5-31: RSV_0 [ color = lightgrey ]
    }
 
 """
@@ -2797,7 +4860,17 @@ QSFP_1_RX_FIFO_PIRQ = { 'addr': 524576,
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`QSFP_1_RX_FIFO_PIRQ`.
+""":const:`QSFP_1_RX_FIFO_PIRQ` generated from `XML2VHDL` output.
+
+================  =============================================  ===============  ==============  ===============
+**Register**
+**Name:**         QSFP_1_RX_FIFO_PIRQ
+**Address:**      ``0x0008_0120``
+**Description:**  Rx FIFO Programmable Depth Interrupt Register
+**Bit Fields**    **Description**                                **Mask**         **Permission**  **Reset Value**
+COMP_VAL          Compare value                                  ``0x0000_000F``  Read/Write      ``0x0000_0000``
+RSV_0             Reserved                                       ``0xFFFF_FFF0``  Read/Write      ``0x0000_0000``
+================  =============================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -2809,1284 +4882,6 @@ QSFP_1_RX_FIFO_PIRQ = { 'addr': 524576,
 
       0-3: COMP_VAL
       4-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_1_GPO = { 'addr': 524580,
-  'description': 'General Purpose Output Register',
-  'fields': [ { 'description': 'General purpose output 0',
-                'is_bit': True,
-                'mask': 1,
-                'name': 'GPO_0',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'General purpose output 1',
-                'is_bit': True,
-                'mask': 2,
-                'name': 'GPO_1',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 1},
-              { 'description': 'General purpose output 2',
-                'is_bit': True,
-                'mask': 4,
-                'name': 'GPO_2',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 2},
-              { 'description': 'General purpose output 3',
-                'is_bit': True,
-                'mask': 8,
-                'name': 'GPO_3',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 3},
-              { 'description': 'General purpose output 4',
-                'is_bit': True,
-                'mask': 16,
-                'name': 'GPO_4',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 4},
-              { 'description': 'General purpose output 5',
-                'is_bit': True,
-                'mask': 32,
-                'name': 'GPO_5',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 5},
-              { 'description': 'General purpose output 6',
-                'is_bit': True,
-                'mask': 64,
-                'name': 'GPO_6',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 6},
-              { 'description': 'General purpose output 7',
-                'is_bit': True,
-                'mask': 128,
-                'name': 'GPO_7',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 7},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967040,
-                'name': 'RSV_0',
-                'nof_bits': 24,
-                'reset_value': '0x0',
-                'shiftr': 8}],
-  'mask': 4294967295,
-  'name': 'QSFP_1_GPO',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_1_GPO`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0: GPO_0 [ rotate = 270 ]
-      1: GPO_1 [ rotate = 270 ]
-      2: GPO_2 [ rotate = 270 ]
-      3: GPO_3 [ rotate = 270 ]
-      4: GPO_4 [ rotate = 270 ]
-      5: GPO_5 [ rotate = 270 ]
-      6: GPO_6 [ rotate = 270 ]
-      7: GPO_7 [ rotate = 270 ]
-      8-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_1_TSUSTA = { 'addr': 524584,
-  'description': 'TSUSTA Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_1_TSUSTA',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_1_TSUSTA`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_1_TSUSTA
-   }
-
-"""
-
-QSFP_1_TSUSTO = { 'addr': 524588,
-  'description': 'TSUSTO Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_1_TSUSTO',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_1_TSUSTO`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_1_TSUSTO
-   }
-
-"""
-
-QSFP_1_THDSTA = { 'addr': 524592,
-  'description': 'THDSTA Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_1_THDSTA',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_1_THDSTA`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_1_THDSTA
-   }
-
-"""
-
-QSFP_1_TSUDAT = { 'addr': 524596,
-  'description': 'TSUDAT Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_1_TSUDAT',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_1_TSUDAT`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_1_TSUDAT
-   }
-
-"""
-
-QSFP_1_TBUF = { 'addr': 524600,
-  'description': 'TBUF Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_1_TBUF',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_1_TBUF`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_1_TBUF
-   }
-
-"""
-
-QSFP_1_THIGH = { 'addr': 524604,
-  'description': 'THIGH Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_1_THIGH',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_1_THIGH`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_1_THIGH
-   }
-
-"""
-
-QSFP_1_TLOW = { 'addr': 524608,
-  'description': 'TLOW Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_1_TLOW',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_1_TLOW`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_1_TLOW
-   }
-
-"""
-
-QSFP_1_THDDAT = { 'addr': 524612,
-  'description': 'THDDAT Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_1_THDDAT',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_1_THDDAT`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_1_THDDAT
-   }
-
-"""
-
-QSFP_2_GIE = { 'addr': 528412,
-  'description': 'Global interrupt enable',
-  'fields': [ { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 2147483647,
-                'name': 'RSV_0',
-                'nof_bits': 31,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Global interrupt enable',
-                'is_bit': True,
-                'mask': 2147483648,
-                'name': 'GIE',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 31}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_GIE',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_GIE`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-30: RSV_0 [ color = lightgrey ]
-      31: GIE [ rotate = 270 ]
-   }
-
-"""
-
-QSFP_2_ISR = { 'addr': 528416,
-  'description': 'Interrupt Status Register',
-  'fields': [ { 'description': 'Arbitration lost',
-                'is_bit': True,
-                'mask': 1,
-                'name': 'INT_0',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Tx error/slave Tx complete',
-                'is_bit': True,
-                'mask': 2,
-                'name': 'INT_1',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 1},
-              { 'description': 'Tx FIFO empty',
-                'is_bit': True,
-                'mask': 4,
-                'name': 'INT_2',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 2},
-              { 'description': 'Rx FIFO full',
-                'is_bit': True,
-                'mask': 8,
-                'name': 'INT_3',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 3},
-              { 'description': 'IIC bus is not ready',
-                'is_bit': True,
-                'mask': 16,
-                'name': 'INT_4',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 4},
-              { 'description': 'Addressed as slave',
-                'is_bit': True,
-                'mask': 32,
-                'name': 'INT_5',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 5},
-              { 'description': 'Not addressed as slave',
-                'is_bit': True,
-                'mask': 64,
-                'name': 'INT_6',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 6},
-              { 'description': 'Tx FIFO half empty',
-                'is_bit': True,
-                'mask': 128,
-                'name': 'INT_7',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 7},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967040,
-                'name': 'RSV_0',
-                'nof_bits': 24,
-                'reset_value': '0x0',
-                'shiftr': 8}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_ISR',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_ISR`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0: INT_0 [ rotate = 270 ]
-      1: INT_1 [ rotate = 270 ]
-      2: INT_2 [ rotate = 270 ]
-      3: INT_3 [ rotate = 270 ]
-      4: INT_4 [ rotate = 270 ]
-      5: INT_5 [ rotate = 270 ]
-      6: INT_6 [ rotate = 270 ]
-      7: INT_7 [ rotate = 270 ]
-      8-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_2_IER = { 'addr': 528424,
-  'description': 'Interrupt Enable Register',
-  'fields': [ { 'description': 'Arbitration lost',
-                'is_bit': True,
-                'mask': 1,
-                'name': 'INT_0',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Tx error/slave Tx complete',
-                'is_bit': True,
-                'mask': 2,
-                'name': 'INT_1',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 1},
-              { 'description': 'Tx FIFO empty',
-                'is_bit': True,
-                'mask': 4,
-                'name': 'INT_2',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 2},
-              { 'description': 'Rx FIFO full',
-                'is_bit': True,
-                'mask': 8,
-                'name': 'INT_3',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 3},
-              { 'description': 'IIC bus is not ready',
-                'is_bit': True,
-                'mask': 16,
-                'name': 'INT_4',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 4},
-              { 'description': 'Addressed as slave',
-                'is_bit': True,
-                'mask': 32,
-                'name': 'INT_5',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 5},
-              { 'description': 'Not addressed as slave',
-                'is_bit': True,
-                'mask': 64,
-                'name': 'INT_6',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 6},
-              { 'description': 'Tx FIFO half empty',
-                'is_bit': True,
-                'mask': 128,
-                'name': 'INT_7',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 7},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967040,
-                'name': 'RSV_0',
-                'nof_bits': 24,
-                'reset_value': '0x0',
-                'shiftr': 8}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_IER',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_IER`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0: INT_0 [ rotate = 270 ]
-      1: INT_1 [ rotate = 270 ]
-      2: INT_2 [ rotate = 270 ]
-      3: INT_3 [ rotate = 270 ]
-      4: INT_4 [ rotate = 270 ]
-      5: INT_5 [ rotate = 270 ]
-      6: INT_6 [ rotate = 270 ]
-      7: INT_7 [ rotate = 270 ]
-      8-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_2_SOFTR = { 'addr': 528448,
-  'description': 'Soft Reset Register',
-  'fields': [ { 'description': 'Reset key: 0xA',
-                'is_bit': False,
-                'mask': 15,
-                'name': 'RKEY',
-                'nof_bits': 4,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967280,
-                'name': 'RSV_0',
-                'nof_bits': 28,
-                'reset_value': '0x0',
-                'shiftr': 4}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_SOFTR',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_SOFTR`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-3: RKEY
-      4-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_2_CTRL_REG = { 'addr': 528640,
-  'description': 'Control Register',
-  'fields': [ { 'description': 'AXI IIC enable',
-                'is_bit': True,
-                'mask': 1,
-                'name': 'EN',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Tx FIFO reset',
-                'is_bit': True,
-                'mask': 2,
-                'name': 'RX_FIFO_RESET',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 1},
-              { 'description': 'Master/Slave mode select',
-                'is_bit': True,
-                'mask': 4,
-                'name': 'MSMS',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 2},
-              { 'description': 'Tx/Rx mode select',
-                'is_bit': True,
-                'mask': 8,
-                'name': 'TX',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 3},
-              { 'description': 'Tx acknowledge enable',
-                'is_bit': True,
-                'mask': 16,
-                'name': 'TXAK',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 4},
-              { 'description': 'Repeat start',
-                'is_bit': True,
-                'mask': 32,
-                'name': 'RSTA',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 5},
-              { 'description': 'General call enable',
-                'is_bit': True,
-                'mask': 64,
-                'name': 'GC_EN',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 6},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967168,
-                'name': 'RSV_0',
-                'nof_bits': 25,
-                'reset_value': '0x0',
-                'shiftr': 7}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_CTRL_REG',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_CTRL_REG`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0: EN [ rotate = 270 ]
-      1: RX_FIFO_RESET [ rotate = 270 ]
-      2: MSMS [ rotate = 270 ]
-      3: TX [ rotate = 270 ]
-      4: TXAK [ rotate = 270 ]
-      5: RSTA [ rotate = 270 ]
-      6: GC_EN [ rotate = 270 ]
-      7-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_2_STAT_REG = { 'addr': 528644,
-  'description': 'Status Register',
-  'fields': [ { 'description': 'Addressed by general call',
-                'is_bit': True,
-                'mask': 1,
-                'name': 'AGBC',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Addressed as slave',
-                'is_bit': True,
-                'mask': 2,
-                'name': 'AAS',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 1},
-              { 'description': 'Bus busy',
-                'is_bit': True,
-                'mask': 4,
-                'name': 'BB',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 2},
-              { 'description': 'Slave read/write',
-                'is_bit': True,
-                'mask': 8,
-                'name': 'SRW',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 3},
-              { 'description': 'Tx FIFO full',
-                'is_bit': True,
-                'mask': 16,
-                'name': 'TX_FIFO_FULL',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 4},
-              { 'description': 'Rx FIFO full',
-                'is_bit': True,
-                'mask': 32,
-                'name': 'RX_FIFO_FULL',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 5},
-              { 'description': 'Rx FIFO empty',
-                'is_bit': True,
-                'mask': 64,
-                'name': 'RX_FIFO_EMPTY',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 6},
-              { 'description': 'Tx FIFO empty',
-                'is_bit': True,
-                'mask': 128,
-                'name': 'TX_FIFO_EMPTY',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 7},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967040,
-                'name': 'RSV_0',
-                'nof_bits': 24,
-                'reset_value': '0x0',
-                'shiftr': 8}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_STAT_REG',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_STAT_REG`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0: AGBC [ rotate = 270 ]
-      1: AAS [ rotate = 270 ]
-      2: BB [ rotate = 270 ]
-      3: SRW [ rotate = 270 ]
-      4: TX_FIFO_FULL [ rotate = 270 ]
-      5: RX_FIFO_FULL [ rotate = 270 ]
-      6: RX_FIFO_EMPTY [ rotate = 270 ]
-      7: TX_FIFO_EMPTY [ rotate = 270 ]
-      8-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_2_TX_FIFO = { 'addr': 528648,
-  'description': 'Tx FIFO',
-  'fields': [ { 'description': 'Tx data',
-                'is_bit': False,
-                'mask': 255,
-                'name': 'TX_DATA',
-                'nof_bits': 8,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Start',
-                'is_bit': True,
-                'mask': 256,
-                'name': 'START',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 8},
-              { 'description': 'Stop',
-                'is_bit': True,
-                'mask': 512,
-                'name': 'STOP',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 9},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294966272,
-                'name': 'RSV_0',
-                'nof_bits': 22,
-                'reset_value': '0x0',
-                'shiftr': 10}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_TX_FIFO',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_TX_FIFO`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-7: TX_DATA
-      8: START [ rotate = 270 ]
-      9: STOP [ rotate = 270 ]
-      10-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_2_RX_FIFO = { 'addr': 528652,
-  'description': 'Rx FIFO',
-  'fields': [ { 'description': 'Rx data',
-                'is_bit': False,
-                'mask': 255,
-                'name': 'RX_DATA',
-                'nof_bits': 8,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967040,
-                'name': 'RSV_0',
-                'nof_bits': 24,
-                'reset_value': '0x0',
-                'shiftr': 8}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_RX_FIFO',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_RX_FIFO`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-7: RX_DATA
-      8-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_2_ADR = { 'addr': 528656,
-  'description': 'Slave Address Register',
-  'fields': [ { 'description': 'Reserved',
-                'is_bit': True,
-                'mask': 1,
-                'name': 'RSV_0',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Slave address',
-                'is_bit': False,
-                'mask': 224,
-                'name': 'SLAVE_ADDR',
-                'nof_bits': 3,
-                'reset_value': '0x0',
-                'shiftr': 5},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967040,
-                'name': 'RSV_1',
-                'nof_bits': 24,
-                'reset_value': '0x0',
-                'shiftr': 8}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_ADR',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_ADR`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0: RSV_0 [ rotate = 270, color = lightgrey ]
-      1-4: [ color = lightgrey ]
-      5-7: SLAVE_ADDR [ rotate = 270 ]
-      8-31: RSV_1 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_2_TX_FIFO_OCY = { 'addr': 528660,
-  'description': 'Tx FIFO Occupancy Register',
-  'fields': [ { 'description': 'Tx FIFO occupancy',
-                'is_bit': False,
-                'mask': 15,
-                'name': 'TX_OCY',
-                'nof_bits': 4,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967280,
-                'name': 'RSV_0',
-                'nof_bits': 28,
-                'reset_value': '0x0',
-                'shiftr': 4}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_TX_FIFO_OCY',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_TX_FIFO_OCY`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-3: TX_OCY
-      4-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_2_RX_FIFO_OCY = { 'addr': 528664,
-  'description': 'Rx FIFO Occupancy Register',
-  'fields': [ { 'description': 'Rx FIFO occupancy',
-                'is_bit': False,
-                'mask': 15,
-                'name': 'RX_OCY',
-                'nof_bits': 4,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967280,
-                'name': 'RSV_0',
-                'nof_bits': 28,
-                'reset_value': '0x0',
-                'shiftr': 4}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_RX_FIFO_OCY',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_RX_FIFO_OCY`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-3: RX_OCY
-      4-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_2_TEN_ADR = { 'addr': 528668,
-  'description': 'Slave 10-bit Address Register',
-  'fields': [ { 'description': 'The MSBs pf the 10bit address when in slave '
-                               'mode',
-                'is_bit': False,
-                'mask': 7,
-                'name': 'MSB_SLAVE_ADDR',
-                'nof_bits': 3,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967264,
-                'name': 'RSV_0',
-                'nof_bits': 27,
-                'reset_value': '0x0',
-                'shiftr': 5}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_TEN_ADR',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_TEN_ADR`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-2: MSB_SLAVE_ADDR [ rotate = 270 ]
-      3-4: [ color = lightgrey ]
-      5-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_2_RX_FIFO_PIRQ = { 'addr': 528672,
-  'description': 'Rx FIFO Programmable Depth Interrupt Register',
-  'fields': [ { 'description': 'Compare value',
-                'is_bit': False,
-                'mask': 15,
-                'name': 'COMP_VAL',
-                'nof_bits': 4,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967280,
-                'name': 'RSV_0',
-                'nof_bits': 28,
-                'reset_value': '0x0',
-                'shiftr': 4}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_RX_FIFO_PIRQ',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_RX_FIFO_PIRQ`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-3: COMP_VAL
-      4-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_2_GPO = { 'addr': 528676,
-  'description': 'General Purpose Output Register',
-  'fields': [ { 'description': 'General purpose output 0',
-                'is_bit': True,
-                'mask': 1,
-                'name': 'GPO_0',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'General purpose output 1',
-                'is_bit': True,
-                'mask': 2,
-                'name': 'GPO_1',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 1},
-              { 'description': 'General purpose output 2',
-                'is_bit': True,
-                'mask': 4,
-                'name': 'GPO_2',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 2},
-              { 'description': 'General purpose output 3',
-                'is_bit': True,
-                'mask': 8,
-                'name': 'GPO_3',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 3},
-              { 'description': 'General purpose output 4',
-                'is_bit': True,
-                'mask': 16,
-                'name': 'GPO_4',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 4},
-              { 'description': 'General purpose output 5',
-                'is_bit': True,
-                'mask': 32,
-                'name': 'GPO_5',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 5},
-              { 'description': 'General purpose output 6',
-                'is_bit': True,
-                'mask': 64,
-                'name': 'GPO_6',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 6},
-              { 'description': 'General purpose output 7',
-                'is_bit': True,
-                'mask': 128,
-                'name': 'GPO_7',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 7},
-              { 'description': 'Reserved',
-                'is_bit': False,
-                'mask': 4294967040,
-                'name': 'RSV_0',
-                'nof_bits': 24,
-                'reset_value': '0x0',
-                'shiftr': 8}],
-  'mask': 4294967295,
-  'name': 'QSFP_2_GPO',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_GPO`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0: GPO_0 [ rotate = 270 ]
-      1: GPO_1 [ rotate = 270 ]
-      2: GPO_2 [ rotate = 270 ]
-      3: GPO_3 [ rotate = 270 ]
-      4: GPO_4 [ rotate = 270 ]
-      5: GPO_5 [ rotate = 270 ]
-      6: GPO_6 [ rotate = 270 ]
-      7: GPO_7 [ rotate = 270 ]
-      8-31: RSV_0 [ color = lightgrey ]
-   }
-
-"""
-
-QSFP_2_TSUSTA = { 'addr': 528680,
-  'description': 'TSUSTA Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_2_TSUSTA',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_TSUSTA`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_2_TSUSTA
-   }
-
-"""
-
-QSFP_2_TSUSTO = { 'addr': 528684,
-  'description': 'TSUSTO Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_2_TSUSTO',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_TSUSTO`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_2_TSUSTO
-   }
-
-"""
-
-QSFP_2_THDSTA = { 'addr': 528688,
-  'description': 'THDSTA Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_2_THDSTA',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_THDSTA`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_2_THDSTA
-   }
-
-"""
-
-QSFP_2_TSUDAT = { 'addr': 528692,
-  'description': 'TSUDAT Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_2_TSUDAT',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_TSUDAT`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_2_TSUDAT
-   }
-
-"""
-
-QSFP_2_TBUF = { 'addr': 528696,
-  'description': 'TBUF Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_2_TBUF',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_TBUF`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_2_TBUF
-   }
-
-"""
-
-QSFP_2_THIGH = { 'addr': 528700,
-  'description': 'THIGH Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_2_THIGH',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_THIGH`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_2_THIGH
-   }
-
-"""
-
-QSFP_2_TLOW = { 'addr': 528704,
-  'description': 'TLOW Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_2_TLOW',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_TLOW`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_2_TLOW
-   }
-
-"""
-
-QSFP_2_THDDAT = { 'addr': 528708,
-  'description': 'THDDAT Timing Parameter Register',
-  'fields': [],
-  'mask': 4294967295,
-  'name': 'QSFP_2_THDDAT',
-  'nof_bits': 32,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`QSFP_2_THDDAT`.
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-31: QSFP_2_THDDAT
    }
 
 """

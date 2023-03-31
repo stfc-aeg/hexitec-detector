@@ -229,14 +229,14 @@ class HexitecFem():
             self.x10g_rdma = RdmaUDP(local_ip=self.server_ctrl_ip_addr, local_port=61649,
                                      rdma_ip=self.camera_ctrl_ip_addr, rdma_port=61648, debug=False)
             self.broadcast_VSRs = \
-                VsrModule(self.x10g_rdma, 0, self.vsr_addr_mapping)
+                VsrModule(self.x10g_rdma, slot=0, init_time=0, addr_mapping=self.vsr_addr_mapping)
             self.vsr_list = []
-            self.vsr_list.append(VsrModule(self.x10g_rdma, 1, self.vsr_addr_mapping))
-            self.vsr_list.append(VsrModule(self.x10g_rdma, 2, self.vsr_addr_mapping))
-            self.vsr_list.append(VsrModule(self.x10g_rdma, 3, self.vsr_addr_mapping))
-            self.vsr_list.append(VsrModule(self.x10g_rdma, 4, self.vsr_addr_mapping))
-            self.vsr_list.append(VsrModule(self.x10g_rdma, 5, self.vsr_addr_mapping))
-            self.vsr_list.append(VsrModule(self.x10g_rdma, 6, self.vsr_addr_mapping))
+            self.vsr_list.append(VsrModule(self.x10g_rdma, slot=1, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            self.vsr_list.append(VsrModule(self.x10g_rdma, slot=2, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            self.vsr_list.append(VsrModule(self.x10g_rdma, slot=3, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            self.vsr_list.append(VsrModule(self.x10g_rdma, slot=4, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            self.vsr_list.append(VsrModule(self.x10g_rdma, slot=5, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            self.vsr_list.append(VsrModule(self.x10g_rdma, slot=6, init_time=0, addr_mapping=self.vsr_addr_mapping))
         except socket_error as e:
             raise socket_error("Failed to setup Control connection: %s" % e)
         return
