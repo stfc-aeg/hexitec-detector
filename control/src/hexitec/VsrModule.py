@@ -230,7 +230,7 @@ class VsrAssembly(object):
         self._dac_enabled_flag = False
 
     def __del__(self):
-        print(f"(Slot: {self.slot} address: 0x{self.addr:X}) Wrapping up, disabling modules/HV")
+        # print(f"(Slot: {self.slot} address: 0x{self.addr:X}) Wrapping up, disabling modules/HV")
         self.hv_disable()
         self.disable_module()
 

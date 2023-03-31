@@ -373,15 +373,15 @@ class HexitecFem():
             self._set_status_message("Camera connected.")
             logging.debug("UDP connection established")
             # Power up VSRs
-            print("Switching all VSRs on..")
             success = self.broadcast_VSRs.enable_module()
             vsr_statuses = self.broadcast_VSRs._get_status(hv=False, all_vsrs=True)
             logging.debug("Power Status: {}".format(vsr_statuses))
             if not success:
                 logging.debug("Power Status: {}".format(vsr_statuses))
                 message = "Not all VSRs powered up"
-                error = "{0:02X}".format(vsr_statuses)
+                error = "{}".format(vsr_statuses)
                 self.flag_error(message, error)
+                return
             # TODO Tie-in rechecking against vsrs_selected?!
             # self.x10g_rdma.enable_all_vsrs()
             # expected_value = self.vsrs_selected
@@ -396,7 +396,6 @@ class HexitecFem():
             #     self.flag_error(message, error)
 
             # Switch HV on
-            print("Switching all HVs on..")
             success = self.broadcast_VSRs.hv_enable()
             hv_statuses = self.broadcast_VSRs._get_status(hv=True, all_vsrs=True)
             logging.debug("HV Status: 0x{}".format(hv_statuses))
@@ -405,6 +404,7 @@ class HexitecFem():
                 message = "VSRs' HV didn't turn on"
                 error = "{}".format(hv_statuses)
                 self.flag_error(message, error)
+                return
             # TODO tie-in with check-in against vsrs_selected?!
             # self.x10g_rdma.enable_all_hvs()
             # expected_value = (self.vsrs_selected << 8) | self.vsrs_selected
