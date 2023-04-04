@@ -17,13 +17,8 @@ import os
 
 # # # from hexitec.test_ui.RdmaUDP import RdmaUDP
 # # from hexitec.RdmaUDP import RdmaUDP     # Satisfy tox
-from hexitec.RDMA_REGISTERS import BOARD_BUILD_INFO_SRC_VERSION, \
-    BOARD_BUILD_INFO_BUILD_DATE, BOARD_BUILD_INFO_DNA_0, BOARD_BUILD_INFO_SCRATCH_1, \
-    HEXITEC_2X6_VSR_DATA_CTRL, \
-    HEXITEC_2X6_VSR0_STATUS
+from hexitec.RDMA_REGISTERS import HEXITEC_2X6_VSR_DATA_CTRL, HEXITEC_2X6_VSR0_STATUS
 from hexitec.RdmaUdp import RdmaUDP
-# from hexitec.BoardCfgStatus import construct_fpga_dna, \
-#     decode_fw_version, decode_build_info
 from hexitec.VsrModule import VsrModule
 
 from socket import error as socket_error
@@ -44,8 +39,7 @@ class HexitecFem():
     # Thread executor used for functions handling rdma transactions
     thread_executor = futures.ThreadPoolExecutor(max_workers=1)
 
-    # VSRs values taken from INI file
-    VSR_ADDRESS = range(0x90, 0x96, 1)
+    vsr_base_address = 0x90
 
     HEX_ASCII_CODE = [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
                       0x41, 0x42, 0x43, 0x44, 0x45, 0x46]
@@ -80,10 +74,6 @@ class HexitecFem():
         :param server_data_ip_addr: PC interface for data path
         :param camera_data_ip_addr: FEM interface for data path
         """
-        # logging.info("server_ctrl_ip_addr={}, camera_ctrl_ip_addr={}".format(
-        #     server_ctrl_ip_addr, camera_ctrl_ip_addr))
-        # logging.info("server_data_ip_addr={}, camera_data_ip_addr={}".format(
-        #     server_data_ip_addr, camera_data_ip_addr))
         # Give access to parent class (Hexitec)
         self.parent = parent
         self.x10g_rdma = None
@@ -117,10 +107,7 @@ class HexitecFem():
         self.bias_level = 0
 
         self.vsrs_selected = 0
-        # TODO This needs to be tied in with the ini entry - vsrs_selected
         self.vsr_addr_mapping = {1: 0x90, 2: 0x91, 3: 0x92, 4: 0x93, 5: 0x94, 6: 0x95}
-        """:obj:`dict` A dictionary mapping VSR slot to VSR addr. This is hardware build dependent
-            and can be determined by :meth:`VsrModule.lookup`"""
         self.broadcast_VSRs = None
         self.vsr_list = []
 
@@ -202,7 +189,6 @@ class HexitecFem():
             "hardware_busy": (lambda: self.hardware_busy, None),
             "firmware_date": (lambda: self.firmware_date, None),
             "firmware_time": (lambda: self.firmware_time, None),
-            # TODO: Verify and implement:
             "vsr_ambient_list": (lambda: self.ambient_list, None),
             "vsr_humidity_list": (lambda: self.humidity_list, None),
             "vsr_asic1_list": (lambda: self.asic1_list, None),
@@ -231,12 +217,18 @@ class HexitecFem():
             self.broadcast_VSRs = \
                 VsrModule(self.x10g_rdma, slot=0, init_time=0, addr_mapping=self.vsr_addr_mapping)
             self.vsr_list = []
-            self.vsr_list.append(VsrModule(self.x10g_rdma, slot=1, init_time=0, addr_mapping=self.vsr_addr_mapping))
-            self.vsr_list.append(VsrModule(self.x10g_rdma, slot=2, init_time=0, addr_mapping=self.vsr_addr_mapping))
-            self.vsr_list.append(VsrModule(self.x10g_rdma, slot=3, init_time=0, addr_mapping=self.vsr_addr_mapping))
-            self.vsr_list.append(VsrModule(self.x10g_rdma, slot=4, init_time=0, addr_mapping=self.vsr_addr_mapping))
-            self.vsr_list.append(VsrModule(self.x10g_rdma, slot=5, init_time=0, addr_mapping=self.vsr_addr_mapping))
-            self.vsr_list.append(VsrModule(self.x10g_rdma, slot=6, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            self.vsr_list.append(
+                VsrModule(self.x10g_rdma, slot=1, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            self.vsr_list.append(
+                VsrModule(self.x10g_rdma, slot=2, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            self.vsr_list.append(
+                VsrModule(self.x10g_rdma, slot=3, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            self.vsr_list.append(
+                VsrModule(self.x10g_rdma, slot=4, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            self.vsr_list.append(
+                VsrModule(self.x10g_rdma, slot=5, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            self.vsr_list.append(
+                VsrModule(self.x10g_rdma, slot=6, init_time=0, addr_mapping=self.vsr_addr_mapping))
         except socket_error as e:
             raise socket_error("Failed to setup Control connection: %s" % e)
         return
@@ -336,19 +328,18 @@ class HexitecFem():
         """Get FEM health status."""
         return self.health
 
-    # TODO: Still need IOLoop call if sensor polling is scrapped?
-    def _start_polling(self):
-        IOLoop.instance().add_callback(self.poll_sensors)   # Not polling sensors
+    # # TODO: Still need IOLoop call if sensor polling is scrapped?
+    # def _start_polling(self):
+    #     IOLoop.instance().add_callback(self.poll_sensors)   # Not polling sensors
 
-    # TODO: redundant ?
-    def poll_sensors(self):
-        """Poll hardware while connected but not busy initialising, collecting offsets, etc."""
-        # if self.hardware_connected and (self.hardware_busy is False):
-        #     self.read_sensors()
-        #     print(" * poll_sensors() not reading sensors *")
-        IOLoop.instance().call_later(3.0, self.poll_sensors)
+    # # TODO: redundant ?
+    # def poll_sensors(self):
+    #     """Poll hardware while connected but not busy initialising, collecting offsets, etc."""
+    #     # if self.hardware_connected and (self.hardware_busy is False):
+    #     #     self.read_sensors()
+    #     #     print(" * poll_sensors() not reading sensors *")
+    #     IOLoop.instance().call_later(3.0, self.poll_sensors)
 
-    # @run_on_executor(executor='thread_executor')
     def connect_hardware(self, msg=None):
         """Establish Hardware connection."""
         try:
@@ -363,7 +354,6 @@ class HexitecFem():
             self._set_status_message("Is the camera powered?")
         except Exception as e:
             self.flag_error("Camera connection", str(e))
-            # Cannot raise Exception beyond current thread
 
     def power_up_modules(self):
         """Power up and enable VSRs."""
@@ -548,10 +538,9 @@ class HexitecFem():
         self._set_status_message("VSRs booted")
         self.hardware_busy = False
         self.parent.software_state = "Idle"
-
-        # Start polling thread (connect successfully set up)
-        if len(self.status_error) == 0:
-            self._start_polling()
+        # # Start polling thread (connect successfully set up)
+        # if len(self.status_error) == 0:
+        #     self._start_polling()
 
     def cam_disconnect(self):
         """Send commands to disconnect camera."""
@@ -649,8 +638,9 @@ class HexitecFem():
 
         if self.stop_acquisition:
             logging.info("Cancelling Acquisition..")
-            for vsr in self.VSR_ADDRESS:
-                self.send_cmd([vsr, 0xE2])
+            # TODO Verify working okay: ?
+            for vsr in self.vsr_list:
+                self.send_cmd([vsr.addr, 0xE2])
             logging.info("Acquisition cancelled")
             # Reset variables
             self.stop_acquisition = False
@@ -683,9 +673,8 @@ class HexitecFem():
         # Acquisition completed, note completion
         self.acquisition_completed = True
         self.parent.software_state = "Idle"
-        # print("\n fem DONE")
 
-    # TODO: Revisit and unit test:
+    # TODO: Will become redundant
     def read_receive_from_all(self, op_command, register_h, register_l):  # pragma: no coverage
         """Read and receive from all VSRs."""
         reply = []
@@ -697,7 +686,7 @@ class HexitecFem():
             reply.append(resp)
         return reply
 
-    # TODO: Revisit and unit test:
+    # TODO: Will become redundant
     def write_receive_to_all(self, op_command, register_h, register_l,
                              value_h, value_l):  # pragma: no coverage
         """Write and receive to all VSRs."""
@@ -705,7 +694,7 @@ class HexitecFem():
             self.send_cmd([vsr.addr, op_command, register_h, register_l, value_h, value_l])
             self.read_response()
 
-    # TODO: Revisit and unit test:
+    # TODO: Will become redundant
     def are_capture_dc_ready(self, vsrs_register_89):  # pragma: no coverage
         """Check status of Register 89, bit 0: Capture DC ready."""
         vsrs_ready = True
@@ -1026,7 +1015,7 @@ class HexitecFem():
 
             vsr_status_addr = HEXITEC_2X6_VSR0_STATUS['addr']
             for vsr in self.vsr_list:
-                index = vsr.addr - 144
+                index = vsr.addr - self.vsr_base_address
                 locked = self.x10g_rdma.udp_rdma_read(vsr_status_addr, burst_len=1, cmd_no=0,
                                                       comment=f"VSR {index} status register")[0]
                 if (locked == 0xFF):
@@ -1092,7 +1081,7 @@ class HexitecFem():
         print(" All vsrs, reg07: {}".format(reg07))
         print("           reg89: {}".format(reg89))
 
-    # TODO: Revisit and finishing unit test
+    # TODO: Will become redundant
     def initialise_vsr(self, vsr):  # pragma: no coverage
         """Initialise a VSR."""
         value_002 = 0x30, 0x31  # RowS1 Low Byte value: 1 = maximum frame rate
@@ -1152,13 +1141,6 @@ class HexitecFem():
         vsr.write_and_response(0x30, 0x31, 0x31, 0x30)
         # Enable PLLs; 1 = Enable PLL; 2 = Enable ADC PLL
         vsr.write_and_response(0x30, 0x37, 0x30, 0x33)
-        # # TODO Enable PLLs, local functions:
-        # self.send_cmd([vsr.addr, 0x42, 0x30, 0x37, 0x30, 0x33])
-        # self.read_response()
-        # # TODO Enable PLLs, MR's functions:
-        # vsr.send_cmd([0x42, 0x30, 0x37, 0x30, 0x33])
-        # vsr._read_response()
-
         vsr.write_and_response(0x30, 0x32, value_002[0], value_002[1],
                                masked=masked, delay=delayed)   # LowByte Row S1
         vsr.write_and_response(0x30, 0x33, value_003[0], value_003[1],
@@ -1179,20 +1161,12 @@ class HexitecFem():
         vsr.write_and_response(0x30, 0x36, value_006[0], value_006[1], delay=delayed)  # Gain
         # ADC Clock Delay:
         vsr.write_and_response(0x30, 0x39, value_009[0], value_009[1], delay=delayed)
-        # self.send_cmd([vsr.addr, 0x42, 0x30, 0x39, value_009[0], value_009[1]])
-        # self.read_response()
         # FVAL/LVAL Delay:
         vsr.write_and_response(0x30, 0x45, value_00E[0], value_00E[1], delay=delayed)
-        # self.send_cmd([vsr.addr, 0x42, 0x30, 0x45, value_00E[0], value_00E[1]])
-        # self.read_response()
         # SM wait Low Row, 8 bits:
         vsr.write_and_response(0x31, 0x42, 0x30, 0x38)
-        # self.send_cmd([vsr.addr, 0x42, 0x31, 0x42, 0x30, 0x38])
-        # self.read_response()
         # Start SM on falling edge ('0' = rising edge) of ADC-CLK:
         vsr.write_and_response(0x31, 0x34, 0x30, 0x31)
-        # self.send_cmd([vsr.addr, 0x42, 0x31, 0x34, 0x30, 0x31])
-        # self.read_response()
         vsr.write_and_response(0x30, 0x31, 0x32, 0x30)    # Enable LVDS Interface
         """
         90	44	61	FF	FF	FF	FF	FF	FF	FF	FF	FF	FF	;Column Read En
@@ -1229,16 +1203,13 @@ class HexitecFem():
         vsr.write_and_response(0x32, 0x34, 0x32, 0x38, False)
         logging.debug("Enable Training")
         vsr.write_and_response(0x30, 0x31, 0x38, 0x30)    # Enable Training
-        # self.send_cmd([vsr.addr, 0x42, 0x30, 0x31, 0x38, 0x30])
-        # self.read_response()
 
-        # vsr.write_and_response(0x31, 0x38, 0x30, 0x31) # Low Byte SM Vcal Clock
         # TODO: Inserting VCal setting here
+
         # Send VCAL2 -> VCAL1 low byte to Register 0x02 (Accepts 8 bits)
         vsr.write_and_response(0x31, 0x38, value_018[0], value_018[1], False)
         # Send VCAL2 -> VCAL1 high byte to Register 0x03 (Accepts 7 bits)
         vsr.write_and_response(0x31, 0x39, value_019[0], value_019[1], False)
-        # vsr.write_and_response(0x32, 0x34,	0x32, 0x30) # Enable Vcal
         logging.debug("Enable Vcal")  # 90	43	24	20	;Enable Vcal
         self.send_cmd([vsr.addr, 0x43, 0x32, 0x34, 0x32, 0x30])
         self.read_response()
@@ -1453,72 +1424,6 @@ class HexitecFem():
             self.set_duration(self.duration)
             self.parent.set_number_frames(self.number_frames)
 
-    # TODO: To be tested using new 2x6 system hardware
-    def print_vcal_registers(self, vsr_addr):  # pragma: no cover
-        """Debug function: Print all VCAL (Power, calibrate & read enables) registers."""
-        print("---------------------------------------------------------------------------------")
-        # ROW, ASIC 1
-
-        rpe1 = [0x2F, 0x38]
-        row_power_enable1 = self.read_back_register(vsr_addr, rpe1)
-        rce1 = [0x39, 0x42]
-        row_cal_enable1 = self.read_back_register(vsr_addr, rce1)
-        rre1 = [0x43, 0x4c]
-        row_read_enable1 = self.read_back_register(vsr_addr, rre1)
-        # print("row_read_enable1: {}".format(row_read_enable1))
-        print("\t\tRow Pwr Ena ASIC1:  %s \n\t\tRow Cal Ena ASIC1: %s \n\t\tRow Rd Ena ASIC1: %s"
-              % (row_power_enable1, row_cal_enable1, row_read_enable1))
-
-        # COLUMN, ASIC 1
-
-        cpe1 = [0x4d, 0x56]
-        col_power_enable1 = self.read_back_register(vsr_addr, cpe1)
-        cce1 = [0x57, 0x60]
-        col_cal_enable1 = self.read_back_register(vsr_addr, cce1)
-        cre1 = [0x61, 0x6a]
-        col_read_enable1 = self.read_back_register(vsr_addr, cre1)
-
-        print("\t\tCol Pwr Ena ASIC1: %s \n\t\tCol Cal Ena ASIC1: %s \n\t\tCol Rd Ena ASIC1: %s"
-              % (col_power_enable1, col_cal_enable1, col_read_enable1))
-        print("---------------------------------------------------------------------------------")
-        # ROW, ASIC 2
-
-        rpe2 = [0x90, 0x99]
-        row_power_enable2 = self.read_back_register(vsr_addr, rpe2)
-        rce2 = [0x9A, 0xA3]
-        row_cal_enable2 = self.read_back_register(vsr_addr, rce2)
-        rre2 = [0xA4, 0xAD]
-        row_read_enable2 = self.read_back_register(vsr_addr, rre2)
-
-        print("\t\tRow Pwr Ena ASIC2: %s \n\t\tRow Cal Ena ASIC2:  %s \n\t\tRow Rd Ena ASIC2: %s"
-              % (row_power_enable2, row_cal_enable2, row_read_enable2))
-
-        # COLUMN, ASIC 2
-
-        cpe2 = [0xAE, 0xB7]
-        col_power_enable2 = self.read_back_register(vsr_addr, cpe2)
-        cce2 = [0xB8, 0xC1]
-        col_cal_enable2 = self.read_back_register(vsr_addr, cce2)
-        cre2 = [0xC2, 0xCB]
-        col_read_enable2 = self.read_back_register(vsr_addr, cre2)
-
-        print("\t\tCol Pwr Ena ASIC2: %s \n\t\tCol Cal Ena ASIC2: %s \n\t\tCol Rd Ena ASIC2: %s"
-              % (col_power_enable2, col_cal_enable2, col_read_enable2))
-        print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
-
-    # TODO: To be tested using new 2x6 system hardware
-    def read_back_register(self, vsr_addr, boundaries):  # pragma: no cover
-        """Debug function: Actual hardware interaction with VCAL registers."""
-        register_reply = []
-        for idx in range(boundaries[0], boundaries[1] + 1, 1):
-            formatted_address = self.convert_to_aspect_format(idx)
-            command = [vsr_addr, HexitecFem.READ_REG_VALUE,
-                       formatted_address[0], formatted_address[1]]
-            self.send_cmd(command)
-            reply = self.convert_list_to_string(self.read_response()[1:])
-            register_reply.append(reply.strip())
-        return register_reply
-
     def convert_list_to_string(self, int_list):
         r"""Convert list of integer into ASCII string.
 
@@ -1528,10 +1433,13 @@ class HexitecFem():
 
     def read_pwr_voltages(self, vsr):
         """Read and convert power data into voltages."""
-        if vsr.addr not in self.VSR_ADDRESS:
+        if vsr.addr not in self.vsr_addr_mapping.values():
             raise HexitecFemError("HV: Invalid VSR address(0x{0:02X})".format(vsr.addr))
-        index = vsr.addr - self.VSR_ADDRESS[0]
-        self.hv_list[index] = vsr._get_power_sensors()
+        index = vsr.addr - self.vsr_base_address
+        if (0 <= index <= 5):
+            self.hv_list[index] = vsr._get_power_sensors()
+        else:
+            raise HexitecFemError("Power Voltages: Invalid VSR index: {}".format(index))
 
     def read_temperatures_humidity_values(self, vsr):
         """Read and convert sensor data into temperatures and humidity values."""
@@ -1543,13 +1451,15 @@ class HexitecFem():
             logging.debug("VSR: %s sensors_values: %s len: %s" % (format(vsr.addr, '#02x'),
                           sensors_values, len(sensors_values)))
 
-        # TODO Improve indexing check?
-        index = vsr.addr - 144
-        self.ambient_list[index] = sensors_values[0]
-        self.humidity_list[index] = sensors_values[1]
-        self.asic1_list[index] = sensors_values[2]
-        self.asic2_list[index] = sensors_values[3]
-        self.adc_list[index] = sensors_values[4]
+        index = vsr.addr - self.vsr_base_address
+        if (0 <= index <= 5):
+            self.ambient_list[index] = sensors_values[0]
+            self.humidity_list[index] = sensors_values[1]
+            self.asic1_list[index] = sensors_values[2]
+            self.asic2_list[index] = sensors_values[3]
+            self.adc_list[index] = sensors_values[4]
+        else:
+            raise HexitecFemError("Sensors: Invalid VSR index: {}".format(index))
 
     def set_hexitec_config(self, filename):
         """Check whether file exists, load parameters from file."""
@@ -1592,29 +1502,27 @@ class HexitecFem():
                                                   'Control-Settings/VSRS_selected', bit_range=6)
             if vsrs_selected > -1:
                 self.vsrs_selected = vsrs_selected
+                self.populate_vsr_addr_mapping(self.vsrs_selected)
 
             # print("row_s1: {} from {}".format(self.row_s1, row_s1))
             # print("s1_sph: {} from {}".format(self.s1_sph, s1_sph))
             # print("sph_s2: {} from {}".format(self.sph_s2, sph_s2))
             # print("bias:   {} from {}".format(self.bias_level, bias_level))
             # print(" vsrs: {}".format(self.vsrs_selected))
-            # time.sleep(2)
-            self.enable_selected_vsrs(self.vsrs_selected)
             self.calculate_frame_rate()
         except HexitecFemError as e:
             self.flag_error("INI File Key Error", str(e))
 
-    def enable_selected_vsrs(self, vsrs_selected):
-        """Populate VSR_ADDRESS according to ini file selection."""
-        index = 0
-        # Clear VSR addresses before selecting according to ini file
-        self.VSR_ADDRESS = []
-        while index < 6:
-            if vsrs_selected & (1 << index):
-                self.VSR_ADDRESS.append(0x90 + index)
-            index += 1
-        # print("VSRs: {}".format(' '.join("0x{0:X}".format(x) for x in self.VSR_ADDRESS)))
-        return self.VSR_ADDRESS
+    def populate_vsr_addr_mapping(self, vsrs_selected):
+        """Populate VSRs mapping according to ini file entry."""
+        self.vsr_addr_mapping = {}
+        vsr_number = 1
+        for index in range(6):
+            if (vsrs_selected >> index) & 1:
+                self.vsr_addr_mapping[vsr_number] = 0x90+index
+                vsr_number += 1
+        # Returning mapping for debugging purposes only, not necessary
+        return self.vsr_addr_mapping
 
     def convert_string_exponential_to_integer(self, exponent):
         """Convert aspect format to fit dac format.
@@ -1628,7 +1536,6 @@ class HexitecFem():
         number_float = float(number_string)
         number_int = int(round(number_float))
         return number_int
-        # number_scaled = int(number_int // self.DAC_SCALE_FACTOR)
 
     def _extract_exponential(self, parameter_dict, descriptor, bit_range):
         """Extract exponential descriptor from parameter_dict, check it's within bit_range."""
@@ -1721,7 +1628,6 @@ class HexitecFem():
         # if param == "ColumnCal":
         #     bDebug = True
 
-        # TODO: Bit clunky returning so many -1 tuples. Better solution for no ini file loaded?
         aspect_list = [(-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1), (-1, -1),
                        (-1, -1), (-1, -1), (-1, -1)]
 
@@ -1853,15 +1759,14 @@ class HexitecFem():
         #     value_l, resp[1], value_l | resp[1], masked_l, self.HEX_ASCII_CODE[masked_l]))
         return self.HEX_ASCII_CODE[masked_h], self.HEX_ASCII_CODE[masked_l]
 
+    # TODO: Scale with num of VSRs..
     def debug_register(self, msb, lsb):  # pragma: no cover
         """Debug function: Display contents of register."""
-        # TODO: Scale with num of VSR..
-        # for vsr in self.VSR_ADDRESS:
-        self.send_cmd([self.VSR_ADDRESS[1], self.READ_REG_VALUE,
+        self.send_cmd([self.vsr_list[0].addr, self.READ_REG_VALUE,
                        msb, lsb])
         vsr2 = self.read_response()
         time.sleep(0.25)
-        self.send_cmd([self.VSR_ADDRESS[0], self.READ_REG_VALUE,
+        self.send_cmd([self.vsr_list[1].addr, self.READ_REG_VALUE,
                        msb, lsb])
         vsr1 = self.read_response()
         vsr2 = vsr2[2:-1]
@@ -1884,13 +1789,6 @@ class HexitecFem():
                     print("  * Register: {}{}: VSR2: {}.{} VSR1: {}.{}".format(hex(msb),
                           hex(lsb)[-1], chr(vsr2[0]), chr(vsr2[1]), chr(vsr1[0]), chr(vsr1[1])))
                     time.sleep(0.25)
-            # for msb in range(16):
-            #     for lsb in range(16):
-            #         (vsr2, vsr1) = self.debug_register(self.HEX_ASCII_CODE[msb],
-            #             self.HEX_ASCII_CODE[lsb])
-            #         print(" \t* Register: {}{}: VSR2: {}.{} VSR1: {}.{}".format(hex(msb),
-            #             hex(lsb)[-1], chr(vsr2[0]), chr(vsr2[1]), chr(vsr1[0]), chr(vsr1[1])))
-            #         time.sleep(0.25)
         except Exception as e:
             logging.error("dump_all_registers: {}".format(e))
 
@@ -1993,7 +1891,7 @@ class HexitecFem():
         self.log_messages = [(str(timestamp), log_message) for timestamp, log_message in logs]
 
 
-class HexitecFemError(Exception):
+class HexitecFemError(Exception):   # pragma: no cover
     """Simple exception class for HexitecFem to wrap lower-level exceptions."""
 
     pass

@@ -424,11 +424,6 @@ class Hexitec():
         else:
             # Nothing in progress, disconnect hardware
             self.fem.disconnect_hardware(msg)
-        # TODO: Do not reset status; See reset_error()
-        # # Reset system status
-        # self.status_error = ""
-        # self.status_message = ""
-        # self.system_health = True
 
     def save_odin(self, msg):
         """Save Odin's settings to file."""
@@ -474,9 +469,12 @@ class Hexitec():
         try:
             with open(self.odin_config_file, "r") as f:
                 print("\n adp.load_Odin()")
-                # print(" exists? {}".format(os.stat(self.odin_config_file)))
+                # import os
+                # print(" isfile? {}".format(os.path.isfile(self.odin_config_file)))
+                # print(" current folder: {}".format(os.getcwd()))
+                # print(" file: {}".format(self.odin_config_file))
                 config = json.load(f)
-                print(" ({}) config = {}".format(type(config), config))
+                # print(" ({}) config = {}".format(type(config), config))
                 self.fem.hexitec_config = config["fem/hexitec_config"]
                 self.daq.file_name = config["daq/file_name"]
                 self.daq.file_dir = config["daq/file_dir"]

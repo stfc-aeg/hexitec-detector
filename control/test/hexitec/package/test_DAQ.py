@@ -356,20 +356,6 @@ class TestDAQ(unittest.TestCase):
         ])
         assert self.test_daq.daq.file_writing is True
 
-    # TODO: NO LONGER USED??
-    # def test_config_odin_data(self):
-    #     """Test configure Odin data works."""
-    #     with patch("hexitec.HexitecDAQ.ApiAdapterRequest") as mock_request:
-    #         self.test_daq.daq.config_dir = "fake/dir"
-    #         self.test_daq.daq.config_files["fp"] = "fp_hexitec.config"
-
-    #         self.test_daq.daq._config_odin_data("fp")
-    #         config = "/{}/{}".format(self.test_daq.daq.config_dir,
-    #                                  self.test_daq.daq.config_files["fp"])
-
-    #         mock_request.assert_called_with(config, content_type="application/json")
-    #         self.test_daq.fake_fp.put.assert_called_with("config/config_file", mock_request())
-
     def test_start_acquisition(self):
         """Test function works."""
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:

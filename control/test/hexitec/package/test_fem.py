@@ -85,6 +85,25 @@ class TestFem(unittest.TestCase):
             assert exc_info.type is socket_error
             assert exc_info.value.args[0] == "Failed to setup Control connection: "
 
+    def test_get_log_messages_display_new_messages(self):
+        """Test the function displays new messages."""
+        datestamp = self.test_fem.fem.create_timestamp()
+        log_messages = [(datestamp, 'Initialised OK.')]
+        self.test_fem.fem.last_message_timestamp = "something"
+        self.test_fem.fem.get_log_messsages("")
+        # Test part of timestamp, as milliseconds will not agree anyway
+        assert self.test_fem.fem.log_messages[0][:-4] == log_messages[0][:-4]
+        assert self.test_fem.fem.log_messages[0][1] == log_messages[0][1]
+
+    def test_get_log_messages_display_all_messages(self):
+        """Test the function displays all messages."""
+        datestamp = self.test_fem.fem.create_timestamp()
+        log_messages = [(datestamp, 'Initialised OK.')]
+        self.test_fem.fem.get_log_messsages("")
+        # Test part of timestamp, as milliseconds will not agree anyway
+        assert self.test_fem.fem.log_messages[0][:-4] == log_messages[0][:-4]
+        assert self.test_fem.fem.log_messages[0][1] == log_messages[0][1]
+
     def test_read_sensors_working_ok(self):
         """Test the read_sensors function works."""
         with patch('hexitec.HexitecFem.RdmaUDP'):
@@ -169,11 +188,11 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.health = health
         assert self.test_fem.fem.get_health() is health
 
-    def test_poll_sensors_calls_self(self):
-        """Test poll_sensors() calls itself."""
-        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
-            self.test_fem.fem.poll_sensors()
-            mock_loop.instance().call_later.assert_called_with(3.0, self.test_fem.fem.poll_sensors)
+    # def test_poll_sensors_calls_self(self):
+    #     """Test poll_sensors() calls itself."""
+    #     with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+    #         self.test_fem.fem.poll_sensors()
+    #         mock_loop.instance().call_later.assert_called_with(3.0, self.test_fem.fem.poll_sensors)
 
     def test_connect_hardware_fails(self):
         """Test that connecting with hardware handles failure."""
@@ -217,46 +236,44 @@ class TestFem(unittest.TestCase):
 
     def test_power_up_modules_flags_vsr_unpowered(self):
         """Test function works."""
-        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
-            self.test_fem.fem.connect = Mock()
-            # vsrs_selected = 0x3F
-            # self.test_fem.fem.vsrs_selected = vsrs_selected
-            # Test VSRs can all be enabled
-            self.test_fem.fem.hardware_connected = False
-            self.test_fem.fem.broadcast_VSRs.enable_module = Mock(return_value=False)
-            vsr_statuses = "fake_status"
-            self.test_fem.fem.broadcast_VSRs._get_status = Mock(return_value=vsr_statuses)
+        self.test_fem.fem.connect = Mock()
+        # vsrs_selected = 0x3F
+        # self.test_fem.fem.vsrs_selected = vsrs_selected
+        # Test VSRs can all be enabled
+        self.test_fem.fem.hardware_connected = False
+        self.test_fem.fem.broadcast_VSRs.enable_module = Mock(return_value=False)
+        vsr_statuses = "fake_status"
+        self.test_fem.fem.broadcast_VSRs._get_status = Mock(return_value=vsr_statuses)
 
-            # # Test HVs can all be enabled
-            # self.test_fem.fem.broadcast_VSRs.hv_enable = Mock(return_value=True)
-            # status = "fake_status"
-            # self.test_fem.fem.broadcast_VSRs._get_status = Mock(return_value=status)
+        # # Test HVs can all be enabled
+        # self.test_fem.fem.broadcast_VSRs.hv_enable = Mock(return_value=True)
+        # status = "fake_status"
+        # self.test_fem.fem.broadcast_VSRs._get_status = Mock(return_value=status)
 
-            self.test_fem.fem.flag_error = Mock()
-            self.test_fem.fem.power_up_modules()
-            message = "Not all VSRs powered up"
-            error = "{}".format(vsr_statuses)
-            self.test_fem.fem.flag_error.assert_called_with(message, error)
+        self.test_fem.fem.flag_error = Mock()
+        self.test_fem.fem.power_up_modules()
+        message = "Not all VSRs powered up"
+        error = "{}".format(vsr_statuses)
+        self.test_fem.fem.flag_error.assert_called_with(message, error)
 
     def test_power_up_modules_flags_hvs_unpowered(self):
-        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
-            self.test_fem.fem.connect = Mock()
-            # vsrs_selected = 0x3F
-            # self.test_fem.fem.vsrs_selected = vsrs_selected
-            # Test VSRs can all be enabled
-            self.test_fem.fem.hardware_connected = False
-            self.test_fem.fem.broadcast_VSRs.enable_module = Mock(return_value=True)
-            vsr_statuses = "fake_status"
-            self.test_fem.fem.broadcast_VSRs._get_status = Mock(return_value=vsr_statuses)
+        self.test_fem.fem.connect = Mock()
+        # vsrs_selected = 0x3F
+        # self.test_fem.fem.vsrs_selected = vsrs_selected
+        # Test VSRs can all be enabled
+        self.test_fem.fem.hardware_connected = False
+        self.test_fem.fem.broadcast_VSRs.enable_module = Mock(return_value=True)
+        vsr_statuses = "fake_status"
+        self.test_fem.fem.broadcast_VSRs._get_status = Mock(return_value=vsr_statuses)
 
-            # Test HVs can all be enabled
-            self.test_fem.fem.broadcast_VSRs.hv_enable = Mock(return_value=False)
+        # Test HVs can all be enabled
+        self.test_fem.fem.broadcast_VSRs.hv_enable = Mock(return_value=False)
 
-            self.test_fem.fem.flag_error = Mock()
-            self.test_fem.fem.power_up_modules()
-            message = "VSRs' HV didn't turn on"
-            error = "{}".format(vsr_statuses)
-            self.test_fem.fem.flag_error.assert_called_with(message, error)
+        self.test_fem.fem.flag_error = Mock()
+        self.test_fem.fem.power_up_modules()
+        message = "VSRs' HV didn't turn on"
+        error = "{}".format(vsr_statuses)
+        self.test_fem.fem.flag_error.assert_called_with(message, error)
 
     def test_power_up_modules_flags_socket_error(self):
         """Test function will handle if not all of selected HVs are powered on."""
@@ -1439,10 +1456,10 @@ class TestFem(unittest.TestCase):
 
     def test_read_and_response(self):
         """Test function works ok."""
+        vsr_addr = 144
         self.test_fem.fem.send_cmd = Mock()
-        response = [42, 144, 48, 49, 13]
+        response = [42, vsr_addr, 48, 49, 13]
         self.test_fem.fem.read_response = Mock(return_value=response)
-        vsr_addr = HexitecFem.VSR_ADDRESS[0]
         self.test_fem.fem.vsr_addr = vsr_addr
         (address_h, address_l) = (0x30, 0x31)
         resp, reply = \
@@ -1457,12 +1474,12 @@ class TestFem(unittest.TestCase):
 
     def test_write_and_response(self):
         """Test function works ok."""
+        vsr_addr = 144
         self.test_fem.fem.send_cmd = Mock()
         (address_h, address_l) = (0x30, 0x31)
         (value_h, value_l) = (0x30, 0x31)
-        response = [42, 144, address_h, address_l, value_h, value_l, 13]
+        response = [42, vsr_addr, address_h, address_l, value_h, value_l, 13]
         self.test_fem.fem.read_response = Mock(return_value=response)
-        vsr_addr = HexitecFem.VSR_ADDRESS[0]
         self.test_fem.fem.vsr_addr = vsr_addr
         resp, reply = \
             self.test_fem.fem.write_and_response(vsr_addr, address_h, address_l,
@@ -1478,12 +1495,12 @@ class TestFem(unittest.TestCase):
 
     def test_write_and_response_handles_unexpected_readback_value(self):
         """Test function handles unexpected readback value."""
+        vsr_addr = 144
         self.test_fem.fem.send_cmd = Mock()
         (address_h, address_l) = (0x30, 0x31)
         (value_h, value_l) = (0x30, 0x31)
-        response = [42, 144, address_h, address_l, value_h, value_l - 1, 13]
+        response = [42, vsr_addr, address_h, address_l, value_h, value_l - 1, 13]
         self.test_fem.fem.read_response = Mock(return_value=response)
-        vsr_addr = HexitecFem.VSR_ADDRESS[0]
         self.test_fem.fem.vsr_addr = vsr_addr
 
         with pytest.raises(HexitecFemError) as exc_info:
@@ -1494,13 +1511,13 @@ class TestFem(unittest.TestCase):
 
     def test_block_write_and_response(self):
         """Test function works ok."""
+        vsr_addr = 144
         self.test_fem.fem.send_cmd = Mock()
         (address_h, address_l) = (0x30, 0x31)
         (value_h, value_l) = (0x30, 0x31)
         number_registers = 10
-        response = [42, 144, address_h, address_l, value_h, value_l, 13]
+        response = [42, vsr_addr, address_h, address_l, value_h, value_l, 13]
         self.test_fem.fem.read_response = Mock(return_value=response)
-        vsr_addr = HexitecFem.VSR_ADDRESS[0]
         self.test_fem.fem.vsr_addr = vsr_addr
         self.test_fem.fem.block_write_and_response(vsr_addr, number_registers, address_h,
                                                    address_l, value_h, value_l)
@@ -1544,16 +1561,16 @@ class TestFem(unittest.TestCase):
 
     def test_block_write_custom_length_fails_bad_selection(self):
         """Test function regards against mismatch of values to write/number_registers."""
+        vsr_addr = 144
         self.test_fem.fem.send_cmd = Mock()
         (address_h, address_l) = (0x30, 0x31)
         values = [57, 56, 57, 57, 57, 65, 57, 66, 57, 67, 57, 68, 57, 69, 57, 70, 65, 48, 65, 49]
         number_registers = 3
-        response = [42, 144, address_h, address_l]
+        response = [42, vsr_addr, address_h, address_l]
         for value in values:
             response.append(value)
         response.append(13)
         self.test_fem.fem.read_response = Mock(return_value=response)
-        vsr_addr = HexitecFem.VSR_ADDRESS[0]
         self.test_fem.fem.vsr_addr = vsr_addr
         with pytest.raises(HexitecFemError) as exc_info:
             self.test_fem.fem.block_write_custom_length(vsr_addr, number_registers,
@@ -1801,9 +1818,9 @@ class TestFem(unittest.TestCase):
     # def test_read_pwr_voltages_vsr1(self):
     #     """Test function handles power voltages ok."""
     #     self.test_fem.fem.send_cmd = Mock()
-    #     response = [42, 144, 48, 50, 69, 53, 48, 53, 68, 48, 48, 56, 67, 66, 48, 48, 48, 52, 48, 67,
-    #                 49, 49, 48, 70, 69, 56, 48, 55, 69, 50, 48, 56, 56, 66, 49, 50, 48, 67, 49, 65,
-    #                 49, 65, 48, 48, 48, 50, 48, 48, 48, 48, 13]
+    #     response = [42, 144, 48, 50, 69, 53, 48, 53, 68, 48, 48, 56, 67, 66, 48, 48, 48, 52, 48,
+    #                 67, 49, 49, 48, 70, 69, 56, 48, 55, 69, 50, 48, 56, 56, 66, 49, 50, 48, 67,
+    #                 49, 65, 49, 65, 48, 48, 48, 50, 48, 48, 48, 48, 13]
     #     self.test_fem.fem.read_response = Mock(return_value=response)
     #     vsr_addr = HexitecFem.VSR_ADDRESS[0]
     #     self.test_fem.fem.vsr_addr = vsr_addr
@@ -1871,7 +1888,8 @@ class TestFem(unittest.TestCase):
     #     with pytest.raises(HexitecFemError) as exc_info:
     #         self.test_fem.fem.read_temperatures_humidity_values()
     #     assert exc_info.type is HexitecFemError
-    #     assert exc_info.value.args[0] == "Sensors: Invalid VSR address(0x{0:02X})".format(vsr_addr)
+        # assert exc_info.value.args[0] == \
+        #     "Sensors: Invalid VSR address(0x{0:02X})".format(vsr_addr)
 
     # def test_read_temperature_humidity_values_handle_wrong_value(self):
     #     """Test function handles bad sensor values."""

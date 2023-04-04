@@ -800,17 +800,6 @@ class HexitecDAQ():
         #     self.adapters["fp"].put(command, request)
         # print(" Node(s) rank: {}".format(rank))
 
-    # def _config_odin_data(self, adapter):
-    #     print("_config_odin_data() self.config_files: {}".format(self.config_files))
-    #     config = os.path.join(self.config_dir, self.config_files[adapter])
-    #     config = os.path.expanduser(config)
-    #     if not config.startswith('/'):
-    #         config = '/' + config
-    #     logging.debug(config)
-    #     request = ApiAdapterRequest(config, content_type="application/json")
-    #     command = "config/config_file"
-    #     _ = self.adapters[adapter].put(command, request)
-
     def update_rows_columns_pixels(self):
         """Update rows, columns and pixels from selected sensors_layout value.
 
