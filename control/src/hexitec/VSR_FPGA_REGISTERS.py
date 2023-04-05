@@ -5,8 +5,17 @@
 # Licensed under the BSD 3-Clause license. See LICENSE file in the project root for details.
 
 # *** This file was AUTO-GENERATED. Modifications to this file will be overwritten. ***
-"""Register dictionaries extracted from XML2VHDL formatted `xml` memory-map generation output file."""
-VSR_FPGA_REGS_V0_5_REG1 = { 'addr': 1,
+"""IC ID and Register dictionaries extracted from XML2VHDL formatted `xml` memory-map generation output file."""
+VSR_FPGA_REGS_V0_5_ID = {'addr_offset': 0, 'fields': [], 'name': 'VSR_FPGA_REGS_V0_5_ID'}
+"""XML2VHDL IC References generated from `XML2VHDL` output.
+
+=====================  ===============
+**ID**                 **Offset
+VSR_FPGA_REGS_V0_5_ID  ``0x0000_0000``
+=====================  ===============
+"""
+
+REG1 = { 'addr': 1,
   'description': 'VSR module control',
   'fields': [ { 'description': 'Enable State-Machine',
                 'is_bit': True,
@@ -68,15 +77,15 @@ VSR_FPGA_REGS_V0_5_REG1 = { 'addr': 1,
                 'reset_value': '0x0',
                 'shiftr': 7}],
   'mask': 4294967295,
-  'name': 'VSR_FPGA_REGS_V0_5_REG1',
+  'name': 'REG1',
   'nof_bits': 32,
   'reset_value': '0x01',
   'shiftr': 0}
-""":const:`VSR_FPGA_REGS_V0_5_REG1` generated from `XML2VHDL` output.
+""":const:`REG1` generated from `XML2VHDL` output.
 
 ====================  ======================================================================================================================  ===============  ==============  ===============
 **Register**
-**Name:**             VSR_FPGA_REGS_V0_5_REG1
+**Name:**             REG1
 **Address:**          ``0x0000_0001``
 **Description:**      VSR module control
 **Bit Fields**        **Description**                                                                                                         **Mask**         **Permission**  **Reset Value**
@@ -93,7 +102,7 @@ TRAINING_PATTERN_EN   Enable serial training pattern                            
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
@@ -106,6 +115,7 @@ TRAINING_PATTERN_EN   Enable serial training pattern                            
       5: SERIAL_IFACE_RST [ rotate = 270 ]
       6: TRAINING_PATTERN_SEL [ rotate = 270 ]
       7: TRAINING_PATTERN_EN [ rotate = 270 ]
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -132,12 +142,13 @@ REG2 = { 'addr': 2,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG2
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -164,13 +175,13 @@ REG3 = { 'addr': 3,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-5: REG3
-      6-7:  [ rotate = 270, color = lightgrey ]
+      6-31:  [ color = lightgrey ]
    }
 
 """
@@ -197,13 +208,13 @@ REG4 = { 'addr': 4,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-5: REG4
-      6-7:  [ rotate = 270, color = lightgrey ]
+      6-31:  [ color = lightgrey ]
    }
 
 """
@@ -230,13 +241,13 @@ REG5 = { 'addr': 5,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-5: REG5
-      6-7:  [ rotate = 270, color = lightgrey ]
+      6-31:  [ color = lightgrey ]
    }
 
 """
@@ -269,13 +280,13 @@ GAIN_SEL          Gain select: '0' High gain | '1' Low gain  ``0x0000_0001``  Re
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0: GAIN_SEL [ rotate = 270 ]
-      1-7:  [ color = lightgrey ]
+      1-31:  [ color = lightgrey ]
    }
 
 """
@@ -316,14 +327,14 @@ ENABLE_ADC_PLL    Enable ADC PLL   ``0x0000_0002``  Read/Write      ``0x0000_000
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0: ENABLE_PLL [ rotate = 270 ]
       1: ENABLE_ADC_PLL [ rotate = 270 ]
-      2-7:  [ color = lightgrey ]
+      2-31:  [ color = lightgrey ]
    }
 
 """
@@ -350,13 +361,13 @@ REG8 = { 'addr': 8,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0: REG8 [ rotate = 270 ]
-      1-7:  [ color = lightgrey ]
+      1-31:  [ color = lightgrey ]
    }
 
 """
@@ -383,13 +394,13 @@ REG9 = { 'addr': 9,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-4: REG9
-      5-7:  [ rotate = 270, color = lightgrey ]
+      5-31:  [ color = lightgrey ]
    }
 
 """
@@ -447,7 +458,7 @@ RSV_0             No description in documentation                         ``0x00
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
@@ -456,7 +467,7 @@ RSV_0             No description in documentation                         ``0x00
       1: TRIGGER_MODE_EN [ rotate = 270 ]
       2: TRIGGER_INPUT_EN [ rotate = 270 ]
       3-6: RSV_0 [ color = lightgrey ]
-      7:  [ rotate = 270, color = lightgrey ]
+      7-31:  [ color = lightgrey ]
    }
 
 """
@@ -483,12 +494,13 @@ REG11 = { 'addr': 11,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG11
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -515,12 +527,13 @@ REG12 = { 'addr': 12,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG12
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -547,12 +560,13 @@ REG13 = { 'addr': 13,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG13
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -579,12 +593,13 @@ REG14 = { 'addr': 14,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG14
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -619,13 +634,13 @@ SM_START_EDGE     '0' Start State-Machine on rising edge of ADC clock | '1' Star
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0: SM_START_EDGE [ rotate = 270 ]
-      1-7:  [ color = lightgrey ]
+      1-31:  [ color = lightgrey ]
    }
 
 """
@@ -652,12 +667,13 @@ REG24 = { 'addr': 24,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG24
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -684,13 +700,13 @@ REG25 = { 'addr': 25,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-6: REG25
-      7:  [ rotate = 270, color = lightgrey ]
+      7-31:  [ color = lightgrey ]
    }
 
 """
@@ -717,12 +733,13 @@ REG26 = { 'addr': 26,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG26
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -749,12 +766,13 @@ REG27 = { 'addr': 27,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG27
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -781,12 +799,13 @@ REG31 = { 'addr': 31,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG31
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -813,12 +832,13 @@ REG32 = { 'addr': 32,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG32
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -845,13 +865,13 @@ REG33 = { 'addr': 33,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-5: REG33
-      6-7:  [ rotate = 270, color = lightgrey ]
+      6-31:  [ color = lightgrey ]
    }
 
 """
@@ -878,12 +898,13 @@ REG34 = { 'addr': 34,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG34
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -910,13 +931,13 @@ REG35 = { 'addr': 35,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-5: REG35
-      6-7:  [ rotate = 270, color = lightgrey ]
+      6-31:  [ color = lightgrey ]
    }
 
 """
@@ -1005,7 +1026,7 @@ TRIGGERED_FRAME_EN     Enable triggered frame in DC counting mode  ``0x0000_0080
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
@@ -1018,6 +1039,7 @@ TRIGGERED_FRAME_EN     Enable triggered frame in DC counting mode  ``0x0000_0080
       5: VCAL_PULSE_DISABLE [ rotate = 270 ]
       6: TEST_MODE_EN [ rotate = 270 ]
       7: TRIGGERED_FRAME_EN [ rotate = 270 ]
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1044,12 +1066,13 @@ REG37 = { 'addr': 37,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG37
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1076,13 +1099,13 @@ REG38 = { 'addr': 38,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-5: REG38
-      6-7:  [ rotate = 270, color = lightgrey ]
+      6-31:  [ color = lightgrey ]
    }
 
 """
@@ -1131,7 +1154,7 @@ TEST_MODE_EN           Enable test mode            ``0x0000_0004``  Read/Write  
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
@@ -1139,7 +1162,7 @@ TEST_MODE_EN           Enable test mode            ``0x0000_0004``  Read/Write  
       0: OVERWRITE_THRS [ rotate = 270 ]
       1: COUNTING_MODE_DISABLE [ rotate = 270 ]
       2: TEST_MODE_EN [ rotate = 270 ]
-      3-7:  [ color = lightgrey ]
+      3-31:  [ color = lightgrey ]
    }
 
 """
@@ -1166,12 +1189,13 @@ REG40 = { 'addr': 40,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG40
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1198,12 +1222,13 @@ REG41 = { 'addr': 41,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG41
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1230,12 +1255,13 @@ REG42 = { 'addr': 42,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG42
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1262,12 +1288,13 @@ REG43 = { 'addr': 43,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG43
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1294,12 +1321,13 @@ REG44 = { 'addr': 44,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG44
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1326,12 +1354,13 @@ REG45 = { 'addr': 45,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG45
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1358,12 +1387,13 @@ REG46 = { 'addr': 46,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG46
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1390,12 +1420,13 @@ REG47 = { 'addr': 47,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG47
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1422,12 +1453,13 @@ REG48 = { 'addr': 48,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG48
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1454,12 +1486,13 @@ REG49 = { 'addr': 49,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG49
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1486,12 +1519,13 @@ REG50 = { 'addr': 50,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG50
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1518,12 +1552,13 @@ REG51 = { 'addr': 51,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG51
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1550,12 +1585,13 @@ REG52 = { 'addr': 52,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG52
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1582,12 +1618,13 @@ REG53 = { 'addr': 53,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG53
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1614,12 +1651,13 @@ REG54 = { 'addr': 54,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG54
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1646,12 +1684,13 @@ REG55 = { 'addr': 55,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG55
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1678,12 +1717,13 @@ REG56 = { 'addr': 56,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG56
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1710,12 +1750,13 @@ REG57 = { 'addr': 57,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG57
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1742,12 +1783,13 @@ REG58 = { 'addr': 58,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG58
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1774,12 +1816,13 @@ REG59 = { 'addr': 59,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG59
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1806,12 +1849,13 @@ REG60 = { 'addr': 60,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG60
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1838,12 +1882,13 @@ REG61 = { 'addr': 61,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG61
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1870,12 +1915,13 @@ REG62 = { 'addr': 62,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG62
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1902,12 +1948,13 @@ REG63 = { 'addr': 63,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG63
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1934,12 +1981,13 @@ REG64 = { 'addr': 64,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG64
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1966,12 +2014,13 @@ REG65 = { 'addr': 65,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG65
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -1998,12 +2047,13 @@ REG66 = { 'addr': 66,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG66
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2030,12 +2080,13 @@ REG67 = { 'addr': 67,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG67
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2062,12 +2113,13 @@ REG68 = { 'addr': 68,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG68
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2094,12 +2146,13 @@ REG69 = { 'addr': 69,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG69
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2126,12 +2179,13 @@ REG70 = { 'addr': 70,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG70
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2158,12 +2212,13 @@ REG71 = { 'addr': 71,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG71
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2190,12 +2245,13 @@ REG72 = { 'addr': 72,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG72
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2222,12 +2278,13 @@ REG73 = { 'addr': 73,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG73
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2254,12 +2311,13 @@ REG74 = { 'addr': 74,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG74
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2286,12 +2344,13 @@ REG75 = { 'addr': 75,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG75
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2318,12 +2377,13 @@ REG76 = { 'addr': 76,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG76
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2350,12 +2410,13 @@ REG77 = { 'addr': 77,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG77
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2382,12 +2443,13 @@ REG78 = { 'addr': 78,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG78
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2414,12 +2476,13 @@ REG79 = { 'addr': 79,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG79
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2446,12 +2509,13 @@ REG80 = { 'addr': 80,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG80
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2478,12 +2542,13 @@ REG81 = { 'addr': 81,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG81
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2510,12 +2575,13 @@ REG82 = { 'addr': 82,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG82
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2542,12 +2608,13 @@ REG83 = { 'addr': 83,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG83
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2574,12 +2641,13 @@ REG84 = { 'addr': 84,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG84
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2606,12 +2674,13 @@ REG85 = { 'addr': 85,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG85
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2638,12 +2707,13 @@ REG86 = { 'addr': 86,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG86
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2670,12 +2740,13 @@ REG87 = { 'addr': 87,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG87
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2702,12 +2773,13 @@ REG88 = { 'addr': 88,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG88
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2734,12 +2806,13 @@ REG89 = { 'addr': 89,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG89
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2766,12 +2839,13 @@ REG90 = { 'addr': 90,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG90
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2798,12 +2872,13 @@ REG91 = { 'addr': 91,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG91
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2830,12 +2905,13 @@ REG92 = { 'addr': 92,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG92
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2862,12 +2938,13 @@ REG93 = { 'addr': 93,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG93
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2894,12 +2971,13 @@ REG94 = { 'addr': 94,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG94
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2926,12 +3004,13 @@ REG95 = { 'addr': 95,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG95
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2958,12 +3037,13 @@ REG96 = { 'addr': 96,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG96
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -2990,12 +3070,13 @@ REG97 = { 'addr': 97,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG97
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3022,12 +3103,13 @@ REG98 = { 'addr': 98,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG98
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3054,12 +3136,13 @@ REG99 = { 'addr': 99,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG99
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3086,12 +3169,13 @@ REG100 = { 'addr': 100,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG100
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3118,12 +3202,13 @@ REG101 = { 'addr': 101,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG101
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3150,12 +3235,13 @@ REG102 = { 'addr': 102,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG102
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3182,12 +3268,13 @@ REG103 = { 'addr': 103,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG103
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3214,12 +3301,13 @@ REG104 = { 'addr': 104,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG104
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3246,12 +3334,13 @@ REG105 = { 'addr': 105,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG105
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3278,12 +3367,13 @@ REG106 = { 'addr': 106,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG106
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3310,13 +3400,13 @@ REG128 = { 'addr': 128,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-5: REG128
-      6-7:  [ rotate = 270, color = lightgrey ]
+      6-31:  [ color = lightgrey ]
    }
 
 """
@@ -3343,13 +3433,13 @@ REG129 = { 'addr': 129,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-5: REG129
-      6-7:  [ rotate = 270, color = lightgrey ]
+      6-31:  [ color = lightgrey ]
    }
 
 """
@@ -3376,12 +3466,13 @@ REG130 = { 'addr': 130,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG130
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3408,12 +3499,13 @@ REG131 = { 'addr': 131,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG131
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3440,12 +3532,13 @@ REG132 = { 'addr': 132,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG132
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3518,7 +3611,7 @@ GPIO_2            Pleora GPIO out 2            ``0x0000_0020``  Read/Write      
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
@@ -3529,7 +3622,7 @@ GPIO_2            Pleora GPIO out 2            ``0x0000_0020``  Read/Write      
       3: GPIO_0 [ rotate = 270 ]
       4: GPIO_1 [ rotate = 270 ]
       5: GPIO_2 [ rotate = 270 ]
-      6-7:  [ rotate = 270, color = lightgrey ]
+      6-31:  [ color = lightgrey ]
    }
 
 """
@@ -3556,12 +3649,13 @@ REG134 = { 'addr': 134,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG134
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3588,12 +3682,13 @@ REG135 = { 'addr': 135,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG135
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3627,13 +3722,13 @@ SAME_IMG_SIZE     Calibration data of both ASICs results in the same image size 
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0: SAME_IMG_SIZE [ rotate = 270 ]
-      1-7:  [ color = lightgrey ]
+      1-31:  [ color = lightgrey ]
    }
 
 """
@@ -3674,14 +3769,14 @@ PLL_LOCKED        PLL locked        ``0x0000_0002``  Read/Write      ``0x0000_00
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0: CAPTURE_RDY [ rotate = 270 ]
       1: PLL_LOCKED [ rotate = 270 ]
-      2-7:  [ color = lightgrey ]
+      2-31:  [ color = lightgrey ]
    }
 
 """
@@ -3715,13 +3810,13 @@ SAME_CAL          Use the same calibration data for both ASICs (as described in 
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0: SAME_CAL [ rotate = 270 ]
-      1-7:  [ color = lightgrey ]
+      1-31:  [ color = lightgrey ]
    }
 
 """
@@ -3748,12 +3843,13 @@ REG144 = { 'addr': 144,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG144
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3780,12 +3876,13 @@ REG145 = { 'addr': 145,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG145
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3812,12 +3909,13 @@ REG146 = { 'addr': 146,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG146
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3844,12 +3942,13 @@ REG147 = { 'addr': 147,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG147
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3876,12 +3975,13 @@ REG148 = { 'addr': 148,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG148
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3908,12 +4008,13 @@ REG149 = { 'addr': 149,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG149
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3940,12 +4041,13 @@ REG150 = { 'addr': 150,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG150
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -3972,12 +4074,13 @@ REG151 = { 'addr': 151,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG151
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4004,12 +4107,13 @@ REG152 = { 'addr': 152,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG152
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4036,12 +4140,13 @@ REG153 = { 'addr': 153,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG153
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4068,12 +4173,13 @@ REG154 = { 'addr': 154,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG154
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4100,12 +4206,13 @@ REG155 = { 'addr': 155,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG155
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4132,12 +4239,13 @@ REG156 = { 'addr': 156,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG156
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4164,12 +4272,13 @@ REG157 = { 'addr': 157,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG157
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4196,12 +4305,13 @@ REG158 = { 'addr': 158,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG158
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4228,12 +4338,13 @@ REG159 = { 'addr': 159,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG159
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4260,12 +4371,13 @@ REG160 = { 'addr': 160,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG160
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4292,12 +4404,13 @@ REG161 = { 'addr': 161,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG161
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4324,12 +4437,13 @@ REG162 = { 'addr': 162,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG162
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4356,12 +4470,13 @@ REG163 = { 'addr': 163,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG163
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4388,12 +4503,13 @@ REG164 = { 'addr': 164,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG164
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4420,12 +4536,13 @@ REG165 = { 'addr': 165,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG165
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4452,12 +4569,13 @@ REG166 = { 'addr': 166,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG166
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4484,12 +4602,13 @@ REG167 = { 'addr': 167,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG167
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4516,12 +4635,13 @@ REG168 = { 'addr': 168,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG168
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4548,12 +4668,13 @@ REG169 = { 'addr': 169,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG169
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4580,12 +4701,13 @@ REG170 = { 'addr': 170,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG170
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4612,12 +4734,13 @@ REG171 = { 'addr': 171,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG171
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4644,12 +4767,13 @@ REG172 = { 'addr': 172,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG172
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4676,12 +4800,13 @@ REG173 = { 'addr': 173,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG173
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4708,12 +4833,13 @@ REG174 = { 'addr': 174,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG174
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4740,12 +4866,13 @@ REG175 = { 'addr': 175,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG175
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4772,12 +4899,13 @@ REG176 = { 'addr': 176,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG176
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4804,12 +4932,13 @@ REG177 = { 'addr': 177,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG177
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4836,12 +4965,13 @@ REG178 = { 'addr': 178,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG178
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4868,12 +4998,13 @@ REG179 = { 'addr': 179,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG179
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4900,12 +5031,13 @@ REG180 = { 'addr': 180,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG180
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4932,12 +5064,13 @@ REG181 = { 'addr': 181,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG181
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4964,12 +5097,13 @@ REG182 = { 'addr': 182,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG182
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -4996,12 +5130,13 @@ REG183 = { 'addr': 183,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG183
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5028,12 +5163,13 @@ REG184 = { 'addr': 184,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG184
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5060,12 +5196,13 @@ REG185 = { 'addr': 185,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG185
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5092,12 +5229,13 @@ REG186 = { 'addr': 186,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG186
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5124,12 +5262,13 @@ REG187 = { 'addr': 187,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG187
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5156,12 +5295,13 @@ REG188 = { 'addr': 188,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG188
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5188,12 +5328,13 @@ REG189 = { 'addr': 189,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG189
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5220,12 +5361,13 @@ REG190 = { 'addr': 190,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG190
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5252,12 +5394,13 @@ REG191 = { 'addr': 191,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG191
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5284,12 +5427,13 @@ REG192 = { 'addr': 192,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG192
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5316,12 +5460,13 @@ REG193 = { 'addr': 193,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG193
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5348,12 +5493,13 @@ REG194 = { 'addr': 194,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG194
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5380,12 +5526,13 @@ REG195 = { 'addr': 195,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG195
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5412,12 +5559,13 @@ REG196 = { 'addr': 196,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG196
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5444,12 +5592,13 @@ REG197 = { 'addr': 197,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG197
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5476,12 +5625,13 @@ REG198 = { 'addr': 198,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG198
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5508,12 +5658,13 @@ REG199 = { 'addr': 199,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG199
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5540,12 +5691,13 @@ REG200 = { 'addr': 200,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG200
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5572,12 +5724,13 @@ REG201 = { 'addr': 201,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG201
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5604,12 +5757,13 @@ REG202 = { 'addr': 202,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG202
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5636,12 +5790,13 @@ REG203 = { 'addr': 203,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG203
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5668,12 +5823,13 @@ REG254 = { 'addr': 254,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG254
+      8-31:  [ color = lightgrey ]
    }
 
 """
@@ -5700,12 +5856,13 @@ REG255 = { 'addr': 255,
 .. packetdiag::
 
    packetdiag {
-      colwidth = 8
+      colwidth = 32
       node_height = 144
       scale_direction = right_to_left
       scale_interval = 8
 
       0-7: REG255
+      8-31:  [ color = lightgrey ]
    }
 
 """

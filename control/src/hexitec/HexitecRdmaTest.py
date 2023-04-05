@@ -3,6 +3,11 @@
 import os.path
 import random
 
+from . import HEX_RDMA_REGISTERS as RDMA_REGS
+import RdmaUdp
+import BoardCfgStatus
+
+
 try:
     from rdma_control.RdmaUdp import *
     from rdma_control.BoardCfgStatus import *
@@ -27,7 +32,7 @@ if __name__ == '__main__':
         Hex2x6CtrlRdma = RdmaUDP(local_ip="192.168.4.1", local_port=61649,
                                  rdma_ip="192.168.4.2", rdma_port=61648, debug=False)
 
-    board_cfg_status = BoardCfgStatus(Hex2x6CtrlRdma)
+    board_cfg_status = BoardCfgStatus(Hex2x6CtrlRdma, rdma_offset=rdma.get_id_offset(RDMA_REGS.BOARD_BUILD_INFO_ID))
     print(f"{board_cfg_status.get_fpga_fw_version()}")
     print(f"{board_cfg_status.get_fpga_build_date()}")
     print(f"{board_cfg_status.get_fpga_build_time()}")
@@ -40,19 +45,17 @@ if __name__ == '__main__':
     """:obj:`dict` A dictionary mapping VSR slot to VSR addr. This is hardware build dependent and can be determined by :meth:`VsrModule.lookup`"""
 
     vsr_1 = VsrModule(Hex2x6CtrlRdma, slot=1, init_time=15, addr_mapping=vsr_addr_mapping)
-    print("initialise VSR 1?")
-    vsr_1.initialise()
-    # # vsr_1.set_row_column()
-    # input()
-    # # vsr_1 = VsrModule(Hex2x6CtrlRdma, slot=1, addr_mapping=None)
-    # print(f"[INFO] Slot: {vsr_1.get_slot()} | VSR Address: {hex(vsr_1.get_addr())}")
-    # print(f"[INFO] Status: {vsr_1.get_module_status()} | H/V Status: {vsr_1.get_hv_status()}")
-    # vsr_1.enable_module()
-    # print(f"[INFO] Status: {vsr_1.get_module_status()} | H/V Status: {vsr_1.get_hv_status()}")
+    vsr_1.set_row_column()
+    input()
+    # vsr_1 = VsrModule(Hex2x6CtrlRdma, slot=1, addr_mapping=None)
+    print(f"[INFO] Slot: {vsr_1.get_slot()} | VSR Address: {hex(vsr_1.get_addr())}")
+    print(f"[INFO] Status: {vsr_1.get_module_status()} | H/V Status: {vsr_1.get_hv_status()}")
+    vsr_1.enable_module()
+    print(f"[INFO] Status: {vsr_1.get_module_status()} | H/V Status: {vsr_1.get_hv_status()}")
 
-    # for i in range(0, 5):
-    #     print(f"[INFO]: VSR{vsr_1.slot} temperature: {vsr_1.get_temperature()}")
-    #     time.sleep(1)
+    for i in range(0, 5):
+        print(f"[INFO]: VSR{vsr_1.slot} temperature: {vsr_1.get_temperature()}")
+        time.sleep(1)
 
     print(f"[INFO] VSR{vsr_1.slot} FPGA Firmware Version: {vsr_1.get_firmware_version()}")
     print(f"[INFO] VSR{vsr_1.slot} FPGA Customer ID: {vsr_1.get_customer_id()}")

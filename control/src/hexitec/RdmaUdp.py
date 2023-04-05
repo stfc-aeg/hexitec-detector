@@ -7,16 +7,19 @@
 
 .. important::
 
-   Requires memory mapped :obj:`dict` imported from :mod:`rdma_control.RDMA_REGISTERS` and helper functions
-   imported from :mod:`rdma_control.rdma_register_helpers`.
+   Requires memory mapped :obj:`dict` imported from :mod:`RdmaUdp.UART_RDMA_REGISTERS` and helper functions
+   imported from :mod:`RdmaUdp.rdma_register_helpers`.
 
-   :mod:`rdma_control.RDMA_REGISTERS` is generated from XML2VHDL output, regenerated at FPGA synthesis time. Please
-   ensure the latest version is used in conjunction with :mod:`rdma_control.RdmaUdp` to ensure compatibility with the
+   :mod:`RdmaUdp.UART_RDMA_REGISTERS` is generated from XML2VHDL output, regenerated at FPGA synthesis time. Please
+   ensure the latest version is used in conjunction with :mod:`RdmaUdp.RdmaUdp` to ensure compatibility with the
    register map in the current FPGA bitstream.
-
 """
 import socket
 import struct
+import time
+
+from . import UART_RDMA_REGISTERS as UART_REGS
+from . import rdma_register_helpers as rdma
 
 print("can you see this?")
 try:
@@ -34,7 +37,8 @@ rx_pkt_done_mask = 0x10
 
 def _errorResponse(e, msg, etype="socket", address=0, burst_len=1, op_code=0, cmd_no=0, comment="", data=""):
     print(f"[ERROR] *** {msg} ***:")
-    print(f"    OP Code: 0x{op_code:02X} | Address: 0x{address:08X} | Burst Length: {burst_len} | CMD No: {cmd_no:02X} <{comment}>")
+    print(f"    OP Code: 0x{op_code:02X} | Address: 0x{address:08X} | Burst Length: {burst_len} "
+          f"| CMD No: {cmd_no:02X} <{comment}>")
     if data != "":
         print(f"         Data: {data}")
     print("")
@@ -46,7 +50,8 @@ def _errorResponse(e, msg, etype="socket", address=0, burst_len=1, op_code=0, cm
 
 
 def _debugMsg(msg, address=0, burst_len=1, op_code=0, cmd_no=0, comment="", data=""):
-    print(f"[DEBUG]: {msg}: 0x{op_code:02X} | Address: 0x{address:08X} | Burst Length: {burst_len} | CMD No: 0x{cmd_no:02X} | {comment}")
+    print(f"[DEBUG]: {msg}: 0x{op_code:02X} | Address: 0x{address:08X} | Burst Length: {burst_len} "
+          f"| CMD No: 0x{cmd_no:02X} | {comment}")
     if data != "":
         print(f"         Data: {data}")
 
@@ -68,74 +73,74 @@ def get_rdma_opcode(opcode):
         return 0x01
 
 
-def iic_qsfp_module_sel(mmap_suffix, idx=1):
-    """A basic function to return AXI I\ :sup:`2`\ C controller registers defined in :mod:`rdma_control.RDMA_REGISTERS`.
-
-    Args:
-        mmap_suffix (:obj:`str`): :mod:`rdma_control.RDMA_REGISTERS` to return, from:
-            `TX_FIFO`, `CTRL_REG`, `ISR`, `STAT_REG`, `SOFTR`, `RX_FIFO`, `RX_FIFO_PIRQ`.
-        idx (:obj:`int`, optional): QSFP module AXI I\ :sup:`2`\ C controller registers to select, from:
-            `1`, `2`. Default: `1`.
-
-    Returns: :obj:`dict`: an entry from :mod:`rdma_control.RDMA_REGISTERS` in the form: `QSFP_<idx>_<mmap_suffix>`.
-    """
-    max_modules = 4
-    if idx > max_modules:
-        print(f"[ERROR] idx <{idx}> exceeds max supported modules <{max_modules}")
-        return None
-
-    if mmap_suffix.upper() == "TX_FIFO":
-        if idx == 1:
-            return QSFP_1_TX_FIFO
-        elif idx == 2:
-            return QSFP_2_TX_FIFO
-        else:
-            return QSFP_1_TX_FIFO
-    elif mmap_suffix.upper() == "CTRL_REG":
-        if idx == 1:
-            return QSFP_1_CTRL_REG
-        elif idx == 2:
-            return QSFP_2_CTRL_REG
-        else:
-            return QSFP_1_CTRL_REG
-    elif mmap_suffix.upper() == "ISR":
-        if idx == 1:
-            return QSFP_1_ISR
-        elif idx == 2:
-            return QSFP_2_ISR
-        else:
-            return QSFP_1_ISR
-    elif mmap_suffix.upper() == "STAT_REG":
-        if idx == 1:
-            return QSFP_1_STAT_REG
-        elif idx == 2:
-            return QSFP_2_STAT_REG
-        else:
-            return QSFP_1_STAT_REG
-    elif mmap_suffix.upper() == "SOFTR":
-        if idx == 1:
-            return QSFP_1_SOFTR
-        elif idx == 2:
-            return QSFP_2_SOFTR
-        else:
-            return QSFP_1_SOFTR
-    elif mmap_suffix.upper() == "RX_FIFO":
-        if idx == 1:
-            return QSFP_1_RX_FIFO
-        elif idx == 2:
-            return QSFP_2_RX_FIFO
-        else:
-            return QSFP_1_RX_FIFO
-    elif mmap_suffix.upper() == "RX_FIFO_PIRQ":
-        if idx == 1:
-            return QSFP_1_RX_FIFO_PIRQ
-        elif idx == 2:
-            return QSFP_2_RX_FIFO_PIRQ
-        else:
-            return QSFP_1_RX_FIFO_PIRQ
-    else:
-        print(f"[ERROR] Unsupported IIC mmap suffix: {mmap_suffix}")
-        return None
+#def iic_qsfp_module_sel(mmap_suffix, idx=1):
+#    """A basic function to return AXI I\ :sup:`2`\ C controller registers defined in :mod:`rdma_control.RDMA_REGISTERS`.
+#
+#    Args:
+#        mmap_suffix (:obj:`str`): :mod:`rdma_control.RDMA_REGISTERS` to return, from:
+#            `TX_FIFO`, `CTRL_REG`, `ISR`, `STAT_REG`, `SOFTR`, `RX_FIFO`, `RX_FIFO_PIRQ`.
+#        idx (:obj:`int`, optional): QSFP module AXI I\ :sup:`2`\ C controller registers to select, from:
+#            `1`, `2`. Default: `1`.
+#
+#    Returns: :obj:`dict`: an entry from :mod:`rdma_control.RDMA_REGISTERS` in the form: `QSFP_<idx>_<mmap_suffix>`.
+#    """
+#    max_modules = 4
+#    if idx > max_modules:
+#        print(f"[ERROR] idx <{idx}> exceeds max supported modules <{max_modules}")
+#        return None
+#
+#    if mmap_suffix.upper() == "TX_FIFO":
+#        if idx == 1:
+#            return QSFP_1_TX_FIFO
+#        elif idx == 2:
+#            return QSFP_2_TX_FIFO
+#        else:
+#            return QSFP_1_TX_FIFO
+#    elif mmap_suffix.upper() == "CTRL_REG":
+#        if idx == 1:
+#            return QSFP_1_CTRL_REG
+#        elif idx == 2:
+#            return QSFP_2_CTRL_REG
+#        else:
+#            return QSFP_1_CTRL_REG
+#    elif mmap_suffix.upper() == "ISR":
+#        if idx == 1:
+#            return QSFP_1_ISR
+#        elif idx == 2:
+#            return QSFP_2_ISR
+#        else:
+#            return QSFP_1_ISR
+#    elif mmap_suffix.upper() == "STAT_REG":
+#        if idx == 1:
+#            return QSFP_1_STAT_REG
+#        elif idx == 2:
+#            return QSFP_2_STAT_REG
+#        else:
+#            return QSFP_1_STAT_REG
+#    elif mmap_suffix.upper() == "SOFTR":
+#        if idx == 1:
+#            return QSFP_1_SOFTR
+#        elif idx == 2:
+#            return QSFP_2_SOFTR
+#        else:
+#            return QSFP_1_SOFTR
+#    elif mmap_suffix.upper() == "RX_FIFO":
+#        if idx == 1:
+#            return QSFP_1_RX_FIFO
+#        elif idx == 2:
+#            return QSFP_2_RX_FIFO
+#        else:
+#            return QSFP_1_RX_FIFO
+#    elif mmap_suffix.upper() == "RX_FIFO_PIRQ":
+#        if idx == 1:
+#            return QSFP_1_RX_FIFO_PIRQ
+#        elif idx == 2:
+#            return QSFP_2_RX_FIFO_PIRQ
+#        else:
+#            return QSFP_1_RX_FIFO_PIRQ
+#    else:
+#        print(f"[ERROR] Unsupported IIC mmap suffix: {mmap_suffix}")
+#        return None
 
 
 class RdmaUDP(object):
@@ -143,12 +148,12 @@ class RdmaUDP(object):
 
     .. important::
 
-       Requires memory mapped :obj:`dict` imported from :mod:`rdma_control.RDMA_REGISTERS` and helper functions
-       imported from :mod:`rdma_control.rdma_register_helpers`.
+       Requires memory mapped :obj:`dict` imported from :mod:`RdmaUdp.UART_RDMA_REGISTERS` and helper functions
+       imported from :mod:`RdmaUdp.rdma_register_helpers`.
 
-       :mod:`rdma_control.RDMA_REGISTERS` is generated from XML2VHDL output, regenerated at FPGA synthesis time. Please
-       ensure the latest version is used in conjunction with :mod:`rdma_control.RdmaUdp` to ensure compatibility with the
-       register map in the current FPGA bitstream.
+       :mod:`RdmaUdp.UART_RDMA_REGISTERS` is generated from XML2VHDL output, regenerated at FPGA synthesis time. Please
+       ensure the latest version is used in conjunction with :mod:`RdmaUdp.RdmaUdp` to ensure compatibility with
+       the register map in the current FPGA bitstream.
 
     .. note::
 
@@ -156,7 +161,6 @@ class RdmaUDP(object):
        :meth:`udp_rdma_write`, the FPGA can be used to bridge to connected devices and peripherals to access the
        following:
          - `aSpect` based `UART`
-         - `Xilinx` AXI I\ :sup:`2`\ C interfaces to attached `QSFP` modules.
 
     Args:
         local_ip (:obj:`str`): IP address of the local NIC used to communicate with the remote `RDMA` control plane.
@@ -169,16 +173,17 @@ class RdmaUDP(object):
             Default: `5`
         speed (:obj:`str`, optional): Speed of the Ethernet connection, from: `10G`, `100G`. Default: `10G`.
         debug (:obj:`bool`): Flag to enable debug messages. Default: `False`.
-
+        cmd_no (:obj:`int'): Number to include in the constructed `RDMA` header, useful for debugging.
     """
     def __init__(self, local_ip='192.168.0.1', local_port=65535,
                  rdma_ip='192.168.0.2', rdma_port=65536,
-                 udpmtu=9000, udptimeout=5, speed="10G", debug=False):
+                 udpmtu=9000, udptimeout=5, speed="10G", uart_offset=0x0, debug=False):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(udptimeout)
         self.error_OK = True
-        self.debug=debug
+        self.debug = debug
         self.speed = speed.upper()
+        self.uart_offset = uart_offset
         try:
             self.socket.bind((local_ip, local_port))
         except (socket.error, OSError) as e:
@@ -190,6 +195,7 @@ class RdmaUDP(object):
         self.rdma_ip = rdma_ip
         self.rdma_port = rdma_port
         self.udpmtu = udpmtu
+        self.cmd_no = 0
         # RDMA Header is defined as:
         #     [=] native byte order
         #     [H] unsigned short <Burst Length> | [B] unsigned char <CMD No> | [B] unsigned char <OP Code>
@@ -204,16 +210,13 @@ class RdmaUDP(object):
         else:
             self._bytes_per_readout_iface = 8
 
-
     def __del__(self):
         """Ensure connection safely closed."""
         self.close()
 
-
     def close(self):
         """Safely close `UDP` socket connection."""
         self.socket.close()
-
 
     def _convert_to_list(self, data, burst_len):
         """
@@ -230,8 +233,18 @@ class RdmaUDP(object):
             bit_shifting += self._bytes_per_word * 8
         return data_array
 
+    def set_cmd_no(self, num):
+        """Sets the command number.
 
-    def _RdmaResponseChecker(self, msg, address=0, burst_len=1, op_code=0, cmd_no=0, comment=""):
+        Args:
+            num (:obj:`int`): command number.
+
+        Returns:
+            Nothing.
+        """
+        self.cmd_no = num
+
+    def _RdmaResponseChecker(self, msg, address=0, burst_len=1, op_code=0, comment=""):
         response_data = ()
         padding = (burst_len % 2)
         # \TODO padding should be calculated on the readout word width
@@ -249,7 +262,8 @@ class RdmaUDP(object):
         if self.debug:
             print(f"[DEBUG]: RDMA {msg} response:")
             print(f"         Op-Code:                             0x{op_code:02X}")
-            print(f"         Readout word size:                   {self._bytes_per_readout_iface} Byte(s) <{self.speed}>")
+            print(f"         Readout word size:                   {self._bytes_per_readout_iface} "
+                  f"Byte(s) <{self.speed}>")
             print(f"         padding size:                        {padding}")
             print(f"         Unpack string:                       \"{packet_struct_str}\"")
             if expected_payload_size > 0:
@@ -261,11 +275,11 @@ class RdmaUDP(object):
         try:
             rdma_response = self.socket.recv(expected_response_size)
         except socket.error as e:
+            rdma_response = ""
             _errorResponse(e, "{msg} acknowledge failed", address=address,
-                           burst_len=burst_len, op_code=op_code, cmd_no=cmd_no, comment=comment)
+                           burst_len=burst_len, op_code=op_code, cmd_no=self.cmd_no, comment=comment)
 
         response_len = len(rdma_response)
-
         if self.debug:
             print(f"         Raw response:                        {rdma_response}")
             print(f"         Raw response size:                   {response_len} Byte(s)")
@@ -273,24 +287,24 @@ class RdmaUDP(object):
         try:
             decoded_response = struct.unpack(packet_struct_str, rdma_response)
         except struct.error as e:
+            decoded_response = list()
             _errorResponse(e, f"RMDA {msg} acknowledge failed", etype="struct", address=address,
-                           burst_len=burst_len, op_code=op_code, cmd_no=cmd_no, comment=comment)
+                           burst_len=burst_len, op_code=op_code, cmd_no=self.cmd_no, comment=comment)
 
-        decoded_hex_response = [ hex(x) for x  in decoded_response ]
+        decoded_hex_response = [hex(x) for x in decoded_response]
 
         if self.debug:
             print(f"[DEBUG]: RDMA {msg} decoded response: {decoded_hex_response}")
 
         response_data = decoded_response[self._header_fields:]
-        response_data = [ x for x in response_data ]
+        response_data = [x for x in response_data]
 
         if self.debug:
             print(f"[DEBUG]: RDMA {msg} response: {response_data}")
 
         return response_data
 
-
-    def udp_rdma_read(self, address, burst_len=1, cmd_no=0, comment=''):
+    def udp_rdma_read(self, address, burst_len=1, comment=''):
         """`UDP` based `RDMA` read.
 
         Issues an `RDMA` formatted read command to the established socket and returns back the contents.
@@ -299,15 +313,13 @@ class RdmaUDP(object):
             address (:obj:`int`): Memory location to read.
             burst_len (:obj:`int`, optional): number of consecutive read transactions, starting from :attr:`address`.
                 Default: `1`.
-            cmd_no (:obj:`int`, optional): Number to include in the constructed `RDMA` header, useful for debugging.
-                Default: `0`.
             comment (:obj:`str`, optional):Useful for debugging, will be included in debugging output.
                 Default: `""` (empty string).
 
         Returns:
             :obj:`list` of :obj:`int`: Data stored in :attr:`address` parsed by :meth:`RdmaUDP_RdmaResponseChecker`.
         """
-        cmd_no = cmd_no & 0xFF
+        cmd_no = self.cmd_no & 0xFF
         op_code = get_rdma_opcode("read")
         if self.debug:
             _debugMsg("RDMA Read", address=address,
@@ -327,8 +339,7 @@ class RdmaUDP(object):
         return self._RdmaResponseChecker("Read", address=address,
                                          burst_len=burst_len, op_code=op_code, cmd_no=cmd_no, comment=comment)
 
-
-    def udp_rdma_write(self, address, data, burst_len=1, cmd_no=0, comment=''):
+    def udp_rdma_write(self, address, data, burst_len=1, comment=''):
         """`UDP` based `RDMA` write.
 
         Issues an `RDMA` formatted write command and write data to the established socket.
@@ -340,8 +351,6 @@ class RdmaUDP(object):
                 to determine the number of consecutive writes to perform, not the number of items in this :obj:`list`.
             burst_len (:obj:`int`, optional): number of consecutive write transactions, starting from :attr:`address`.
                 Default: `1`.
-            cmd_no (:obj:`int`, optional): Number to include in the constructed `RDMA` header, useful for debugging.
-                Default: `0`.
             comment (:obj:`str`, optional):Useful for deugging, will be included in debugging output.
                 Default: `""` (empty string).
 
@@ -350,7 +359,7 @@ class RdmaUDP(object):
         Returns:
             Nothing.
         """
-        cmd_no = cmd_no & 0xFF
+        cmd_no = self.cmd_no & 0xFF
         op_code = get_rdma_opcode("write")
         if self.debug:
             _debugMsg("RDMA Write", address=address,
@@ -381,98 +390,93 @@ class RdmaUDP(object):
         write_reponse = self._RdmaResponseChecker("Write", address=address,
                                                   burst_len=burst_len, op_code=op_code, cmd_no=cmd_no, comment=comment)
 
-
-    def uart_read(self, cmd_no=0):
-        """Performs a UART read operation by checking the `UART` read buffer using :meth:`udp_rdma_read` and :meth:`udp_rdma_write`.
-
-        Args:
-            cmd_no (:obj:`int`, optional): Number to include in the constructed `RDMA` header, useful for debugging.
-                Default: `0`.
+    def uart_read(self):
+        """Performs a UART read operation by checking the `UART` read buffer status.
 
         Returns:
             :obj:`list` of bytes as :obj:`int`: for all data read from the `UART` receive buffer.
         """
+        cmd_no = self.cmd_no
+
         rx_d = list()
         # check RX_BUFF_EMTY
-        status_reg = self.udp_rdma_read(HEXITEC_2X6_UART_STATUS['addr'],
+        status_reg = self.udp_rdma_read(UART_REGS.UART_STATUS['addr'] + self.uart_offset,
                                         burst_len=1, cmd_no=cmd_no,
-                                        comment=HEXITEC_2X6_UART_STATUS['description'])[0]
-        has_data = not decode_field(HEXITEC_2X6_UART_STATUS, "RX_BUFF_EMTY", status_reg)
-        rx_buff_lvl = decode_field(HEXITEC_2X6_UART_STATUS, "RX_BUFF_LEVEL", status_reg)
+                                        comment=UART_REGS.UART_STATUS['description'])[0]
+        has_data = not rdma.decode_field(UART_REGS.UART_STATUS, "RX_BUFF_EMTY", status_reg)
+        rx_buff_lvl = rdma.decode_field(UART_REGS.UART_STATUS, "RX_BUFF_LEVEL", status_reg)
         while has_data:
             # set RX_BUFF_STRB
-            rx_ctrl = self.udp_rdma_read(HEXITEC_2X6_UART_RX_CTRL['addr'],
+            rx_ctrl = self.udp_rdma_read(UART_REGS.UART_RX_CTRL['addr'] + self.uart_offset,
                                          burst_len=1, cmd_no=cmd_no,
-                                         comment=HEXITEC_2X6_UART_RX_CTRL['description'])[0]
-            rx_ctrl = set_field(HEXITEC_2X6_UART_RX_CTRL, "RX_BUFF_STRB", rx_ctrl, 1)
-            self.udp_rdma_write(HEXITEC_2X6_UART_RX_CTRL['addr'], [rx_ctrl],
+                                         comment=UART_REGS.UART_RX_CTRL['description'])[0]
+            rx_ctrl = rdma.set_field(UART_REGS.UART_RX_CTRL, "RX_BUFF_STRB", rx_ctrl, 1)
+            self.udp_rdma_write(UART_REGS.UART_RX_CTRL['addr'] + self.uart_offset, [rx_ctrl],
                                 burst_len=1, cmd_no=cmd_no,
-                                comment=HEXITEC_2X6_UART_RX_CTRL['description'])
+                                comment=UART_REGS.UART_RX_CTRL['description'])
             # clr RX_BUFF_STRB
-            rx_ctrl = self.udp_rdma_read(HEXITEC_2X6_UART_RX_CTRL['addr'],
+            rx_ctrl = self.udp_rdma_read(UART_REGS.UART_RX_CTRL['addr'] + self.uart_offset,
                                          burst_len=1, cmd_no=cmd_no,
-                                         comment=HEXITEC_2X6_UART_RX_CTRL['description'])[0]
-            rx_ctrl = clr_field(HEXITEC_2X6_UART_RX_CTRL, "RX_BUFF_STRB", rx_ctrl)
-            self.udp_rdma_write(HEXITEC_2X6_UART_RX_CTRL['addr'], [rx_ctrl],
+                                         comment=UART_REGS.UART_RX_CTRL['description'])[0]
+            rx_ctrl = rdma.clr_field(UART_REGS.UART_RX_CTRL, "RX_BUFF_STRB", rx_ctrl)
+            self.udp_rdma_write(UART_REGS.UART_RX_CTRL['addr'] + self.uart_offset, [rx_ctrl],
                                 burst_len=1, cmd_no=cmd_no,
-                                comment=HEXITEC_2X6_UART_RX_CTRL['description'])
+                                comment=UART_REGS.UART_RX_CTRL['description'])
             # get RX_DATA and check RX_BUFF_EMTY
-            status_reg = self.udp_rdma_read(HEXITEC_2X6_UART_STATUS['addr'],
+            status_reg = self.udp_rdma_read(UART_REGS.UART_STATUS['addr'] + self.uart_offset,
                                             burst_len=1, cmd_no=cmd_no,
-                                            comment=HEXITEC_2X6_UART_STATUS['description'])[0]
-            rx_d.append(decode_field(HEXITEC_2X6_UART_STATUS, "RX_DATA", status_reg))
-            has_data = not decode_field(HEXITEC_2X6_UART_STATUS, "RX_BUFF_EMTY", status_reg)
+                                            comment=UART_REGS.UART_STATUS['description'])[0]
+            rx_d.append(rdma.decode_field(UART_REGS.UART_STATUS, "RX_DATA", status_reg))
+            has_data = not rdma.decode_field(UART_REGS.UART_STATUS, "RX_BUFF_EMTY", status_reg)
         return rx_d
 
-
-    def uart_write(self, wr_d, cmd_no=0):
-        """Performs a UART write operation by transfer :attr:`wr_d` to the `UART` write buffer using :meth:`udp_rdma_read` and :meth:`udp_rdma_write`.
+    def uart_write(self, wr_d):
+        """Performs a UART write operation by transfer :attr:`wr_d` to the `UART` write buffer.
 
         Args:
             wr_d (:obj:`list` of bytes as :obj:`int`): Data to write to the `UART`. When the entire :obj:`list` has been
                 transferred to the `UART` write buffer, the complete buffer will be transmitted.
-            cmd_no (:obj:`int`, optional): Number to include in the constructed `RDMA` header, useful for debugging.
-                Default: `0`.
 
         Returns:
             Nothing.
         """
         # print(f" HxtRdU uart_write({wr_d}) ")
+        cmd_no = self.cmd_no
         # queue each byte in the UART Tx FIFO
         for b in wr_d:
             # load TX_DATA and set TX_FILL_STRB
-            tx_ctrl = self.udp_rdma_read(HEXITEC_2X6_UART_TX_CTRL['addr'],
+            tx_ctrl = self.udp_rdma_read(UART_REGS.UART_TX_CTRL['addr'] + self.uart_offset,
                                          burst_len=1, cmd_no=cmd_no,
-                                         comment=HEXITEC_2X6_UART_TX_CTRL['description'])[0]
-            tx_ctrl = set_field(HEXITEC_2X6_UART_TX_CTRL, "TX_DATA", tx_ctrl, b)
-            tx_ctrl = set_field(HEXITEC_2X6_UART_TX_CTRL, "TX_FILL_STRB", tx_ctrl, 1)
-            self.udp_rdma_write(HEXITEC_2X6_UART_TX_CTRL['addr'], [tx_ctrl],
+                                         comment=UART_REGS.UART_TX_CTRL['description'])[0]
+            tx_ctrl = rdma.set_field(UART_REGS.UART_TX_CTRL, "TX_DATA", tx_ctrl, b)
+            tx_ctrl = rdma.set_field(UART_REGS.UART_TX_CTRL, "TX_FILL_STRB", tx_ctrl, 1)
+            self.udp_rdma_write(UART_REGS.UART_TX_CTRL['addr'] + self.uart_offset, [tx_ctrl],
                                 burst_len=1, cmd_no=cmd_no,
-                                comment=HEXITEC_2X6_UART_TX_CTRL['description'])
+                                comment=UART_REGS.UART_TX_CTRL['description'])
             # clr TX_FILL_STRB
-            tx_ctrl = self.udp_rdma_read(HEXITEC_2X6_UART_TX_CTRL['addr'],
+            tx_ctrl = self.udp_rdma_read(UART_REGS.UART_TX_CTRL['addr'] + self.uart_offset,
                                          burst_len=1, cmd_no=cmd_no,
-                                         comment=HEXITEC_2X6_UART_TX_CTRL['description'])[0]
-            tx_ctrl = clr_field(HEXITEC_2X6_UART_TX_CTRL, "TX_FILL_STRB", tx_ctrl)
-            self.udp_rdma_write(HEXITEC_2X6_UART_TX_CTRL['addr'], [tx_ctrl],
+                                         comment=UART_REGS.UART_TX_CTRL['description'])[0]
+            tx_ctrl = rdma.clr_field(UART_REGS.UART_TX_CTRL, "TX_FILL_STRB", tx_ctrl)
+            self.udp_rdma_write(UART_REGS.UART_TX_CTRL['addr'] + self.uart_offset, [tx_ctrl],
                                 burst_len=1, cmd_no=cmd_no,
-                                comment=HEXITEC_2X6_UART_TX_CTRL['description'])
+                                comment=UART_REGS.UART_TX_CTRL['description'])
         # transmit all contents of UART Tx FIFO
             # set TX_BUFF_STRB
-            tx_ctrl = self.udp_rdma_read(HEXITEC_2X6_UART_TX_CTRL['addr'], burst_len=1, cmd_no=cmd_no,
-                                         comment=HEXITEC_2X6_UART_TX_CTRL['description'])[0]
-            tx_ctrl = set_field(HEXITEC_2X6_UART_TX_CTRL, "TX_BUFF_STRB", tx_ctrl, 1)
-            self.udp_rdma_write(HEXITEC_2X6_UART_TX_CTRL['addr'], [tx_ctrl],
+            tx_ctrl = self.udp_rdma_read(UART_REGS.UART_TX_CTRL['addr'] + self.uart_offset, burst_len=1,
+                                         cmd_no=cmd_no, comment=UART_REGS.UART_TX_CTRL['description'])[0]
+            tx_ctrl = rdma.set_field(UART_REGS.UART_TX_CTRL, "TX_BUFF_STRB", tx_ctrl, 1)
+            self.udp_rdma_write(UART_REGS.UART_TX_CTRL['addr'] + self.uart_offset, [tx_ctrl],
                                 burst_len=1, cmd_no=cmd_no,
-                                comment=HEXITEC_2X6_UART_TX_CTRL['description'])
+                                comment=UART_REGS.UART_TX_CTRL['description'])
             # clr TX_BUFF_STRB
-            tx_ctrl = self.udp_rdma_read(HEXITEC_2X6_UART_TX_CTRL['addr'],
+            tx_ctrl = self.udp_rdma_read(UART_REGS.UART_TX_CTRL['addr'] + self.uart_offset,
                                          burst_len=1, cmd_no=cmd_no,
-                                         comment=HEXITEC_2X6_UART_TX_CTRL['description'])[0]
-            tx_ctrl = clr_field(HEXITEC_2X6_UART_TX_CTRL, "TX_BUFF_STRB", tx_ctrl)
-            self.udp_rdma_write(HEXITEC_2X6_UART_TX_CTRL['addr'], [tx_ctrl],
+                                         comment=UART_REGS.UART_TX_CTRL['description'])[0]
+            tx_ctrl = rdma.clr_field(UART_REGS.UART_TX_CTRL, "TX_BUFF_STRB", tx_ctrl)
+            self.udp_rdma_write(UART_REGS.UART_TX_CTRL['addr'] + self.uart_offset, [tx_ctrl],
                                 burst_len=1, cmd_no=cmd_no,
-                                comment=HEXITEC_2X6_UART_TX_CTRL['description'])
+                                comment=UART_REGS.UART_TX_CTRL['description'])
 
     def read_uart_status(self):
         """Poll the UART reg (0x10)."""
@@ -502,239 +506,221 @@ class RdmaUDP(object):
         return uart_status, is_tx_buff_full, is_tx_buff_empty, is_rx_buff_full, \
             is_rx_buff_empty, is_rx_pkt_done
 
-    def toggle_training(self, reg_value):
-        """Toggle Training (UART Register 0x20) on then off."""
-        cmd_no = 0
-        op_code = get_rdma_opcode("write")
-        address = HEXITEC_2X6_VSR_DATA_CTRL['addr']
-        burst_len = 1
-        comment = HEXITEC_2X6_VSR_DATA_CTRL['description']
-        uart_status = (0, )
-        try:
-            self.udp_rdma_write(address, reg_value,
-                                burst_len=burst_len, cmd_no=cmd_no,
-                                comment=comment)
-        except Exception as e:
-            _errorResponse(e, "Write failed", address=address,
-                           burst_len=burst_len, op_code=op_code, cmd_no=cmd_no, comment=comment)
-
-    def _iic_read_fifo(self, size, idx=1, cmd_no=0):
-        """Read `N` words from IIC Rx FIFO.
-
-        """
-        rx_fifo_dict = iic_qsfp_module_sel("RX_FIFO", idx=idx)
-        b = list()
-        for i in range(0, size):
-            rx_fifo_reg = self.udp_rdma_read(rx_fifo_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                             comment=rx_fifo_dict['description'])[0]
-            b.append(decode_field(rx_fifo_dict, "RX_DATA", rx_fifo_reg))
-        return b
-
-
-    def _iic_write_byte(self, b, idx=1, op="WRITE", dev_addr=0x50, cmd_no=0):
-        """Write a single byte to IIC location defined by :obj:`dev_addr`
-
-        """
-        tx_fifo_dict = iic_qsfp_module_sel("TX_FIFO", idx=idx)
-        cr_dict = iic_qsfp_module_sel("CTRL_REG", idx=idx)
-        isr_dict = iic_qsfp_module_sel("ISR", idx=idx)
-
-        if op.lower() == "write":
-            dev_addr = dev_addr << 1
-        else:
-            dev_addr = (dev_addr << 1) | 0x1
-
-        self.udp_rdma_write(tx_fifo_dict['addr'], [dev_addr], burst_len=1, cmd_no=cmd_no,
-                            comment=tx_fifo_dict['description'])
-        # Enable Transmission
-        cr_reg = self.udp_rdma_read(cr_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                    comment=cr_dict['description'])[0]
-        cr_reg = set_field(cr_dict, "TX", cr_reg, 1)
-        cr_reg = set_field(cr_dict, "MSMS", cr_reg, 1)
-        cr_reg = set_field(cr_dict, "EN", cr_reg, 1)
-        self.udp_rdma_write(cr_dict['addr'], [cr_reg], burst_len=1, cmd_no=cmd_no,
-                            comment=cr_dict['description'])
-
-        if not self._poll_iic_isr_flag("INT_2", idx=idx, operation="write device addr",
-                                       dev_addr=dev_addr, cmd_no=cmd_no, attempts=1000): return 0
-
-        # Stop Transmission and send byte (this order matches corresponding Tcl code)
-        cr_reg = self.udp_rdma_read(cr_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                    comment=cr_dict['description'])[0]
-        cr_reg = clr_field(cr_dict, "MSMS", cr_reg)
-        self.udp_rdma_write(cr_dict['addr'], [cr_reg], burst_len=1, cmd_no=cmd_no,
-                            comment=cr_dict['description'])
-        self.udp_rdma_write(tx_fifo_dict['addr'], [b], burst_len=1, cmd_no=cmd_no,
-                            comment=tx_fifo_dict['description'])
-
-        if not self._poll_iic_isr_flag("INT_2", idx=idx, operation="write byte",
-                                       dev_addr=dev_addr, cmd_no=cmd_no, attempts=1000): return 0
-        # clear Tx FIFO and completed interrupts:
-        isr_reg = self.udp_rdma_read(isr_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                     comment=isr_dict['description'])[0]
-        # Clear an ISR INT by writing to the location:
-        # isr_reg = clr_field(isr_dict, "INT_2", isr_reg)
-        isr_reg = set_field(isr_dict, "INT_2", isr_reg, 1)
-        self.udp_rdma_write(isr_dict['addr'], [isr_reg], burst_len=1, cmd_no=cmd_no,
-                            comment=isr_dict['description'])
-        return 1
-
-
-    def _reset_axi_iic(self, idx=1, cmd_no=0):
-        softr_dict = iic_qsfp_module_sel("SOFTR", idx=idx)
-        SOFTR_KEY = 0xA
-        self.udp_rdma_write(softr_dict['addr'], [SOFTR_KEY], burst_len=1, cmd_no=cmd_no,
-                            comment=softr_dict['description'])
-        return 1
-
-
-    def _init_axi_iic(self, idx=1, cmd_no=0):
-        ISR_CLR_MASK = 0xFF
-        ISR_INIT_VAL = 0xD0 # mask for INT_0, INT_2 and INT_3
-        SR_INIT_VAL = 0xC0 # mask for INT_2 and INT_3
-
-        cr_dict = iic_qsfp_module_sel("CTRL_REG", idx=idx)
-        isr_dict = iic_qsfp_module_sel("ISR", idx=idx)
-        sr_dict = iic_qsfp_module_sel("STAT_REG", idx=idx)
-
-        self._reset_axi_iic(idx=idx, cmd_no=cmd_no)
-        cr_reg = self.udp_rdma_read(cr_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                    comment=cr_dict['description'])[0]
-        cr_reg = set_field(cr_dict, "EN", cr_reg, 1)
-        self.udp_rdma_write(cr_dict['addr'], [cr_reg], burst_len=1, cmd_no=cmd_no,
-                            comment=cr_dict['description'])
-
-        isr = self.udp_rdma_read(isr_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                 comment=isr_dict['description'])[0]
-        isr_clr = isr & ISR_CLR_MASK
-        self.udp_rdma_write(isr_dict['addr'], [isr_clr], burst_len=1, cmd_no=cmd_no,
-                            comment=isr_dict['description'])
-        isr = self.udp_rdma_read(isr_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                 comment=isr_dict['description'])[0]
-        if isr != ISR_INIT_VAL:
-            print(f"[ERROR] IIC initialisation failed. Incorrect ISR response, expected: {hex(ISR_INIT_VAL)}, got: {hex(isr)}")
-            return 0
-        sr = self.udp_rdma_read(sr_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                comment=sr_dict['description'])[0]
-        if sr != SR_INIT_VAL:
-            print(f"[ERROR] IIC initialisation failed. Incorrect SR response, expected: {hex(SR_INIT_VAL)}, got: {hex(sr)}")
-            return 0
-        return 1
-
-
-    def _check_iic_module_exists(self, idx=1, dev_addr=0x50, cmd_no=0):
-        return self._iic_write_byte(1, idx=idx, op="WRITE", dev_addr=dev_addr, cmd_no=cmd_no)
-
-
-    def _get_iic_module_info(self, idx=1, dev_addr=0x50, cmd_no=0):
-        MAX_CHUNK = 16
-        BASE_ID_OFFSET = 0x81
-        base_id = list()
-        BASE_ID_LENGTH = 63
-        EXTENDED_ID_OFFSET = 0xC0
-        EXTENDED_ID_LENGTH = 32
-        VENDOR_SPECIFIC_ID_OFFSET = 0xF4
-        VENDOR_SPECIFIC_ID_LENGTH = 32
-        self._init_axi_iic(idx=idx, cmd_no=cmd_no)
-        mod_present = self._check_iic_module_exists(idx=idx, dev_addr=dev_addr, cmd_no=cmd_no)
-        if mod_present:
-            print(f"[INFO]: <{hex(dev_addr)}> IIC device found")
-        else:
-            print(f"[ERROR]: <{hex(dev_addr)}> No IIC device found")
-            return 0
-
-        i = 0
-        size = 63
-        perph_addr = BASE_ID_OFFSET
-        while i < size:
-            chunk = MAX_CHUNK if (size - i) > MAX_CHUNK else (size - i)
-            print(f"[DEBUG]: size: {size} | i: {i} | chunk size: {chunk} | perph_addr: {hex(perph_addr)}")
-            if chunk > 1:
-                base_id.extend(self._iic_read(perph_addr, idx=idx, size=chunk - 1, dev_addr=dev_addr, cmd_no=cmd_no))
-            i += chunk
-            perph_addr += chunk
-
-        print(f"[INFO] Base ID: {base_id}")
-        string = ""
-        for i in base_id:
-           string += chr(i)
-        print(f"[INFO]: Base ID: {string}")
-        print(f"[DEBUG]: Base ID length: {len(base_id)}")
-
-    def _iic_read(self, addr, idx=1, size=16, dev_addr=0x50, cmd_no=0):
-        rd_data = list()
-
-        cr_dict = iic_qsfp_module_sel("CTRL_REG", idx=idx)
-        isr_dict = iic_qsfp_module_sel("ISR", idx=idx)
-        rx_fifo_pirq_dict = iic_qsfp_module_sel("RX_FIFO_PIRQ", idx=idx)
-        tx_fifo_dict = iic_qsfp_module_sel("TX_FIFO", idx=idx)
-
-        # from: https://docs.xilinx.com/v/u/2.0-English/pg090-axi-iic PG090 v2.0 (page 33)
-        # IIC Master Receiver with a Repeated Start
-        # 1
-        self._iic_write_byte(addr, idx=idx, op="WRITE", dev_addr=dev_addr, cmd_no=cmd_no)
-        self.udp_rdma_write(rx_fifo_pirq_dict['addr'], [size - 2], burst_len=1, cmd_no=cmd_no,
-                            comment=rx_fifo_pirq_dict['description'])
-        self.udp_rdma_write(tx_fifo_dict['addr'], [(dev_addr << 1) | 0x1], burst_len=1, cmd_no=cmd_no,
-                            comment=tx_fifo_dict['description'])
-        # 2 CR MSMS = 1 CR Tx = 0
-        cr_reg = self.udp_rdma_read(cr_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                    comment=cr_dict['description'])[0]
-        cr_reg = clr_field(cr_dict, "TX", cr_reg)
-        cr_reg = set_field(cr_dict, "MSMS", cr_reg, 1)
-        self.udp_rdma_write(cr_dict['addr'], [cr_reg], burst_len=1, cmd_no=cmd_no,
-                            comment=cr_dict['description'])
-        # 3
-        if not self._poll_iic_isr_flag("INT_3", idx=idx, operation="read byte(s)",
-                                       dev_addr=dev_addr, cmd_no=cmd_no, attempts=1000): return 0
-        # 4
-        cr_reg = self.udp_rdma_read(cr_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                    comment=cr_dict['description'])[0]
-        cr_reg = set_field(cr_dict, "TXAK", cr_reg, 1)
-        self.udp_rdma_write(cr_dict['addr'], [cr_reg], burst_len=1, cmd_no=cmd_no,
-                            comment=cr_dict['description'])
-        # 5-10 not impletemented skip to
-        # 11
-        rd_data.extend(self._iic_read_fifo(size - 1, idx=idx, cmd_no=cmd_no))
-        self.udp_rdma_write(rx_fifo_pirq_dict['addr'], 0, burst_len=1, cmd_no=cmd_no,
-                            comment=rx_fifo_pirq_dict['description'])
-        rd_data.extend(self._iic_read_fifo(1, idx=idx, cmd_no=cmd_no))
-
-        isr_reg = self.udp_rdma_read(isr_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                     comment=isr_dict['description'])[0]
-        isr_reg = set_field(isr_dict, "INT_3", isr_reg, 1)
-        self.udp_rdma_write(isr_dict['addr'], [isr_reg], burst_len=1, cmd_no=cmd_no,
-                            comment=isr_dict['description'])
-        # 12
-        if not self._poll_iic_isr_flag("INT_3", idx=idx, operation="read final byte(s)",
-                                       dev_addr=dev_addr, cmd_no=cmd_no, attempts=1000): return 0
-        # 13
-        cr_reg = self.udp_rdma_read(cr_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                    comment=cr_dict['description'])[0]
-        cr_reg = clr_field(cr_dict, "MSMS", cr_reg)
-        self.udp_rdma_write(cr_dict['addr'], [cr_reg], burst_len=1, cmd_no=cmd_no,
-                            comment=cr_dict['description'])
-        # 14
-        rd_data.extend(self._iic_read_fifo(1, idx=idx, cmd_no=cmd_no))
-        return rd_data
-
-    def _poll_iic_isr_flag(self, isr, idx=1, operation="", dev_addr=0x50, cmd_no=0, attempts=1000):
-        """
-        """
-        isr_dict = iic_qsfp_module_sel("ISR", idx=idx)
-
-        isr_reg = self.udp_rdma_read(isr_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                     comment=isr_dict['description'])[0]
-        rx_fifo_not_full = not decode_field(isr_dict, isr, isr_reg)
-        timeout_attempt = 0
-        while rx_fifo_not_full:
-            if timeout_attempt == attempts - 1:
-                print(f"[ERROR] <{hex(dev_addr)}> IIC device failed to respond to {operation}.")
-                print(f"[ERROR]:    <ISR> response: {hex(isr_reg)} ")
-                return 0
-            else:
-                isr_reg = self.udp_rdma_read(isr_dict['addr'], burst_len=1, cmd_no=cmd_no,
-                                             comment=isr_dict['description'])[0]
-                rx_fifo_not_full = not decode_field(isr_dict, isr, isr_reg)
-                timeout_attempt += 1
-        return 1
+    # def _iic_read_fifo(self, size, idx=1, cmd_no=0):
+    #     """Read `N` words from IIC Rx FIFO.
+    #
+    #     """
+    #     rx_fifo_dict = iic_qsfp_module_sel("RX_FIFO", idx=idx)
+    #     b = list()
+    #     for i in range(0, size):
+    #         rx_fifo_reg = self.udp_rdma_read(rx_fifo_dict['addr'] + self.uart_offset, burst_len=1, cmd_no=cmd_no,
+    #                                          comment=rx_fifo_dict['description'])[0]
+    #         b.append(decode_field(rx_fifo_dict, "RX_DATA", rx_fifo_reg))
+    #     return b
+    #
+    # def _iic_write_byte(self, b, idx=1, op="WRITE", dev_addr=0x50, cmd_no=0):
+    #     """Write a single byte to IIC location defined by :obj:`dev_addr`
+    #
+    #     """
+    #     tx_fifo_dict = iic_qsfp_module_sel("TX_FIFO", idx=idx)
+    #     cr_dict = iic_qsfp_module_sel("CTRL_REG", idx=idx)
+    #     isr_dict = iic_qsfp_module_sel("ISR", idx=idx)
+    #
+    #     if op.lower() == "write":
+    #         dev_addr = dev_addr << 1
+    #     else:
+    #         dev_addr = (dev_addr << 1) | 0x1
+    #
+    #     self.udp_rdma_write(tx_fifo_dict['addr'] + self.uart_offset, [dev_addr], burst_len=1, cmd_no=cmd_no,
+    #                         comment=tx_fifo_dict['description'])
+    #     # Enable Transmission
+    #     cr_reg = self.udp_rdma_read(cr_dict['addr'] + self.uart_offset, burst_len=1, cmd_no=cmd_no,
+    #                                 comment=cr_dict['description'])[0]
+    #     cr_reg = set_field(cr_dict, "TX", cr_reg, 1)
+    #     cr_reg = set_field(cr_dict, "MSMS", cr_reg, 1)
+    #     cr_reg = set_field(cr_dict, "EN", cr_reg, 1)
+    #     self.udp_rdma_write(cr_dict['addr'] + self.uart_offset, [cr_reg], burst_len=1, cmd_no=cmd_no,
+    #                         comment=cr_dict['description'])
+    #
+    #     if not self._poll_iic_isr_flag("INT_2", idx=idx, operation="write device addr",
+    #                                    dev_addr=dev_addr, cmd_no=cmd_no, attempts=1000): return 0
+    #
+    #     # Stop Transmission and send byte (this order matches corresponding Tcl code)
+    #     cr_reg = self.udp_rdma_read(cr_dict['addr'] + self.uart_offset, burst_len=1, cmd_no=cmd_no,
+    #                                 comment=cr_dict['description'])[0]
+    #     cr_reg = clr_field(cr_dict, "MSMS", cr_reg)
+    #     self.udp_rdma_write(cr_dict['addr'] + self.uart_offset, [cr_reg], burst_len=1, cmd_no=cmd_no,
+    #                         comment=cr_dict['description'])
+    #     self.udp_rdma_write(tx_fifo_dict['addr'] + self.uart_offset, [b], burst_len=1, cmd_no=cmd_no,
+    #                         comment=tx_fifo_dict['description'])
+    #
+    #     if not self._poll_iic_isr_flag("INT_2", idx=idx, operation="write byte",
+    #                                    dev_addr=dev_addr, cmd_no=cmd_no, attempts=1000): return 0
+    #     # clear Tx FIFO and completed interrupts:
+    #     isr_reg = self.udp_rdma_read(isr_dict['addr'] + self.uart_offset, burst_len=1, cmd_no=cmd_no,
+    #                                  comment=isr_dict['description'])[0]
+    #     # Clear an ISR INT by writing to the location:
+    #     # isr_reg = clr_field(isr_dict, "INT_2", isr_reg)
+    #     isr_reg = set_field(isr_dict, "INT_2", isr_reg, 1)
+    #     self.udp_rdma_write(isr_dict['addr'] + self.uart_offset, [isr_reg], burst_len=1, cmd_no=cmd_no,
+    #                         comment=isr_dict['description'])
+    #     return 1
+    #
+    # def _reset_axi_iic(self, idx=1, cmd_no=0):
+    #     softr_dict = iic_qsfp_module_sel("SOFTR", idx=idx)
+    #     SOFTR_KEY = 0xA
+    #     self.udp_rdma_write(softr_dict['addr'], [SOFTR_KEY], burst_len=1, cmd_no=cmd_no,
+    #                         comment=softr_dict['description'])
+    #     return 1
+    #
+    #
+    # def _init_axi_iic(self, idx=1, cmd_no=0):
+    #     ISR_CLR_MASK = 0xFF
+    #     ISR_INIT_VAL = 0xD0 # mask for INT_0, INT_2 and INT_3
+    #     SR_INIT_VAL = 0xC0 # mask for INT_2 and INT_3
+    #
+    #     cr_dict = iic_qsfp_module_sel("CTRL_REG", idx=idx)
+    #     isr_dict = iic_qsfp_module_sel("ISR", idx=idx)
+    #     sr_dict = iic_qsfp_module_sel("STAT_REG", idx=idx)
+    #
+    #     self._reset_axi_iic(idx=idx, cmd_no=cmd_no)
+    #     cr_reg = self.udp_rdma_read(cr_dict['addr'], burst_len=1, cmd_no=cmd_no,
+    #                                 comment=cr_dict['description'])[0]
+    #     cr_reg = set_field(cr_dict, "EN", cr_reg, 1)
+    #     self.udp_rdma_write(cr_dict['addr'], [cr_reg], burst_len=1, cmd_no=cmd_no,
+    #                         comment=cr_dict['description'])
+    #
+    #     isr = self.udp_rdma_read(isr_dict['addr'], burst_len=1, cmd_no=cmd_no,
+    #                              comment=isr_dict['description'])[0]
+    #     isr_clr = isr & ISR_CLR_MASK
+    #     self.udp_rdma_write(isr_dict['addr'], [isr_clr], burst_len=1, cmd_no=cmd_no,
+    #                         comment=isr_dict['description'])
+    #     isr = self.udp_rdma_read(isr_dict['addr'], burst_len=1, cmd_no=cmd_no,
+    #                              comment=isr_dict['description'])[0]
+    #     if isr != ISR_INIT_VAL:
+    #         print(f"[ERROR] IIC initialisation failed. Incorrect ISR response, expected: {hex(ISR_INIT_VAL)}, got: {hex(isr)}")
+    #         return 0
+    #     sr = self.udp_rdma_read(sr_dict['addr'], burst_len=1, cmd_no=cmd_no,
+    #                             comment=sr_dict['description'])[0]
+    #     if sr != SR_INIT_VAL:
+    #         print(f"[ERROR] IIC initialisation failed. Incorrect SR response, expected: {hex(SR_INIT_VAL)}, got: {hex(sr)}")
+    #         return 0
+    #     return 1
+    #
+    #
+    # def _check_iic_module_exists(self, idx=1, dev_addr=0x50, cmd_no=0):
+    #     return self._iic_write_byte(1, idx=idx, op="WRITE", dev_addr=dev_addr, cmd_no=cmd_no)
+    #
+    #
+    # def _get_iic_module_info(self, idx=1, dev_addr=0x50, cmd_no=0):
+    #     MAX_CHUNK = 16
+    #     BASE_ID_OFFSET = 0x81
+    #     base_id = list()
+    #     BASE_ID_LENGTH = 63
+    #     EXTENDED_ID_OFFSET = 0xC0
+    #     EXTENDED_ID_LENGTH = 32
+    #     VENDOR_SPECIFIC_ID_OFFSET = 0xF4
+    #     VENDOR_SPECIFIC_ID_LENGTH = 32
+    #     self._init_axi_iic(idx=idx, cmd_no=cmd_no)
+    #     mod_present = self._check_iic_module_exists(idx=idx, dev_addr=dev_addr, cmd_no=cmd_no)
+    #     if mod_present:
+    #         print(f"[INFO]: <{hex(dev_addr)}> IIC device found")
+    #     else:
+    #         print(f"[ERROR]: <{hex(dev_addr)}> No IIC device found")
+    #         return 0
+    #
+    #     i = 0
+    #     size = 63
+    #     perph_addr = BASE_ID_OFFSET
+    #     while i < size:
+    #         chunk = MAX_CHUNK if (size - i) > MAX_CHUNK else (size - i)
+    #         print(f"[DEBUG]: size: {size} | i: {i} | chunk size: {chunk} | perph_addr: {hex(perph_addr)}")
+    #         if chunk > 1:
+    #             base_id.extend(self._iic_read(perph_addr, idx=idx, size=chunk - 1, dev_addr=dev_addr, cmd_no=cmd_no))
+    #         i += chunk
+    #         perph_addr += chunk
+    #
+    #     print(f"[INFO] Base ID: {base_id}")
+    #     string = ""
+    #     for i in base_id:
+    #        string += chr(i)
+    #     print(f"[INFO]: Base ID: {string}")
+    #     print(f"[DEBUG]: Base ID length: {len(base_id)}")
+    #
+    # def _iic_read(self, addr, idx=1, size=16, dev_addr=0x50, cmd_no=0):
+    #     rd_data = list()
+    #
+    #     cr_dict = iic_qsfp_module_sel("CTRL_REG", idx=idx)
+    #     isr_dict = iic_qsfp_module_sel("ISR", idx=idx)
+    #     rx_fifo_pirq_dict = iic_qsfp_module_sel("RX_FIFO_PIRQ", idx=idx)
+    #     tx_fifo_dict = iic_qsfp_module_sel("TX_FIFO", idx=idx)
+    #
+    #     # from: https://docs.xilinx.com/v/u/2.0-English/pg090-axi-iic PG090 v2.0 (page 33)
+    #     # IIC Master Receiver with a Repeated Start
+    #     # 1
+    #     self._iic_write_byte(addr, idx=idx, op="WRITE", dev_addr=dev_addr, cmd_no=cmd_no)
+    #     self.udp_rdma_write(rx_fifo_pirq_dict['addr'], [size - 2], burst_len=1, cmd_no=cmd_no,
+    #                         comment=rx_fifo_pirq_dict['description'])
+    #     self.udp_rdma_write(tx_fifo_dict['addr'], [(dev_addr << 1) | 0x1], burst_len=1, cmd_no=cmd_no,
+    #                         comment=tx_fifo_dict['description'])
+    #     # 2 CR MSMS = 1 CR Tx = 0
+    #     cr_reg = self.udp_rdma_read(cr_dict['addr'], burst_len=1, cmd_no=cmd_no,
+    #                                 comment=cr_dict['description'])[0]
+    #     cr_reg = clr_field(cr_dict, "TX", cr_reg)
+    #     cr_reg = set_field(cr_dict, "MSMS", cr_reg, 1)
+    #     self.udp_rdma_write(cr_dict['addr'], [cr_reg], burst_len=1, cmd_no=cmd_no,
+    #                         comment=cr_dict['description'])
+    #     # 3
+    #     if not self._poll_iic_isr_flag("INT_3", idx=idx, operation="read byte(s)",
+    #                                    dev_addr=dev_addr, cmd_no=cmd_no, attempts=1000): return 0
+    #     # 4
+    #     cr_reg = self.udp_rdma_read(cr_dict['addr'], burst_len=1, cmd_no=cmd_no,
+    #                                 comment=cr_dict['description'])[0]
+    #     cr_reg = set_field(cr_dict, "TXAK", cr_reg, 1)
+    #     self.udp_rdma_write(cr_dict['addr'], [cr_reg], burst_len=1, cmd_no=cmd_no,
+    #                         comment=cr_dict['description'])
+    #     # 5-10 not impletemented skip to
+    #     # 11
+    #     rd_data.extend(self._iic_read_fifo(size - 1, idx=idx, cmd_no=cmd_no))
+    #     self.udp_rdma_write(rx_fifo_pirq_dict['addr'], 0, burst_len=1, cmd_no=cmd_no,
+    #                         comment=rx_fifo_pirq_dict['description'])
+    #     rd_data.extend(self._iic_read_fifo(1, idx=idx, cmd_no=cmd_no))
+    #
+    #     isr_reg = self.udp_rdma_read(isr_dict['addr'], burst_len=1, cmd_no=cmd_no,
+    #                                  comment=isr_dict['description'])[0]
+    #     isr_reg = set_field(isr_dict, "INT_3", isr_reg, 1)
+    #     self.udp_rdma_write(isr_dict['addr'], [isr_reg], burst_len=1, cmd_no=cmd_no,
+    #                         comment=isr_dict['description'])
+    #     # 12
+    #     if not self._poll_iic_isr_flag("INT_3", idx=idx, operation="read final byte(s)",
+    #                                    dev_addr=dev_addr, cmd_no=cmd_no, attempts=1000): return 0
+    #     # 13
+    #     cr_reg = self.udp_rdma_read(cr_dict['addr'], burst_len=1, cmd_no=cmd_no,
+    #                                 comment=cr_dict['description'])[0]
+    #     cr_reg = clr_field(cr_dict, "MSMS", cr_reg)
+    #     self.udp_rdma_write(cr_dict['addr'], [cr_reg], burst_len=1, cmd_no=cmd_no,
+    #                         comment=cr_dict['description'])
+    #     # 14
+    #     rd_data.extend(self._iic_read_fifo(1, idx=idx, cmd_no=cmd_no))
+    #     return rd_data
+    #
+    # def _poll_iic_isr_flag(self, isr, idx=1, operation="", dev_addr=0x50, cmd_no=0, attempts=1000):
+    #     """
+    #     """
+    #     isr_dict = iic_qsfp_module_sel("ISR", idx=idx)
+    #
+    #     isr_reg = self.udp_rdma_read(isr_dict['addr'], burst_len=1, cmd_no=cmd_no,
+    #                                  comment=isr_dict['description'])[0]
+    #     rx_fifo_not_full = not decode_field(isr_dict, isr, isr_reg)
+    #     timeout_attempt = 0
+    #     while rx_fifo_not_full:
+    #         if timeout_attempt == attempts - 1:
+    #             print(f"[ERROR] <{hex(dev_addr)}> IIC device failed to respond to {operation}.")
+    #             print(f"[ERROR]:    <ISR> response: {hex(isr_reg)} ")
+    #             return 0
+    #         else:
+    #             isr_reg = self.udp_rdma_read(isr_dict['addr'], burst_len=1, cmd_no=cmd_no,
+    #                                          comment=isr_dict['description'])[0]
+    #             rx_fifo_not_full = not decode_field(isr_dict, isr, isr_reg)
+    #             timeout_attempt += 1
+    #     return 1
