@@ -859,13 +859,13 @@ class HexitecFem():
         logging.debug("Loading Power, Cal and Read Enables")
         # logging.debug("Column Read Enable")
 
-        # Column Read Enable ASIC1 (Reg 0x61)
+        # Column Read Enable ASIC1 (Reg 0x61) - checked 2
         asic1_col_read_enable = self._extract_80_bits("ColumnEn_", vsr_num, 1, "Channel")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
         self.load_enables_settings(vsr, 0x36, 0x31, asic1_col_read_enable, enables_defaults)
 
-        # Column Read Enable ASIC2 (Reg 0xC2)
+        # Column Read Enable ASIC2 (Reg 0xC2) - checked 1
         asic2_col_read_enable = self._extract_80_bits("ColumnEn_", vsr_num, 2, "Channel")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
@@ -873,13 +873,13 @@ class HexitecFem():
 
         logging.debug("Column Power Enable")
 
-        # Column Power Enable ASIC1 (Reg 0x4D)
+        # Column Power Enable ASIC1 (Reg 0x4D) - checked 2
         asic1_col_power_enable = self._extract_80_bits("ColumnPwr", vsr_num, 1, "Channel")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
         self.load_enables_settings(vsr, 0x34, 0x44, asic1_col_power_enable, enables_defaults)
 
-        # Column Power Enable ASIC2 (Reg 0xAE)
+        # Column Power Enable ASIC2 (Reg 0xAE) - checked 1
         asic2_col_power_enable = self._extract_80_bits("ColumnPwr", vsr_num, 2, "Channel")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
@@ -887,13 +887,13 @@ class HexitecFem():
 
         logging.debug("Column Calibration Enable")
 
-        # Column Calibrate Enable ASIC1 (Reg 0x57)
+        # Column Calibrate Enable ASIC1 (Reg 0x57) - checked 3
         asic1_col_cal_enable = self._extract_80_bits("ColumnCal", vsr_num, 1, "Channel")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
         self.load_enables_settings(vsr, 0x35, 0x37, asic1_col_cal_enable, enables_defaults)
 
-        # Column Calibrate Enable ASIC2 (Reg 0xB8)
+        # Column Calibrate Enable ASIC2 (Reg 0xB8) - checked 3
         asic2_col_cal_enable = self._extract_80_bits("ColumnCal", vsr_num, 2, "Channel")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
@@ -901,13 +901,13 @@ class HexitecFem():
 
         logging.debug("Row Read Enable")
 
-        # Row Read Enable ASIC1 (Reg 0x43)
+        # Row Read Enable ASIC1 (Reg 0x43) - chcked 5
         asic1_row_enable = self._extract_80_bits("RowEn_", vsr_num, 1, "Block")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
         self.load_enables_settings(vsr, 0x34, 0x33, asic1_row_enable, enables_defaults)
 
-        # Row Read Enable ASIC2 (Reg 0xA4)
+        # Row Read Enable ASIC2 (Reg 0xA4) - checked 4
         asic2_row_enable = self._extract_80_bits("RowEn_", vsr_num, 2, "Block")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
@@ -915,13 +915,13 @@ class HexitecFem():
 
         logging.debug("Row Power Enable")
 
-        # Row Power Enable ASIC1 (Reg 0x2F)
+        # Row Power Enable ASIC1 (Reg 0x2F) - checked 5
         asic1_row_power_enable = self._extract_80_bits("RowPwr", vsr_num, 1, "Block")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
         self.load_enables_settings(vsr, 0x32, 0x46, asic1_row_power_enable, enables_defaults)
 
-        # Row Power Enable ASIC2 (Reg 0x90)
+        # Row Power Enable ASIC2 (Reg 0x90) - chcked 4
         asic2_row_power_enable = self._extract_80_bits("RowPwr", vsr_num, 2, "Block")
         enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
                             0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
@@ -929,13 +929,13 @@ class HexitecFem():
 
         logging.debug("Row Calibration Enable")
 
-        # Row Calibrate Enable ASIC1 (Reg 0x39)
+        # Row Calibrate Enable ASIC1 (Reg 0x39) - chcked 6
         asic1_row_cal_enable = self._extract_80_bits("RowCal", vsr_num, 1, "Block")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
         self.load_enables_settings(vsr, 0x33, 0x39, asic1_row_cal_enable, enables_defaults)
 
-        # Row Calibrate Enable ASIC2 (Reg 0x9A)
+        # Row Calibrate Enable ASIC2 (Reg 0x9A) - checked 6
         asic2_row_cal_enable = self._extract_80_bits("RowCal", vsr_num, 2, "Block")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
@@ -1167,7 +1167,8 @@ class HexitecFem():
         vsr.write_and_response(0x31, 0x42, 0x30, 0x38)
         # Start SM on falling edge ('0' = rising edge) of ADC-CLK:
         vsr.write_and_response(0x31, 0x34, 0x30, 0x31)
-        vsr.write_and_response(0x30, 0x31, 0x32, 0x30)    # Enable LVDS Interface
+
+        vsr.write_and_response(0x30, 0x31, 0x32, 0x30)    # Enable LVDS Interface (Serial interface reset on MR's)
         """
         90	44	61	FF	FF	FF	FF	FF	FF	FF	FF	FF	FF	;Column Read En
         90	44	4D	FF	FF	FF	FF	FF	FF	FF	FF	FF	FF	;Column PWR En
@@ -1182,8 +1183,8 @@ class HexitecFem():
         self.write_dac_values(vsr)
         """
         90	55	02	;Disable ADC/Enable DAC
-        90	43	01	01	;Enable SM
-        90	42	01	01	;Disable SM
+        90	43	01	01	;Disable SM
+        90	42	01	01	;Enable SM
         90	55	03	;Enable ADC/Enable DAC
         90	53	16	09	;Write ADC Register
         """
@@ -1375,12 +1376,12 @@ class HexitecFem():
         self.send_cmd([vsr.addr, HexitecFem.CTRL_ADC_DAC, 0x30, 0x32])
         self.read_response()
 
-        logging.debug("Enable SM")      # 90 43 01 01 ;Enable SM
-        self.send_cmd([vsr.addr, 0x43, 0x30, 0x31, 0x30, 0x31])
+        logging.debug("Disable SM")      # 90 43 01 01 ;Disable SM
+        self.send_cmd([vsr.addr, HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x31])
         self.read_response()
 
-        logging.debug("Disable SM")     # 90 42 01 01 #Disable SM
-        self.send_cmd([vsr.addr, 0x42, 0x30, 0x31, 0x30, 0x31])
+        logging.debug("Enable SM")     # 90 42 01 01 ;Enable SM
+        self.send_cmd([vsr.addr, HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31])
         self.read_response()
 
         logging.debug("Enable ADC/Enable DAC")  # 90 55 03  ;Enable ADC/Enable DAC
