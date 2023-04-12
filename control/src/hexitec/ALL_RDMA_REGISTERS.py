@@ -6,7 +6,13 @@
 
 # *** This file was AUTO-GENERATED. Modifications to this file will be overwritten. ***
 """IC ID and Register dictionaries extracted from XML2VHDL formatted `xml` memory-map generation output file."""
-HEXITEC_2X6_ID = {'addr_offset': 0, 'fields': [], 'name': 'HEXITEC_2X6_ID'}
+IC_OFFSETS = { 'ic_ids': [ {'addr_offset': 0, 'name': 'HEXITEC_2X6_ID'},
+              {'addr_offset': 32768, 'name': 'BOARD_BUILD_INFO_ID'},
+              {'addr_offset': 131072, 'name': 'UDP_CORE_0_0_ID'},
+              {'addr_offset': 139264, 'name': 'UDP_CORE_0_1_ID'},
+              {'addr_offset': 147456, 'name': 'UDP_CORE_0_2_ID'},
+              {'addr_offset': 524288, 'name': 'QSFP_1_ID'},
+              {'addr_offset': 528384, 'name': 'QSFP_2_ID'}]}
 """XML2VHDL IC References generated from `XML2VHDL` output.
 
 ===================  ===============
@@ -20,12 +26,6 @@ QSFP_1_ID            ``0x0008_0000``
 QSFP_2_ID            ``0x0008_1000``
 ===================  ===============
 """
-BOARD_BUILD_INFO_ID = {'addr_offset': 32768, 'fields': [], 'name': 'BOARD_BUILD_INFO_ID'}
-UDP_CORE_0_0_ID = {'addr_offset': 131072, 'fields': [], 'name': 'UDP_CORE_0_0_ID'}
-UDP_CORE_0_1_ID = {'addr_offset': 139264, 'fields': [], 'name': 'UDP_CORE_0_1_ID'}
-UDP_CORE_0_2_ID = {'addr_offset': 147456, 'fields': [], 'name': 'UDP_CORE_0_2_ID'}
-QSFP_1_ID = {'addr_offset': 524288, 'fields': [], 'name': 'QSFP_1_ID'}
-QSFP_2_ID = {'addr_offset': 528384, 'fields': [], 'name': 'QSFP_2_ID'}
 
 HEXITEC_2X6_READBACK = { 'addr': 4,
   'description': 'Readback register',

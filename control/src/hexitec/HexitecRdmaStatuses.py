@@ -6,24 +6,17 @@ Christian Angelsen, STFC Detector Systems Software Group, 2023.
 
 import time
 import os.path
-import sys
 
 try:
-    from hexitec.rdma_control.RdmaUdp import RdmaUDP
-    from hexitec.rdma_control.BoardCfgStatus import construct_fpga_dna, \
-        decode_fw_version, decode_build_info
-    from hexitec.rdma_control.VsrModule import VsrModule
-    from hexitec.rdma_control.RDMA_REGISTERS import BOARD_BUILD_INFO_SRC_VERSION, \
-        BOARD_BUILD_INFO_BUILD_DATE, BOARD_BUILD_INFO_DNA_0, BOARD_BUILD_INFO_SCRATCH_1, \
-        HEXITEC_2X6_VSR_DATA_CTRL, \
-        HEXITEC_2X6_VSR0_STATUS  # , HEXITEC_2X6_VSR1_STATUS, HEXITEC_2X6_VSR2_STATUS, \
-    #     HEXITEC_2X6_VSR3_STATUS, HEXITEC_2X6_VSR4_STATUS, HEXITEC_2X6_VSR5_STATUS
-    # from hexitec.rdma_control.rdma_register_helpers import calc_shiftr, get_mmap_info, \
-    #     get_mmap_field_info, get_field,, decode_field, encode_field, set_field, \
-    #     clr_field
+    from RdmaUdp import *
+    from boardcfgstatus.BoardCfgStatus import *
+    from hexitec_vsr.VsrModule import VsrModule
+    import ALL_RDMA_REGISTERS as HEX_REGISTERS
+
 except ModuleNotFoundError:
     print("Silent ModuleNotFoundError ************")
-    # from RdmaUdp import *
+    from RdmaUdp import *
+    print("no second exception")
     # from BoardCfgStatus import *
     # from VsrModule import *
     # from RDMA_REGISTERS import *
@@ -307,22 +300,28 @@ if __name__ == '__main__':  # pragma: no cover
         Hex2x6CtrlRdma = RdmaUDP(local_ip="192.168.4.1", local_port=61649,
                                  rdma_ip="192.168.4.2", rdma_port=61648, debug=False)
 
-    fw_version = Hex2x6CtrlRdma.udp_rdma_read(address=BOARD_BUILD_INFO_SRC_VERSION['addr'],
-                                              burst_len=1, cmd_no=0,
-                                              comment=BOARD_BUILD_INFO_SRC_VERSION['description'])
-    decoded_fw_version = decode_fw_version(fw_version, as_str=True)
-    print(f"[INFO]: Firmware version: {decoded_fw_version}")
-    build_info = Hex2x6CtrlRdma.udp_rdma_read(address=BOARD_BUILD_INFO_BUILD_DATE['addr'],
-                                              burst_len=2, cmd_no=0,
-                                              comment=BOARD_BUILD_INFO_BUILD_DATE['description'])
+    board_cfg_status = BoardCfgStatus(
+        Hex2x6CtrlRdma, rdma_offset=rdma.get_id_offset(
+            HEX_REGISTERS.IC_OFFSETS, 'BOARD_BUILD_INFO_ID'))
+    # print(f"{board_cfg_status.get_fpga_fw_git_hash()}")
+    info_hdr = board_cfg_status.get_info_header()
+    print(f"{info_hdr}")
 
-    decoded_fw_build_date, decoded_fw_build_time = decode_build_info(build_info, as_str=True)
+    decoded_fw_version = board_cfg_status.get_fpga_fw_version()
+    print(f"[INFO]: Firmware version: {decoded_fw_version}")
+    # build_info = Hex2x6CtrlRdma.udp_rdma_read(address=BOARD_BUILD_INFO_BUILD_DATE['addr'],
+    #                                           burst_len=2, cmd_no=0,
+    #                                           comment=BOARD_BUILD_INFO_BUILD_DATE['description'])
+
+    decoded_fw_build_date = board_cfg_status.get_fpga_build_date()
+    decoded_fw_build_time = board_cfg_status.get_fpga_build_time()
     print(f"[INFO]: {decoded_fw_build_date} - {decoded_fw_build_time}")
 
-    dna = Hex2x6CtrlRdma.udp_rdma_read(address=BOARD_BUILD_INFO_DNA_0['addr'],
-                                       burst_len=3, cmd_no=0,
-                                       comment=BOARD_BUILD_INFO_DNA_0['description'])
-    dna = construct_fpga_dna(dna, full=False)
+    # dna = Hex2x6CtrlRdma.udp_rdma_read(address=BOARD_BUILD_INFO_DNA_0['addr'],
+    #                                    burst_len=3, cmd_no=0,
+    #                                    comment=BOARD_BUILD_INFO_DNA_0['description'])
+    # dna = construct_fpga_dna(dna, full=False)
+    dna = board_cfg_status.get_fpga_dna()
     info_hdr = f"[{dna}|{decoded_fw_version}|{decoded_fw_build_date}|{decoded_fw_build_time}]"
     print(f"{info_hdr}")
 
