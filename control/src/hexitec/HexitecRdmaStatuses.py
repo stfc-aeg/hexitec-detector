@@ -309,51 +309,35 @@ if __name__ == '__main__':  # pragma: no cover
 
     decoded_fw_version = board_cfg_status.get_fpga_fw_version()
     print(f"[INFO]: Firmware version: {decoded_fw_version}")
-    # build_info = Hex2x6CtrlRdma.udp_rdma_read(address=BOARD_BUILD_INFO_BUILD_DATE['addr'],
-    #                                           burst_len=2, cmd_no=0,
-    #                                           comment=BOARD_BUILD_INFO_BUILD_DATE['description'])
 
     decoded_fw_build_date = board_cfg_status.get_fpga_build_date()
     decoded_fw_build_time = board_cfg_status.get_fpga_build_time()
     print(f"[INFO]: {decoded_fw_build_date} - {decoded_fw_build_time}")
 
-    # dna = Hex2x6CtrlRdma.udp_rdma_read(address=BOARD_BUILD_INFO_DNA_0['addr'],
-    #                                    burst_len=3, cmd_no=0,
-    #                                    comment=BOARD_BUILD_INFO_DNA_0['description'])
-    # dna = construct_fpga_dna(dna, full=False)
     dna = board_cfg_status.get_fpga_dna()
     info_hdr = f"[{dna}|{decoded_fw_version}|{decoded_fw_build_date}|{decoded_fw_build_time}]"
     print(f"{info_hdr}")
 
-    # Write new values to all of the 4 scratch registers
-    scratch_1_comment = f"{BOARD_BUILD_INFO_SCRATCH_1['description']}"
-    Hex2x6CtrlRdma.udp_rdma_write(address=BOARD_BUILD_INFO_SCRATCH_1['addr'],
-                                  data=[0x11110001, 0x22220002, 0x33330003, 0x44440004],
-                                  burst_len=4, cmd_no=0xAA, comment=scratch_1_comment)
-
-    # Read scratch registers values
-    burst_len = 4
-    scratch = Hex2x6CtrlRdma.udp_rdma_read(address=BOARD_BUILD_INFO_SCRATCH_1['addr'],
-                                           burst_len=burst_len, cmd_no=0xBB,
-                                           comment=scratch_1_comment)
-    old_scratch = [f"0x{hex(reg)[2:].zfill(8).upper()}" for reg in scratch]
-    print(f"Scratch register: {old_scratch}")
+    # Write scratch registers
+    scratch_regs = board_cfg_status.read_scratch_regs(size=4)
+    print(f"scratch registers: {[hex(i) for i in scratch_regs]}")
+    # Read scratch registers
+    board_cfg_status.write_scratch_regs([0x11110000, 0x22220000, 0x33330000, 0x44440000])
+    scratch_regs = board_cfg_status.read_scratch_regs(size=4)
+    print(f"scratch registers: {[hex(i) for i in scratch_regs]}")
 
     vsr_addr_mapping = {1: 0x90, 2: 0x91, 3: 0x92, 4: 0x93, 5: 0x94, 6: 0x95}
     """:obj:`dict` A dictionary mapping VSR slot to VSR addr. This is hardware build dependent
         and can be determined by :meth:`VsrModule.lookup`"""
 
     vsr_1 = VsrModule(Hex2x6CtrlRdma, slot=1, addr_mapping=vsr_addr_mapping)
-    vsr_status = vsr_1._get_status(hv=False, all_vsrs=True)
-    hv_status = vsr_1._get_status(hv=True, all_vsrs=True)
     print("Beforehand")
-    print(f"[INFO] Status:     {vsr_status}")
-    print(f"[INFO] H/V Status: {hv_status}")
+    print(f"[INFO] Status: {vsr_1.get_module_status()} | H/V Status: {vsr_1.get_hv_status()}")
 
-    # # TODO Switches VSR 1 on, enables HV - Verified
+    # # TODO Switches VSR 1 on, enables HV - Reverify
     # # Turn VSR1 on
     # print(f"[INFO] Slot: {vsr_1.get_slot()} | VSR Address: {hex(vsr_1.get_addr())}")
-    # print(f"[INFO] Status: {vsr_1._get_status()} | H/V Status: {vsr_1.get_hv_status()}")
+    # print(f"[INFO] Status: {vsr_1.get_module_status()} | H/V Status: {vsr_1.get_hv_status()}")
     # print("Enabling module(s)..")
     # vsr_1.enable_module()
     # print("Turning HV on..")
@@ -361,10 +345,7 @@ if __name__ == '__main__':  # pragma: no cover
     # print(f"[INFO] Status: {vsr_1._get_status()} | H/V Status: {vsr_1.get_hv_status()}")
 
     # # Check statuses
-    # module_status = vsr_1.get_module_status()
-    # print(f"VSR1 Module status: {module_status}")
-    # hv_status = vsr_1.get_hv_status()
-    # print(f"VSR1 HV Status:     {hv_status}")
+    # print(f"[INFO] Status: {vsr_1.get_module_status()} | H/V Status: {vsr_1.get_hv_status()}")
 
     # TODO: Controlling all VSRs - Verified
     VSRs = VsrModule(Hex2x6CtrlRdma, slot=0, addr_mapping=vsr_addr_mapping)
@@ -391,11 +372,19 @@ if __name__ == '__main__':  # pragma: no cover
     vsr_6 = VsrModule(Hex2x6CtrlRdma, slot=6, addr_mapping=vsr_addr_mapping)
     vsr_list.append(vsr_6)
 
-    # TODO Readout HV voltages - Verified
-    for idx in range(1):
-        print(" -=-=-=-=-=-=-=-=-=-=-")
-        for vsr in vsr_list:
-            print(f" VSR{vsr.addr-143} HV: {round(vsr._get_power_sensors(), 2)}")
+    # # TODO Readout HV voltages - Requires porting _get_power_sensors() - Reverify
+    # for idx in range(1):
+    #     print(" -=-=-=-=-=-=-=-=-=-=-")
+    #     for vsr in vsr_list:
+    #         print(f" VSR{vsr.addr-143} HV: {round(vsr._get_power_sensors(), 2)}")
+
+    # # New Implementation
+
+    # print(vsr_1._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr']))
+    # vsr_1.initialise()
+    # for i in range(1, 10):
+    #     time.sleep(1)
+    #     print(vsr_1._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr']))
 
     # TODO Initialisation - Verified
     number_registers = 1
