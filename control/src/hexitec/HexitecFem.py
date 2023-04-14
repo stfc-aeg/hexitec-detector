@@ -17,9 +17,11 @@ import os
 
 # # # from hexitec.test_ui.RdmaUDP import RdmaUDP
 # # from hexitec.RdmaUDP import RdmaUDP     # Satisfy tox
-from hexitec.RDMA_REGISTERS import HEXITEC_2X6_VSR_DATA_CTRL, HEXITEC_2X6_VSR0_STATUS
-from hexitec.RdmaUdp import RdmaUDP
-from hexitec.VsrModule import VsrModule
+from RdmaUdp import *
+from boardcfgstatus.BoardCfgStatus import *
+from hexitec_vsr.VsrModule import VsrModule
+# TODO Redundant to include ALL_RDMA_REGISTERS?
+# import hexitec.ALL_RDMA_REGISTERS as HEX_REGISTERS
 
 from socket import error as socket_error
 from odin.adapters.parameter_tree import ParameterTree

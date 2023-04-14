@@ -378,14 +378,19 @@ if __name__ == '__main__':  # pragma: no cover
     #     for vsr in vsr_list:
     #         print(f" VSR{vsr.addr-143} HV: {round(vsr._get_power_sensors(), 2)}")
 
-    # # New Implementation
+#     # # New Implementation
 
-    # print(vsr_1._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr']))
-    # vsr_1.initialise()
-    # for i in range(1, 10):
-    #     time.sleep(1)
-    #     print(vsr_1._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr']))
-
+#     print(vsr_1._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr']))
+#     vsr_1.initialise()
+#     for i in range(1, 10):
+#         time.sleep(1)
+#         print(vsr_1._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr']))
+# #
+#     # Going directly through VsrModule?
+#         wr_data = self.s1sph & VSR_FPGA_REGISTERS.REG4['mask']
+#         addr = VSR_FPGA_REGISTERS.REG4['addr']
+#         self._fpga_reg_write(addr, wr_data)
+# #
     # TODO Initialisation - Verified
     number_registers = 1
     the_start = time.time()
