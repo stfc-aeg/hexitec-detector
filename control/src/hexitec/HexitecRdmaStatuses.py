@@ -334,7 +334,7 @@ if __name__ == '__main__':  # pragma: no cover
     print("Beforehand")
     print(f"[INFO] Status: {vsr_1.get_module_status()} | H/V Status: {vsr_1.get_hv_status()}")
 
-    # # TODO Switches VSR 1 on, enables HV - Reverify
+    # # Switches VSR 1 on, enables HV - TODO Reverify
     # # Turn VSR1 on
     # print(f"[INFO] Slot: {vsr_1.get_slot()} | VSR Address: {hex(vsr_1.get_addr())}")
     # print(f"[INFO] Status: {vsr_1.get_module_status()} | H/V Status: {vsr_1.get_hv_status()}")
@@ -372,25 +372,53 @@ if __name__ == '__main__':  # pragma: no cover
     vsr_6 = VsrModule(Hex2x6CtrlRdma, slot=6, addr_mapping=vsr_addr_mapping)
     vsr_list.append(vsr_6)
 
-    # # TODO Readout HV voltages - Requires porting _get_power_sensors() - Reverify
+    # # Readout HV voltages - Requires porting _get_power_sensors() - TODO Reverify
     # for idx in range(1):
     #     print(" -=-=-=-=-=-=-=-=-=-=-")
     #     for vsr in vsr_list:
     #         print(f" VSR{vsr.addr-143} HV: {round(vsr._get_power_sensors(), 2)}")
 
-#     # # New Implementation
+    # New Implementation
 
-#     print(vsr_1._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr']))
-#     vsr_1.initialise()
-#     for i in range(1, 10):
-#         time.sleep(1)
-#         print(vsr_1._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr']))
-# #
-#     # Going directly through VsrModule?
-#         wr_data = self.s1sph & VSR_FPGA_REGISTERS.REG4['mask']
-#         addr = VSR_FPGA_REGISTERS.REG4['addr']
-#         self._fpga_reg_write(addr, wr_data)
-# #
+    # Initialise VSR, train Kintex VLDS, Check VSR locked - TODO Reverify
+
+    vsr_1.initialise()
+
+    print("Did PLL(s) lock?")
+    bPolling = True
+    while bPolling:
+        pll_status = vsr_1.read_pll_status()
+        if pll_status & 1:
+            bPolling = False
+        else:
+            time.sleep(0.2)
+
+    # Training Kintex
+
+    print(f"LVDS Training.. Address: {HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr']:X}")
+    VSR_DATA_CTRL = HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL
+    Hex2x6CtrlRdma.udp_rdma_write(address=VSR_DATA_CTRL['addr'],
+                                  data=0x10, burst_len=1,
+                                  comment=VSR_DATA_CTRL['description'])
+    time.sleep(0.2)
+    Hex2x6CtrlRdma.udp_rdma_write(address=VSR_DATA_CTRL['addr'],
+                                  data=0x10, burst_len=1,
+                                  comment=VSR_DATA_CTRL['description'])
+
+    # Check VSR Locked
+    vsr_status_addr = HEX_REGISTERS.HEXITEC_2X6_VSR0_STATUS['addr']
+    for vsr in vsr_list:
+        index = vsr.addr - 144
+        locked = Hex2x6CtrlRdma.udp_rdma_read(vsr_status_addr, burst_len=1,
+                                              comment=f"VSR {index} status register")
+        if (locked == 0xFF):
+            print("VSR{0} Locked (0x{1:X})".format(vsr.addr-143, locked))
+        else:
+            print("VSR{0} incomplete lock! (0x{1:X}) ****".format(vsr.addr-143, locked))
+        vsr_status_addr += 4
+
+    # Old Implementation
+
     # TODO Initialisation - Verified
     number_registers = 1
     the_start = time.time()
@@ -398,7 +426,6 @@ if __name__ == '__main__':  # pragma: no cover
     reg89 = []
     for vsr in vsr_list:
         print(f" -=-=- VSR{vsr.addr-143} -=-=- ")
-
         initialise_vsr(vsr)
 
         bPolling = True
@@ -406,7 +433,6 @@ if __name__ == '__main__':  # pragma: no cover
         while bPolling:
             (address_h, address_l) = (0x38, 0x39)
             _, r89_reply_list = vsr.block_read_and_response(number_registers, address_h, address_l)
-
             LSB = ord(r89_reply_list[0][1])
             # Is PLL locked? (bit1 high)
             if LSB & 2:
@@ -417,15 +443,12 @@ if __name__ == '__main__':  # pragma: no cover
             if time_taken > 3.0:
                 print(" *** VSR{} PLL still disabled! ***".format(vsr-144))
                 bPolling = False
-
         reg89.append(r89_reply_list[0])
         (address_h, address_l) = (0x30, 0x37)
         _, r7_reply_list = vsr.block_read_and_response(number_registers, address_h, address_l)
         reg07.append(r7_reply_list[0])
-
     print(f"Register 07: {reg07}")
     print(f"Register 89: {reg89}")
-
     print("LVDS Training..")
     Hex2x6CtrlRdma.udp_rdma_write(address=HEXITEC_2X6_VSR_DATA_CTRL['addr'],
                                   data=0x10, burst_len=1, cmd_no=0x0,
@@ -434,8 +457,6 @@ if __name__ == '__main__':  # pragma: no cover
     Hex2x6CtrlRdma.udp_rdma_write(address=HEXITEC_2X6_VSR_DATA_CTRL['addr'],
                                   data=0x10, burst_len=1, cmd_no=0x0,
                                   comment=HEXITEC_2X6_VSR_DATA_CTRL['description'])
-
-    # TODO HEXITEC_2X6_VSRx_STATUS - Verified
     vsr_status_addr = HEXITEC_2X6_VSR0_STATUS['addr']
     for vsr in vsr_list:
         index = vsr.addr - 144
@@ -446,7 +467,6 @@ if __name__ == '__main__':  # pragma: no cover
         else:
             print("VSR{0} incomplete lock! (0x{1:X}) ****".format(vsr.addr-143, locked))
         vsr_status_addr += 4
-
     the_stop = time.time()
     print(f"Initialisation took: {the_stop - the_start}")
 
