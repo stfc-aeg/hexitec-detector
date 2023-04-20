@@ -104,6 +104,7 @@ class TestFem(unittest.TestCase):
         assert self.test_fem.fem.log_messages[0][:-4] == log_messages[0][:-4]
         assert self.test_fem.fem.log_messages[0][1] == log_messages[0][1]
 
+    # TODO Update when Hardware available to test firmware info
     def test_read_sensors_working_ok(self):
         """Test the read_sensors function works."""
         with patch('hexitec.HexitecFem.RdmaUDP'):
@@ -126,35 +127,30 @@ class TestFem(unittest.TestCase):
             # assert self.test_fem.fem.read_firmware_version is False
             # assert self.test_fem.fem.firmware_date == ""
 
-    # # @pytest.mark.slow
-    # def test_read_sensors_Exception(self):
-    #     """Test the read_sensors handles Exception."""
-    #     with patch('hexitec.HexitecFem.RdmaUDP'):
-    #         self.test_fem.fem.read_firmware_version = False
-    #         self.test_fem.fem.read_temperatures_humidity_values = Mock()
-    #         self.test_fem.fem.read_temperatures_humidity_values.side_effect = Exception()
-    #         self.test_fem.fem.read_pwr_voltages = Mock()
-    #         self.test_fem.fem.read_sensors()
-    #         # TODO: Ridiculous time delay or unit test completes before tested fem function
-    #         time.sleep(3.1)
-    #         error = "Reading sensors failed"
-    #         # print("UT, {}".format(time.time()))
-    #         assert self.test_fem.fem._get_status_error() == error
+    # @pytest.mark.slow
+    def test_read_sensors_Exception(self):
+        """Test the read_sensors handles Exception."""
+        with patch('hexitec.HexitecFem.RdmaUDP'):
+            self.test_fem.fem.read_firmware_version = False
+            self.test_fem.fem.read_temperatures_humidity_values = Mock()
+            self.test_fem.fem.read_temperatures_humidity_values.side_effect = Exception()
+            self.test_fem.fem.read_sensors()
+            time.sleep(0.5)
+            error = "Reading sensors failed"
+            assert self.test_fem.fem._get_status_error() == error
 
-    # # @pytest.mark.slow
-    # def test_read_sensors_HexitecFemError(self):
-    #     """Test the read_sensors handles HexitecFemError."""
-    #     with patch('hexitec.HexitecFem.RdmaUDP'):
-    #         self.test_fem.fem.read_firmware_version = False
-    #         self.test_fem.fem.read_temperatures_humidity_values = Mock()
-    #         self.test_fem.fem.read_temperatures_humidity_values.side_effect = HexitecFemError()
-    #         self.test_fem.fem.read_sensors()
-    #         # TODO: Ridiculous time delay or unit test completes before tested fem function
-    #         time.sleep(2.5)
-    #         error = "Failed to read sensors"
-    #         assert self.test_fem.fem._get_status_error() == error
-    #         # fake_sleep.stop()
-    #     assert self.test_fem.fem.parent.software_state == "Error"
+    # @pytest.mark.slow
+    def test_read_sensors_HexitecFemError(self):
+        """Test the read_sensors handles HexitecFemError."""
+        with patch('hexitec.HexitecFem.RdmaUDP'):
+            self.test_fem.fem.read_firmware_version = False
+            self.test_fem.fem.read_temperatures_humidity_values = Mock()
+            self.test_fem.fem.read_temperatures_humidity_values.side_effect = HexitecFemError()
+            self.test_fem.fem.read_sensors()
+            time.sleep(0.5)
+            error = "Failed to read sensors"
+            assert self.test_fem.fem._get_status_error() == error
+        assert self.test_fem.fem.parent.software_state == "Error"
 
     def test_cleanup(self):
         """Test cleanup function works ok."""
@@ -200,10 +196,15 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.connect_hardware("test")
         assert self.test_fem.fem._get_status_error() == "Error: Connection already established"
 
+    def test_connect_hardware_handles_Exception(self):
+        """Test that connecting with hardware handles failure."""
+        self.test_fem.fem.power_up_modules = Mock(side_effect = Exception(""))
+        self.test_fem.fem.connect_hardware("test")
+        assert self.test_fem.fem._get_status_error() == "Camera connection"
+
     def test_connect_hardware(self):
         """Test connecting with hardware works."""
         with patch("hexitec.HexitecFem.RdmaUDP"):
-
             self.test_fem.fem.connect_hardware("test")
             assert self.test_fem.fem.hardware_connected is True
 
@@ -1700,10 +1701,10 @@ class TestFem(unittest.TestCase):
 
     #     self.test_fem.fem.initialise_system()
     #     time.sleep(0.5)
-    #     self.test_fem.fem.x10g_rdma.write.assert_has_calls([
-    #         call(0x00000020, 0x10, burst_len=1, comment="Enabling training"),
-    #         call(0x00000020, 0x00, burst_len=1, comment="Disabling training")
-    #     ])
+    #     # self.test_fem.fem.x10g_rdma.write.assert_has_calls([
+    #     #     call(0x00000020, 0x10, burst_len=1, comment="Enabling training"),
+    #     #     call(0x00000020, 0x00, burst_len=1, comment="Disabling training")
+    #     # ])
     #     time.sleep(0.5)
     #     vsr_status_addr = 0x000003E8
     #     index = 0
