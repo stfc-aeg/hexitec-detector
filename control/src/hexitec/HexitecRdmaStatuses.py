@@ -292,13 +292,16 @@ if __name__ == '__main__':  # pragma: no cover
 
     if hostname.lower() == "te7hexidaq":
         Hex2x6CtrlRdma = RdmaUDP(local_ip="10.0.3.1", local_port=61649,
-                                 rdma_ip="10.0.3.2", rdma_port=61648, debug=False)
+                                 rdma_ip="10.0.3.2", rdma_port=61648,
+                                 debug=False, uart_offset=0xC)
     elif hostname.lower() == "te7wendolene":
         Hex2x6CtrlRdma = RdmaUDP(local_ip="192.168.4.1", local_port=61649,
-                                 rdma_ip="192.168.4.2", rdma_port=61648, debug=False)
+                                 rdma_ip="192.168.4.2", rdma_port=61648,
+                                 debug=False, uart_offset=0xC)
     else:
         Hex2x6CtrlRdma = RdmaUDP(local_ip="192.168.4.1", local_port=61649,
-                                 rdma_ip="192.168.4.2", rdma_port=61648, debug=False)
+                                 rdma_ip="192.168.4.2", rdma_port=61648,
+                                 debug=False, uart_offset=0xC)
 
     board_cfg_status = BoardCfgStatus(
         Hex2x6CtrlRdma, rdma_offset=rdma.get_id_offset(
@@ -333,6 +336,13 @@ if __name__ == '__main__':  # pragma: no cover
     vsr_1 = VsrModule(Hex2x6CtrlRdma, slot=1, addr_mapping=vsr_addr_mapping)
     print("Beforehand")
     print(f"[INFO] Status: {vsr_1.get_module_status()} | H/V Status: {vsr_1.get_hv_status()}")
+
+    # TODO Status of all VSRs
+    # vsr_status = vsr_1._get_status(hv=False, all_vsrs=True)
+    # hv_status = vsr_1._get_status(hv=True, all_vsrs=True)
+    # print("Beforehand")
+    # print(f"[INFO] Status:     {vsr_status}")
+    # print(f"[INFO] H/V Status: {hv_status}")
 
     # # Switches VSR 1 on, enables HV - TODO Reverify
     # # Turn VSR1 on
@@ -382,7 +392,8 @@ if __name__ == '__main__':  # pragma: no cover
 
     # Initialise VSR, train Kintex VLDS, Check VSR locked - TODO Reverify
 
-    vsr_1.initialise()
+    for vsr in vsr_list:
+        vsr.initialise()
 
     print("Did PLL(s) lock?")
     bPolling = True
@@ -410,91 +421,9 @@ if __name__ == '__main__':  # pragma: no cover
     for vsr in vsr_list:
         index = vsr.addr - 144
         locked = Hex2x6CtrlRdma.udp_rdma_read(vsr_status_addr, burst_len=1,
-                                              comment=f"VSR {index} status register")
-        if (locked == 0xFF):
-            print("VSR{0} Locked (0x{1:X})".format(vsr.addr-143, locked))
-        else:
-            print("VSR{0} incomplete lock! (0x{1:X}) ****".format(vsr.addr-143, locked))
-        vsr_status_addr += 4
-
-    # Old Implementation
-
-    # TODO Initialisation - Verified
-    number_registers = 1
-    the_start = time.time()
-    reg07 = []
-    reg89 = []
-    for vsr in vsr_list:
-        print(f" -=-=- VSR{vsr.addr-143} -=-=- ")
-        initialise_vsr(vsr)
-
-        bPolling = True
-        time_taken = 0
-        while bPolling:
-            (address_h, address_l) = (0x38, 0x39)
-            _, r89_reply_list = vsr.block_read_and_response(number_registers, address_h, address_l)
-            LSB = ord(r89_reply_list[0][1])
-            # Is PLL locked? (bit1 high)
-            if LSB & 2:
-                bPolling = False
-            else:
-                time.sleep(0.2)
-                time_taken += 0.2
-            if time_taken > 3.0:
-                print(" *** VSR{} PLL still disabled! ***".format(vsr-144))
-                bPolling = False
-        reg89.append(r89_reply_list[0])
-        (address_h, address_l) = (0x30, 0x37)
-        _, r7_reply_list = vsr.block_read_and_response(number_registers, address_h, address_l)
-        reg07.append(r7_reply_list[0])
-    print(f"Register 07: {reg07}")
-    print(f"Register 89: {reg89}")
-    print("LVDS Training..")
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEXITEC_2X6_VSR_DATA_CTRL['addr'],
-                                  data=0x10, burst_len=1, cmd_no=0x0,
-                                  comment=HEXITEC_2X6_VSR_DATA_CTRL['description'])
-    time.sleep(0.2)
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEXITEC_2X6_VSR_DATA_CTRL['addr'],
-                                  data=0x10, burst_len=1, cmd_no=0x0,
-                                  comment=HEXITEC_2X6_VSR_DATA_CTRL['description'])
-    vsr_status_addr = HEXITEC_2X6_VSR0_STATUS['addr']
-    for vsr in vsr_list:
-        index = vsr.addr - 144
-        locked = Hex2x6CtrlRdma.udp_rdma_read(vsr_status_addr, burst_len=1, cmd_no=0,
                                               comment=f"VSR {index} status register")[0]
         if (locked == 0xFF):
             print("VSR{0} Locked (0x{1:X})".format(vsr.addr-143, locked))
         else:
             print("VSR{0} incomplete lock! (0x{1:X}) ****".format(vsr.addr-143, locked))
         vsr_status_addr += 4
-    the_stop = time.time()
-    print(f"Initialisation took: {the_stop - the_start}")
-
-    # TODO Collect offsets - Verified
-    collect_offsets(vsr_list)
-
-    # TODO Switches off all VSRs - Verified
-    # print("Switching OFF all VSRs..")
-    # success = vsr_1._ctrl(True, op="disable")
-    # if not success:
-    #     print("Failed to disable all VSRs")
-
-    # # TODO Readout Read, Power, Calibration Enables - Verified
-    # rpc_start = time.time()
-    # for vsr in vsr_list:
-    #     print(f"VSR{vsr.addr-143}")
-    #     vsr.readout_vsr_register("Column Read  Enable ASIC1", 0x36, 0x31)
-    #     vsr.readout_vsr_register("Column Read  Enable ASIC2", 0x43, 0x32)
-    #     vsr.readout_vsr_register("Column Power Enable ASIC1", 0x34, 0x44)
-    #     vsr.readout_vsr_register("Column Power Enable ASIC2", 0x41, 0x45)
-    #     vsr.readout_vsr_register("Column Calib Enable ASIC1", 0x35, 0x37)
-    #     vsr.readout_vsr_register("Column Calib Enable ASIC2", 0x42, 0x38)
-
-    #     vsr.readout_vsr_register("Row    Read  Enable ASIC1", 0x34, 0x33)
-    #     vsr.readout_vsr_register("Row    Read  Enable ASIC2", 0x41, 0x34)
-    #     vsr.readout_vsr_register("Row    Power Enable ASIC1", 0x32, 0x46)
-    #     vsr.readout_vsr_register("Row    Power Enable ASIC2", 0x39, 0x30)
-    #     vsr.readout_vsr_register("Row    Calib Enable ASIC1", 0x33, 0x39)
-    #     vsr.readout_vsr_register("Row    Calib Enable ASIC2", 0x39, 0x41)
-    # rpc_stop = time.time()
-    # print(f"Reading out Read, Power, Calib Enables took: {rpc_stop - rpc_start}")
