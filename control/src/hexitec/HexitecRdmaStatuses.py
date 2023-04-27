@@ -323,11 +323,11 @@ if __name__ == '__main__':  # pragma: no cover
 
     # Write scratch registers
     scratch_regs = board_cfg_status.read_scratch_regs(size=4)
-    print(f"scratch registers: {[hex(i) for i in scratch_regs]}")
+    print(f"0. scratch registers: {[hex(i) for i in scratch_regs]}")
     # Read scratch registers
     board_cfg_status.write_scratch_regs([0x11110000, 0x22220000, 0x33330000, 0x44440000])
     scratch_regs = board_cfg_status.read_scratch_regs(size=4)
-    print(f"scratch registers: {[hex(i) for i in scratch_regs]}")
+    print(f"1. scratch registers: {[hex(i) for i in scratch_regs]}")
 
     vsr_addr_mapping = {1: 0x90, 2: 0x91, 3: 0x92, 4: 0x93, 5: 0x94, 6: 0x95}
     """:obj:`dict` A dictionary mapping VSR slot to VSR addr. This is hardware build dependent
@@ -388,7 +388,8 @@ if __name__ == '__main__':  # pragma: no cover
     #     for vsr in vsr_list:
     #         print(f" VSR{vsr.addr-143} HV: {round(vsr._get_power_sensors(), 2)}")
 
-    # New Implementation
+    for vsr in vsr_list:
+        print(f"[INFO]: VSR{vsr.slot} temperature: {vsr.get_temperature()}")
 
     # Initialise VSR, train Kintex VLDS, Check VSR locked - TODO Reverify
 
@@ -406,7 +407,6 @@ if __name__ == '__main__':  # pragma: no cover
 
     # Training Kintex
 
-    print(f"LVDS Training.. Address: {HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr']:X}")
     VSR_DATA_CTRL = HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL
     Hex2x6CtrlRdma.udp_rdma_write(address=VSR_DATA_CTRL['addr'],
                                   data=0x10, burst_len=1,
@@ -427,3 +427,7 @@ if __name__ == '__main__':  # pragma: no cover
         else:
             print("VSR{0} incomplete lock! (0x{1:X}) ****".format(vsr.addr-143, locked))
         vsr_status_addr += 4
+
+    print("-=-=-=-=- collect_offsets() -=-=-=-=-")
+    for vsr in vsr_list:
+        vsr.collect_offsets()
