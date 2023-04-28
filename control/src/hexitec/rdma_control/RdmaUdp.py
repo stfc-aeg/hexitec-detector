@@ -527,7 +527,6 @@ class RdmaUDP(object):
 
     def read_response(self):
         """Monitors UART Status, reads response once available."""
-        # print("uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done")
         counter = 0
         rx_pkt_done = 0
         while not rx_pkt_done:
@@ -536,12 +535,6 @@ class RdmaUDP(object):
             if counter == 15001:
                 raise Exception("UART read timed out")
                 break
-            # Debugging:
-            # uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, \
-            #     rx_pkt_done = self.read_uart_status()
-            # if (counter % 10) == 0:
-            #     print(" *VM {0:X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X} counter: {6}".format(
-            #         uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done, counter))
 
     # def _iic_read_fifo(self, size, idx=1, cmd_no=0):
     #     """Read `N` words from IIC Rx FIFO.

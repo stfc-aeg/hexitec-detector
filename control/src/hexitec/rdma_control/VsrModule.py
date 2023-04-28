@@ -48,6 +48,8 @@ def get_vsr_cmd_char(code):
         return 0xFF
     elif code.lower() == "whois":
         return 0xF7
+    elif code.lower() == "get_pwr":
+        return 0x50
     elif code.lower() == "get_env":
         return 0x52
     elif code.lower() == "enable":
@@ -215,11 +217,8 @@ class VsrAssembly(object):
         self._dac_enabled_flag = False
 
     def __del__(self):
-        try:
-            self.hv_disable()
-            self.disable_module()
-        except Exception as e:
-            print(f" Deleting VSR slot: {self.addr} threw: {e}")
+        self.hv_disable()
+        self.disable_module()
 
     def get_slot(self):
         """Returns the slot number, hosting the VSR module.
@@ -399,6 +398,7 @@ class VsrAssembly(object):
         for d in wr_d:
             wr_cmd.append(d)
         wr_cmd.append(get_vsr_cmd_char("end"))
+        # print(f"[DEBUG]: rdmaVsrMod._uart_write: {[ hex(c) for c in wr_cmd ]}")
         self._rdma_ctrl_iface.uart_write(wr_cmd)
 
     def _get_status(self, vsr_mod=None, hv=False, all_vsrs=False):
@@ -626,32 +626,43 @@ class VsrAssembly(object):
         all_vsrs = True if self.slot == 0 else False
         return self._ctrl(all_vsrs=all_vsrs, op="hv_disable", init_time=0)
 
-    def enable_vsr(self, init_time=15):
+    def enable_vsr(self, init_time=15, addr=False):
         """Starts the default power-up/init sequence of VSR module.
 
         Default values will be written to VSR modules FPGA and the ADC and DAC will be enabled.
 
-        Average picture will be taken and the state-machine will start for continuous readout with dark correction.
+        Average picture will be taken and the state-machine will start for continuous readout with
+        dark correction.
 
         Args:
-            init_time (:obj:`int`, optional): wait time, in seconds, to allow each VSR to initialise after being sent
-                the `"enable"` command.
+            init_time (:obj:`int`, optional): wait time, in seconds, to allow each VSR to
+                initialise after being sent the `"enable"` command.
+            addr (:obj:`int`): Hardware address to target if set, otherwise own VSR module's.
 
         Returns:
             Nothing.
         """
+        address = self.addr
+        if addr:
+            address = addr
         vsr_d = list()  # empty VSR data list to pass to: :meth:`_vsr_uart_write()`
-        self._uart_write(self.addr, get_vsr_cmd_char("enable"), vsr_d)
+        self._uart_write(address, get_vsr_cmd_char("enable"), vsr_d)
         time.sleep(init_time)
 
-    def disable_vsr(self):
+    def disable_vsr(self, addr=False):
         """Stops the state-machine, and disables ADC and DAC, also stops the PLL in the VSR modules FPGA.
+
+        Args:
+            addr (:obj:`int`): Hardware address to target if set, otherwise own VSR module's.
 
         Returns:
             Nothing.
         """
+        address = self.addr
+        if addr:
+            address = addr
         vsr_d = list()  # empty VSR data list to pass to: :meth:`_vsr_uart_write()`
-        self._uart_write(self.addr, get_vsr_cmd_char("disable"), vsr_d)
+        self._uart_write(address, get_vsr_cmd_char("disable"), vsr_d)
 
     def _ctrl_converters(self, adc=False, dac=False):
         """Controls the VSR modules ADC and DAC.
@@ -1871,31 +1882,34 @@ class VsrModule(VsrAssembly):
         """
         return self.dac_det_ctrl
 
-    def write_dac_values(self):
+    def write_dac_values(self, addr=False):
         """Writes each of the DAC based attributes to the VSR DAC.
 
-        Writes the following attributes: :attr:`dac_vcal`, :attr:`dac_umid`,  :attr:`dac_hv`,
-        :attr:`dac_det_ctrl`, and :attr:`dac_reserve2`.
+        Writes the following attributes: :attr:`dac_vcal`, :attr:`dac_umid`,  :attr:`dac_hv`,  :attr:`dac_det_ctrl`, and
+        :attr:`dac_reserve2`.
 
         .. note::
-           The only way to return values from the VSR DAC is by performing a
-           :meth:`write_dac_values`. This method will return a :obj:`dict` of all values
-           **without** overwriting the VSR DAC based attributes.
+           The only way to return values from the VSR DAC is by performing a :meth:`write_dac_values`. This method
+           will return a :obj:`dict` of all values **without** overwriting the VSR DAC based attributes.
+
+        Args:
+            addr (:obj:`int`): Hardware address to target if set, otherwise own VSR module's.
 
         Returns:
-            :obj:`dict` of key/values pairs, where the keys are: `vcal`, `umid`, `hv`, `det_ctrl`
-                and `reserve2`.
+            :obj:`dict` of key/values pairs, where the keys are: `vcal`, `umid`, `hv`, `det_ctrl` and `reserve2`.
         """
+        address = self.addr
+        if addr:
+            address = addr
         dac_mask = 0xFFF  # Limit the DAC to 12 bits.
         nof_bytes = 2  # Each value unpacks into this many bytes.
         vsr_cmd = get_vsr_cmd_char("write_dac_values")
-        dac_values = [self.dac_vcal, self.dac_umid, self.dac_hv, self.dac_det_ctrl,
-                      self.dac_reserve2]
+        dac_values = [self.dac_vcal, self.dac_umid, self.dac_hv, self.dac_det_ctrl, self.dac_reserve2]
         wr_cmd = list()
         tmp_dict = dict()
         for val in dac_values:
             wr_cmd.extend(unpack_data_for_vsr_write(val, mask=dac_mask, nof_bytes=nof_bytes))
-        self._uart_write(self.addr, vsr_cmd, wr_cmd)
+        self._uart_write(address, vsr_cmd, wr_cmd)
         resp = self._rdma_ctrl_iface.uart_read()
         resp = self._check_uart_response(resp)
         tmp_dict['vcal'] = resp[0:4]
@@ -2116,16 +2130,6 @@ class VsrModule(VsrAssembly):
                                  spectroscopic_mode_en=False)  # 1243
         print(f"[INFO]: VSR{self.slot}: Finished Initialisation.")
 
-    # TODO Unused?
-    def write_lvds_training(self, wr_data):
-        """Writes `wr_data` to the HEXITEC_2X6_VSR_DATA_CTRL Kintex register.
-
-        Returns:
-            Nothing.
-        """
-        addr = VSR_FPGA_REGISTERS.REG137['addr']
-        self._fpga_reg_write(addr, wr_data)
-
     # TODO Used; Check PLLs before Kintex LVDS training
     def read_pll_status(self):
         """Reads the `PLL locked` value from the VSR FPGA Registered 137.
@@ -2135,15 +2139,15 @@ class VsrModule(VsrAssembly):
         """
         return self._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr'])
 
-    def _get_power_sensors(self, cmd_no=0):
+    def get_power_sensors(self):
         vsr_d = list()  # empty VSR data list to pass to: self.uart_write()
-        self._uart_write(self.addr, get_vsr_cmd_char("get_pwr"), vsr_d, cmd_no=cmd_no)
-        resp = self._read_response(cmd_no)
+        self._uart_write(self.addr, get_vsr_cmd_char("get_pwr"), vsr_d)
+        resp = self._rdma_ctrl_iface.uart_read()
         sensors_values = self._check_uart_response(resp)
-        hv_value = self.get_hv_value(sensors_values, None)
+        hv_value = self.get_hv_value(sensors_values)
         return hv_value
 
-    def get_hv_value(self, sensors_values, vsr):
+    def get_hv_value(self, sensors_values):
         """Take the full string of voltages and extract the HV value."""
         try:
             # Calculate V10, the 3.3V reference voltage
@@ -2154,50 +2158,23 @@ class VsrModule(VsrAssembly):
             hv_monitoring_voltage = u1 * 1621.65 - 1043.22 + 56
             return hv_monitoring_voltage
         except ValueError as e:
-            print("VSR %s: Error obtaining HV value: %s" %
-                  (format(vsr, '#02x'), e))
+            print(f"[ERROR]: VSR{self.slot}: Error obtaining HV value: {e}")
             return -1
-
-    def _read_response(self, cmd_no=0):
-        """Monitors UART Status, reads response once available."""
-        # print("uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done")
-        counter = 0
-        rx_pkt_done = 0
-        while not rx_pkt_done:
-            # _, _, _, _, _, rx_pkt_done = self._rdma_ctrl_iface.read_uart_status()
-            uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, \
-                rx_pkt_done = self._rdma_ctrl_iface.read_uart_status()
-            # if (counter % 10) == 0:
-            #     print(" *VM {0:X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X} counter: {6}".format(
-            #         uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done, counter))
-            counter += 1
-            if counter == 15001:
-                raise Exception("VsrMod: 0x{0:0X} UART read timed out".format(self.addr))
-                break
-        response = self._rdma_ctrl_iface.uart_read(cmd_no=cmd_no)
-        # print("... receiving: {} ({})".format(' '.join("0x{0:02X}".format(x) for x in response), counter))
-        return response
 
     # Added to implement coll_offsets() tasks
 
     def collect_offsets(self):
         """HexitecRdmaStatuses.collect_offsets() ported by CA."""
         print(f"[INFO]: VSR{self.slot}: Collecting offsets...")
-        # 2. Stop the state machine
-        # write_receive_to_all(vsr_list, 0x43, 0x30, 0x31, 0x30, 0x31)
-        self.disable_sm()
+        # 1. System is fully initialised (Done already)
 
+        # 2. Stop the state machine
+        self.disable_sm()
         # 3. Set reg 0x24 to 0x22
-        # print("Gathering offsets..")
-        # # Send reg value; Register 0x24, bits5,1: disable VCAL, capture average picture:
-        # write_receive_to_all(vsr_list, 0x40, 0x32, 0x34, 0x32, 0x32)
         self.set_dc_control_bits(capt_avg_pict=True, vcal_pulse_disable=True,
                                  spectroscopic_mode_en=False)
-
         # 4. Start the state machine
-        # write_receive_to_all(vsr_list, 0x42, 0x30, 0x31, 0x30, 0x31)
         self.enable_sm()
-
         # 5. Wait > 8192 * frame time (~1 second, @ 9118.87Hz)
         expected_duration = 8192 / 9118.87
         timeout = (expected_duration * 1.2) + 1
@@ -2212,25 +2189,25 @@ class VsrModule(VsrAssembly):
         # t_after = time.time()
         # time_taken = round(t_after - poll_beginning, 3)
         # print(f" Coll_offs took: {time_taken}, reg: {reg}")
-
         # 6. Stop state machine
-        # write_receive_to_all(vsr_list, 0x43, 0x30, 0x31, 0x30, 0x31)
         self.disable_sm()
-
         # 7. Set reg 0x24 to 0x28
-        # print("Offsets collected")
-        # # Send reg value; Register 0x24, bits5,3: disable VCAL, enable spectroscopic mode:
-        # write_receive_to_all(vsr_list, 0x40, 0x32, 0x34, 0x32, 0x38)
         self.set_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=False,
                                  spectroscopic_mode_en=True)  # 1229
-
         # 8. Start state machine
-        # write_receive_to_all(vsr_list, 0x42, 0x30, 0x31, 0x30, 0x31)
         self.enable_sm()
-
         # print("Ensure VCAL remains on")
-        # write_receive_to_all(vsr_list, 0x43, 0x32, 0x34, 0x32, 0x30)
         self.clr_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=True,
                                  spectroscopic_mode_en=False)
-
         print(f"[INFO]: VSR{self.slot}: Offsets Collected.")
+
+    def hv_on(self):
+        """Switch HV on."""
+        hv_address = 0xC0
+        self.enable_vsr(init_time=0.5, addr=hv_address)
+        current_dac_vals = self.write_dac_values(addr=hv_address)
+
+    def hv_off(self):
+        """Switch HV off."""
+        hv_address = 0xC0
+        self.disable_vsr(addr=hv_address)
