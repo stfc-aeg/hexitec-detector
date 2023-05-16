@@ -67,17 +67,14 @@ if __name__ == '__main__':  # pragma: no cover
         and can be determined by :meth:`VsrModule.lookup`"""
 
     vsr_1 = VsrModule(Hex2x6CtrlRdma, slot=1, addr_mapping=vsr_addr_mapping)
-    print("Beforehand")
-    print(f"[INFO] Status: {vsr_1.get_module_status()} | H/V Status: {vsr_1.get_hv_status()}")
 
-    # TODO Status of all VSRs
-    # vsr_status = vsr_1._get_status(hv=False, all_vsrs=True)
-    # hv_status = vsr_1._get_status(hv=True, all_vsrs=True)
-    # print("Beforehand")
-    # print(f"[INFO] Status:     {vsr_status}")
-    # print(f"[INFO] H/V Status: {hv_status}")
+    print(" Status of all VSRs ")
+    vsr_status = vsr_1._get_status(hv=False, all_vsrs=True)
+    hv_status = vsr_1._get_status(hv=True, all_vsrs=True)
+    print(f"[INFO] Status:     {vsr_status}")
+    print(f"[INFO] H/V Status: {hv_status}")
 
-    # # Switches VSR 1 on, enables HV - TODO Reverify
+    # print(" Switch VSR 1 on, enable HV ")
     # # Turn VSR1 on
     # print(f"[INFO] Slot: {vsr_1.get_slot()} | VSR Address: {hex(vsr_1.get_addr())}")
     # print(f"[INFO] Status: {vsr_1.get_module_status()} | H/V Status: {vsr_1.get_hv_status()}")
@@ -90,7 +87,8 @@ if __name__ == '__main__':  # pragma: no cover
     # # Check statuses
     # print(f"[INFO] Status: {vsr_1.get_module_status()} | H/V Status: {vsr_1.get_hv_status()}")
 
-    # TODO: Controlling all VSRs - Verified
+    print(" # Aspect - Init")
+    # print(" Control VSRs ")
     VSRs = VsrModule(Hex2x6CtrlRdma, slot=0, addr_mapping=vsr_addr_mapping)
     print("Switching all VSRs on..")
     success = VSRs.enable_module()
@@ -115,15 +113,16 @@ if __name__ == '__main__':  # pragma: no cover
     vsr_6 = VsrModule(Hex2x6CtrlRdma, slot=6, addr_mapping=vsr_addr_mapping)
     vsr_list.append(vsr_6)
 
-    for vsr in vsr_list:
-        print(f"[INFO]: VSR{vsr.slot} temperature: {vsr.get_temperature()}")
+    # for vsr in vsr_list:
+    #     print(f"[INFO]: VSR{vsr.slot} temperature: {vsr.get_temperature()}")
 
     # Initialise VSR, train Kintex VLDS, Check VSR locked
 
+    print(" # Aspect - Configure")
     for vsr in vsr_list:
         vsr.initialise()
 
-    print("Did PLL(s) lock?")
+    print("(Did PLL(s) lock? - Not part of idMATE_Sequence..xlsx instructions)")
     bPolling = True
     while bPolling:
         pll_status = vsr_1.read_pll_status()
@@ -133,8 +132,14 @@ if __name__ == '__main__':  # pragma: no cover
             time.sleep(0.2)
 
     # Training Kintex
-
+    print(" # Aspect - Training")
     VSR_DATA_CTRL = HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL
+    # Debug:
+    rval = Hex2x6CtrlRdma.udp_rdma_read(address=VSR_DATA_CTRL['addr'],
+                                        burst_len=1,
+                                        comment=VSR_DATA_CTRL['description'])[0]
+    print(f" 1) K.FPGA Reg 32: 0x{rval:X}")
+    #
     Hex2x6CtrlRdma.udp_rdma_write(address=VSR_DATA_CTRL['addr'],
                                   data=0x10, burst_len=1,
                                   comment=VSR_DATA_CTRL['description'])
@@ -155,18 +160,112 @@ if __name__ == '__main__':  # pragma: no cover
             print("VSR{0} incomplete lock! (0x{1:X}) ****".format(vsr.addr-143, locked))
         vsr_status_addr += 4
 
-    print("-=-=-=-=- Dark Images -=-=-=-=-")
+    print(" # Aspect - Prepare Image Acq")
+    """
+		UART	Write Sequence	Sequence File=<<U:\idMATE Setup\idFLINK\allVSR_Run.txt>>	enable triggered SM start
+		FPGA Register	Write Register	Register Address=7;Register Value=1	Set re_EN_SM to '1'
+    ## allVSR_Run.txt
+    90	40	1	30	;
+    90	40	A	1	;
+    91  40  1   30  ;
+    ..
+    95  14  A   1   ;
+    """
     for vsr in vsr_list:
-        vsr.collect_offsets()
-    print("-=-=-=-=-     Done    -=-=-=-=-")
+        vsr.write_sync_reset_daq()
+        vsr.write_sync_sm_start_trigger()
+    """ Set re_EN_SM to '1' """
+    VSR_MODE_CTRL = HEX_REGISTERS.HEXITEC_2X6_VSR_MODE_CTRL
+    rval = Hex2x6CtrlRdma.udp_rdma_read(address=VSR_MODE_CTRL['addr'],
+                                        burst_len=1,
+                                        comment=VSR_MODE_CTRL['description'])[0]
+    print(f" 1) K.FPGA Reg 28: 0x{rval:X} - Before Set re_EN_SM to '1'")
+    Hex2x6CtrlRdma.udp_rdma_write(address=VSR_MODE_CTRL['addr'],
+                                  data=0x1, burst_len=1,
+                                  comment=VSR_MODE_CTRL['description'])
+    rval = Hex2x6CtrlRdma.udp_rdma_read(address=VSR_MODE_CTRL['addr'],
+                                        burst_len=1,
+                                        comment=VSR_MODE_CTRL['description'])[0]
+    print(f" 2) K.FPGA Reg 28: 0x{rval:X}")
 
-    print("Controlling the HV - on")
-    vsr_1.hv_on()
-    time.sleep(1)
-    print(" Turning it off now..")
-    vsr_1.hv_off()
-    print(" All Done")
+    print(" # Aspect - Image Acq Debug [redundant? Skipping for now..]")
+    """
+		FPGA Register	Write Register	Register Address=8;Register Value=257	Set re_EN_SM and re_EN_SYNTH_DATA to '1'
+			Wait	100 ms	Aquire Image Data
+		FPGA Register	Write Register	Register Address=8;Register Value=0	Set re_EN_SM and re_EN_SYNTH_DATA to '0'
+    """
 
-    print(" Readout HV Power")
-    for vsr in vsr_list:
-        print(f"VSR{vsr.slot} HV: {round(vsr_1.get_power_sensors(), 2)}")
+    print(" # Aspect - Image Acq")
+    """
+		FPGA Register	Write Register	Register Address=8;Register Value=1	Set re_EN_SM to '1'
+			Wait	100 ms	Aquire Image Data
+		FPGA Register	Write Register	Register Address=8;Register Value=0	Set re_EN_SM to '0'
+    """
+    VSR_DATA_CTRL = HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL
+    # Debug:
+    rval = Hex2x6CtrlRdma.udp_rdma_read(address=VSR_DATA_CTRL['addr'],
+                                        burst_len=1,
+                                        comment=VSR_DATA_CTRL['description'])[0]
+    print(f" 1) K.FPGA Reg 32: 0x{rval:X} - Before Set re_EN_SM to '1'")
+    #
+    Hex2x6CtrlRdma.udp_rdma_write(address=VSR_DATA_CTRL['addr'],
+                                  data=0x1, burst_len=1,
+                                  comment=VSR_DATA_CTRL['description'])
+    time.sleep(0.1)
+    # Debug:
+    rval = Hex2x6CtrlRdma.udp_rdma_read(address=VSR_DATA_CTRL['addr'],
+                                        burst_len=1,
+                                        comment=VSR_DATA_CTRL['description'])[0]
+    print(f" 2) K.FPGA Reg 32: 0x{rval:X} - Before Set re_EN_SM to '0'")
+    time.sleep(0.1)
+    #
+    Hex2x6CtrlRdma.udp_rdma_write(address=VSR_DATA_CTRL['addr'],
+                                  data=0x0, burst_len=1,
+                                  comment=VSR_DATA_CTRL['description'])
+    # Debug:
+    rval = Hex2x6CtrlRdma.udp_rdma_read(address=VSR_DATA_CTRL['addr'],
+                                        burst_len=1,
+                                        comment=VSR_DATA_CTRL['description'])[0]
+    print(f" 3) K.FPGA Reg 32: 0x{rval:X} - After Set re_EN_SM to '0'")
+
+    # TODO Running aspect's exit recipe prevents readout!
+    # print(" # Aspect - Exit")
+    # """
+	# 	FPGA Register	Write Register	Register Address=6;Register Value=0	Set re_EN_VSR to 0x0
+    #     # NOT setting the following line - it will disable the Kintex main clock!
+	# 	FPGA Register	Write Register	Register Address=2;Register Value=0	Set re_EN_CLK to '0'
+    # """
+    # VSR_CTRL = HEX_REGISTERS.HEXITEC_2X6_VSR_CTRL
+    # # Debug:
+    # rval = Hex2x6CtrlRdma.udp_rdma_read(address=VSR_CTRL['addr'],
+    #                                     burst_len=1,
+    #                                     comment=VSR_CTRL['description'])[0]
+    # print(f" 1) K.FPGA Reg 24: 0x{rval:X} - Before Set re_EN_VSR to 0x0")
+    # #
+    # Hex2x6CtrlRdma.udp_rdma_write(address=VSR_CTRL['addr'],
+    #                               data=0x0, burst_len=1,
+    #                               comment=VSR_CTRL['description'])
+    # time.sleep(0.1)
+    # # Debug:
+    # rval = Hex2x6CtrlRdma.udp_rdma_read(address=VSR_CTRL['addr'],
+    #                                     burst_len=1,
+    #                                     comment=VSR_CTRL['description'])[0]
+    # print(f" 2) K.FPGA Reg 24: 0x{rval:X} - After Set re_EN_VSR to 0x0")
+    # #
+
+    # # Collect offsets, switching HV on, checking HV power - Not part of aspect's readout recipe
+    # print("-=-=-=-=- Dark Images -=-=-=-=-")
+    # for vsr in vsr_list:
+    #     vsr.collect_offsets()
+    # print("-=-=-=-=-     Done    -=-=-=-=-")
+
+    # print("Controlling the HV - on")
+    # vsr_1.hv_on()
+    # time.sleep(1)
+    # print(" Turning it off now..")
+    # vsr_1.hv_off()
+    # print(" All Done")
+
+    # print(" Readout HV Power")
+    # for vsr in vsr_list:
+    #     print(f"VSR{vsr.slot} HV: {round(vsr_1.get_power_sensors(), 2)}")
