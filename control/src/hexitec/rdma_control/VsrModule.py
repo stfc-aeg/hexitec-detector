@@ -48,8 +48,6 @@ def get_vsr_cmd_char(code):
         return 0xFF
     elif code.lower() == "whois":
         return 0xF7
-    elif code.lower() == "get_pwr":
-        return 0x50
     elif code.lower() == "get_env":
         return 0x52
     elif code.lower() == "enable":
@@ -70,6 +68,8 @@ def get_vsr_cmd_char(code):
         return 0x44
     elif code.lower() == "fpga_reg_write_stream":
         return 0x46
+    elif code.lower() == "get_pwr":
+        return 0x50
     elif code.lower() == "fpga_active_reg_readback":
         return 0x51
     elif code.lower() == "write_dac_values":
@@ -161,6 +161,26 @@ def unpack_data_for_vsr_write(dat, mask=0xFFF, nof_bytes=2):
         unpacked_dat = [*(convert_to_ascii(shifted, zero_pad=True)), *unpacked_dat]
     return unpacked_dat
 
+def enable_training(vsr_list, time_s=0.1):
+    vsr = ''
+    for vsr in vsr_list:
+        vsr._enable_training()
+
+    ctrl_reg = rdma.set_field(HEXITEC_2X6_VSR_DATA_CTRL, "TRAINING_EN",
+                              vsr._fpga_reg_read(HEXITEC_2X6_VSR_DATA_CTRL['addr']), 1)
+    vsr._fpga_reg_write(HEXITEC_2X6_VSR_DATA_CTRL['addr'], ctrl_reg)
+
+    time.sleep(time_s)
+
+def disable_training(vsr_list):
+    vsr = ''
+    for vsr in vsr_list:
+        vsr._disable_training()
+
+    ctrl_reg = rdma.clr_field(HEXITEC_2X6_VSR_DATA_CTRL, "TRAINING_EN",
+                              vsr._fpga_reg_read(HEXITEC_2X6_VSR_DATA_CTRL['addr']))
+    vsr._fpga_reg_write(HEXITEC_2X6_VSR_DATA_CTRL['addr'], ctrl_reg)
+
 
 class VsrAssembly(object):
     """Class for globally controlling all VSR modules on a Hexitec assembly.
@@ -216,9 +236,9 @@ class VsrAssembly(object):
         self._adc_enabled_flag = False
         self._dac_enabled_flag = False
 
-    def __del__(self):
-        self.hv_disable()
-        self.disable_module()
+    # def __del__(self):
+    #     self.hv_disable()
+    #     self.disable_module()
 
     def get_slot(self):
         """Returns the slot number, hosting the VSR module.
@@ -881,7 +901,7 @@ class VsrModule(VsrAssembly):
         calc_asic1_temp = round(convert_from_ascii(resp[8:12]) * 0.0625, 2)
         calc_asic2_temp = round(convert_from_ascii(resp[12:16]) * 0.0625, 2)
         calc_adc_temp = round(convert_from_ascii(resp[16:20]) * 0.0625, 2)
-        ret_tup = f"{calc_ambient_temp}°C", f"{calc_humidity}%",\
+        ret_tup = f"{calc_ambient_temp}", f"{calc_humidity}%",\
             f"{calc_asic1_temp}°C", f"{calc_asic2_temp}°C", \
             f"{calc_adc_temp}°C"
         return ret_tup
@@ -1447,6 +1467,34 @@ class VsrModule(VsrAssembly):
                                   self._fpga_reg_read(VSR_FPGA_REGISTERS.REG1['addr']), 1)
         self._fpga_reg_write(VSR_FPGA_REGISTERS.REG1['addr'], ctrl_reg)
 
+    def _disable_training(self):
+        """De-asserts the Training Pattern Enable bit in the control register.
+
+        Returns:
+            Nothing.
+        """
+        ctrl_reg = rdma.clr_field(VSR_FPGA_REGISTERS.REG1, "TRAINING_PATTERN_EN",
+                                  self._fpga_reg_read(VSR_FPGA_REGISTERS.REG1['addr']))
+        self._fpga_reg_write(VSR_FPGA_REGISTERS.REG1['addr'], ctrl_reg)
+
+    def _enable_training(self, time_s=0.1):
+        """Asserts the Training Pattern Enable bit in the control register.
+
+        Returns:
+            Nothing.
+        """
+        ctrl_reg = rdma.set_field(VSR_FPGA_REGISTERS.REG1, "TRAINING_PATTERN_EN",
+                                  self._fpga_reg_read(VSR_FPGA_REGISTERS.REG1['addr']), 1)
+        self._fpga_reg_write(VSR_FPGA_REGISTERS.REG1['addr'], ctrl_reg)
+
+        time.sleep(time_s)
+
+    def start_trigger_sm(self):
+        ctrl_reg = rdma.set_field(VSR_FPGA_REGISTERS.REG10, "TRIGGER_START_SM",
+                                  self._fpga_reg_read(VSR_FPGA_REGISTERS.REG10['addr']), 1)
+        self._fpga_reg_write(VSR_FPGA_REGISTERS.REG1['addr'], ctrl_reg)
+
+
     def enable_plls(self, pll=True, adc_pll=True):
         """Enables the VSR PLLs.
 
@@ -1502,6 +1550,7 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         ctrl_reg = self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr'])
+        print(f" 1488 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}  set_dc_control_bits")
         if capt_avg_pict:
             ctrl_reg = rdma.set_field(VSR_FPGA_REGISTERS.REG36, "CAPT_AVG_PICT", ctrl_reg, 1)
         if vcal_pulse_disable:
@@ -1510,6 +1559,7 @@ class VsrModule(VsrAssembly):
             ctrl_reg = rdma.set_field(VSR_FPGA_REGISTERS.REG36, "SPECTROSCOPIC_MODE_EN",
                                       ctrl_reg, 1)
         self._fpga_reg_write(VSR_FPGA_REGISTERS.REG36['addr'], ctrl_reg)
+        print(f" 1496 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}")
 
     def clr_dc_control_bits(self, capt_avg_pict=True, vcal_pulse_disable=True,
                             spectroscopic_mode_en=True):
@@ -1527,6 +1577,7 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         ctrl_reg = self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr'])
+        print(f" 1513 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}  clr_dc_control_bits")
         if capt_avg_pict:
             ctrl_reg = rdma.clr_field(VSR_FPGA_REGISTERS.REG36, "CAPT_AVG_PICT", ctrl_reg)
         if vcal_pulse_disable:
@@ -1534,6 +1585,7 @@ class VsrModule(VsrAssembly):
         if spectroscopic_mode_en:
             ctrl_reg = rdma.clr_field(VSR_FPGA_REGISTERS.REG36, "SPECTROSCOPIC_MODE_EN", ctrl_reg)
         self._fpga_reg_write(VSR_FPGA_REGISTERS.REG36['addr'], ctrl_reg)
+        print(f" 1521 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}")
 
     def enable_all_columns(self, asic=1):
         """Writes the masks to enable Read and Power for Columns of the target ASIC.
@@ -1723,12 +1775,13 @@ class VsrModule(VsrAssembly):
         Returns:
             Nothing.
         """
+        # print(" enable_all_rows_cal: 1693, asic=", asic)
         if asic == 2:
             en_start_addrs = [VSR_FPGA_REGISTERS.REG57['addr']]
         else:
             en_start_addrs = [VSR_FPGA_REGISTERS.REG154['addr']]
         for s_addr in en_start_addrs:
-            self._fpga_reg_write_burst(s_addr, set_row_column_mask(all_elements=True))
+            self._fpga_reg_write_burst(s_addr, set_row_column_mask(all_as_value=0x05))
 
     def disable_all_rows_cal(self, asic=1):
         """Writes the masks to disable Calibration for Rows of the target ASIC.
@@ -1758,9 +1811,11 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         self.enable_all_columns(asic=asic)
-        self.disable_all_columns_cal(asic=asic)
+        # self.disable_all_columns_cal(asic=asic)
+        self.enable_all_columns_cal(asic=asic)
         self.enable_all_rows(asic=asic)
-        self.disable_all_rows_cal(asic=asic)
+        # self.disable_all_rows_cal(asic=asic)
+        self.enable_all_rows_cal(asic=asic)
 
     def set_dac_vcal(self, val):
         """Sets the value of V\ :sub:`cal` attribute *without* writing to the VSR DAC.
@@ -1797,7 +1852,7 @@ class VsrModule(VsrAssembly):
 
         .. warning::
            This method *DOES NOT* load the U\ :sub:`mid` value into the VSR DAC. Use
-           meth:`write_dac_values` to write all `DAC` attributes to the VSR DAC.
+           :meth:`write_dac_values` to write all `DAC` attributes to the VSR DAC.
 
         Args:
             val (:obj:`int`): A 12 bit :obj:`int` representing the DAC U\ :sub:`mid` value.
@@ -2088,7 +2143,7 @@ class VsrModule(VsrAssembly):
         self.enable_adc_and_dac()
         self.write_adc_values(self.get_adc_output_phase())
 
-    def initialise(self):
+    def initialise(self, training_delay=0.1):
         """Initialise the VSR.
 
         Before running :meth:`initialise` ensure the correct configuration is loaded using
@@ -2108,9 +2163,8 @@ class VsrModule(VsrAssembly):
         self.write_adc_signal_delay()
         self.write_sm_row_wait_clock()
         self.start_sm_on_falling_edge()
-        # asserting the serial interface reset bit corresponds with line 1196
-        # (enable LVDS interface) of:
-        # https://github.com/stfc-aeg/hexitec-detector/blob/rdma_rework_from_gitlab/control/src/hexitec/HexitecFem.py
+        # asserting the serial interface reset bit corresponds with line 1196 (enable LVDS interface) of:
+        # https://github.com/stfc-aeg/hexitec-detector/blob/761ff3aa1008de4fc3fac1b7fdb5c02880168371/control/src/hexitec/HexitecFem.py
         self.assert_serial_iface_rst()  # 1196
         asics = [1, 2]
         for asic in asics:
@@ -2119,18 +2173,52 @@ class VsrModule(VsrAssembly):
         self.init_adc()  # 1216
         self.set_dc_control_bits(capt_avg_pict=True, vcal_pulse_disable=True,
                                  spectroscopic_mode_en=False)  # 1226
-        # \TODO: Check if the spectroscopic_mode_en is already enabled or if it needs to be toggled
-        #        off/on via the previous :meth:`write_dc_control_bits`.
-        self.set_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=False,
-                                 spectroscopic_mode_en=True)  # 1229
+        # \TODO: Check if the spectroscopic_mode_en is already enabled or if it needs to be toggled off/on via the
+        #        previous :meth:`write_dc_control_bits`.
+        # self.set_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=False, spectroscopic_mode_en=True)  # 1229
         print(f"[INFO]: VSR{self.slot}: Starting LVDS Training...")
-        self.enable_training()  # 1231
+        # self.enable_training(time_s=training_delay)  # 1231
+        self._enable_training(time_s=training_delay)
+        # input("training enabled, press enter")
+        # self.disable_training()
+        # self._disable_training()
+        # input("training disabled, press enter")
         self.write_sm_vcal_clock()  # 1238 & 1240
         self.clr_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=True,
                                  spectroscopic_mode_en=False)  # 1243
         print(f"[INFO]: VSR{self.slot}: Finished Initialisation.")
 
-    # TODO Used; Check PLLs before Kintex LVDS training
+    def get_power(self):
+        vsr_d = list()  # empty VSR data list to pass to: self.uart_write()
+        self._uart_write(self.addr, 0x50 , vsr_d)
+        resp = self._rdma_ctrl_iface.uart_read()
+        resp = self._check_uart_response(resp)
+        MAX1239_INT_REF_V = 2.048
+        U10_REF_V = 3.3
+
+        # calc_hv_monitor_rail = round((convert_from_ascii(resp[36:40]) * 1621.65 ) - 1043.22,2)
+        calc_3v3 = convert_from_ascii(resp[36:40]) * (MAX1239_INT_REF_V / 4095)
+        u1 = convert_from_ascii(resp[0:4]) * (calc_3v3 / 2 ** 12)
+        calc_hv_monitor_rail = round(u1 * 1621.65 - 1043.22 , 2) # Removed " + 56 " found in Christian's code
+        calc_1v2 = round(convert_from_ascii(resp[4:8]) * ( U10_REF_V / 2**12 ), 2)
+        calc_1v8 = round(convert_from_ascii(resp[8:12]) * ( U10_REF_V / 2**12 ), 2)
+        #reserved
+        calc_2v5 = round(convert_from_ascii(resp[16:20]) * ( U10_REF_V / 2**12 ), 2)
+        calc_3v3_ln = round(convert_from_ascii(resp[20:24]) * ( U10_REF_V / 2**12 ), 2)
+        calc_1v65 = round(convert_from_ascii(resp[24:28]) * ( U10_REF_V / 2**12 ), 2)
+        calc_1vb8 = round(convert_from_ascii(resp[28:32]) * ( U10_REF_V / 2**12 ), 2)
+        calc_3v8 = round(convert_from_ascii(resp[32:36]) * ( U10_REF_V / 2**12 ), 2)
+        calc_3v3 = round(convert_from_ascii(resp[36:40]) * (MAX1239_INT_REF_V / 2 ** 12), 2)
+
+        #reserved
+        #reserved
+        ret_tup = f"{calc_hv_monitor_rail}V", f"{calc_1v2}V",\
+            f"{calc_1v8}V", f"{calc_2v5}V", \
+            f"{calc_3v3_ln}V", f"{calc_1v65}V", \
+            f"{calc_1vb8}V", f"{calc_3v8}V", \
+            f"{calc_3v3}V"
+        return ret_tup
+
     def read_pll_status(self):
         """Reads the `PLL locked` value from the VSR FPGA Registered 137.
 
@@ -2166,15 +2254,21 @@ class VsrModule(VsrAssembly):
     def collect_offsets(self):
         """HexitecRdmaStatuses.collect_offsets() ported by CA."""
         print(f"[INFO]: VSR{self.slot}: Collecting offsets...")
-        # 1. System is fully initialised (Done already)
-
         # 2. Stop the state machine
+        # write_receive_to_all(vsr_list, 0x43, 0x30, 0x31, 0x30, 0x31)
         self.disable_sm()
+
         # 3. Set reg 0x24 to 0x22
+        # print("Gathering offsets..")
+        # # Send reg value; Register 0x24, bits5,1: disable VCAL, capture average picture:
+        # write_receive_to_all(vsr_list, 0x40, 0x32, 0x34, 0x32, 0x32)
         self.set_dc_control_bits(capt_avg_pict=True, vcal_pulse_disable=True,
                                  spectroscopic_mode_en=False)
+
         # 4. Start the state machine
+        # write_receive_to_all(vsr_list, 0x42, 0x30, 0x31, 0x30, 0x31)
         self.enable_sm()
+
         # 5. Wait > 8192 * frame time (~1 second, @ 9118.87Hz)
         expected_duration = 8192 / 9118.87
         timeout = (expected_duration * 1.2) + 1
@@ -2189,16 +2283,27 @@ class VsrModule(VsrAssembly):
         # t_after = time.time()
         # time_taken = round(t_after - poll_beginning, 3)
         # print(f" Coll_offs took: {time_taken}, reg: {reg}")
+
         # 6. Stop state machine
+        # write_receive_to_all(vsr_list, 0x43, 0x30, 0x31, 0x30, 0x31)
         self.disable_sm()
+
         # 7. Set reg 0x24 to 0x28
+        # print("Offsets collected")
+        # # Send reg value; Register 0x24, bits5,3: disable VCAL, enable spectroscopic mode:
+        # write_receive_to_all(vsr_list, 0x40, 0x32, 0x34, 0x32, 0x38)
         self.set_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=False,
                                  spectroscopic_mode_en=True)  # 1229
+
         # 8. Start state machine
+        # write_receive_to_all(vsr_list, 0x42, 0x30, 0x31, 0x30, 0x31)
         self.enable_sm()
+
         # print("Ensure VCAL remains on")
+        # write_receive_to_all(vsr_list, 0x43, 0x32, 0x34, 0x32, 0x30)
         self.clr_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=True,
                                  spectroscopic_mode_en=False)
+
         print(f"[INFO]: VSR{self.slot}: Offsets Collected.")
 
     def hv_on(self):
@@ -2211,3 +2316,26 @@ class VsrModule(VsrAssembly):
         """Switch HV off."""
         hv_address = 0xC0
         self.disable_vsr(addr=hv_address)
+
+    def write_sync_reset_daq(self):
+        """Writes SYNC clock, reset interface to the VSR FPGA register.
+            i.e. enabling these two bits in register 0x01:
+        4 Use SYNC clock from DAQ Board
+        5 0 -> Reset serial Interface to DAQ Board
+        Returns:
+            Nothing.
+        """
+        wr_data = 0x30 & VSR_FPGA_REGISTERS.REG1['mask']
+        addr = VSR_FPGA_REGISTERS.REG1['addr']
+        self._fpga_reg_write(addr, wr_data)
+
+    def write_sync_sm_start_trigger(self):
+        """Writes synchronized SM start to the VSR FPGA register.
+            i.e. write first bit in register 0x0A:
+        0 enable synchronized SM start via Trigger
+        Returns:
+            Nothing.
+        """
+        wr_data = 0x1 & VSR_FPGA_REGISTERS.REG10['mask']
+        addr = VSR_FPGA_REGISTERS.REG10['addr']
+        self._fpga_reg_write(addr, wr_data)

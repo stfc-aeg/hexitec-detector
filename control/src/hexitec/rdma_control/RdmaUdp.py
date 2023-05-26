@@ -17,17 +17,10 @@
 """
 import socket
 import struct
+import time
 
 from . import UART_RDMA_REGISTERS as UART_REGS
 from . import rdma_register_helpers as rdma
-
-
-# TEMPORARY: Global variables to support read_uart_status() function
-tx_buff_full_mask = 0x1
-tx_buff_empty_mask = 0x2
-rx_buff_full_mask = 0x4
-rx_buff_empty_mask = 0x8
-rx_pkt_done_mask = 0x10
 
 
 def _errorResponse(e, msg, etype="socket", address=0, burst_len=1, op_code=0, cmd_no=0,
@@ -415,8 +408,10 @@ class RdmaUDP(object):
         Returns:
             :obj:`list` of bytes as :obj:`int`: for all data read from the `UART` receive buffer.
         """
-        # Poll UART to ensure data ready before reading
-        self.read_response()
+        # The following time.sleep(0.2) is required to allow time for the response to be queued in the UART Read FIFO
+        cmd_no = self.cmd_no
+        time.sleep(0.2)
+        # counter = self.uart_read_wait()
         rx_d = list()
         # check RX_BUFF_EMTY
         status_reg = self.udp_rdma_read(UART_REGS.UART_STATUS['addr'] + self.uart_offset,
@@ -460,6 +455,7 @@ class RdmaUDP(object):
         Returns:
             Nothing.
         """
+        cmd_no = self.cmd_no
         # queue each byte in the UART Tx FIFO
         for b in wr_d:
             # load TX_DATA and set TX_FILL_STRB
@@ -497,44 +493,58 @@ class RdmaUDP(object):
                                 burst_len=1,
                                 comment=UART_REGS.UART_TX_CTRL['description'])
 
-    def read_uart_status(self):
+    def read_status_reg(self):
         """Poll the UART reg (0x10)."""
         cmd_no = self.cmd_no
         op_code = get_rdma_opcode("read")
         address = UART_REGS.UART_STATUS['addr']
         # TODO Above address incorrect, hardcoded to fix this:
-        address = 0x10
+        # address = 0x10
         burst_len = 1
         comment = UART_REGS.UART_STATUS['description']
-        is_tx_buff_full = 0
-        is_tx_buff_empty = 0
-        is_rx_buff_full = 0
-        is_rx_buff_empty = 0
-        is_rx_pkt_done = 0
-        uart_status = (0, )
+        tx_buff_full = 0
+        tx_buff_empty = 0
+        rx_buff_full = 0
+        rx_buff_empty = 0
+        rx_pkt_done = 0
+        status_reg = (0, )
         try:
-            uart_status = self.udp_rdma_read(address, burst_len=burst_len, comment=comment)[0]
-            is_tx_buff_full = uart_status & tx_buff_full_mask
-            is_tx_buff_empty = (uart_status & tx_buff_empty_mask) >> 1
-            is_rx_buff_full = (uart_status & rx_buff_full_mask) >> 2
-            is_rx_buff_empty = (uart_status & rx_buff_empty_mask) >> 3
-            is_rx_pkt_done = (uart_status & rx_pkt_done_mask) >> 4
+            status_reg = self.udp_rdma_read(address + self.uart_offset,
+            # status_reg = self.udp_rdma_read(UART_REGS.UART_STATUS['addr'] + self.uart_offset,
+                                                    burst_len=1,
+                                                    comment=UART_REGS.UART_STATUS['description'])[0]
+            # Extract fields using one or more of the following:
+            # Field names can be found here:
+            #    http://www-local.technology.stfc.ac.uk/ESDG/documentation/common-libraries/hexitec_2x6/latest/auto_generated_mmaps.html
+            tx_buff_full = rdma.decode_field(UART_REGS.UART_STATUS, "TX_BUFF_FULL", status_reg)
+            tx_buff_empty = rdma.decode_field(UART_REGS.UART_STATUS, "TX_BUFF_EMTY", status_reg)
+            rx_buff_full = rdma.decode_field(UART_REGS.UART_STATUS, "RX_BUFF_FULL", status_reg)
+            rx_buff_empty = rdma.decode_field(UART_REGS.UART_STATUS, "RX_BUFF_EMTY", status_reg)
+            rx_pkt_done = rdma.decode_field(UART_REGS.UART_STATUS, "RX_PKT_DONE", status_reg)
+            rx_buff_level = rdma.decode_field(UART_REGS.UART_STATUS, "RX_BUFF_LEVEL", status_reg)
         except Exception as e:
             _errorResponse(e, "Read failed", address=address,
                            burst_len=burst_len, op_code=op_code, cmd_no=cmd_no, comment=comment)
-        return uart_status, is_tx_buff_full, is_tx_buff_empty, is_rx_buff_full, \
-            is_rx_buff_empty, is_rx_pkt_done
+        return status_reg, tx_buff_full, tx_buff_empty, rx_buff_full, \
+            rx_buff_empty, rx_pkt_done
 
-    def read_response(self):
+    def uart_read_wait(self):
         """Monitors UART Status, reads response once available."""
+        # print("uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done")
         counter = 0
         rx_pkt_done = 0
         while not rx_pkt_done:
-            _, _, _, _, _, rx_pkt_done = self.read_uart_status()
+            # _, _, _, _, _, rx_pkt_done = self.read_status_reg()
+            uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, \
+                rx_pkt_done = self.read_status_reg()
+            # if (counter % 15001) == 0:
+            #     print(" *VM {0:X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X} counter: {6}".format(
+            #         uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done, counter))
             counter += 1
             if counter == 15001:
                 raise Exception("UART read timed out")
                 break
+        return counter
 
     # def _iic_read_fifo(self, size, idx=1, cmd_no=0):
     #     """Read `N` words from IIC Rx FIFO.

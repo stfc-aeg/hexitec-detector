@@ -162,9 +162,9 @@ if __name__ == '__main__':  # pragma: no cover
 
     print(" # Aspect - Prepare Image Acq")
     """
-		UART	Write Sequence	Sequence File=<<U:\idMATE Setup\idFLINK\allVSR_Run.txt>>	enable triggered SM start
-		FPGA Register	Write Register	Register Address=7;Register Value=1	Set re_EN_SM to '1'
-    ## allVSR_Run.txt
+    UART	Write Sequence	Sequence File=<<U:\idMATE Setup\idFLINK\allVSR_Run.txt>>	enable triggered SM start
+    FPGA Register	Write Register	Register Address=7;Register Value=1	Set re_EN_SM to '1'
+    # allVSR_Run.txt:
     90	40	1	30	;
     90	40	A	1	;
     91  40  1   30  ;
@@ -190,16 +190,16 @@ if __name__ == '__main__':  # pragma: no cover
 
     print(" # Aspect - Image Acq Debug [redundant? Skipping for now..]")
     """
-		FPGA Register	Write Register	Register Address=8;Register Value=257	Set re_EN_SM and re_EN_SYNTH_DATA to '1'
-			Wait	100 ms	Aquire Image Data
-		FPGA Register	Write Register	Register Address=8;Register Value=0	Set re_EN_SM and re_EN_SYNTH_DATA to '0'
+    FPGA Register	Write Register	Register Address=8;Register Value=257	Set re_EN_SM and re_EN_SYNTH_DATA to '1'
+        Wait	100 ms	Aquire Image Data
+    FPGA Register	Write Register	Register Address=8;Register Value=0	Set re_EN_SM and re_EN_SYNTH_DATA to '0'
     """
 
     print(" # Aspect - Image Acq")
     """
-		FPGA Register	Write Register	Register Address=8;Register Value=1	Set re_EN_SM to '1'
-			Wait	100 ms	Aquire Image Data
-		FPGA Register	Write Register	Register Address=8;Register Value=0	Set re_EN_SM to '0'
+    FPGA Register	Write Register	Register Address=8;Register Value=1	Set re_EN_SM to '1'
+        Wait	100 ms	Aquire Image Data
+    FPGA Register	Write Register	Register Address=8;Register Value=0	Set re_EN_SM to '0'
     """
     VSR_DATA_CTRL = HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL
     # Debug:
@@ -207,7 +207,10 @@ if __name__ == '__main__':  # pragma: no cover
                                         burst_len=1,
                                         comment=VSR_DATA_CTRL['description'])[0]
     print(f" 1) K.FPGA Reg 32: 0x{rval:X} - Before Set re_EN_SM to '1'")
-    #
+    input("1 hit enter")
+    # Requires brief pause otherwise no data output
+    time.sleep(1)
+    # Triggers data to be read out
     Hex2x6CtrlRdma.udp_rdma_write(address=VSR_DATA_CTRL['addr'],
                                   data=0x1, burst_len=1,
                                   comment=VSR_DATA_CTRL['description'])
@@ -218,7 +221,8 @@ if __name__ == '__main__':  # pragma: no cover
                                         comment=VSR_DATA_CTRL['description'])[0]
     print(f" 2) K.FPGA Reg 32: 0x{rval:X} - Before Set re_EN_SM to '0'")
     time.sleep(0.1)
-    #
+    # Stops data read out
+    # input("2 hit enter")
     Hex2x6CtrlRdma.udp_rdma_write(address=VSR_DATA_CTRL['addr'],
                                   data=0x0, burst_len=1,
                                   comment=VSR_DATA_CTRL['description'])
@@ -231,9 +235,9 @@ if __name__ == '__main__':  # pragma: no cover
     # TODO Running aspect's exit recipe prevents readout!
     # print(" # Aspect - Exit")
     # """
-	# 	FPGA Register	Write Register	Register Address=6;Register Value=0	Set re_EN_VSR to 0x0
-    #     # NOT setting the following line - it will disable the Kintex main clock!
-	# 	FPGA Register	Write Register	Register Address=2;Register Value=0	Set re_EN_CLK to '0'
+    # FPGA Register	Write Register	Register Address=6;Register Value=0	Set re_EN_VSR to 0x0
+    # # NOT setting the following line - it will disable the Kintex main clock!
+    # FPGA Register	Write Register	Register Address=2;Register Value=0	Set re_EN_CLK to '0'
     # """
     # VSR_CTRL = HEX_REGISTERS.HEXITEC_2X6_VSR_CTRL
     # # Debug:
