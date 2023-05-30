@@ -410,8 +410,8 @@ class RdmaUDP(object):
         """
         # The following time.sleep(0.2) is required to allow time for the response to be queued in the UART Read FIFO
         cmd_no = self.cmd_no
-        time.sleep(0.2)
-        # counter = self.uart_read_wait()
+        # time.sleep(0.2)
+        counter = self.uart_read_wait()
         rx_d = list()
         # check RX_BUFF_EMTY
         status_reg = self.udp_rdma_read(UART_REGS.UART_STATUS['addr'] + self.uart_offset,

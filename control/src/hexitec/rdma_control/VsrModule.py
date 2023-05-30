@@ -883,13 +883,17 @@ class VsrModule(VsrAssembly):
         self.adc_signal_delay = 10
         self.sm_vcal_clock = 1
         self.sm_row_wait_clock = 8
-        self.dac_vcal = 0x1ff
-        self.dac_umid = 0xfff
+        self.dac_vcal = 0x111   # 0x111 = 0.2V
+        self.dac_umid = 0xfff   # 0x555 = 1.0V
         self.dac_hv = 0x555
         self.dac_det_ctrl = 0x0
         self.dac_reserve2 = 0x8E8
         self.adc_output_phase = 9
         self.set_adc_output_phase("540")
+        self.vcal_enabled = False;print(f" self.vcal_enabled = {self.vcal_enabled}")
+        # TODO To set row/column cakibration mask:
+        self.cal_col_mask = 0x55
+        self.cal_row_mask = 0x55
 
     def _get_env_sensors(self):
         vsr_d = list()  # empty VSR data list to pass to: self.uart_write()
@@ -1550,7 +1554,7 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         ctrl_reg = self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr'])
-        print(f" 1488 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}  set_dc_control_bits")
+        # print(f" 1488 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}  set_dc_control_bits")
         if capt_avg_pict:
             ctrl_reg = rdma.set_field(VSR_FPGA_REGISTERS.REG36, "CAPT_AVG_PICT", ctrl_reg, 1)
         if vcal_pulse_disable:
@@ -1559,7 +1563,7 @@ class VsrModule(VsrAssembly):
             ctrl_reg = rdma.set_field(VSR_FPGA_REGISTERS.REG36, "SPECTROSCOPIC_MODE_EN",
                                       ctrl_reg, 1)
         self._fpga_reg_write(VSR_FPGA_REGISTERS.REG36['addr'], ctrl_reg)
-        print(f" 1496 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}")
+        # print(f" 1496 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}")
 
     def clr_dc_control_bits(self, capt_avg_pict=True, vcal_pulse_disable=True,
                             spectroscopic_mode_en=True):
@@ -1577,7 +1581,7 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         ctrl_reg = self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr'])
-        print(f" 1513 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}  clr_dc_control_bits")
+        # print(f" 1513 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}  clr_dc_control_bits")
         if capt_avg_pict:
             ctrl_reg = rdma.clr_field(VSR_FPGA_REGISTERS.REG36, "CAPT_AVG_PICT", ctrl_reg)
         if vcal_pulse_disable:
@@ -1585,7 +1589,7 @@ class VsrModule(VsrAssembly):
         if spectroscopic_mode_en:
             ctrl_reg = rdma.clr_field(VSR_FPGA_REGISTERS.REG36, "SPECTROSCOPIC_MODE_EN", ctrl_reg)
         self._fpga_reg_write(VSR_FPGA_REGISTERS.REG36['addr'], ctrl_reg)
-        print(f" 1521 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}")
+        # print(f" 1521 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}")
 
     def enable_all_columns(self, asic=1):
         """Writes the masks to enable Read and Power for Columns of the target ASIC.
@@ -1653,9 +1657,9 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         if asic == 2:
-            en_start_addrs = [VSR_FPGA_REGISTERS.REG174['addr'], VSR_FPGA_REGISTERS.REG194['addr']]
+            en_start_addrs = [VSR_FPGA_REGISTERS.REG144['addr'], VSR_FPGA_REGISTERS.REG164['addr']]
         else:
-            en_start_addrs = [VSR_FPGA_REGISTERS.REG77['addr'], VSR_FPGA_REGISTERS.REG97['addr']]
+            en_start_addrs = [VSR_FPGA_REGISTERS.REG47['addr'], VSR_FPGA_REGISTERS.REG67['addr']]
         for s_addr in en_start_addrs:
             self._fpga_reg_write_burst(s_addr, set_row_column_mask(row_col_mask=row_mask))
 
@@ -1759,9 +1763,9 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         if asic == 2:
-            en_start_addrs = [VSR_FPGA_REGISTERS.REG184['addr']]
+            en_start_addrs = [VSR_FPGA_REGISTERS.REG154['addr']]
         else:
-            en_start_addrs = [VSR_FPGA_REGISTERS.REG87['addr']]
+            en_start_addrs = [VSR_FPGA_REGISTERS.REG57['addr']]
         for s_addr in en_start_addrs:
             self._fpga_reg_write_burst(s_addr, set_row_column_mask(row_col_mask=row_mask))
 
@@ -1777,11 +1781,11 @@ class VsrModule(VsrAssembly):
         """
         # print(" enable_all_rows_cal: 1693, asic=", asic)
         if asic == 2:
-            en_start_addrs = [VSR_FPGA_REGISTERS.REG57['addr']]
-        else:
             en_start_addrs = [VSR_FPGA_REGISTERS.REG154['addr']]
+        else:
+            en_start_addrs = [VSR_FPGA_REGISTERS.REG57['addr']]
         for s_addr in en_start_addrs:
-            self._fpga_reg_write_burst(s_addr, set_row_column_mask(all_as_value=0x05))
+            self._fpga_reg_write_burst(s_addr, set_row_column_mask(all_as_value=0xff))
 
     def disable_all_rows_cal(self, asic=1):
         """Writes the masks to disable Calibration for Rows of the target ASIC.
@@ -1794,9 +1798,9 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         if asic == 2:
-            en_start_addrs = [VSR_FPGA_REGISTERS.REG57['addr']]
-        else:
             en_start_addrs = [VSR_FPGA_REGISTERS.REG154['addr']]
+        else:
+            en_start_addrs = [VSR_FPGA_REGISTERS.REG57['addr']]
         for s_addr in en_start_addrs:
             self._fpga_reg_write_burst(s_addr, set_row_column_mask(all_as_value=0x0))
 
@@ -1811,11 +1815,13 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         self.enable_all_columns(asic=asic)
-        # self.disable_all_columns_cal(asic=asic)
-        self.enable_all_columns_cal(asic=asic)
+        if self.vcal_enabled:
+            self.enable_all_columns_cal(asic=asic)
+            self.enable_all_rows_cal(asic=asic)
+        else:
+            self.disable_all_columns_cal(asic=asic)
+            self.disable_all_rows_cal(asic=asic)
         self.enable_all_rows(asic=asic)
-        # self.disable_all_rows_cal(asic=asic)
-        self.enable_all_rows_cal(asic=asic)
 
     def set_dac_vcal(self, val):
         """Sets the value of V\ :sub:`cal` attribute *without* writing to the VSR DAC.
@@ -1953,6 +1959,7 @@ class VsrModule(VsrAssembly):
         Returns:
             :obj:`dict` of key/values pairs, where the keys are: `vcal`, `umid`, `hv`, `det_ctrl` and `reserve2`.
         """
+        # print(f" *** writ_dac_values, self.dac_vcal: 0x{self.dac_vcal:X}")
         address = self.addr
         if addr:
             address = addr
@@ -1964,6 +1971,7 @@ class VsrModule(VsrAssembly):
         tmp_dict = dict()
         for val in dac_values:
             wr_cmd.extend(unpack_data_for_vsr_write(val, mask=dac_mask, nof_bytes=nof_bytes))
+        # print("Send to UART: {} ".format(' '.join("0x{0:02X}".format(x) for x in wr_cmd)))
         self._uart_write(address, vsr_cmd, wr_cmd)
         resp = self._rdma_ctrl_iface.uart_read()
         resp = self._check_uart_response(resp)
@@ -2171,7 +2179,7 @@ class VsrModule(VsrAssembly):
             self.configure_asic(asic=asic)  # 1206
         current_dac_vals = self.write_dac_values()  # 1208
         self.init_adc()  # 1216
-        self.set_dc_control_bits(capt_avg_pict=True, vcal_pulse_disable=True,
+        self.set_dc_control_bits(capt_avg_pict=True, vcal_pulse_disable=self.vcal_enabled,
                                  spectroscopic_mode_en=False)  # 1226
         # \TODO: Check if the spectroscopic_mode_en is already enabled or if it needs to be toggled off/on via the
         #        previous :meth:`write_dc_control_bits`.
@@ -2184,7 +2192,7 @@ class VsrModule(VsrAssembly):
         # self._disable_training()
         # input("training disabled, press enter")
         self.write_sm_vcal_clock()  # 1238 & 1240
-        self.clr_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=True,
+        self.clr_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=self.vcal_enabled,
                                  spectroscopic_mode_en=False)  # 1243
         print(f"[INFO]: VSR{self.slot}: Finished Initialisation.")
 
@@ -2262,7 +2270,7 @@ class VsrModule(VsrAssembly):
         # print("Gathering offsets..")
         # # Send reg value; Register 0x24, bits5,1: disable VCAL, capture average picture:
         # write_receive_to_all(vsr_list, 0x40, 0x32, 0x34, 0x32, 0x32)
-        self.set_dc_control_bits(capt_avg_pict=True, vcal_pulse_disable=True,
+        self.set_dc_control_bits(capt_avg_pict=True, vcal_pulse_disable=self.vcal_enabled,
                                  spectroscopic_mode_en=False)
 
         # 4. Start the state machine
@@ -2292,8 +2300,9 @@ class VsrModule(VsrAssembly):
         # print("Offsets collected")
         # # Send reg value; Register 0x24, bits5,3: disable VCAL, enable spectroscopic mode:
         # write_receive_to_all(vsr_list, 0x40, 0x32, 0x34, 0x32, 0x38)
-        self.set_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=False,
-                                 spectroscopic_mode_en=True)  # 1229
+        # TODO Redundant because changing 0x2A -> 0x2A
+        # self.set_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=False,
+        #                          spectroscopic_mode_en=True)  # 1229
 
         # 8. Start state machine
         # write_receive_to_all(vsr_list, 0x42, 0x30, 0x31, 0x30, 0x31)
@@ -2301,7 +2310,7 @@ class VsrModule(VsrAssembly):
 
         # print("Ensure VCAL remains on")
         # write_receive_to_all(vsr_list, 0x43, 0x32, 0x34, 0x32, 0x30)
-        self.clr_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=True,
+        self.clr_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=self.vcal_enabled,
                                  spectroscopic_mode_en=False)
 
         print(f"[INFO]: VSR{self.slot}: Offsets Collected.")

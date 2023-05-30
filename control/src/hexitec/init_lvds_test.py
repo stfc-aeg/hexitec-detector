@@ -98,6 +98,8 @@ if __name__ == '__main__':
     for vsr in vsr_addr_mapping.keys():
         vsrs.append(VsrModule(Hex2x6CtrlRdma, slot=vsr, init_time=10, addr_mapping=vsr_addr_mapping))
 
+    # get_env_values(vsrs)
+
     # input("press enter to enable data")
     # Hex2x6CtrlRdma.udp_rdma_write(address=0x20, data=0x1, burst_len=4)  # EN_DATA
     # print("data enabled")
@@ -105,6 +107,10 @@ if __name__ == '__main__':
     for vsr in vsrs:
         # print(f"pll lock value before initialise for vsr {vsr.slot}: ",
         #       vsr._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr']))
+        # Set VCAL magnitude; 0x0CC (.15V) 111 (0.2) 155 (0.25) 199 (.3)
+        vsr.set_dac_vcal(0x0111)
+        # Set umid magnitude; 0x0555 (1.0V)
+        vsr.set_dac_umid(0x0555)
         vsr.initialise()
         ppl_lock = vsr._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr'])
         while True:
@@ -130,9 +136,9 @@ if __name__ == '__main__':
             print(f"[ERROR] VSR{vsr.slot} lock_status: {vsr_lock_status[vsr.slot-1]}")
 
     # input("Press enter to disable vsr training")
+    print(f"Disabling training for vsr(s)..")
     for vsr in vsrs:
         vsr._disable_training()
-        print(f"training disabled for vsr{vsr.slot}")
         # vsr.start_trigger_sm()
         # print(f"sm triggered for vsr{vsr.slot}")
     print("-"*10)
