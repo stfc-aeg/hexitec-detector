@@ -81,17 +81,16 @@ if __name__ == '__main__':
     print(f"scratch registers: {[hex(i) for i in scratch_regs]}")
     print("\n")
 
-    # starting = time.time()
     vsr_addr_mapping = {1: 0x90, 2: 0x91, 3: 0x92, 4: 0x93, 5: 0x94, 6: 0x95}
     all_vsrs = VsrAssembly(Hex2x6CtrlRdma, init_time=10, addr_mapping=vsr_addr_mapping)
     vsr_assembly = time.time()
-    # print(f" VsrAssembly() took: {vsr_assembly - starting}")
+
     all_vsrs.enable_module()
     finished_modules = time.time()
     print(f" .enable_module() took: {finished_modules - vsr_assembly}")
     all_vsrs.enable_vsr()
     ending = time.time()
-    print(f" .enable_vsr() took: {ending - finished_modules}")
+    print(f" .enable_vsr()    took: {ending - finished_modules}")
     print("Module(s) & VSR(s) ready")
     """:obj:`dict` A dictionary mapping VSR slot to VSR addr. This is hardware build dependent and can be determined by :meth:`VsrModule.lookup`"""
     vsrs = list()
@@ -100,17 +99,27 @@ if __name__ == '__main__':
 
     # get_env_values(vsrs)
 
-    # input("press enter to enable data")
-    # Hex2x6CtrlRdma.udp_rdma_write(address=0x20, data=0x1, burst_len=4)  # EN_DATA
-    # print("data enabled")
+    vcal_enabled = True
+    vcal_param = "0.10"
+    vcal = vsrs[0]._extract_float(vcal_param, 'Control-Settings/VCAL')
+    print(f"  vcal: {vcal} (0x{vcal:x}) from input: {vcal_param}")
+
+    umid_param = "1,00000E+3"
+    umid = vsrs[0]._extract_exponential(umid_param, 'Control-Settings/Uref_mid', bit_range=12)
+    print(f"  umid: {umid} (0x{umid:x}) from input: {umid_param}")
+
+    column_calibration_mask = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11]
+    row_calibration_mask = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11]
 
     for vsr in vsrs:
-        # print(f"pll lock value before initialise for vsr {vsr.slot}: ",
-        #       vsr._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr']))
+        vsr.enable_vcal(vcal_enabled)
+        vsr.set_column_calibration_mask(column_calibration_mask)
+        vsr.set_row_calibration_mask(row_calibration_mask)
+
         # Set VCAL magnitude; 0x0CC (.15V) 111 (0.2) 155 (0.25) 199 (.3)
-        vsr.set_dac_vcal(0x0111)
+        vsr.set_dac_vcal(vcal)
         # Set umid magnitude; 0x0555 (1.0V)
-        vsr.set_dac_umid(0x0555)
+        vsr.set_dac_umid(umid)
         vsr.initialise()
         ppl_lock = vsr._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr'])
         while True:
@@ -118,11 +127,8 @@ if __name__ == '__main__':
                 break
             time.sleep(0.1)
             ppl_lock = vsr._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr'])
-        print(f"pll lock value after initialise for vsr {vsr.slot}: ",
-              ppl_lock)
         print("-" * 80)
 
-    # input("Press enter to enable & disable training")
     Hex2x6CtrlRdma.udp_rdma_write(address=HEXITEC_2X6_VSR_DATA_CTRL['addr'], data=0x10 , burst_len=1, comment=" ") #EN_TRAINING
     time.sleep(0.2)
     Hex2x6CtrlRdma.udp_rdma_write(address=HEXITEC_2X6_VSR_DATA_CTRL['addr'], data=0x00, burst_len=1, comment=" ") # Disable training

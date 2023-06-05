@@ -234,7 +234,7 @@ class VsrAssembly(object):
             self.addr_mapping = addr_mapping
         self.addr = self.get_addr()
         self._adc_enabled_flag = False
-        self._dac_enabled_flag = False
+        self._dac_enabled_flag = True   # Enabled upon VSR Power on
 
     # def __del__(self):
     #     self.hv_disable()
@@ -694,10 +694,12 @@ class VsrAssembly(object):
         Returns:
             :obj:`int`:  `1` on success, `0` on failure.
         """
-        adc_ctrl_bit = 0 if adc else 1
-        dac_ctrl_bit = 0 if dac else 1
+        adc_ctrl_bit = 1 if adc else 0
+        dac_ctrl_bit = 1 if dac else 0
         ctrl_byte = (dac_ctrl_bit << 1) + adc_ctrl_bit
-        self._uart_write(self.addr, get_vsr_cmd_char("adc_dac_ctrl"), [ctrl_byte])
+        # Ensure byte follow aSpect format
+        ctrl_byte = [0x30, ctrl_byte+0x30]
+        self._uart_write(self.addr, get_vsr_cmd_char("adc_dac_ctrl"), ctrl_byte)
         resp = self._rdma_ctrl_iface.uart_read()
         resp = self._check_uart_response(resp)
         return 1 if resp[0] == ctrl_byte else 0
@@ -878,22 +880,24 @@ class VsrModule(VsrAssembly):
         self.rows1_clock = 1
         self.s1sph = 1
         self.sphs2 = 6
-        self.gain = "low"
+        self.gain = "high"
         self.adc_clock_delay = 2
         self.adc_signal_delay = 10
         self.sm_vcal_clock = 1
         self.sm_row_wait_clock = 8
         self.dac_vcal = 0x111   # 0x111 = 0.2V
-        self.dac_umid = 0xfff   # 0x555 = 1.0V
+        self.dac_umid = 0x555   # 0x555 = 1.0V
         self.dac_hv = 0x555
         self.dac_det_ctrl = 0x0
         self.dac_reserve2 = 0x8E8
         self.adc_output_phase = 9
         self.set_adc_output_phase("540")
-        self.vcal_enabled = False;print(f" self.vcal_enabled = {self.vcal_enabled}")
-        # TODO To set row/column cakibration mask:
-        self.cal_col_mask = 0x55
-        self.cal_row_mask = 0x55
+        self.vcal_enabled = True
+        # Control row, column calibration masks:
+        self.column_calibration_mask = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
+        self.row_calibration_mask = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
+
+        self.DAC_SCALE_FACTOR = 0.732
 
     def _get_env_sensors(self):
         vsr_d = list()  # empty VSR data list to pass to: self.uart_write()
@@ -1816,8 +1820,8 @@ class VsrModule(VsrAssembly):
         """
         self.enable_all_columns(asic=asic)
         if self.vcal_enabled:
-            self.enable_all_columns_cal(asic=asic)
-            self.enable_all_rows_cal(asic=asic)
+            self.set_all_columns_cal(col_mask=self.column_calibration_mask)
+            self.set_all_rows_cal(row_mask=self.row_calibration_mask)
         else:
             self.disable_all_columns_cal(asic=asic)
             self.disable_all_rows_cal(asic=asic)
@@ -2187,10 +2191,8 @@ class VsrModule(VsrAssembly):
         print(f"[INFO]: VSR{self.slot}: Starting LVDS Training...")
         # self.enable_training(time_s=training_delay)  # 1231
         self._enable_training(time_s=training_delay)
-        # input("training enabled, press enter")
         # self.disable_training()
         # self._disable_training()
-        # input("training disabled, press enter")
         self.write_sm_vcal_clock()  # 1238 & 1240
         self.clr_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=self.vcal_enabled,
                                  spectroscopic_mode_en=False)  # 1243
@@ -2207,7 +2209,7 @@ class VsrModule(VsrAssembly):
         # calc_hv_monitor_rail = round((convert_from_ascii(resp[36:40]) * 1621.65 ) - 1043.22,2)
         calc_3v3 = convert_from_ascii(resp[36:40]) * (MAX1239_INT_REF_V / 4095)
         u1 = convert_from_ascii(resp[0:4]) * (calc_3v3 / 2 ** 12)
-        calc_hv_monitor_rail = round(u1 * 1621.65 - 1043.22 , 2) # Removed " + 56 " found in Christian's code
+        calc_hv_monitor_rail = round(u1 * 1621.65 - 1043.22 , 2) # Removed " + 56 "
         calc_1v2 = round(convert_from_ascii(resp[4:8]) * ( U10_REF_V / 2**12 ), 2)
         calc_1v8 = round(convert_from_ascii(resp[8:12]) * ( U10_REF_V / 2**12 ), 2)
         #reserved
@@ -2331,6 +2333,7 @@ class VsrModule(VsrAssembly):
             i.e. enabling these two bits in register 0x01:
         4 Use SYNC clock from DAQ Board
         5 0 -> Reset serial Interface to DAQ Board
+
         Returns:
             Nothing.
         """
@@ -2342,9 +2345,105 @@ class VsrModule(VsrAssembly):
         """Writes synchronized SM start to the VSR FPGA register.
             i.e. write first bit in register 0x0A:
         0 enable synchronized SM start via Trigger
+
         Returns:
             Nothing.
         """
         wr_data = 0x1 & VSR_FPGA_REGISTERS.REG10['mask']
         addr = VSR_FPGA_REGISTERS.REG10['addr']
         self._fpga_reg_write(addr, wr_data)
+
+
+    def enable_vcal(self, vcal_enabled):
+        """Enables the VSR VCAL and calibration masks.
+
+        Args:
+            vcal_enabled (:obj:`bool`, optional): Enable the VCAL.
+
+        Returns:
+            Nothing.
+        """
+        self.vcal_enabled = vcal_enabled
+
+    def set_column_calibration_mask(self, column_calibration_mask):
+        """Sets the VSR column calibration mask.
+
+        Args:
+            column_calibration_mask (:obj:`list` of :obj:`int`): Column calibration mask.
+
+        Returns:
+            Nothing.
+        """
+        self.column_calibration_mask = column_calibration_mask
+
+    def set_row_calibration_mask(self, row_calibration_mask):
+        """Sets the VSR row calibration mask.
+
+        Args:
+            row_calibration_mask (:obj:`list` of :obj:`int`): Row calibration mask.
+
+        Returns:
+            Nothing.
+        """
+        self.row_calibration_mask = row_calibration_mask
+
+    # From HexitecFem - Will be removed later
+
+    def convert_string_exponential_to_integer(self, exponent):
+        """Convert aspect format to fit dac format.
+
+        Aspect's exponent format looks like: 1,003000E+2
+        Convert to float (eg: 100.3), rounding to nearest
+        int before scaling to fit DAC range.
+        """
+        number_string = str(exponent)
+        number_string = number_string.replace(",", ".")
+        number_float = float(number_string)
+        number_int = int(round(number_float))
+        return number_int
+        # number_scaled = int(number_int // self.DAC_SCALE_FACTOR)
+
+    def _extract_exponential(self, parameter_dict, descriptor, bit_range):
+        """Extract exponential descriptor from parameter_dict, check it's within bit_range."""
+        valid_range = [0, 1 << bit_range]
+        setting = -1
+        try:
+            unscaled_setting = parameter_dict   #[descriptor]
+            scaled_setting = self.convert_string_exponential_to_integer(unscaled_setting)
+            if scaled_setting >= valid_range[0] and scaled_setting <= valid_range[1]:
+                setting = int(scaled_setting // self.DAC_SCALE_FACTOR)
+            else:
+                print("Error parsing %s, got: %s (scaled: % s) but valid range: %s-%s" %
+                              (descriptor, unscaled_setting, scaled_setting, valid_range[0],
+                               valid_range[1]))
+                setting = -1
+        except KeyError:
+            raise Exception("ERROR: No '%s' Key defined!" % descriptor)
+        return setting
+
+    def convert_aspect_float_to_dac_value(self, number_float):
+        """Convert aspect float format to fit dac format.
+
+        Convert float (eg: 1.3V) to mV (*1000), scale to fit DAC range
+        before rounding to nearest int.
+        """
+        milli_volts = number_float * 1000
+        number_scaled = int(round(milli_volts // self.DAC_SCALE_FACTOR))
+        return number_scaled
+
+    def _extract_float(self, parameter_dict, descriptor):
+        """Extract descriptor from parameter_dict, check within 0.0 - 3.0 (hardcoded) range."""
+        valid_range = [0.0, 3.0]
+        setting = -1
+        try:
+            setting = float(parameter_dict) #[descriptor])
+            if setting >= valid_range[0] and setting <= valid_range[1]:
+                # Convert from volts to DAQ format
+                setting = self.convert_aspect_float_to_dac_value(setting)
+            else:
+                print("Error parsing float %s, got: %s but valid range: %s-%s" %
+                              (descriptor, setting, valid_range[0], valid_range[1]))
+                setting = -1
+        except KeyError:
+            raise Exception("Missing Key: '%s'" % descriptor)
+        return setting

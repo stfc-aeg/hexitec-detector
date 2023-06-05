@@ -186,6 +186,12 @@ if __name__ == '__main__':  # pragma: no cover
     rval = Hex2x6CtrlRdma.udp_rdma_read(address=VSR_MODE_CTRL['addr'],
                                         burst_len=1,
                                         comment=VSR_MODE_CTRL['description'])[0]
+
+    print("-=-=-=-=- Dark Images -=-=-=-=-")
+    for vsr in vsr_list:
+        vsr.collect_offsets()
+    print("-=-=-=-=-     Done    -=-=-=-=-")
+
     print(f" 2) K.FPGA Reg 28: 0x{rval:X}")
 
     print(" # Aspect - Image Acq Debug [redundant? Skipping for now..]")
