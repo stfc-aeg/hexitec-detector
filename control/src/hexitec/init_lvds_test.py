@@ -5,9 +5,6 @@ from boardcfgstatus.BoardCfgStatus import *
 from hexitec_vsr.VsrModule import *
 from udpcore.UdpCore import *
 import ALL_RDMA_REGISTERS as HEX_REGISTERS
-# import pandas as pd
-# import time
-# import matplotlib.pyplot as plt
 
 
 def get_env_values(vsrs):
@@ -15,40 +12,95 @@ def get_env_values(vsrs):
     for vsr in vsrs:
         print(f"[INFO] Slot: {vsr.get_slot()} | VSR Address: {hex(vsr.get_addr())}")
         print(f"[INFO] Status: {vsr.get_module_status()} | H/V Status: {vsr.get_hv_status()}")
-        #15 seconds later, the fpga on the vsr should be powered and initialised
         print(f"[INFO] Status: {vsr.get_module_status()} | H/V Status: {vsr.get_hv_status()}")
 
         print(f"[INFO]: VSR{vsr.slot} temperature: {vsr.get_temperature()}")
 
         print(f"[INFO]: VSR{vsr.slot} humidity: {vsr.get_humidity()}")
 
-        for asic in [1,2]:
-            print(f"[INFO]: VSR{vsr.slot} ASIC{asic} temperature: {vsr.get_asic_temperature(idx=asic)}")
+        for asic in [1, 2]:
+            print(f"[INFO]: VSR{vsr.slot} ASIC{asic} temp: {vsr.get_asic_temperature(idx=asic)} C")
 
         print(f"[INFO]: VSR{vsr.slot} adc temperature: {vsr.get_adc_temperature()}")
 
         print(vsr.get_power())
         print("-"*80)
 
-def path_reset():
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_TIG_CTRL['addr'],data= 0x0,  burst_len=1)
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_TIG_CTRL['addr'], data=0x1, burst_len=1)
 
-def data_en(enable = True):
+def path_reset():
+    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
+                                  data=0x0,  burst_len=1)
+    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
+                                  data=0x1, burst_len=1)
+
+
+def data_en(enable=True):
     if enable:
-        Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'], data=0x1, burst_len=1)
+        Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'],
+                                      data=0x1, burst_len=1)
     else:
-        Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'], data=0x0, burst_len=1)
+        Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'],
+                                      data=0x0, burst_len=1)
+
 
 def frame_reset_to_zero():
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_LOWER['addr'], data=0x0,
-                                    burst_len=1)
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_UPPER['addr'], data=0x0,
-                                    burst_len=1)
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'], data=0x1,
-                                    burst_len=1)
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'], data=0x0,
-                                    burst_len=1)
+    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_LOWER['addr'],
+                                  data=0x0, burst_len=1)
+    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_UPPER['addr'],
+                                  data=0x0, burst_len=1)
+    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
+                                  data=0x1, burst_len=1)
+    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
+                                  data=0x0, burst_len=1)
+
+
+def set_nof_frames(number_frames):
+    answer = input("Do you want to capture set number of frames? y/n")
+    if answer == '' or answer == 'y':
+        Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
+                                      data=0x100, burst_len=1)
+        print("Frame limited mode")
+        Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER['addr'],
+                                      data=number_frames, burst_len=1)
+        print("Number of frames set to 0x{0:X}".format(number_frames))
+    else:
+        print("Free acquisition mode")
+
+
+def convert_to_aspect_format(value):
+    """Convert integer to Aspect's hexadecimal notation e.g. 31 (0x1F) -> 0x31, 0x46."""
+    HEX_ASCII_CODE = [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
+                      0x41, 0x42, 0x43, 0x44, 0x45, 0x46]
+    hex_string = "{:02x}".format(value)
+    high_string = hex_string[0]
+    low_string = hex_string[1]
+    high_int = int(high_string, 16)
+    low_int = int(low_string, 16)
+    high_encoded = HEX_ASCII_CODE[high_int]
+    low_encoded = HEX_ASCII_CODE[low_int]
+    # print(" *** conv_to_aspect_..({}) -> {}, {}".format(value, high_encoded, low_encoded))
+    return high_encoded, low_encoded
+
+
+def convert_hv_to_hex(hv_value):
+    """Convert HV voltage into hexadecimal value."""
+    return int((hv_value / 1250) * 0xFFF)
+
+
+def convert_bias_to_dac_values(hv):
+    """Convert bias level to DAC formatted values.
+
+    I.e. 21 V -> 0x0041 (0x30, 0x30, 0x34, 0x31)
+    """
+    hv_hex = convert_hv_to_hex(hv)
+    # print(" Selected hv: {0}. Converted to hex: {1:04X}".format(hv, hv_hex))
+    hv_hex_msb = hv_hex >> 8
+    hv_hex_lsb = hv_hex & 0xFF
+    hv_msb = convert_to_aspect_format(hv_hex_msb)
+    hv_lsb = convert_to_aspect_format(hv_hex_lsb)
+    # print(" Conv'd to aSp_M: {}".format(hv_msb))
+    # print(" Conv'd to aSp_L: {}".format(hv_lsb))
+    return hv_msb, hv_lsb
 
 
 if __name__ == '__main__':
@@ -56,16 +108,24 @@ if __name__ == '__main__':
     print(f"Running on: {hostname}")
     if hostname.lower() == "te7hexidaq":
         Hex2x6CtrlRdma = RdmaUDP(local_ip="10.0.3.1", local_port=61649,
-                                 rdma_ip="10.0.3.2", rdma_port=61648, debug=False, uart_offset=0xC)
+                                 rdma_ip="10.0.3.2", rdma_port=61648,
+                                 debug=False, uart_offset=0xC)
     elif hostname.lower() == "te7wendolene":
         Hex2x6CtrlRdma = RdmaUDP(local_ip="192.168.4.1", local_port=61649,
-                                 rdma_ip="192.168.4.2", rdma_port=61648, debug=False, uart_offset=0xC)
+                                 rdma_ip="192.168.4.2", rdma_port=61648,
+                                 debug=False, uart_offset=0xC)
     else:
         Hex2x6CtrlRdma = RdmaUDP(local_ip="192.168.4.1", local_port=61649,
-                                 rdma_ip="192.168.4.2", rdma_port=61648, debug=False, uart_offset=0xC)
+                                 rdma_ip="192.168.4.2", rdma_port=61648,
+                                 debug=False, uart_offset=0xC)
+
+    ### reset the datapath
+    print("Executing: reset output path")
+    path_reset()
 
     board_cfg_status = BoardCfgStatus(Hex2x6CtrlRdma,
-                                      rdma_offset=rdma.get_id_offset(HEX_REGISTERS.IC_OFFSETS, 'BOARD_BUILD_INFO_ID'))
+                                      rdma_offset=rdma.get_id_offset(HEX_REGISTERS.IC_OFFSETS,
+                                                                     'BOARD_BUILD_INFO_ID'))
     print(f"{board_cfg_status.get_fpga_fw_version()}")
     print(f"{board_cfg_status.get_fpga_build_date()}")
     print(f"{board_cfg_status.get_fpga_build_time()}")
@@ -83,23 +143,46 @@ if __name__ == '__main__':
 
     vsr_addr_mapping = {1: 0x90, 2: 0x91, 3: 0x92, 4: 0x93, 5: 0x94, 6: 0x95}
     all_vsrs = VsrAssembly(Hex2x6CtrlRdma, init_time=10, addr_mapping=vsr_addr_mapping)
-    vsr_assembly = time.time()
 
-    all_vsrs.enable_module()
-    finished_modules = time.time()
-    print(f" .enable_module() took: {finished_modules - vsr_assembly}")
-    all_vsrs.enable_vsr()
-    ending = time.time()
-    print(f" .enable_vsr()    took: {ending - finished_modules}")
+    # Enable module, VSRs
+    init_vsrs_etc = True
+    if init_vsrs_etc:
+        vsr_assembly = time.time()
+        all_vsrs.enable_module()
+        finished_modules = time.time()
+        print(f" .enable_module() took: {finished_modules - vsr_assembly}")
+        all_vsrs.enable_vsr()
+        ending = time.time()
+        print(f" .enable_vsr()    took: {ending - finished_modules}")
     print("Module(s) & VSR(s) ready")
+
     """:obj:`dict` A dictionary mapping VSR slot to VSR addr. This is hardware build dependent and can be determined by :meth:`VsrModule.lookup`"""
     vsrs = list()
     for vsr in vsr_addr_mapping.keys():
         vsrs.append(VsrModule(Hex2x6CtrlRdma, slot=vsr, init_time=10, addr_mapping=vsr_addr_mapping))
 
-    # get_env_values(vsrs)
+    get_env_values(vsrs)
+    time.sleep(1)
 
-    vcal_enabled = True
+    bias_level = 500
+    hv_msb, hv_lsb = convert_bias_to_dac_values(bias_level)
+    print(f" HV Bias (-{bias_level}) : {hv_msb[0]:X} {hv_msb[1]:X} | {hv_lsb[0]:X} {hv_lsb[1]:X}")
+    vsrs[0].hv_on(hv_msb, hv_lsb)
+    time.sleep(1)
+
+    print("Enable HV on each VSR")
+    for vsr in vsrs:
+        rc = vsr.hv_enable()
+        if rc == 0:
+            print(f" VSR{vsr.slot} Failed to enable HV!")
+
+    time.sleep(1)
+    for vsr in vsrs:
+        pwr = vsr.get_power_sensors()
+        print(f"After,  power sens: {pwr}")
+
+    vcal_enabled = False
+    print(f" *** VCAL: {vcal_enabled}")
     vcal_param = "0.10"
     vcal = vsrs[0]._extract_float(vcal_param, 'Control-Settings/VCAL')
     print(f"  vcal: {vcal} (0x{vcal:x}) from input: {vcal_param}")
@@ -108,9 +191,12 @@ if __name__ == '__main__':
     umid = vsrs[0]._extract_exponential(umid_param, 'Control-Settings/Uref_mid', bit_range=12)
     print(f"  umid: {umid} (0x{umid:x}) from input: {umid_param}")
 
-    column_calibration_mask = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11]
-    row_calibration_mask = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11]
+    # column_calibration_mask = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11]
+    # row_calibration_mask = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11]
+    column_calibration_mask = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+    row_calibration_mask = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
+    print("Config VCAL, DAC, Umid")
     for vsr in vsrs:
         vsr.enable_vcal(vcal_enabled)
         vsr.set_column_calibration_mask(column_calibration_mask)
@@ -120,6 +206,9 @@ if __name__ == '__main__':
         vsr.set_dac_vcal(vcal)
         # Set umid magnitude; 0x0555 (1.0V)
         vsr.set_dac_umid(umid)
+
+    print("Init VSRs")
+    for vsr in vsrs:
         vsr.initialise()
         ppl_lock = vsr._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr'])
         while True:
@@ -129,12 +218,14 @@ if __name__ == '__main__':
             ppl_lock = vsr._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr'])
         print("-" * 80)
 
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEXITEC_2X6_VSR_DATA_CTRL['addr'], data=0x10 , burst_len=1, comment=" ") #EN_TRAINING
+    Hex2x6CtrlRdma.udp_rdma_write(address=HEXITEC_2X6_VSR_DATA_CTRL['addr'], data=0x10,
+                                  burst_len=1, comment=" ")  # EN_TRAINING
     time.sleep(0.2)
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEXITEC_2X6_VSR_DATA_CTRL['addr'], data=0x00, burst_len=1, comment=" ") # Disable training
+    Hex2x6CtrlRdma.udp_rdma_write(address=HEXITEC_2X6_VSR_DATA_CTRL['addr'], data=0x00,
+                                  burst_len=1, comment=" ")  # Disable training
 
     number_vsrs = len(vsr_addr_mapping.keys())
-    vsr_lock_status =  Hex2x6CtrlRdma.udp_rdma_read(address=0x3e8, burst_len=number_vsrs)
+    vsr_lock_status = Hex2x6CtrlRdma.udp_rdma_read(address=0x3e8, burst_len=number_vsrs)
     for vsr in vsrs:
         if vsr_lock_status[vsr.slot-1] == 255:
             print(f"[INFO]  VSR{vsr.slot} lock_status: {vsr_lock_status[vsr.slot-1]}")
@@ -142,41 +233,26 @@ if __name__ == '__main__':
             print(f"[ERROR] VSR{vsr.slot} lock_status: {vsr_lock_status[vsr.slot-1]}")
 
     # input("Press enter to disable vsr training")
-    print(f"Disabling training for vsr(s)..")
+    print("Disabling training for vsr(s)..")
     for vsr in vsrs:
         vsr._disable_training()
         # vsr.start_trigger_sm()
         # print(f"sm triggered for vsr{vsr.slot}")
     print("-"*10)
 
-    # input("Press enter to enable sm")
-    Hex2x6CtrlRdma.udp_rdma_write(address=0x1c, data=0x1, burst_len=1) #EN_SM
+    Hex2x6CtrlRdma.udp_rdma_write(address=0x1c, data=0x1, burst_len=1)
     print("fpga state machine enabled")
 
-    # Collect offsets, switching HV on, checking HV power - Not part of aspect's readout recipe
     print("-=-=-=-=- Dark Images -=-=-=-=-")
     for vsr in vsrs:
         vsr.collect_offsets()
     print("-=-=-=-=-     Done    -=-=-=-=-")
 
-    # input("press enter to enable data synth")
-    # Hex2x6CtrlRdma.udp_rdma_write(address=0x20, data=0x80, burst_len=1)  # EN_SYNTH_DATA
-    # print("data synth enabled")
-    #
-    # input("press enter to enable data along with synth")
-    # Hex2x6CtrlRdma.udp_rdma_write(address=0x20, data=0x81, burst_len=1)  # EN_DATA
-    # print("data and synth enabled")
-
     ### reset the frame number
     print("Executing: reset frame number")
     frame_reset_to_zero()
 
-    ### reset the datapath
-    print("Executing: reset output path")
-    path_reset()
-
-    print("Allow F/W time to exit reset state")
-    time.sleep(1)
+    set_nof_frames()
 
     input("Press enter to enable data (200 ms)")
     data_en(enable=True)

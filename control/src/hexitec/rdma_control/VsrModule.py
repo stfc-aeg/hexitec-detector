@@ -3,20 +3,22 @@
 # Electronic System Design Group, Technology Department,
 # Science and Technology Facilities Council
 # Licensed under the BSD 3-Clause license. See LICENSE file in the project root for details.
-"""Classes and functions to connect to, and interact with aSpect VSR modules in Hexitec 2x\ `N` based systems.
+"""Classes and functions to connect to, and interact with aSpect VSR modules in Hexitec 2x\ `N` 
+based systems.
 
 .. important::
 
    Requires memory mapped :obj:`dict` imported from the following modules:
     - :mod:`rdma_control.RDMA_REGISTERS`,
     - :mod:`rdma_control.VSR_FPGA_REGISTERS`
-   Also requires the corresponding helper functions imported from :mod:`rdma_control.rdma_register_helpers` to access
-   and modify the dictionary entries defining the registers.
+   Also requires the corresponding helper functions imported from
+   :mod:`rdma_control.rdma_register_helpers` to access and modify the dictionary entries defining
+   the registers.
 
    :mod:`rdma_control.RDMA_REGISTERS` and :mod:`rdma_control.VSR_FPGA_REGISTERS` are generated from
    `XML2VHDL` output, regenerated at FPGA synthesis time. Please
-   ensure the latest version is used in conjunction with :mod:`rdma_control.RdmaUdp` to ensure compatibility with the
-   register map in the current FPGA bitstream.
+   ensure the latest version is used in conjunction with :mod:`rdma_control.RdmaUdp` to ensure
+   compatibility with the register map in the current FPGA bitstream.
 """
 import time
 import RdmaUdp.rdma_register_helpers as rdma
@@ -30,13 +32,13 @@ def get_vsr_cmd_char(code):
         Args:
             code (:obj:`str`): from:
                 `"start"`, `"end"`, `"resp"`, `"bcast"`, `"whois"`, `"get_env"`, '"enable"', '"disable"',
-                `"adc_dac_ctrl"`, `"fpga_reg_write"`, `"fpga_reg_read"`, `"fpga_reg_set_bit"`, `"fpga_reg_clr_bit"`,
-                `"fpga_reg_write_burst"`, `"fpga_reg_write_stream"`, `"fpga_active_reg_readback"`, `"write_dac_values"`,
-                `"write_dac_values"`
+                `"adc_dac_ctrl"`, `"fpga_reg_write"`, `"fpga_reg_read"`, `"fpga_reg_set_bit"`,
+                `"fpga_reg_clr_bit"`, `"fpga_reg_write_burst"`, `"fpga_reg_write_stream"`,
+                `"fpga_active_reg_readback"`, `"write_dac_values"`, `"write_dac_values"`
 
         Returns:
-            :obj:`int`: cmd/character to place in VSR UART command sequences, can also be used to validate command
-            responses.
+            :obj:`int`: cmd/character to place in VSR UART command sequences, can also be used to
+                validate command responses.
         """
     if code.lower() == "start":
         return 0x23
@@ -93,16 +95,17 @@ def convert_from_ascii(d):
 
 
 def convert_to_ascii(d, zero_pad=False):
-    """Converts an integer into a :obj:`list` of :obj:`int` ASCII representations of the :obj:`hex` equivalent.
+    """Converts an integer into a :obj:`list` of :obj:`int` ASCII representations of the :obj:`hex`
+    equivalent.
 
     Args:
         d (:obj:`int`): Value to convert.
-        zero_pad (:obj:`bool`, optional): Add ASCII zero padding to left-hand side of generated :obj:`list`.
-            Default: `False`.
+        zero_pad (:obj:`bool`, optional): Add ASCII zero padding to left-hand side of generated
+            :obj:`list`. Default: `False`.
 
     Returns:
-        :obj:`list` of :obj:`int`: Values of ASCII equivalents, for each of the :obj:`hex` characters required
-        to represent the :attr:`d`.
+        :obj:`list` of :obj:`int`: Values of ASCII equivalents, for each of the :obj:`hex`
+            characters required to represent the :attr:`d`.
     """
     unpadded = [ord(c) for c in hex(d).upper()[2:]]
     if zero_pad:
@@ -122,16 +125,18 @@ def set_row_column_mask(row_col_mask=None, all_as_value=0xff, max_elements=80, r
     """Generates a mask to set the selected elements of a `Hexitec` Row or Column.
 
     Args:
-        row_col_mask (:obj:`list` of obj:`int`, optional): A :obj:`list` containing :obj:`max_elements` of 8 bit values
-            to apply as the row/column mask, if `None` :obj:`all_as_value` will be applied to all elements.
-            Default: `None`.
-        all_as_value (:obj:`int`, optional): 8 bit value, to set all elements to, if `row_col_mask is `None`,
-            otherwise ignored and :obj:`row_col_mask` will be used. Default: `0xff`.
-        max_elements (:obj:`int`, optional): number of elements in the generated mask. Default: `80`.
-        reg_size (:obj:`int`, optional): size, in bits, of the register(s) storing masked values. Default: `8` bit.
+        row_col_mask (:obj:`list` of obj:`int`, optional): A :obj:`list` containing
+            :obj:`max_elements` of 8 bit valuesto apply as the row/column mask, if
+            `None` :obj:`all_as_value` will be applied to all elements. Default: `None`.
+        all_as_value (:obj:`int`, optional): 8 bit value, to set all elements to, if `row_col_mask`
+            is `None`, otherwise ignored and :obj:`row_col_mask` will be used. Default: `0xff`.
+        max_elements (:obj:`int`, optional): number of elements in the generated mask.
+            Default: `80`.
+        reg_size (:obj:`int`, optional): size, in bits, of the register(s) storing masked values.
+            Default: `8` bit.
     Returns:
-        :obj:`list` of :obj:`int` of values, where each element in the :obj:`list` represents the masked values
-        of each of the 8 bit registers required to describe the complete mask.
+        :obj:`list` of :obj:`int` of values, where each element in the :obj:`list` represents the
+            masked values of each of the 8 bit registers required to describe the complete mask.
     """
     tmp_list = list()
     if row_col_mask is None:
@@ -144,7 +149,8 @@ def set_row_column_mask(row_col_mask=None, all_as_value=0xff, max_elements=80, r
 
 
 def unpack_data_for_vsr_write(dat, mask=0xFFF, nof_bytes=2):
-    """Unpacks words, greater than 1 byte and unpacks them into multiple bytes for writing to the VSR.
+    """Unpacks words, greater than 1 byte and unpacks them into multiple bytes for writing to the
+    VSR.
 
     Args:
         dat (:obj:`int`): Data to unpack.
@@ -155,11 +161,13 @@ def unpack_data_for_vsr_write(dat, mask=0xFFF, nof_bytes=2):
     Returns:
         :obj:`list` of ASCII coded hex values for :argument:`dat`.
     """
+    #print(f" *** dat: ({dat}) {dat}")
     unpacked_dat = list()
     for i in range(0, nof_bytes):
         shifted = ((dat & mask) >> (i * 8)) & 0xFF
         unpacked_dat = [*(convert_to_ascii(shifted, zero_pad=True)), *unpacked_dat]
     return unpacked_dat
+
 
 def enable_training(vsr_list, time_s=0.1):
     vsr = ''
@@ -171,6 +179,7 @@ def enable_training(vsr_list, time_s=0.1):
     vsr._fpga_reg_write(HEXITEC_2X6_VSR_DATA_CTRL['addr'], ctrl_reg)
 
     time.sleep(time_s)
+
 
 def disable_training(vsr_list):
     vsr = ''
@@ -190,37 +199,41 @@ class VsrAssembly(object):
        Requires memory mapped :obj:`dict` imported from the following modules:
         - :mod:`rdma_control.RDMA_REGISTERS`,
         - :mod:`rdma_control.VSR_FPGA_REGISTERS`
-       Also requires the corresponding helper functions imported from :mod:`rdma_control.rdma_register_helpers` to
-       access and modify the dictionary entries defining the registers.
+       Also requires the corresponding helper functions imported from
+       :mod:`rdma_control.rdma_register_helpers` to access and modify the dictionary entries
+       defining the registers.
 
-       :mod:`rdma_control.RDMA_REGISTERS` and :mod:`rdma_control.VSR_FPGA_REGISTERS` are generated from
-       `XML2VHDL` output, regenerated at FPGA synthesis time. Please
-       ensure the latest version is used in conjunction with :mod:`rdma_control.RdmaUdp` to ensure compatibility with
-       the register map in the current FPGA bitstream.
+       :mod:`rdma_control.RDMA_REGISTERS` and :mod:`rdma_control.VSR_FPGA_REGISTERS` are generated
+       from `XML2VHDL` output, regenerated at FPGA synthesis time. Please ensure the latest version
+       is used in conjunction with :mod:`rdma_control.RdmaUdp` to ensure compatibility with the
+       register map in the current FPGA bitstream.
 
     .. warning::
 
-       Not supplying a :attr:`addr_mapping` :obj:`dict`, :class:`VsrAssembly` will perform a :meth:`VsrAssembly.lookup`
-       to determine the configuration of the attached system. This is a time-consuming operation so should be avoided
-       whenever possible by supplying a pre-determined configuration matching the target system.
+       Not supplying a :attr:`addr_mapping` :obj:`dict`, :class:`VsrAssembly` will perform a
+       :meth:`VsrAssembly.lookup` to determine the configuration of the attached system. This is a
+       time-consuming operation so should be avoided whenever possible by supplying a pre-determined
+       configuration matching the target system.
 
     Args:
-        rdma_ctrl_iface (:obj:`rdma_control.RdmaUdp`): A configured connection to communicate with the `RDMA` `UDP`
-            Ethernet interface.
-        slot (:obj:`int`, optional): Slot should only be set via child class(es). Leave set to `0`. Default: `0`.
-        init_time(:obj:`int`, optional): Time, in seconds, to wait for VSR to power up and FPGA to initialise.
-            Default: `15` seconds.
-        addr_mapping (:obj:`dict`, optional): Key/value pairs cross-referencing :attr:`slot` with hardware address of
-            the corresponding VSR module. Default: `None`. If an address mapping is not supplied the :obj:`VsrAssembly`
-            will perform a :meth:`VsrAssembly.lookup` to determine the configuration of the attached system.
+        rdma_ctrl_iface (:obj:`rdma_control.RdmaUdp`): A configured connection to communicate with
+            the `RDMA` `UDP` Ethernet interface.
+        slot (:obj:`int`, optional): Slot should only be set via child class(es). Leave set to `0`.
+            Default: `0`.
+        init_time(:obj:`int`, optional): Time, in seconds, to wait for VSR to power up and FPGA to
+            initialise. Default: `15` seconds.
+        addr_mapping (:obj:`dict`, optional): Key/value pairs cross-referencing :attr:`slot` with
+            hardware address of the corresponding VSR module. Default: `None`. If an address mapping
+            is not supplied the :obj:`VsrAssembly` will perform a :meth:`VsrAssembly.lookup` to
+            determine the configuration of the attached system.
 
     Attributes:
-        addr_mapping (:obj:`dict`): A copy of the address mapping configuration, either provided or determined at
-            initialisation.
+        addr_mapping (:obj:`dict`): A copy of the address mapping configuration, either provided or
+            determined at initialisation.
         slot (:obj:`int`): Slot number. Set to '0' for global addressing and control.
         addr (:obj:`int`): Hardware address of VSR module, hard-coded on each VSR module.
-        cmd_no (:obj:`int`): command number to insert into the RDMA header. Useful for debugging RDMA
-                commands. Default: `0`.
+        cmd_no (:obj:`int`): command number to insert into the RDMA header. Useful for debugging
+            RDMA commands. Default: `0`.
     """
     def __init__(self, rdma_ctrl_iface, slot=0, init_time=15, addr_mapping=None, rdma_offset=0x0):
         self._rdma_ctrl_iface = rdma_ctrl_iface
@@ -245,9 +258,10 @@ class VsrAssembly(object):
 
         .. note::
 
-           :attr:`slot` = 0 has a special meaning, where :attr:`addr` will be set to the VSR broadcast address.
-           Otherwise, positional location of the VSR module (indexed from '1'). Used by the host FPGA to control power
-           and high-voltage, and to determine which :mod:`rdma_control.RDMA_REGISTERS` to associate with the VSR module.
+           :attr:`slot` = 0 has a special meaning, where :attr:`addr` will be set to the VSR
+           broadcast address. Otherwise, positional location of the VSR module (indexed from '1').
+           Used by the host FPGA to control power and high-voltage, and to determine which
+           :mod:`rdma_control.RDMA_REGISTERS` to associate with the VSR module.
 
         Returns:
             :obj:`int`:
@@ -259,8 +273,8 @@ class VsrAssembly(object):
 
         .. note::
 
-            :attr:`slot` = `0` has a special meaning, where :attr:`addr` will be set to the VSR broadcast address.
-            Otherwise, the physical VSR address, hard-coded onto the VSR module.
+            :attr:`slot` = `0` has a special meaning, where :attr:`addr` will be set to the VSR
+            broadcast address. Otherwise, the physical VSR address, hard-coded onto the VSR module.
 
         Returns:
             :obj:`int`:
@@ -280,7 +294,8 @@ class VsrAssembly(object):
         self.init_time = init_time
 
     def _fpga_reg_read(self, fgpa_reg_addr):
-        """Constructs a VSR FPGA register read command and transmits the request via the UART connection.
+        """Constructs a VSR FPGA register read command and transmits the request via the UART
+        connection.
 
         Args:
             fgpa_reg_addr (:obj:`int`): Single FPGA register address to read from.
@@ -301,7 +316,8 @@ class VsrAssembly(object):
             return 0
 
     def _fpga_reg_write(self, fpga_reg_addr, wr_data):
-        """Constructs a VSR FPGA register write command and transmits the request via the UART connection.
+        """Constructs a VSR FPGA register write command and transmits the request via the UART
+        connection.
 
         Args:
             fpga_reg_addr (:obj:`int`): Single FPGA register address to write to.
@@ -318,11 +334,13 @@ class VsrAssembly(object):
         self._check_uart_response(resp)
 
     def _fpga_reg_set_bit(self, fgpa_reg_addr, mask):
-        """Constructs a VSR FPGA register set bit command and transmits the request via the UART connection.
+        """Constructs a VSR FPGA register set bit command and transmits the request via the UART
+        connection.
 
         Args:
             fgpa_reg_addr (:obj:`int`): Single FPGA register address to write to.
-            mask (:obj:`int`): Mask to select bits in the register to set, unmasked bits will remain unchanged.
+            mask (:obj:`int`): Mask to select bits in the register to set, unmasked bits will remain
+                unchanged.
         Returns:
             Nothing.
         """
@@ -334,11 +352,13 @@ class VsrAssembly(object):
         self._check_uart_response(resp)
 
     def _fpga_reg_clr_bit(self, fpga_reg_addr, mask):
-        """Constructs a VSR FPGA register clear bit command and transmits the request via the UART connection.
+        """Constructs a VSR FPGA register clear bit command and transmits the request via the UART
+        connection.
 
         Args:
             fpga_reg_addr (:obj:`int`): Single FPGA register address to write to.
-            mask (:obj:`int`): Mask to select bits in the register to clear, unmasked bits will remain unchanged.
+            mask (:obj:`int`): Mask to select bits in the register to clear, unmasked bits will
+            remain unchanged.
         Returns:
             Nothing.
         """
@@ -351,7 +371,8 @@ class VsrAssembly(object):
         self._check_uart_response(resp)
 
     def _fpga_reg_write_burst(self, fpga_reg_addr, wr_data):
-        """Constructs a VSR FPGA register write burst command and transmits the request via the UART connection.
+        """Constructs a VSR FPGA register write burst command and transmits the request via the UART
+        connection.
 
         .. note::
 
@@ -372,11 +393,13 @@ class VsrAssembly(object):
         self._check_uart_response(resp)
 
     def _fpga_reg_write_stream(self, addr_data_pairs):
-        """Constructs a VSR FPGA register write stream command and transmits the request via the UART connection.
+        """Constructs a VSR FPGA register write stream command and transmits the request via the
+        UART connection.
 
         Args:
-            addr_data_pairs (:obj:`dict` of :obj:`int` key and :obj:`int` value pairs): where the key is the FPGA
-                register address and the value is the data to write to the key's address.
+            addr_data_pairs (:obj:`dict` of :obj:`int` key and :obj:`int` value pairs): where the
+                key is the FPGA register address and the value is the data to write to the key's
+                address.
 
         Returns:
             Nothing.
@@ -418,22 +441,22 @@ class VsrAssembly(object):
         for d in wr_d:
             wr_cmd.append(d)
         wr_cmd.append(get_vsr_cmd_char("end"))
-        # print(f"[DEBUG]: rdmaVsrMod._uart_write: {[ hex(c) for c in wr_cmd ]}")
+        #print(f"[DEBUG]: rdmaVsrMod._uart_write: {[ hex(c) for c in wr_cmd ]}")
         self._rdma_ctrl_iface.uart_write(wr_cmd)
 
     def _get_status(self, vsr_mod=None, hv=False, all_vsrs=False):
         """Returns status of power/high-voltage enable signals for the selected VSR(s).
 
         Args:
-            vsr_mod (:obj:`int`, optional): VSR module to control, indexed from 1. If not set, will use the :attr:`slot`
-                to set the VSR module number. Default: `None`.
-            hv (:obj:`bool`, optional): Report High Voltage on status, otherwise report power on status to the VSR.
-                Default: `False`.
+            vsr_mod (:obj:`int`, optional): VSR module to control, indexed from 1. If not set, will
+                use the :attr:`slot` to set the VSR module number. Default: `None`.
+            hv (:obj:`bool`, optional): Report High Voltage on status, otherwise report power on
+                status to the VSR. Default: `False`.
             all_vsrs (:obj:`bool`, optional): Report on all VSR modules. Default: `False`.
 
         Returns:
-            :obj:`list`: Status of requested VSR enable signal(s), represented as :obj:`str` with the values `"ENABLED"`
-            or `"DISABLED"`.
+            :obj:`list`: Status of requested VSR enable signal(s), represented as :obj:`str` with
+            the values `"ENABLED"` or `"DISABLED"`.
         """
         # use the VSR_EN field to set the total number of VSR modules in the system:
         vsr_en_field = rdma.get_field(HEXITEC_2X6_VSR_CTRL, 'VSR_EN')
@@ -473,8 +496,8 @@ class VsrAssembly(object):
         """Returns status of VSR enable signals for the selected VSR(s).
 
         Returns:
-            :obj:`list`: Status of requested VSR enable signal(s), represented as :obj:`str` with the values `"ENABLED"
-            or `"DISABLED"`.
+            :obj:`list`: Status of requested VSR enable signal(s), represented as :obj:`str` with
+            the values `"ENABLED" or `"DISABLED"`.
         """
         all_vsrs = True if self.slot == 0 else False
         return self._get_status(hv=False, all_vsrs=all_vsrs)
@@ -483,8 +506,8 @@ class VsrAssembly(object):
         """Returns status of high-voltage enable signals for the selected VSR(s).
 
         Returns:
-            :obj:`list`: Status of requested VSR enable signal(s), represented as :obj:`str` with the values `"ENABLED"
-            or `"DISABLED"`.
+            :obj:`list`: Status of requested VSR enable signal(s), represented as :obj:`str` with
+            the values `"ENABLED" or `"DISABLED"`.
         """
         all_vsrs = True if self.slot == 0 else False
         return self._get_status(hv=True, all_vsrs=all_vsrs)
@@ -492,11 +515,12 @@ class VsrAssembly(object):
     def who_is(self):
         """Sends a VSR `who_is?` command.
 
-        Will check the response to see of the Power/HV module is connected. The Power/HV response and end of `who_is?`
-        character will be stripped from the response.
+        Will check the response to see of the Power/HV module is connected. The Power/HV response
+        and end of `who_is?` character will be stripped from the response.
 
         Returns:
-            :obj:`list`: of VSR :obj:`int`: Addresses of enabled VSR modules returned by `who_is?` command.
+            :obj:`list`: of VSR :obj:`int`: Addresses of enabled VSR modules returned by `who_is?`
+            command.
         """
         vsr_d = list()  # empty VSR data list to pass to: :meth:`_vsr_uart_write()`
         hv_power_module_id = [0xc0, 0x31]
@@ -518,18 +542,21 @@ class VsrAssembly(object):
         return vsr_addrs
 
     def lookup(self, init_time=15):
-        """Cycle through each possible VSR module slot and return the VSR address for the module in each slot.
+        """Cycle through each possible VSR module slot and return the VSR address for the module in
+        each slot.
 
-        Each VSR module has its address hard-coded on the VSR module. The position of VSRs isn't guaranteed between
-        hardware assemblies. This routine can be executed once per assembly with the results stored externally.
+        Each VSR module has its address hard-coded on the VSR module. The position of VSRs isn't
+        guaranteed between hardware assemblies. This routine can be executed once per assembly with
+        the results stored externally.
 
         Args:
-            init_time (:obj:`int`, optional): Time, in seconds, to allow VSR FPGA to initialise. Default: `15` seconds.
+            init_time (:obj:`int`, optional): Time, in seconds, to allow VSR FPGA to initialise.
+                Default: `15` seconds.
 
         Returns:
-            :obj:`dict`: The hardware configuration of the `Hexitec` assembly. Where the key is the VSR slot idx and the
-            value is the :obj:`int` VSR address. Set to `None` if there is no `who_is?` response from the corresponding
-            slot.
+            :obj:`dict`: The hardware configuration of the `Hexitec` assembly. Where the key is the
+                VSR slot idx and the value is the :obj:`int` VSR address. Set to `None` if there is
+                no `who_is?` response from the corresponding slot.
         """
         # use the VSR_EN field to set the total number of VSR modules in the system:
         vsr_en_field = rdma.get_field(HEXITEC_2X6_VSR_CTRL, 'VSR_EN')
@@ -539,7 +566,7 @@ class VsrAssembly(object):
             self._ctrl(vsr_mod=v + 1, op="enable", init_time=init_time)
             self._get_status(vsr_mod=v + 1)
             tmp_addr = self.who_is()
-            vsr_addr_map[v+1] = tmp_addr[0] if tmp_addr else None
+            vsr_addr_map[v + 1] = tmp_addr[0] if tmp_addr else None
             self._ctrl(vsr_mod=v + 1, op="disable", init_time=0)
             self._get_status(vsr_mod=v + 1)
         print(f"[INFO]: Address mapping from lookup: {vsr_addr_map}")
@@ -551,13 +578,13 @@ class VsrAssembly(object):
         This controls the power and high-voltage enable signals between the FPGA and VSR module slots.
 
         Args:
-            vsr_mod (:obj:`int`, optional): VSR module to control, indexed from 1. If not set, will use the :attr:`slot`
-                to set the VSR module number. Default: `None`.
+            vsr_mod (:obj:`int`, optional): VSR module to control, indexed from 1. If not set, will
+                use the :attr:`slot` to set the VSR module number. Default: `None`.
             all_vsrs (:obj:`bool`, optional): Control all VSR modules. Default: `False`.
-            op (:obj:`str`, optional): Operation to perform. From: `enable`, `disable`, `hv_enable`, `hv_disable`.
-                Default: `disable`.
-            init_time(:obj:`int`, optional): Time, in seconds, to wait for VSR to power up and FPGA to initialise.
-                Default: `15` seconds.
+            op (:obj:`str`, optional): Operation to perform. From: `enable`, `disable`, `hv_enable`,
+                `hv_disable`. Default: `disable`.
+            init_time(:obj:`int`, optional): Time, in seconds, to wait for VSR to power up and FPGA
+                to initialise. Default: `15` seconds.
 
         Returns:
             :obj:`int`: `1` on success, `0` on failure.
@@ -670,7 +697,8 @@ class VsrAssembly(object):
         time.sleep(init_time)
 
     def disable_vsr(self, addr=False):
-        """Stops the state-machine, and disables ADC and DAC, also stops the PLL in the VSR modules FPGA.
+        """Stops the state-machine, and disables ADC and DAC, also stops the PLL in the VSR modules
+        FPGA.
 
         Args:
             addr (:obj:`int`): Hardware address to target if set, otherwise own VSR module's.
@@ -688,8 +716,10 @@ class VsrAssembly(object):
         """Controls the VSR modules ADC and DAC.
 
         Args:
-            adc (:obj:`bool`, optional): State to set the ADC. `True` is enabled, `False` is disabled. Default: `False`.
-            dac (:obj:`bool`, optional): State to set the DAC. `True` is enabled, `False` is disabled. Default: `False`.
+            adc (:obj:`bool`, optional): State to set the ADC. `True` is enabled, `False` is
+                disabled. Default: `False`.
+            dac (:obj:`bool`, optional): State to set the DAC. `True` is enabled, `False` is
+                disabled. Default: `False`.
 
         Returns:
             :obj:`int`:  `1` on success, `0` on failure.
@@ -698,7 +728,7 @@ class VsrAssembly(object):
         dac_ctrl_bit = 1 if dac else 0
         ctrl_byte = (dac_ctrl_bit << 1) + adc_ctrl_bit
         # Ensure byte follow aSpect format
-        ctrl_byte = [0x30, ctrl_byte+0x30]
+        ctrl_byte = [0x30, ctrl_byte + 0x30]
         self._uart_write(self.addr, get_vsr_cmd_char("adc_dac_ctrl"), ctrl_byte)
         resp = self._rdma_ctrl_iface.uart_read()
         resp = self._check_uart_response(resp)
@@ -795,14 +825,15 @@ class VsrAssembly(object):
         return "ENABLED" if self._dac_enabled_flag else "DISABLED"
 
     def _check_uart_response(self, rx_d):
-        """Takes an incoming :obj:`list` of bytes received from the VSR UART and validates the start and end characters.
+        """Takes an incoming :obj:`list` of bytes received from the VSR UART and validates the
+        start and end characters.
 
         Args:
             rx_d (:obj:`list` of :obj:`int`): full byte-by-byte response from VSR UART.
 
         Returns:
-            :obj:`list` of :obj:`int`: Parses :attr:`rx_d` by removing the start of response; address; and end
-            character.
+            :obj:`list` of :obj:`int`: Parses :attr:`rx_d` by removing the start of response;
+            address; and end character.
         """
         if rx_d[0] == get_vsr_cmd_char("resp"):
             rx_d = rx_d[1:]
@@ -823,43 +854,49 @@ class VsrModule(VsrAssembly):
        Requires memory mapped :obj:`dict` imported from the following modules:
         - :mod:`rdma_control.RDMA_REGISTERS`,
         - :mod:`rdma_control.VSR_FPGA_REGISTERS`
-       Also requires the corresponding helper functions imported from :mod:`rdma_control.rdma_register_helpers` to
-       access and modify the dictionary entries defining the registers.
+       Also requires the corresponding helper functions imported from
+       :mod:`rdma_control.rdma_register_helpers` to access and modify the dictionary entries
+       defining the registers.
 
-       :mod:`rdma_control.RDMA_REGISTERS` and :mod:`rdma_control.VSR_FPGA_REGISTERS` are generated from
-       `XML2VHDL` output, regenerated at FPGA synthesis time. Please
-       ensure the latest version is used in conjunction with :mod:`rdma_control.RdmaUdp` to ensure compatibility with
-       the register map in the current FPGA bitstream.
+       :mod:`rdma_control.RDMA_REGISTERS` and :mod:`rdma_control.VSR_FPGA_REGISTERS` are generated
+       from `XML2VHDL` output, regenerated at FPGA synthesis time. Please ensure the latest version
+       is used in conjunction with :mod:`rdma_control.RdmaUdp` to ensure compatibility with the
+       register map in the current FPGA bitstream.
 
     .. warning::
 
-       Not supplying a :attr:`addr_mapping` :obj:`dict`, :class:`VsrModule` will perform a :meth:`VsrModule.lookup` to
-       determine the configuration of the attached system. This is a time-consuming operation so should be avoided
-       whenever possible by supplying a pre-determined configuration matching the target system.
+       Not supplying a :attr:`addr_mapping` :obj:`dict`, :class:`VsrModule` will perform a
+       :meth:`VsrModule.lookup` to determine the configuration of the attached system. This is a
+       time-consuming operation so should be avoided whenever possible by supplying a pre-determined
+       configuration matching the target system.
 
     Args:
-        rdma_ctrl_iface (:obj:`rdma_control.RdmaUdp`): A configured connection to communicate with the `RDMA` `UDP`
-            Ethernet interface.
+        rdma_ctrl_iface (:obj:`rdma_control.RdmaUdp`): A configured connection to communicate with
+            the `RDMA` `UDP` Ethernet interface.
         slot (:obj:`int`, optional): Slot index, indexed from `1`, of the VSR module. Default: `1`.
-        init_time(:obj:`int`, optional): Time, in seconds, to wait for VSR to power up and FPGA to initialise.
-            Default: `15` seconds.
-        addr_mapping (:obj:`dict`, optional): Key/value pairs cross-referencing :attr:`slot` with hardware address of
-            the corresponding VSR module. Default: `None`. If an address mapping is not supplied the :obj:`VsrModule`
-            will perform a :meth:`VsrModule.lookup` to determine the configuration of the attached system.
+        init_time(:obj:`int`, optional): Time, in seconds, to wait for VSR to power up and FPGA to
+            initialise. Default: `15` seconds.
+        addr_mapping (:obj:`dict`, optional): Key/value pairs cross-referencing :attr:`slot` with
+            hardware address of the corresponding VSR module. Default: `None`. If an address
+            mapping is not supplied the :obj:`VsrModule` will perform a :meth:`VsrModule.lookup`
+            to determine the configuration of the attached system.
 
     Attributes:
-        addr_mapping (:obj:`dict`): A copy of the address mapping configuration, either provided or determined at
-            initialisation.
+        addr_mapping (:obj:`dict`): A copy of the address mapping configuration, either provided or
+            determined at initialisation.
         slot (:obj:`int`): Slot number for corresponding VSR module, indexed from '1'.
         addr (:obj:`int`): Hardware address of VSR module, hard-coded on each VSR module.
-        rows1_clock (:obj:`int`): A 16 bit :obj:`int` representing the `RowS1 Clock` value. Default: `1`.
+        rows1_clock (:obj:`int`): A 16 bit :obj:`int` representing the `RowS1 Clock` value.
+            Default: `1`.
         s1sph (:obj:`int`): A 6 bit :obj:`int` representing the `S1Sph` value. Default: `1`.
         sphs2 (:obj:`int`): A 6 bit :obj:`int` representing the `SphS2` value. Default: `6`.
         gain (:obj:`str`): `"high"` or `"low"` `gain`. Default: `"low"`.
-        adc_clock_delay (:obj:`int`): A 5 bit :obj:`int` representing the `ADC Clock Delay` value. Default: `2`.
-        adc_signal_delay (:obj:`int`): A 8 bit :obj:`int` representing the `ADC Signal Delay` value. Controls the
-            F\ :sub:`val` and L\ :sub:`val` delays. Default: `10`.
-        sm_vcal_clock (:obj:`int`): A 15 bit :obj:`int` representing the `State-Machine` V\ :sub:`cal` `Clock` value.
+        adc_clock_delay (:obj:`int`): A 5 bit :obj:`int` representing the `ADC Clock Delay` value.
+            Default: `2`.
+        adc_signal_delay (:obj:`int`): A 8 bit :obj:`int` representing the `ADC Signal Delay` value.
+            Controls the F\ :sub:`val` and L\ :sub:`val` delays. Default: `10`.
+        sm_vcal_clock (:obj:`int`): A 15 bit :obj:`int` representing the
+            `State-Machine` V\ :sub:`cal` `Clock` value.
             Default: `0`.
         sm_row_wait_clock (:obj:`int`): A 8 bit :obj:`int` representing the
             `State-Machine Row Wait Clock` value. Default: `8`.
@@ -888,7 +925,7 @@ class VsrModule(VsrAssembly):
         self.dac_vcal = 0x111   # 0x111 = 0.2V
         self.dac_umid = 0x555   # 0x555 = 1.0V
         self.dac_hv = 0x555
-        self.dac_det_ctrl = 0x0
+        self.dac_det_ctrl = 0xCCC   # 0
         self.dac_reserve2 = 0x8E8
         self.adc_output_phase = 9
         self.set_adc_output_phase("540")
@@ -1502,7 +1539,6 @@ class VsrModule(VsrAssembly):
                                   self._fpga_reg_read(VSR_FPGA_REGISTERS.REG10['addr']), 1)
         self._fpga_reg_write(VSR_FPGA_REGISTERS.REG1['addr'], ctrl_reg)
 
-
     def enable_plls(self, pll=True, adc_pll=True):
         """Enables the VSR PLLs.
 
@@ -1558,7 +1594,6 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         ctrl_reg = self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr'])
-        # print(f" 1488 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}  set_dc_control_bits")
         if capt_avg_pict:
             ctrl_reg = rdma.set_field(VSR_FPGA_REGISTERS.REG36, "CAPT_AVG_PICT", ctrl_reg, 1)
         if vcal_pulse_disable:
@@ -1567,7 +1602,6 @@ class VsrModule(VsrAssembly):
             ctrl_reg = rdma.set_field(VSR_FPGA_REGISTERS.REG36, "SPECTROSCOPIC_MODE_EN",
                                       ctrl_reg, 1)
         self._fpga_reg_write(VSR_FPGA_REGISTERS.REG36['addr'], ctrl_reg)
-        # print(f" 1496 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}")
 
     def clr_dc_control_bits(self, capt_avg_pict=True, vcal_pulse_disable=True,
                             spectroscopic_mode_en=True):
@@ -1585,7 +1619,6 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         ctrl_reg = self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr'])
-        # print(f" 1513 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}  clr_dc_control_bits")
         if capt_avg_pict:
             ctrl_reg = rdma.clr_field(VSR_FPGA_REGISTERS.REG36, "CAPT_AVG_PICT", ctrl_reg)
         if vcal_pulse_disable:
@@ -1593,7 +1626,6 @@ class VsrModule(VsrAssembly):
         if spectroscopic_mode_en:
             ctrl_reg = rdma.clr_field(VSR_FPGA_REGISTERS.REG36, "SPECTROSCOPIC_MODE_EN", ctrl_reg)
         self._fpga_reg_write(VSR_FPGA_REGISTERS.REG36['addr'], ctrl_reg)
-        # print(f" 1521 REG36: 0x{self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr']):X}")
 
     def enable_all_columns(self, asic=1):
         """Writes the masks to enable Read and Power for Columns of the target ASIC.
@@ -1877,10 +1909,10 @@ class VsrModule(VsrAssembly):
         """Gets the U\ :sub:`mid` attribute value of :obj:`VsrModule`.
 
         .. warning::
-           This method *DOES NOT* read the U\ :sub:`mid` value from the VSR DAC. There is no method
-           to read each of the current DAC values from the VSR DAC. The only way to retrieve the
-           current values of the VSR DAC is to perform a :meth:`write_dac_values` and process the
-           returned :obj:`dict`.
+           This method *DOES NOT* read the U\ :sub:`mid` value from the VSR DAC. There is no
+           method to read each of the current DAC values from the VSR DAC. The only way to
+           retrieve the current values of the VSR DAC is to perform a :meth:`write_dac_values`
+           and process the returned :obj:`dict`.
 
         Returns:
             :obj:`int`: 12 bit :obj:`int` for the :attr:`dac_umid` attribute.
@@ -1950,18 +1982,20 @@ class VsrModule(VsrAssembly):
     def write_dac_values(self, addr=False):
         """Writes each of the DAC based attributes to the VSR DAC.
 
-        Writes the following attributes: :attr:`dac_vcal`, :attr:`dac_umid`,  :attr:`dac_hv`,  :attr:`dac_det_ctrl`, and
-        :attr:`dac_reserve2`.
+        Writes the following attributes: :attr:`dac_vcal`, :attr:`dac_umid`, :attr:`dac_hv`,
+        :attr:`dac_det_ctrl`, and :attr:`dac_reserve2`.
 
         .. note::
-           The only way to return values from the VSR DAC is by performing a :meth:`write_dac_values`. This method
-           will return a :obj:`dict` of all values **without** overwriting the VSR DAC based attributes.
+           The only way to return values from the VSR DAC is by performing a
+           :meth:`write_dac_values`. This method will return a :obj:`dict` of all values
+           **without** overwriting the VSR DAC based attributes.
 
         Args:
             addr (:obj:`int`): Hardware address to target if set, otherwise own VSR module's.
 
         Returns:
-            :obj:`dict` of key/values pairs, where the keys are: `vcal`, `umid`, `hv`, `det_ctrl` and `reserve2`.
+            :obj:`dict` of key/values pairs, where the keys are: `vcal`, `umid`, `hv`, `det_ctrl`
+            and `reserve2`.
         """
         # print(f" *** writ_dac_values, self.dac_vcal: 0x{self.dac_vcal:X}")
         address = self.addr
@@ -1970,12 +2004,13 @@ class VsrModule(VsrAssembly):
         dac_mask = 0xFFF  # Limit the DAC to 12 bits.
         nof_bytes = 2  # Each value unpacks into this many bytes.
         vsr_cmd = get_vsr_cmd_char("write_dac_values")
-        dac_values = [self.dac_vcal, self.dac_umid, self.dac_hv, self.dac_det_ctrl, self.dac_reserve2]
+        dac_values = [self.dac_vcal, self.dac_umid, self.dac_hv, self.dac_det_ctrl,
+                      self.dac_reserve2]
         wr_cmd = list()
         tmp_dict = dict()
         for val in dac_values:
             wr_cmd.extend(unpack_data_for_vsr_write(val, mask=dac_mask, nof_bytes=nof_bytes))
-        # print("Send to UART: {} ".format(' '.join("0x{0:02X}".format(x) for x in wr_cmd)))
+        #print("Send to UART: {} ".format(' '.join("0x{0:02X}".format(x) for x in wr_cmd)))
         self._uart_write(address, vsr_cmd, wr_cmd)
         resp = self._rdma_ctrl_iface.uart_read()
         resp = self._check_uart_response(resp)
@@ -2175,7 +2210,7 @@ class VsrModule(VsrAssembly):
         self.write_adc_signal_delay()
         self.write_sm_row_wait_clock()
         self.start_sm_on_falling_edge()
-        # asserting the serial interface reset bit corresponds with line 1196 (enable LVDS interface) of:
+        # Asserting serial interface reset bit corresponds with line 1196 (enable LVDS interface):
         # https://github.com/stfc-aeg/hexitec-detector/blob/761ff3aa1008de4fc3fac1b7fdb5c02880168371/control/src/hexitec/HexitecFem.py
         self.assert_serial_iface_rst()  # 1196
         asics = [1, 2]
@@ -2185,9 +2220,10 @@ class VsrModule(VsrAssembly):
         self.init_adc()  # 1216
         self.set_dc_control_bits(capt_avg_pict=True, vcal_pulse_disable=self.vcal_enabled,
                                  spectroscopic_mode_en=False)  # 1226
-        # \TODO: Check if the spectroscopic_mode_en is already enabled or if it needs to be toggled off/on via the
-        #        previous :meth:`write_dc_control_bits`.
-        # self.set_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=False, spectroscopic_mode_en=True)  # 1229
+        # \TODO: Check if the spectroscopic_mode_en is already enabled or if it needs to be
+        #        toggled off/on via the previous :meth:`write_dc_control_bits`.
+        # self.set_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=False,
+        #                          spectroscopic_mode_en=True)  # 1229
         print(f"[INFO]: VSR{self.slot}: Starting LVDS Training...")
         # self.enable_training(time_s=training_delay)  # 1231
         self._enable_training(time_s=training_delay)
@@ -2200,7 +2236,7 @@ class VsrModule(VsrAssembly):
 
     def get_power(self):
         vsr_d = list()  # empty VSR data list to pass to: self.uart_write()
-        self._uart_write(self.addr, 0x50 , vsr_d)
+        self._uart_write(self.addr, 0x50, vsr_d)
         resp = self._rdma_ctrl_iface.uart_read()
         resp = self._check_uart_response(resp)
         MAX1239_INT_REF_V = 2.048
@@ -2209,19 +2245,19 @@ class VsrModule(VsrAssembly):
         # calc_hv_monitor_rail = round((convert_from_ascii(resp[36:40]) * 1621.65 ) - 1043.22,2)
         calc_3v3 = convert_from_ascii(resp[36:40]) * (MAX1239_INT_REF_V / 4095)
         u1 = convert_from_ascii(resp[0:4]) * (calc_3v3 / 2 ** 12)
-        calc_hv_monitor_rail = round(u1 * 1621.65 - 1043.22 , 2) # Removed " + 56 "
-        calc_1v2 = round(convert_from_ascii(resp[4:8]) * ( U10_REF_V / 2**12 ), 2)
-        calc_1v8 = round(convert_from_ascii(resp[8:12]) * ( U10_REF_V / 2**12 ), 2)
-        #reserved
-        calc_2v5 = round(convert_from_ascii(resp[16:20]) * ( U10_REF_V / 2**12 ), 2)
-        calc_3v3_ln = round(convert_from_ascii(resp[20:24]) * ( U10_REF_V / 2**12 ), 2)
-        calc_1v65 = round(convert_from_ascii(resp[24:28]) * ( U10_REF_V / 2**12 ), 2)
-        calc_1vb8 = round(convert_from_ascii(resp[28:32]) * ( U10_REF_V / 2**12 ), 2)
-        calc_3v8 = round(convert_from_ascii(resp[32:36]) * ( U10_REF_V / 2**12 ), 2)
+        calc_hv_monitor_rail = round(u1 * 1621.65 - 1043.22, 2)    # Removed " + 56 "
+        calc_1v2 = round(convert_from_ascii(resp[4:8]) * (U10_REF_V / 2**12), 2)
+        calc_1v8 = round(convert_from_ascii(resp[8:12]) * (U10_REF_V / 2**12), 2)
+        # reserved
+        calc_2v5 = round(convert_from_ascii(resp[16:20]) * (U10_REF_V / 2**12), 2)
+        calc_3v3_ln = round(convert_from_ascii(resp[20:24]) * (U10_REF_V / 2**12), 2)
+        calc_1v65 = round(convert_from_ascii(resp[24:28]) * (U10_REF_V / 2**12), 2)
+        calc_1vb8 = round(convert_from_ascii(resp[28:32]) * (U10_REF_V / 2**12), 2)
+        calc_3v8 = round(convert_from_ascii(resp[32:36]) * (U10_REF_V / 2**12), 2)
         calc_3v3 = round(convert_from_ascii(resp[36:40]) * (MAX1239_INT_REF_V / 2 ** 12), 2)
 
-        #reserved
-        #reserved
+        # reserved
+        # reserved
         ret_tup = f"{calc_hv_monitor_rail}V", f"{calc_1v2}V",\
             f"{calc_1v8}V", f"{calc_2v5}V", \
             f"{calc_3v3_ln}V", f"{calc_1v65}V", \
@@ -2263,7 +2299,7 @@ class VsrModule(VsrAssembly):
 
     def collect_offsets(self):
         """HexitecRdmaStatuses.collect_offsets() ported by CA."""
-        print(f"[INFO]: VSR{self.slot}: Collecting offsets...")
+        #print(f" *** [INFO]: VSR{self.slot}: Collecting offsets...")
         # 2. Stop the state machine
         # write_receive_to_all(vsr_list, 0x43, 0x30, 0x31, 0x30, 0x31)
         self.disable_sm()
@@ -2317,16 +2353,70 @@ class VsrModule(VsrAssembly):
 
         print(f"[INFO]: VSR{self.slot}: Offsets Collected.")
 
-    def hv_on(self):
+    def hv_on(self, hv_msb, hv_lsb):
         """Switch HV on."""
         hv_address = 0xC0
         self.enable_vsr(init_time=0.5, addr=hv_address)
-        current_dac_vals = self.write_dac_values(addr=hv_address)
+        current_dac_vals = self.write_power_board_dac_values(hv_address, hv_msb, hv_lsb)
+        # Necessary to enable HV again?(!)
+        #self.enable_vsr(init_time=0.5, addr=hv_address)
+        #print(" enabled HV 2nd time!")
 
     def hv_off(self):
         """Switch HV off."""
         hv_address = 0xC0
         self.disable_vsr(addr=hv_address)
+
+    def write_power_board_dac_values(self, addr, hv_msb, hv_lsb):
+        """Writes the DAC based HV attribute to the Power Board DAC.
+
+        Args:
+            addr (:obj:`int`): Hardware address to target if set, otherwise own VSR module's.
+            hv_msb (:obj:`int`): Most significant byte of HV bias level
+            hv_lsb (:obj:`int`): Least significant byte of HV bias level
+
+        Returns:
+            :obj:`dict` of key/values pairs, where the key is: `hv`.
+        """
+        address = self.addr
+        if addr:
+            address = addr
+        dac_mask = 0xFFF  # Limit the DAC to 12 bits.
+        nof_bytes = 2  # Each value unpacks into this many bytes.
+        vsr_cmd = get_vsr_cmd_char("write_dac_values")
+        padding = [0x30, 0x30, 0x30, 0x30]
+        # Should be:
+        #dac_values = [#padding, padding, padding,
+        #    hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
+        #    #padding, padding, padding, padding]
+        #
+        dac_values = [#padding, padding, padding,
+            #0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
+            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
+            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
+            # Actual HV values:
+            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
+            #padding, padding, padding, padding]
+            #0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
+            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
+            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
+            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1]]
+        wr_cmd = list()
+        tmp_dict = dict()
+        #print(f" dac_values: {dac_values}");import sys;sys.exit(0)
+        for val in dac_values:
+            #wr_cmd.extend(unpack_data_for_vsr_write(val, mask=dac_mask, nof_bytes=nof_bytes))
+            wr_cmd.append(val)
+        #print("Send to UART: {} ".format(' '.join("0x{0:02X}".format(x) for x in wr_cmd)))
+        #print(type(wr_cmd))
+        #print(len(wr_cmd))
+        self._uart_write(address, vsr_cmd, wr_cmd)
+        resp = self._rdma_ctrl_iface.uart_read()
+        resp = self._check_uart_response(resp)
+        tmp_dict['hv'] = resp[12:16]
+        return tmp_dict
 
     def write_sync_reset_daq(self):
         """Writes SYNC clock, reset interface to the VSR FPGA register.
@@ -2352,7 +2442,6 @@ class VsrModule(VsrAssembly):
         wr_data = 0x1 & VSR_FPGA_REGISTERS.REG10['mask']
         addr = VSR_FPGA_REGISTERS.REG10['addr']
         self._fpga_reg_write(addr, wr_data)
-
 
     def enable_vcal(self, vcal_enabled):
         """Enables the VSR VCAL and calibration masks.
@@ -2408,14 +2497,14 @@ class VsrModule(VsrAssembly):
         valid_range = [0, 1 << bit_range]
         setting = -1
         try:
-            unscaled_setting = parameter_dict   #[descriptor]
+            unscaled_setting = parameter_dict   # [descriptor]
             scaled_setting = self.convert_string_exponential_to_integer(unscaled_setting)
             if scaled_setting >= valid_range[0] and scaled_setting <= valid_range[1]:
                 setting = int(scaled_setting // self.DAC_SCALE_FACTOR)
             else:
                 print("Error parsing %s, got: %s (scaled: % s) but valid range: %s-%s" %
-                              (descriptor, unscaled_setting, scaled_setting, valid_range[0],
-                               valid_range[1]))
+                      (descriptor, unscaled_setting, scaled_setting, valid_range[0],
+                       valid_range[1]))
                 setting = -1
         except KeyError:
             raise Exception("ERROR: No '%s' Key defined!" % descriptor)
@@ -2436,13 +2525,13 @@ class VsrModule(VsrAssembly):
         valid_range = [0.0, 3.0]
         setting = -1
         try:
-            setting = float(parameter_dict) #[descriptor])
+            setting = float(parameter_dict)  # [descriptor])
             if setting >= valid_range[0] and setting <= valid_range[1]:
                 # Convert from volts to DAQ format
                 setting = self.convert_aspect_float_to_dac_value(setting)
             else:
                 print("Error parsing float %s, got: %s but valid range: %s-%s" %
-                              (descriptor, setting, valid_range[0], valid_range[1]))
+                      (descriptor, setting, valid_range[0], valid_range[1]))
                 setting = -1
         except KeyError:
             raise Exception("Missing Key: '%s'" % descriptor)

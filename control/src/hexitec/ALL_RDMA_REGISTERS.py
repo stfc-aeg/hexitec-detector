@@ -429,7 +429,14 @@ HEXITEC_2X6_VSR_CTRL = { 'addr': 24,
                 'name': 'HV_EN',
                 'nof_bits': 6,
                 'reset_value': '0x0',
-                'shiftr': 8}],
+                'shiftr': 8},
+              { 'description': 'Disable the VSR power sequencer logic',
+                'is_bit': True,
+                'mask': 1073741824,
+                'name': 'PWR_SEQ_DISABLE',
+                'nof_bits': 1,
+                'reset_value': '0x0',
+                'shiftr': 30}],
   'mask': 4294967295,
   'name': 'HEXITEC_2X6_VSR_CTRL',
   'nof_bits': 32,
@@ -437,15 +444,16 @@ HEXITEC_2X6_VSR_CTRL = { 'addr': 24,
   'shiftr': 0}
 """:const:`HEXITEC_2X6_VSR_CTRL` generated from `XML2VHDL` output.
 
-================  ====================  ===============  ==============  ===============
+================  =====================================  ===============  ==============  ===============
 **Register**
 **Name:**         HEXITEC_2X6_VSR_CTRL
 **Address:**      ``0x0000_0018``
 **Description:**  VSR control register
-**Bit Fields**    **Description**       **Mask**         **Permission**  **Reset Value**
-VSR_EN            VSR enable            ``0x0000_003F``  Read/Write      ``0x0000_0000``
-HV_EN             High Voltage enable   ``0x0000_3F00``  Read/Write      ``0x0000_0000``
-================  ====================  ===============  ==============  ===============
+**Bit Fields**    **Description**                        **Mask**         **Permission**  **Reset Value**
+VSR_EN            VSR enable                             ``0x0000_003F``  Read/Write      ``0x0000_0000``
+HV_EN             High Voltage enable                    ``0x0000_3F00``  Read/Write      ``0x0000_0000``
+PWR_SEQ_DISABLE   Disable the VSR power sequencer logic  ``0x4000_0000``  Read/Write      ``0x0000_0000``
+================  =====================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -458,7 +466,9 @@ HV_EN             High Voltage enable   ``0x0000_3F00``  Read/Write      ``0x000
       0-5: VSR_EN
       6-7:  [ rotate = 270, color = lightgrey ]
       8-13: HV_EN
-      14-31:  [ color = lightgrey ]
+      14-29:  [ color = lightgrey ]
+      30: PWR_SEQ_DISABLE [ rotate = 270 ]
+      31:  [ rotate = 270, color = lightgrey ]
    }
 
 """
@@ -622,46 +632,30 @@ HEXITEC_2X6_SMB_CFG = { 'addr': 36,
 
 """
 
-HEXITEC_2X6_TIG_CTRL = { 'addr': 40,
-  'description': 'Test Image Generator control register',
-  'fields': [ { 'description': 'Test Image Generator reset',
+HEXITEC_2X6_HEXITEC_CTRL = { 'addr': 40,
+  'description': 'Hexitec 2x6 output datapath control',
+  'fields': [ { 'description': 'Hexitec 2x6 output datapath reset',
                 'is_bit': True,
                 'mask': 1,
-                'name': 'TIG_RST',
+                'name': 'HEXITEC_RST',
                 'nof_bits': 1,
                 'reset_value': '0x0',
-                'shiftr': 0},
-              { 'description': 'Test Image Generator enable',
-                'is_bit': True,
-                'mask': 2,
-                'name': 'TIG_EN',
-                'nof_bits': 1,
-                'reset_value': '0x0',
-                'shiftr': 1},
-              { 'description': 'Test Image Generator mode',
-                'is_bit': False,
-                'mask': 1792,
-                'name': 'TIG_MODE',
-                'nof_bits': 3,
-                'reset_value': '0x0',
-                'shiftr': 8}],
+                'shiftr': 0}],
   'mask': 4294967295,
-  'name': 'HEXITEC_2X6_TIG_CTRL',
+  'name': 'HEXITEC_2X6_HEXITEC_CTRL',
   'nof_bits': 32,
   'reset_value': '0x0',
   'shiftr': 0}
-""":const:`HEXITEC_2X6_TIG_CTRL` generated from `XML2VHDL` output.
+""":const:`HEXITEC_2X6_HEXITEC_CTRL` generated from `XML2VHDL` output.
 
-================  =====================================  ===============  ==============  ===============
+================  ===================================  ===============  ==============  ===============
 **Register**
-**Name:**         HEXITEC_2X6_TIG_CTRL
+**Name:**         HEXITEC_2X6_HEXITEC_CTRL
 **Address:**      ``0x0000_0028``
-**Description:**  Test Image Generator control register
-**Bit Fields**    **Description**                        **Mask**         **Permission**  **Reset Value**
-TIG_RST           Test Image Generator reset             ``0x0000_0001``  Read/Write      ``0x0000_0000``
-TIG_EN            Test Image Generator enable            ``0x0000_0002``  Read/Write      ``0x0000_0000``
-TIG_MODE          Test Image Generator mode              ``0x0000_0700``  Read/Write      ``0x0000_0000``
-================  =====================================  ===============  ==============  ===============
+**Description:**  Hexitec 2x6 output datapath control
+**Bit Fields**    **Description**                      **Mask**         **Permission**  **Reset Value**
+HEXITEC_RST       Hexitec 2x6 output datapath reset    ``0x0000_0001``  Read/Write      ``0x0000_0000``
+================  ===================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -671,143 +665,8 @@ TIG_MODE          Test Image Generator mode              ``0x0000_0700``  Read/W
       scale_direction = right_to_left
       scale_interval = 8
 
-      0: TIG_RST [ rotate = 270 ]
-      1: TIG_EN [ rotate = 270 ]
-      2-7:  [ color = lightgrey ]
-      8-10: TIG_MODE [ rotate = 270 ]
-      11-31:  [ color = lightgrey ]
-   }
-
-"""
-
-HEXITEC_2X6_TIG_ROWS = { 'addr': 44,
-  'description': 'Test Image Generator rows register',
-  'fields': [],
-  'mask': 16777215,
-  'name': 'HEXITEC_2X6_TIG_ROWS',
-  'nof_bits': 24,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`HEXITEC_2X6_TIG_ROWS` generated from `XML2VHDL` output.
-
-================  ==================================
-**Register**
-**Name:**         HEXITEC_2X6_TIG_ROWS
-**Address:**      ``0x0000_002C``
-**Description:**  Test Image Generator rows register
-**Permission:**   Read/Write
-**Reset Value:**  ``0x0000_0000``
-================  ==================================
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-23: TIG_ROWS
-      24-31:  [ color = lightgrey ]
-   }
-
-"""
-
-HEXITEC_2X6_TIG_COLS = { 'addr': 48,
-  'description': 'Test Image Generator columns register',
-  'fields': [],
-  'mask': 16777215,
-  'name': 'HEXITEC_2X6_TIG_COLS',
-  'nof_bits': 24,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`HEXITEC_2X6_TIG_COLS` generated from `XML2VHDL` output.
-
-================  =====================================
-**Register**
-**Name:**         HEXITEC_2X6_TIG_COLS
-**Address:**      ``0x0000_0030``
-**Description:**  Test Image Generator columns register
-**Permission:**   Read/Write
-**Reset Value:**  ``0x0000_0000``
-================  =====================================
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-23: TIG_COLS
-      24-31:  [ color = lightgrey ]
-   }
-
-"""
-
-HEXITEC_2X6_TIG_LBCLKS = { 'addr': 52,
-  'description': 'Test Image Generator lbclks register',
-  'fields': [],
-  'mask': 16777215,
-  'name': 'HEXITEC_2X6_TIG_LBCLKS',
-  'nof_bits': 24,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`HEXITEC_2X6_TIG_LBCLKS` generated from `XML2VHDL` output.
-
-================  ====================================
-**Register**
-**Name:**         HEXITEC_2X6_TIG_LBCLKS
-**Address:**      ``0x0000_0034``
-**Description:**  Test Image Generator lbclks register
-**Permission:**   Read/Write
-**Reset Value:**  ``0x0000_0000``
-================  ====================================
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-23: TIG_LBCLKS
-      24-31:  [ color = lightgrey ]
-   }
-
-"""
-
-HEXITEC_2X6_TIG_FBCLKS = { 'addr': 56,
-  'description': 'Test Image Generator fbclks register',
-  'fields': [],
-  'mask': 16777215,
-  'name': 'HEXITEC_2X6_TIG_FBCLKS',
-  'nof_bits': 24,
-  'reset_value': '0x0',
-  'shiftr': 0}
-""":const:`HEXITEC_2X6_TIG_FBCLKS` generated from `XML2VHDL` output.
-
-================  ====================================
-**Register**
-**Name:**         HEXITEC_2X6_TIG_FBCLKS
-**Address:**      ``0x0000_0038``
-**Description:**  Test Image Generator fbclks register
-**Permission:**   Read/Write
-**Reset Value:**  ``0x0000_0000``
-================  ====================================
-
-.. packetdiag::
-
-   packetdiag {
-      colwidth = 32
-      node_height = 144
-      scale_direction = right_to_left
-      scale_interval = 8
-
-      0-23: TIG_FBCLKS
-      24-31:  [ color = lightgrey ]
+      0: HEXITEC_RST [ rotate = 270 ]
+      1-31:  [ color = lightgrey ]
    }
 
 """
@@ -920,6 +779,21 @@ HEXITEC_2X6_HEADER_CTRL = { 'addr': 256,
                 'nof_bits': 1,
                 'reset_value': '0x0',
                 'shiftr': 3},
+              { 'description': 'Acquire number of frames enable',
+                'is_bit': True,
+                'mask': 256,
+                'name': 'ACQ_NOF_FRAMES_EN',
+                'nof_bits': 1,
+                'reset_value': '0x0',
+                'shiftr': 8},
+              { 'description': 'Wait for external trigger 1 to start '
+                               'acquisition',
+                'is_bit': True,
+                'mask': 65536,
+                'name': 'WAIT_FOR_EXT_TRIG_1',
+                'nof_bits': 1,
+                'reset_value': '0x0',
+                'shiftr': 16},
               { 'description': 'Restart the frame generator',
                 'is_bit': True,
                 'mask': 1073741824,
@@ -941,19 +815,21 @@ HEXITEC_2X6_HEADER_CTRL = { 'addr': 256,
   'shiftr': 0}
 """:const:`HEXITEC_2X6_HEADER_CTRL` generated from `XML2VHDL` output.
 
-===================  ==============================================  ===============  ==============  ===============
+===================  ================================================  ===============  ==============  ===============
 **Register**
 **Name:**            HEXITEC_2X6_HEADER_CTRL
 **Address:**         ``0x0000_0100``
 **Description:**     Hexitc header control register
-**Bit Fields**       **Description**                                 **Mask**         **Permission**  **Reset Value**
-FRAME_COUNTER_LOAD   Load preload frame number into frame counter    ``0x0000_0001``  Read/Write      ``0x0000_0000``
-PACKET_COUNTER_LOAD  Load preload packet number into packet counter  ``0x0000_0002``  Read/Write      ``0x0000_0000``
-FRAME_COUNTER_RST    Reset frame number counter                      ``0x0000_0004``  Read/Write      ``0x0000_0000``
-PACKET_COUNTER_RST   Reset packet number counter                     ``0x0000_0008``  Read/Write      ``0x0000_0000``
-RUN_GENERATOR        Restart the frame generator                     ``0x4000_0000``  Read/Write      ``0x0000_0000``
-READOUT_ENABLE       Readout enable                                  ``0x8000_0000``  Read/Write      ``0x0000_0000``
-===================  ==============================================  ===============  ==============  ===============
+**Bit Fields**       **Description**                                   **Mask**         **Permission**  **Reset Value**
+FRAME_COUNTER_LOAD   Load preload frame number into frame counter      ``0x0000_0001``  Read/Write      ``0x0000_0000``
+PACKET_COUNTER_LOAD  Load preload packet number into packet counter    ``0x0000_0002``  Read/Write      ``0x0000_0000``
+FRAME_COUNTER_RST    Reset frame number counter                        ``0x0000_0004``  Read/Write      ``0x0000_0000``
+PACKET_COUNTER_RST   Reset packet number counter                       ``0x0000_0008``  Read/Write      ``0x0000_0000``
+ACQ_NOF_FRAMES_EN    Acquire number of frames enable                   ``0x0000_0100``  Read/Write      ``0x0000_0000``
+WAIT_FOR_EXT_TRIG_1  Wait for external trigger 1 to start acquisition  ``0x0001_0000``  Read/Write      ``0x0000_0000``
+RUN_GENERATOR        Restart the frame generator                       ``0x4000_0000``  Read/Write      ``0x0000_0000``
+READOUT_ENABLE       Readout enable                                    ``0x8000_0000``  Read/Write      ``0x0000_0000``
+===================  ================================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -967,7 +843,11 @@ READOUT_ENABLE       Readout enable                                  ``0x8000_00
       1: PACKET_COUNTER_LOAD [ rotate = 270 ]
       2: FRAME_COUNTER_RST [ rotate = 270 ]
       3: PACKET_COUNTER_RST [ rotate = 270 ]
-      4-29:  [ color = lightgrey ]
+      4-7:  [ color = lightgrey ]
+      8: ACQ_NOF_FRAMES_EN [ rotate = 270 ]
+      9-15:  [ color = lightgrey ]
+      16: WAIT_FOR_EXT_TRIG_1 [ rotate = 270 ]
+      17-29:  [ color = lightgrey ]
       30: RUN_GENERATOR [ rotate = 270 ]
       31: READOUT_ENABLE [ rotate = 270 ]
    }
@@ -982,7 +862,63 @@ HEXITEC_2X6_HEADER_STATUS = { 'addr': 260,
                 'name': 'READOUT_LANE',
                 'nof_bits': 2,
                 'reset_value': '0x0',
-                'shiftr': 0}],
+                'shiftr': 0},
+              { 'description': 'External trigger 1 flag',
+                'is_bit': True,
+                'mask': 256,
+                'name': 'EXT_TRIGGER_1_FLAG',
+                'nof_bits': 1,
+                'reset_value': '0x0',
+                'shiftr': 8},
+              { 'description': 'Acquisition complete',
+                'is_bit': True,
+                'mask': 65536,
+                'name': 'ACQ_COMPLETE',
+                'nof_bits': 1,
+                'reset_value': '0x0',
+                'shiftr': 16},
+              { 'description': 'Start of Acquisition flag',
+                'is_bit': True,
+                'mask': 16777216,
+                'name': 'SOA_FLAG',
+                'nof_bits': 1,
+                'reset_value': '0x0',
+                'shiftr': 24},
+              { 'description': 'End of Acquisition flag',
+                'is_bit': True,
+                'mask': 33554432,
+                'name': 'EOA_FLAG',
+                'nof_bits': 1,
+                'reset_value': '0x0',
+                'shiftr': 25},
+              { 'description': 'End of Packet flag',
+                'is_bit': True,
+                'mask': 268435456,
+                'name': 'EOP_FLAG',
+                'nof_bits': 1,
+                'reset_value': '0x0',
+                'shiftr': 28},
+              { 'description': 'Start of Packet flag',
+                'is_bit': True,
+                'mask': 536870912,
+                'name': 'SOP_FLAG',
+                'nof_bits': 1,
+                'reset_value': '0x0',
+                'shiftr': 29},
+              { 'description': 'End of Frame flag',
+                'is_bit': True,
+                'mask': 1073741824,
+                'name': 'EOF_FLAG',
+                'nof_bits': 1,
+                'reset_value': '0x0',
+                'shiftr': 30},
+              { 'description': 'Start of Frame flag',
+                'is_bit': True,
+                'mask': 2147483648,
+                'name': 'SOF_FLAG',
+                'nof_bits': 1,
+                'reset_value': '0x0',
+                'shiftr': 31}],
   'mask': 4294967295,
   'name': 'HEXITEC_2X6_HEADER_STATUS',
   'nof_bits': 32,
@@ -990,14 +926,22 @@ HEXITEC_2X6_HEADER_STATUS = { 'addr': 260,
   'shiftr': 0}
 """:const:`HEXITEC_2X6_HEADER_STATUS` generated from `XML2VHDL` output.
 
-================  ==============================  ===============  ==============  ===============
+==================  ==============================  ===============  ==============  ===============
 **Register**
-**Name:**         HEXITEC_2X6_HEADER_STATUS
-**Address:**      ``0x0000_0104``
-**Description:**  Hexitec header status register
-**Bit Fields**    **Description**                 **Mask**         **Permission**  **Reset Value**
-READOUT_LANE      Current readout lane            ``0x0000_0003``  Read/Write      ``0x0000_0000``
-================  ==============================  ===============  ==============  ===============
+**Name:**           HEXITEC_2X6_HEADER_STATUS
+**Address:**        ``0x0000_0104``
+**Description:**    Hexitec header status register
+**Bit Fields**      **Description**                 **Mask**         **Permission**  **Reset Value**
+READOUT_LANE        Current readout lane            ``0x0000_0003``  Read/Write      ``0x0000_0000``
+EXT_TRIGGER_1_FLAG  External trigger 1 flag         ``0x0000_0100``  Read/Write      ``0x0000_0000``
+ACQ_COMPLETE        Acquisition complete            ``0x0001_0000``  Read/Write      ``0x0000_0000``
+SOA_FLAG            Start of Acquisition flag       ``0x0100_0000``  Read/Write      ``0x0000_0000``
+EOA_FLAG            End of Acquisition flag         ``0x0200_0000``  Read/Write      ``0x0000_0000``
+EOP_FLAG            End of Packet flag              ``0x1000_0000``  Read/Write      ``0x0000_0000``
+SOP_FLAG            Start of Packet flag            ``0x2000_0000``  Read/Write      ``0x0000_0000``
+EOF_FLAG            End of Frame flag               ``0x4000_0000``  Read/Write      ``0x0000_0000``
+SOF_FLAG            Start of Frame flag             ``0x8000_0000``  Read/Write      ``0x0000_0000``
+==================  ==============================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -1008,7 +952,18 @@ READOUT_LANE      Current readout lane            ``0x0000_0003``  Read/Write   
       scale_interval = 8
 
       0-1: READOUT_LANE [ rotate = 270 ]
-      2-31:  [ color = lightgrey ]
+      2-7:  [ color = lightgrey ]
+      8: EXT_TRIGGER_1_FLAG [ rotate = 270 ]
+      9-15:  [ color = lightgrey ]
+      16: ACQ_COMPLETE [ rotate = 270 ]
+      17-23:  [ color = lightgrey ]
+      24: SOA_FLAG [ rotate = 270 ]
+      25: EOA_FLAG [ rotate = 270 ]
+      26-27:  [ rotate = 270, color = lightgrey ]
+      28: EOP_FLAG [ rotate = 270 ]
+      29: SOP_FLAG [ rotate = 270 ]
+      30: EOF_FLAG [ rotate = 270 ]
+      31: SOF_FLAG [ rotate = 270 ]
    }
 
 """
@@ -1265,6 +1220,70 @@ HEXITEC_2X6_PACKET_NUMBER_UPPER = { 'addr': 300,
       scale_interval = 8
 
       0-31: PACKET_NUMBER_UPPER
+   }
+
+"""
+
+HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER = { 'addr': 304,
+  'description': 'number of frames to acquire [31:0]',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER',
+  'nof_bits': 32,
+  'reset_value': '0x0',
+  'shiftr': 0}
+""":const:`HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER` generated from `XML2VHDL` output.
+
+================  ==================================
+**Register**
+**Name:**         HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER
+**Address:**      ``0x0000_0130``
+**Description:**  number of frames to acquire [31:0]
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ==================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: ACQ_NOF_FRAMES_LOWER
+   }
+
+"""
+
+HEXITEC_2X6_ACQ_NOF_FRAMES_UPPER = { 'addr': 308,
+  'description': 'number of frames to acquire [63:32]',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'HEXITEC_2X6_ACQ_NOF_FRAMES_UPPER',
+  'nof_bits': 32,
+  'reset_value': '0x0',
+  'shiftr': 0}
+""":const:`HEXITEC_2X6_ACQ_NOF_FRAMES_UPPER` generated from `XML2VHDL` output.
+
+================  ===================================
+**Register**
+**Name:**         HEXITEC_2X6_ACQ_NOF_FRAMES_UPPER
+**Address:**      ``0x0000_0134``
+**Description:**  number of frames to acquire [63:32]
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ===================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: ACQ_NOF_FRAMES_UPPER
    }
 
 """
