@@ -19,7 +19,7 @@ def get_env_values(vsrs):
         print(f"[INFO]: VSR{vsr.slot} humidity: {vsr.get_humidity()}")
 
         for asic in [1, 2]:
-            print(f"[INFO]: VSR{vsr.slot} ASIC{asic} temp: {vsr.get_asic_temperature(idx=asic)} C")
+            print(f"[INFO]: VSR{vsr.slot} ASIC{asic} temp: {vsr.get_asic_temperature(idx=asic)} C   ***")
 
         print(f"[INFO]: VSR{vsr.slot} adc temperature: {vsr.get_adc_temperature()}")
 
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     get_env_values(vsrs)
     time.sleep(1)
 
-    bias_level = 500
+    bias_level = 10
     hv_msb, hv_lsb = convert_bias_to_dac_values(bias_level)
     print(f" HV Bias (-{bias_level}) : {hv_msb[0]:X} {hv_msb[1]:X} | {hv_lsb[0]:X} {hv_lsb[1]:X}")
     vsrs[0].hv_on(hv_msb, hv_lsb)
@@ -252,7 +252,7 @@ if __name__ == '__main__':
     print("Executing: reset frame number")
     frame_reset_to_zero()
 
-    set_nof_frames()
+    set_nof_frames(0x11)
 
     input("Press enter to enable data (200 ms)")
     data_en(enable=True)

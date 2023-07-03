@@ -248,6 +248,7 @@ class VsrAssembly(object):
         self.addr = self.get_addr()
         self._adc_enabled_flag = False
         self._dac_enabled_flag = True   # Enabled upon VSR Power on
+        self.debug = False
 
     # def __del__(self):
     #     self.hv_disable()
@@ -441,7 +442,8 @@ class VsrAssembly(object):
         for d in wr_d:
             wr_cmd.append(d)
         wr_cmd.append(get_vsr_cmd_char("end"))
-        #print(f"[DEBUG]: rdmaVsrMod._uart_write: {[ hex(c) for c in wr_cmd ]}")
+        if self.debug:
+            print(f"[DEBUG]: rdmaVsrMod._uart_write: {[ hex(c) for c in wr_cmd ]}")
         self._rdma_ctrl_iface.uart_write(wr_cmd)
 
     def _get_status(self, vsr_mod=None, hv=False, all_vsrs=False):
@@ -2299,7 +2301,7 @@ class VsrModule(VsrAssembly):
 
     def collect_offsets(self):
         """HexitecRdmaStatuses.collect_offsets() ported by CA."""
-        #print(f" *** [INFO]: VSR{self.slot}: Collecting offsets...")
+        # print(f" *** [INFO]: VSR{self.slot}: Collecting offsets...")
         # 2. Stop the state machine
         # write_receive_to_all(vsr_list, 0x43, 0x30, 0x31, 0x30, 0x31)
         self.disable_sm()
@@ -2310,7 +2312,6 @@ class VsrModule(VsrAssembly):
         # write_receive_to_all(vsr_list, 0x40, 0x32, 0x34, 0x32, 0x32)
         self.set_dc_control_bits(capt_avg_pict=True, vcal_pulse_disable=self.vcal_enabled,
                                  spectroscopic_mode_en=False)
-
         # 4. Start the state machine
         # write_receive_to_all(vsr_list, 0x42, 0x30, 0x31, 0x30, 0x31)
         self.enable_sm()
