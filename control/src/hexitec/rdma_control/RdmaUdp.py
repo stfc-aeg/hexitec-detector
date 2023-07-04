@@ -408,10 +408,9 @@ class RdmaUDP(object):
         Returns:
             :obj:`list` of bytes as :obj:`int`: for all data read from the `UART` receive buffer.
         """
-        # The following time.sleep(0.2) is required to allow time for the response to be queued in the UART Read FIFO
         cmd_no = self.cmd_no
-        # time.sleep(0.2)
         counter = self.uart_read_wait()
+        # print(f"  {counter}")
         rx_d = list()
         # check RX_BUFF_EMTY
         status_reg = self.udp_rdma_read(UART_REGS.UART_STATUS['addr'] + self.uart_offset,
@@ -510,9 +509,8 @@ class RdmaUDP(object):
         status_reg = (0, )
         try:
             status_reg = self.udp_rdma_read(address + self.uart_offset,
-            # status_reg = self.udp_rdma_read(UART_REGS.UART_STATUS['addr'] + self.uart_offset,
-                                                    burst_len=1,
-                                                    comment=UART_REGS.UART_STATUS['description'])[0]
+                                            burst_len=1,
+                                            comment=UART_REGS.UART_STATUS['description'])[0]
             # Extract fields using one or more of the following:
             # Field names can be found here:
             #    http://www-local.technology.stfc.ac.uk/ESDG/documentation/common-libraries/hexitec_2x6/latest/auto_generated_mmaps.html
@@ -534,9 +532,9 @@ class RdmaUDP(object):
         counter = 0
         rx_pkt_done = 0
         while not rx_pkt_done:
-            # _, _, _, _, _, rx_pkt_done = self.read_status_reg()
-            uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, \
-                rx_pkt_done = self.read_status_reg()
+            _, _, _, _, _, rx_pkt_done = self.read_status_reg()
+            # uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, \
+            #     rx_pkt_done = self.read_status_reg()
             # if (counter % 15001) == 0:
             #     print(" *VM {0:X}          {1:X}             {2:X}              {3:X}          {4:X}            {5:X} counter: {6}".format(
             #         uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done, counter))

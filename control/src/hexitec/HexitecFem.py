@@ -215,7 +215,8 @@ class HexitecFem():
         """Set up hardware connection."""
         try:
             self.x10g_rdma = RdmaUDP(local_ip=self.server_ctrl_ip_addr, local_port=61649,
-                                     rdma_ip=self.camera_ctrl_ip_addr, rdma_port=61648, debug=False)
+                                     rdma_ip=self.camera_ctrl_ip_addr, rdma_port=61648,
+                                     debug=False, uart_offset=0xC)
             self.broadcast_VSRs = \
                 VsrModule(self.x10g_rdma, slot=0, init_time=0, addr_mapping=self.vsr_addr_mapping)
             self.vsr_list = []
@@ -384,7 +385,7 @@ class HexitecFem():
             #     logging.debug("Power OK: 0x{0:08X}".format(read_value))
             # else:
             #     message = "Not all VSRs powered up"
-            #     error = "Expected 0x{0:02X}, got 0x{1:02X}".format(expected_value, read_value)
+            #     error = "{}".format(vsr_statuses)
             #     self.flag_error(message, error)
 
             # Switch HV on
@@ -497,26 +498,13 @@ class HexitecFem():
         cmd.insert(0, 0x23)
         cmd.append(0xd)
         # print(" *FEM Send to UART: {}  ({})".format(' '.join("0x{0:02X}".format(x) for x in cmd), cmd))
-        self.x10g_rdma.uart_write(cmd, cmd_no=0)
+        self.x10g_rdma.uart_write(cmd)
 
     def read_response(self):
         """Read a VSR's microcontroller response, passed on by the FEM."""
-        counter = 0
-        rx_pkt_done = 0
-        while not rx_pkt_done:
-            _, _, _, _, _, rx_pkt_done = self.x10g_rdma.read_uart_status()
-            # uart_status, tx_buff_full, tx_buff_empty, rx_buff_full, rx_buff_empty, rx_pkt_done \
-            #     = self.x10g_rdma.read_uart_status()
-            # if (counter % 10) == 0:
-            #     msg = " FEM {0:05} UART: {1:08X} tx_buff_full: {2:0X} tx_buff_empty: {3:0X}".format(
-            #         counter, uart_status, tx_buff_full, tx_buff_empty)
-            #     print("{0} rx_buff_full: {1:0X} rx_buff_empty: {2:0X} rx_pkt_done: {3:0X}".format(
-            #         msg, rx_buff_full, rx_buff_empty, rx_pkt_done))
-            counter += 1
-            if counter == HexitecFem.UART_MAX_RETRIES:
-                logging.error("read_response, UART timed out")
-                raise HexitecFemError("UART read timed out")
-        response = self.x10g_rdma.uart_read(cmd_no=0)
+        counter = self.x10g_rdma.uart_read_wait()
+        # print(f"  read_resp, counter: {counter}")
+        response = self.x10g_rdma.uart_read()
         # print("R: {}.  ({}). {}".format(
         #     ' '.join("0x{0:02X}".format(x) for x in response), response, counter))
         return response
@@ -1440,7 +1428,7 @@ class HexitecFem():
             raise HexitecFemError("HV: Invalid VSR address(0x{0:02X})".format(vsr.addr))
         index = vsr.addr - self.vsr_base_address
         if (0 <= index <= 5):
-            self.hv_list[index] = vsr._get_power_sensors()
+            self.hv_list[index] = vsr.get_power_sensors()
         else:
             raise HexitecFemError("Power Voltages: Invalid VSR index: {}".format(index))
 
@@ -1450,17 +1438,13 @@ class HexitecFem():
             raise HexitecFemError("Sensors: Invalid VSR address(0x{0:02X})".format(vsr.addr))
         sensors_values = vsr._get_env_sensors()
 
-        if self.debug:   # pragma: no coverage
-            logging.debug("VSR: %s sensors_values: %s len: %s" % (format(vsr.addr, '#02x'),
-                          sensors_values, len(sensors_values)))
-
         index = vsr.addr - self.vsr_base_address
         if (0 <= index <= 5):
-            self.ambient_list[index] = sensors_values[0]
-            self.humidity_list[index] = sensors_values[1]
-            self.asic1_list[index] = sensors_values[2]
-            self.asic2_list[index] = sensors_values[3]
-            self.adc_list[index] = sensors_values[4]
+            self.ambient_list[index] = float(sensors_values[0])
+            self.humidity_list[index] = float(sensors_values[1])
+            self.asic1_list[index] = float(sensors_values[2])
+            self.asic2_list[index] = float(sensors_values[3])
+            self.adc_list[index] = float(sensors_values[4])
         else:
             raise HexitecFemError("Sensors: Invalid VSR index: {}".format(index))
 

@@ -948,9 +948,9 @@ class VsrModule(VsrAssembly):
         calc_asic1_temp = round(convert_from_ascii(resp[8:12]) * 0.0625, 2)
         calc_asic2_temp = round(convert_from_ascii(resp[12:16]) * 0.0625, 2)
         calc_adc_temp = round(convert_from_ascii(resp[16:20]) * 0.0625, 2)
-        ret_tup = f"{calc_ambient_temp}", f"{calc_humidity}%",\
-            f"{calc_asic1_temp}°C", f"{calc_asic2_temp}°C", \
-            f"{calc_adc_temp}°C"
+        ret_tup = f"{calc_ambient_temp}", f"{calc_humidity}",\
+            f"{calc_asic1_temp}", f"{calc_asic2_temp}", \
+            f"{calc_adc_temp}"
         return ret_tup
 
     def get_temperature(self):
@@ -959,6 +959,7 @@ class VsrModule(VsrAssembly):
         Returns:
             :obj:`str`: Formatted temperature.
         """
+
         return self._get_env_sensors()[0]
 
     def get_humidity(self):

@@ -14,14 +14,14 @@ def get_env_values(vsrs):
         print(f"[INFO] Status: {vsr.get_module_status()} | H/V Status: {vsr.get_hv_status()}")
         print(f"[INFO] Status: {vsr.get_module_status()} | H/V Status: {vsr.get_hv_status()}")
 
-        print(f"[INFO]: VSR{vsr.slot} temperature: {vsr.get_temperature()}")
+        print(f"[INFO]: VSR{vsr.slot} temperature: {vsr.get_temperature()} °C")
 
-        print(f"[INFO]: VSR{vsr.slot} humidity: {vsr.get_humidity()}")
+        print(f"[INFO]: VSR{vsr.slot} humidity: {vsr.get_humidity()} %")
 
         for asic in [1, 2]:
-            print(f"[INFO]: VSR{vsr.slot} ASIC{asic} temp: {vsr.get_asic_temperature(idx=asic)} C   ***")
+            print(f"[INFO]: VSR{vsr.slot} ASIC{asic} temp: {vsr.get_asic_temperature(idx=asic)} °C   ***")
 
-        print(f"[INFO]: VSR{vsr.slot} adc temperature: {vsr.get_adc_temperature()}")
+        print(f"[INFO]: VSR{vsr.slot} adc temperature: {vsr.get_adc_temperature()} °C")
 
         print(vsr.get_power())
         print("-"*80)
