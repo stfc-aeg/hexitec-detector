@@ -845,6 +845,40 @@ class VsrAssembly(object):
             rx_d = rx_d[:-1]
         return rx_d
 
+    def frame_reset_to_zero(self, address1, address2, address3):
+        # print(f"   {address1:X} {address2:X} {address3:X}")
+        self._rdma_ctrl_iface.udp_rdma_write(address=address1, #HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_LOWER['addr'],
+                                            data=0x0, burst_len=1)
+        self._rdma_ctrl_iface.udp_rdma_write(address=address2, #HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_UPPER['addr'],
+                                            data=0x0, burst_len=1)
+        self._rdma_ctrl_iface.udp_rdma_write(address=address3, #HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
+                                            data=0x1, burst_len=1)
+        self._rdma_ctrl_iface.udp_rdma_write(address=address3, #HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
+                                            data=0x0, burst_len=1)
+
+    def set_nof_frames(self, address1, address2, number_frames):
+        # print(f"   {address1:X} {address2:X}")
+        # answer = input("Do you want to capture set number of frames? y/n")
+        # if answer == '' or answer == 'y':
+        time.sleep(1)
+        self._rdma_ctrl_iface.udp_rdma_write(address=address1, #HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
+                                    data=0x100, burst_len=1)
+        print("Frame limited mode")
+        self._rdma_ctrl_iface.udp_rdma_write(address=address2, #HEX_REGISTERS.HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER['addr'],
+                                    data=number_frames, burst_len=1)
+        print("Number of frames set to 0x{0:X}".format(number_frames))
+        # else:
+        #     print("Free acquisition mode")
+
+    def data_en(self, address1, enable=True):
+        # print(f"   {address1:X}")
+        if enable:
+            self._rdma_ctrl_iface.udp_rdma_write(address=address1, #HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'],
+                                          data=0x1, burst_len=1)
+        else:
+            self._rdma_ctrl_iface.udp_rdma_write(address=address1, #HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'],
+                                          data=0x0, burst_len=1)
+
 
 class VsrModule(VsrAssembly):
     """A child class, which inherits methods and attributes from :class:`rdma_control.VsrAssembly`.
@@ -1043,6 +1077,7 @@ class VsrModule(VsrAssembly):
                    ((self.rows1_clock >> 8) & VSR_FPGA_REGISTERS.REG3['mask'])]
         addr = VSR_FPGA_REGISTERS.REG2['addr']
         self._fpga_reg_write_burst(addr, wr_data)
+        # print(f"  write_rows1_clock({self.rows1_clock}) as {[ hex(c) for c in wr_data ]}")
 
     def get_rows1_clock(self):
         """Gets the `RowS1 Clock` value of the :obj:`VsrModule`.
@@ -1107,6 +1142,7 @@ class VsrModule(VsrAssembly):
         wr_data = self.s1sph & VSR_FPGA_REGISTERS.REG4['mask']
         addr = VSR_FPGA_REGISTERS.REG4['addr']
         self._fpga_reg_write(addr, wr_data)
+        # print(f"  write_s1sph({self.s1sph}) as {wr_data:X}")
 
     def read_s1sph(self):
         """Reads the `S1Sph` value from the corresponding VSR FPGA register.
@@ -1156,6 +1192,7 @@ class VsrModule(VsrAssembly):
         wr_data = self.sphs2 & VSR_FPGA_REGISTERS.REG5['mask']
         addr = VSR_FPGA_REGISTERS.REG5['addr']
         self._fpga_reg_write(addr, wr_data)
+        # print(f"  write_sphs2({self.sphs2}) as {wr_data:X}")
 
     def read_sph2(self):
         """Reads the `SphS2` value from the corresponding VSR FPGA register.
@@ -1171,10 +1208,12 @@ class VsrModule(VsrAssembly):
     def _write_high_gain(self):
         ctrl_reg = rdma.clr_field(VSR_FPGA_REGISTERS.REG6, "GAIN_SEL", self.read_gain())
         self._fpga_reg_write(VSR_FPGA_REGISTERS.REG6['addr'], ctrl_reg)
+        # print(f" writing high gain")
 
     def _write_low_gain(self):
         ctrl_reg = rdma.set_field(VSR_FPGA_REGISTERS.REG6, "GAIN_SEL", self.read_gain(), 1)
         self._fpga_reg_write(VSR_FPGA_REGISTERS.REG6['addr'], ctrl_reg)
+        # print(f" writing Low gain")
 
     def read_gain(self):
         """Reads the `gain` setting bit from the corresponding VSR FPGA register.
@@ -1267,6 +1306,7 @@ class VsrModule(VsrAssembly):
         wr_data = self.adc_clock_delay & VSR_FPGA_REGISTERS.REG9['mask']
         addr = VSR_FPGA_REGISTERS.REG9['addr']
         self._fpga_reg_write(addr, wr_data)
+        # print(f"  write_adc_clock_delay({self.adc_clock_delay}) as {wr_data:X}")
 
     def read_adc_clock_delay(self):
         """Reads the `ADC Clock Delay` value from the corresponding VSR FPGA register.
@@ -1327,6 +1367,7 @@ class VsrModule(VsrAssembly):
         wr_data = self.adc_signal_delay & VSR_FPGA_REGISTERS.REG14['mask']
         addr = VSR_FPGA_REGISTERS.REG14['addr']
         self._fpga_reg_write(addr, wr_data)
+        # print(f"  write_adc_signal_delay({self.adc_signal_delay}) as {wr_data:X}")
 
     def read_adc_signal_delay(self):
         """Reads the `ADC Signal Delay` value from the corresponding VSR FPGA register.
@@ -1442,6 +1483,7 @@ class VsrModule(VsrAssembly):
         wr_data = self.sm_row_wait_clock & VSR_FPGA_REGISTERS.REG27['mask']
         addr = VSR_FPGA_REGISTERS.REG27['addr']
         self._fpga_reg_write(addr, wr_data)
+        # print(f"  write_sm_row_wait_clock({self.sm_row_wait_clock}) as {wr_data:X}")
 
     def read_sm_row_wait_clock(self):
         """Reads the `State-Machine Row Wait Clock` value from the corresponding VSR FPGA register.

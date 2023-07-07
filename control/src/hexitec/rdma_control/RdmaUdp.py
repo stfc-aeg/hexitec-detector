@@ -207,6 +207,7 @@ class RdmaUDP(object):
             self._bytes_per_readout_iface = 64
         else:
             self._bytes_per_readout_iface = 8
+        self.dbg = False
 
     def __del__(self):
         """Ensure connection safely closed."""
@@ -392,6 +393,8 @@ class RdmaUDP(object):
             print(f"         Packed write command: {command_0}")
         # Send the single write command packet
         try:
+            if self.dbg:
+                print(f"[DEBUG]: rdma.udp_rdma_write: {[ hex(c) for c in command_0 ]}")
             self.socket.sendto(command_0, (self.rdma_ip, self.rdma_port))
         except socket.error as e:
             _errorResponse(e, "Write failed", address=address,

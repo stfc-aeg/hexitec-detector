@@ -161,6 +161,10 @@ if __name__ == '__main__':
     for vsr in vsr_addr_mapping.keys():
         vsrs.append(VsrModule(Hex2x6CtrlRdma, slot=vsr, init_time=10, addr_mapping=vsr_addr_mapping))
 
+    # Check fem finished sending all UDP data
+    # status = Hex2x6CtrlRdma.udp_rdma_read(address=HEX_REGISTERS.HEXITEC_2X6_HEADER_STATUS['addr'],
+    #                                       burst_len=1)
+    # print(f" fem Readout status: {status}")
     get_env_values(vsrs)
     time.sleep(1)
 
@@ -210,12 +214,11 @@ if __name__ == '__main__':
     print("Init VSRs")
     for vsr in vsrs:
         vsr.initialise()
-        ppl_lock = vsr._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr'])
         while True:
-            if ppl_lock & 1:
+            pll_lock = vsr.read_pll_status()
+            if pll_lock & 1:
                 break
             time.sleep(0.1)
-            ppl_lock = vsr._fpga_reg_read(VSR_FPGA_REGISTERS.REG137['addr'])
         print("-" * 80)
 
     Hex2x6CtrlRdma.udp_rdma_write(address=HEXITEC_2X6_VSR_DATA_CTRL['addr'], data=0x10,
@@ -248,17 +251,32 @@ if __name__ == '__main__':
         vsr.collect_offsets()
     print("-=-=-=-=-     Done    -=-=-=-=-")
 
+    # Hex2x6CtrlRdma.dbg = True
     ### reset the frame number
-    print("Executing: reset frame number")
-    frame_reset_to_zero()
+    print("  *****  Executing: reset frame number")
+    # frame_reset_to_zero()
+    vsrs[0].frame_reset_to_zero(
+        HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_LOWER['addr'],
+        HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_UPPER['addr'],
+        HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr']
+    )
 
-    set_nof_frames(0x11)
+    print("  *****  Set nof frames")
+    # set_nof_frames(0x1f40)
+    vsrs[0].set_nof_frames(
+        HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
+        HEX_REGISTERS.HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER['addr'],
+        0x1f
+    )
 
-    input("Press enter to enable data (200 ms)")
-    data_en(enable=True)
-    print("data enabled")
+    # input("Press enter to enable data (200 ms)")
+    print("  *****  Enable data")
+    # data_en(enable=True)
+    vsrs[0].data_en(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'], enable=True)
+    print("  *****  data enabled")
     time.sleep(0.2)
 
     ### stop the data flow
-    print("Executing: disable data")
-    data_en(enable=False)
+    print("  *****  Executing: disable data")
+    # data_en(enable=False)
+    vsrs[0].data_en(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'], enable=False)
