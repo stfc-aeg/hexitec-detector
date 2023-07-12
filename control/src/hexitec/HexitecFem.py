@@ -361,6 +361,12 @@ class HexitecFem():
         """Power up and enable VSRs."""
         try:
             self.connect()
+            self.data_path_reset()
+            self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
+                                        data=0x0,  burst_len=1)
+            self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
+                                        data=0x1, burst_len=1)
+
             self.hardware_connected = True
             self._set_status_message("Camera connected.")
             logging.debug("UDP connection established")
@@ -568,38 +574,21 @@ class HexitecFem():
             logging.info("Initiate Data Capture")
             self.acquire_start_time = self.create_timestamp()
 
-            # TODO: Placeholder for triggering daq
-#
-            # Hex2x6CtrlRdma.dbg = True
-            ### reset the frame number
-            print("  *****  Executing: reset frame number")
-            # frame_reset_to_zero()
-            self.vsr_list[0].frame_reset_to_zero(
-                HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_LOWER['addr'],
-                HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_UPPER['addr'],
-                HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr']
-            )
+            logging.debug("Reset frame number")
+            self.frame_reset_to_zero()
 
-            print("  *****  Set nof frames")
-            # set_nof_frames(0x1f40)
-            self.vsr_list[0].set_nof_frames(
-                HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
-                HEX_REGISTERS.HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER['addr'],
-                0x1f40
-            )
+            logging.debug(f"Set number frames to: {self.number_frames})")
+            self.set_nof_frames(self.number_frames)
 
             # input("Press enter to enable data (200 ms)")
-            print("  *****  Enable data")
-            # data_en(enable=True)
-            self.vsr_list[0].data_en(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'], enable=True)
-            print("  *****  data enabled")
+            logging.debug("Enable data")
+            self.data_en(enable=True)
             time.sleep(0.2)
 
             # Stop data flow (free acquisition mode), reset setting if number of frames mode
-            print("  *****  Executing: disable data")
-            # data_en(enable=False)
-            self.vsr_list[0].data_en(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'], enable=False)
-#
+            logging.debug("Disable data")
+            self.data_en(enable=False)
+
             # How to convert datetime object to float?
             self.acquire_timestamp = time.time()    # Utilised by adapter's watchdog
 
@@ -624,7 +613,7 @@ class HexitecFem():
                                                       burst_len=1)[0]
                 # 0 during data transmission, 65536 when completed
                 self.all_data_sent = (status & 65536)
-                print(f"   *** all_data_sent: {self.all_data_sent:X} status: {status:X}")
+                # print(f"   *** all_data_sent: {self.all_data_sent:X} status: {status:X}")
                 if self.all_data_sent == 0:
                     # print(" *** Awaiting data.. ***")
                     IOLoop.instance().call_later(0.5, self.check_acquire_finished)
@@ -1208,6 +1197,7 @@ class HexitecFem():
         # 90	43	24	20	;Enable Vcal
         # 90	42	24	20	;Disable Vcal
         # """
+        # # TODO Beware register 18 - Low Byte SM Vcal Clock / value_018, 019  !
         # # Disable Vcal/Capture Avg Picture (False=don't mask)
         # vsr.write_and_response(0x32, 0x34, 0x32, 0x32, False)
         # # print("Disable Vcal/En DC spectroscopic mode")
@@ -1828,23 +1818,12 @@ class HexitecFem():
 
     def hv_on(self):
         """Switch HV on."""
-        logging.debug("Enable: [0xE3]")
-        self.send_cmd([0xC0, 0xE3])
-        time.sleep(0.5)
-
         logging.debug("Going to set HV bias to -{} volts".format(self.bias_level))
+        self._set_status_message(f"HV bias set to -{self.bias_level} V")
         hv_msb, hv_lsb = self.convert_bias_to_dac_values(self.bias_level)
+        print(f" HV Bias (-{self.bias_level}) : {hv_msb[0]:X} {hv_msb[1]:X} | {hv_lsb[0]:X} {hv_lsb[1]:X}")
 
-        logging.debug("Write DAC: [0x54]")
-        self.send_cmd([0xC0, 0x54, 0x30, 0x30, 0x30, 0x30,
-                       0x30, 0x30, 0x30, 0x30,
-                       0x30, 0x30, 0x30, 0x30,
-                       hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
-                       0x30, 0x30, 0x30, 0x30,
-                       0x30, 0x30, 0x30, 0x30,
-                       0x30, 0x30, 0x30, 0x30,
-                       0x30, 0x30, 0x30, 0x30])
-        self.read_response()
+        self.vsr_list[0].hv_on(hv_msb, hv_lsb)
         self.hv_bias_enabled = True
         logging.debug("HV now ON")
 
@@ -1852,7 +1831,7 @@ class HexitecFem():
         """Switch HV off."""
         logging.debug("Disable: [0xE2]")
         self.send_cmd([0xC0, 0xE2])
-        # logging.debug("disabled, all done!")
+        self._set_status_message("HV turned off")
         self.hv_bias_enabled = False
         logging.debug("HV now OFF")
 
@@ -1900,6 +1879,45 @@ class HexitecFem():
             self.last_message_timestamp = self.create_timestamp()
 
         self.log_messages = [(str(timestamp), log_message) for timestamp, log_message in logs]
+
+    def set_bit(self, register, field):
+        reg_value = int(self.x10g_rdma.udp_rdma_read(register['addr'])[0])
+        ctrl_reg = rdma.set_field(register, field, reg_value, 1)
+        self.x10g_rdma.udp_rdma_write(register['addr'], ctrl_reg)
+
+    def reset_bit(self, register, field):
+        reg_value = int(self.x10g_rdma.udp_rdma_read(register['addr'])[0])
+        ctrl_reg = rdma.clr_field(register, field, reg_value)
+        self.x10g_rdma.udp_rdma_write(register['addr'], ctrl_reg)
+
+    def data_path_reset(self):
+        """Take Kintex data path out of reset."""
+        self.reset_bit(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL, "HEXITEC_RST")
+        self.set_bit(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL, "HEXITEC_RST")
+
+    def frame_reset_to_zero(self):
+        """Reset Firmware frame number to 0."""
+        self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_LOWER['addr'],
+                                            data=0x0, burst_len=1)
+        self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_UPPER['addr'],
+                                            data=0x0, burst_len=1)
+        self.set_bit(HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL, "FRAME_COUNTER_LOAD")
+        self.reset_bit(HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL, "FRAME_COUNTER_LOAD")
+
+    def set_nof_frames(self, number_frames):
+        """Set number of frames in Firmware."""
+        # Frame limited mode
+        self.set_bit(HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL, "ACQ_NOF_FRAMES_EN")
+        self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER['addr'],
+                                    data=number_frames, burst_len=1)
+        logging.debug("Number of frames set to 0x{0:X}".format(number_frames))
+
+    def data_en(self, enable=True):
+        if enable:
+            self.set_bit(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL, "DATA_EN")
+        else:
+            self.reset_bit(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL, "DATA_EN")
+
 
 
 class HexitecFemError(Exception):   # pragma: no cover

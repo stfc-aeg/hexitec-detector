@@ -241,7 +241,7 @@ class Hexitec():
         self.status_message = ""
         self.status_error = ""
         self.elog = ""
-        self.number_nodes = 1   # 3
+        self.number_nodes = 2   # 1
         # Software states:
         #   Cold, Environs, Initialising, Offsets, Disconnected, Idle, Acquiring, Error, Cleared
         self.software_state = "Cold"
@@ -660,11 +660,11 @@ class Hexitec():
 
     def hv_on(self, msg):
         """Switch HV on."""
-        self.fem.hv_on(msg)
+        self.fem.hv_on()
 
     def hv_off(self, msg):
         """Switch HV off."""
-        self.fem.hv_off(msg)
+        self.fem.hv_off()
 
     def environs(self, msg):
         """Readout environmental data."""

@@ -19,7 +19,7 @@ def get_env_values(vsrs):
         print(f"[INFO]: VSR{vsr.slot} humidity: {vsr.get_humidity()} %")
 
         for asic in [1, 2]:
-            print(f"[INFO]: VSR{vsr.slot} ASIC{asic} temp: {vsr.get_asic_temperature(idx=asic)} °C   ***")
+            print(f"[INFO]: VSR{vsr.slot} ASIC{asic} temp: {vsr.get_asic_temperature(idx=asic)} °C")
 
         print(f"[INFO]: VSR{vsr.slot} adc temperature: {vsr.get_adc_temperature()} °C")
 
@@ -27,20 +27,28 @@ def get_env_values(vsrs):
         print("-"*80)
 
 
+def set_bit(register, field):
+    reg_value = int(Hex2x6CtrlRdma.udp_rdma_read(register['addr'])[0])
+    ctrl_reg = rdma.set_field(register, field, reg_value, 1)
+    Hex2x6CtrlRdma.udp_rdma_write(register['addr'], ctrl_reg)
+
+
+def reset_bit(register, field):
+    reg_value = int(Hex2x6CtrlRdma.udp_rdma_read(register['addr'])[0])
+    ctrl_reg = rdma.clr_field(register, field, reg_value)
+    Hex2x6CtrlRdma.udp_rdma_write(register['addr'], ctrl_reg)
+
+
 def path_reset():
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
-                                  data=0x0,  burst_len=1)
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
-                                  data=0x1, burst_len=1)
+    reset_bit(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL, "HEXITEC_RST")
+    set_bit(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL, "HEXITEC_RST")
 
 
 def data_en(enable=True):
     if enable:
-        Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'],
-                                      data=0x1, burst_len=1)
+        set_bit(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL, "DATA_EN")
     else:
-        Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'],
-                                      data=0x0, burst_len=1)
+        reset_bit(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL, "DATA_EN")
 
 
 def frame_reset_to_zero():
@@ -48,21 +56,18 @@ def frame_reset_to_zero():
                                   data=0x0, burst_len=1)
     Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_UPPER['addr'],
                                   data=0x0, burst_len=1)
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
-                                  data=0x1, burst_len=1)
-    Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
-                                  data=0x0, burst_len=1)
+    set_bit(HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL, "FRAME_COUNTER_LOAD")
+    reset_bit(HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL, "FRAME_COUNTER_LOAD")
 
 
 def set_nof_frames(number_frames):
     answer = input("Do you want to capture set number of frames? y/n")
     if answer == '' or answer == 'y':
-        Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
-                                      data=0x100, burst_len=1)
+        set_bit(HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL, "ACQ_NOF_FRAMES_EN")
         print("Frame limited mode")
         Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER['addr'],
                                       data=number_frames, burst_len=1)
-        print("Number of frames set to 0x{0:X}".format(number_frames))
+        print("Number of frames set to: {0} 0x{0:X}".format(number_frames))
     else:
         print("Free acquisition mode")
 
@@ -85,6 +90,14 @@ def convert_to_aspect_format(value):
 def convert_hv_to_hex(hv_value):
     """Convert HV voltage into hexadecimal value."""
     return int((hv_value / 1250) * 0xFFF)
+
+
+def make_list(pattern):
+    """Create a list of 10 entries, each entry is pattern."""
+    list_of_patterns = []
+    for idx in range(0, 10):
+        list_of_patterns.append(pattern)
+    return list_of_patterns
 
 
 def convert_bias_to_dac_values(hv):
@@ -119,8 +132,8 @@ if __name__ == '__main__':
                                  rdma_ip="192.168.4.2", rdma_port=61648,
                                  debug=False, uart_offset=0xC)
 
-    ### reset the datapath
-    print("Executing: reset output path")
+    # Reset the datapath
+    print("Reset output path")
     path_reset()
 
     board_cfg_status = BoardCfgStatus(Hex2x6CtrlRdma,
@@ -161,10 +174,6 @@ if __name__ == '__main__':
     for vsr in vsr_addr_mapping.keys():
         vsrs.append(VsrModule(Hex2x6CtrlRdma, slot=vsr, init_time=10, addr_mapping=vsr_addr_mapping))
 
-    # Check fem finished sending all UDP data
-    # status = Hex2x6CtrlRdma.udp_rdma_read(address=HEX_REGISTERS.HEXITEC_2X6_HEADER_STATUS['addr'],
-    #                                       burst_len=1)
-    # print(f" fem Readout status: {status}")
     get_env_values(vsrs)
     time.sleep(1)
 
@@ -185,7 +194,7 @@ if __name__ == '__main__':
         pwr = vsr.get_power_sensors()
         print(f"After,  power sens: {pwr}")
 
-    vcal_enabled = False
+    vcal_enabled = True
     print(f" *** VCAL: {vcal_enabled}")
     vcal_param = "0.10"
     vcal = vsrs[0]._extract_float(vcal_param, 'Control-Settings/VCAL')
@@ -195,16 +204,42 @@ if __name__ == '__main__':
     umid = vsrs[0]._extract_exponential(umid_param, 'Control-Settings/Uref_mid', bit_range=12)
     print(f"  umid: {umid} (0x{umid:x}) from input: {umid_param}")
 
-    # column_calibration_mask = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11]
-    # row_calibration_mask = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11]
-    column_calibration_mask = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
-    row_calibration_mask = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+    # # Clear vcal pattern
+    # column_calibration_mask_asic1 = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+    # row_calibration_mask_asic1 = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+    # column_calibration_mask_asic2 = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+    # row_calibration_mask_asic2 = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+
+    # column_calibration_mask_asic1 = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11]
+    # row_calibration_mask_asic1 = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11]
+    # column_calibration_mask_asic2 = [0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33]
+    # row_calibration_mask_asic2 = [0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33]
+
+    column_calibration_mask_asic1 = []
+    row_calibration_mask_asic1 = []
+    column_calibration_mask_asic2 = []
+    row_calibration_mask_asic2 = []
+    pattern = 0x1
 
     print("Config VCAL, DAC, Umid")
     for vsr in vsrs:
         vsr.enable_vcal(vcal_enabled)
-        vsr.set_column_calibration_mask(column_calibration_mask)
-        vsr.set_row_calibration_mask(row_calibration_mask)
+        asic = 1
+        list_of_patterns = make_list(pattern)
+        column_calibration_mask_asic1 = list_of_patterns
+        row_calibration_mask_asic1 = list_of_patterns
+        pattern += 1
+
+        vsr.set_column_calibration_mask(column_calibration_mask_asic1, asic)
+        vsr.set_row_calibration_mask(row_calibration_mask_asic1, asic)
+
+        asic = 2
+        list_of_patterns = make_list(pattern)
+        column_calibration_mask_asic1 = list_of_patterns
+        row_calibration_mask_asic1 = list_of_patterns
+        pattern += 1
+        vsr.set_column_calibration_mask(column_calibration_mask_asic1, asic)
+        vsr.set_row_calibration_mask(row_calibration_mask_asic1, asic)
 
         # Set VCAL magnitude; 0x0CC (.15V) 111 (0.2) 155 (0.25) 199 (.3)
         vsr.set_dac_vcal(vcal)
@@ -235,7 +270,6 @@ if __name__ == '__main__':
         else:
             print(f"[ERROR] VSR{vsr.slot} lock_status: {vsr_lock_status[vsr.slot-1]}")
 
-    # input("Press enter to disable vsr training")
     print("Disabling training for vsr(s)..")
     for vsr in vsrs:
         vsr._disable_training()
@@ -252,31 +286,17 @@ if __name__ == '__main__':
     print("-=-=-=-=-     Done    -=-=-=-=-")
 
     # Hex2x6CtrlRdma.dbg = True
-    ### reset the frame number
-    print("  *****  Executing: reset frame number")
-    # frame_reset_to_zero()
-    vsrs[0].frame_reset_to_zero(
-        HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_LOWER['addr'],
-        HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_UPPER['addr'],
-        HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr']
-    )
+    print("  Reset frame number")
+    frame_reset_to_zero()
 
-    print("  *****  Set nof frames")
-    # set_nof_frames(0x1f40)
-    vsrs[0].set_nof_frames(
-        HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
-        HEX_REGISTERS.HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER['addr'],
-        0x1f
-    )
+    print("  Set number of frames")
+    set_nof_frames(8)
 
     # input("Press enter to enable data (200 ms)")
-    print("  *****  Enable data")
-    # data_en(enable=True)
-    vsrs[0].data_en(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'], enable=True)
-    print("  *****  data enabled")
+    print("  Enable data")
+    data_en(enable=True)
     time.sleep(0.2)
 
-    ### stop the data flow
-    print("  *****  Executing: disable data")
-    # data_en(enable=False)
-    vsrs[0].data_en(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'], enable=False)
+    # Stop the data flow
+    print("  Disable data")
+    data_en(enable=False)

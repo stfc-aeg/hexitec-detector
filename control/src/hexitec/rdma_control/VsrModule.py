@@ -250,9 +250,9 @@ class VsrAssembly(object):
         self._dac_enabled_flag = True   # Enabled upon VSR Power on
         self.debug = False
 
-    # def __del__(self):
-    #     self.hv_disable()
-    #     self.disable_module()
+    def __del__(self):
+        self.hv_disable()
+        self.disable_module()
 
     def get_slot(self):
         """Returns the slot number, hosting the VSR module.
@@ -845,40 +845,6 @@ class VsrAssembly(object):
             rx_d = rx_d[:-1]
         return rx_d
 
-    def frame_reset_to_zero(self, address1, address2, address3):
-        # print(f"   {address1:X} {address2:X} {address3:X}")
-        self._rdma_ctrl_iface.udp_rdma_write(address=address1, #HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_LOWER['addr'],
-                                            data=0x0, burst_len=1)
-        self._rdma_ctrl_iface.udp_rdma_write(address=address2, #HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_UPPER['addr'],
-                                            data=0x0, burst_len=1)
-        self._rdma_ctrl_iface.udp_rdma_write(address=address3, #HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
-                                            data=0x1, burst_len=1)
-        self._rdma_ctrl_iface.udp_rdma_write(address=address3, #HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
-                                            data=0x0, burst_len=1)
-
-    def set_nof_frames(self, address1, address2, number_frames):
-        # print(f"   {address1:X} {address2:X}")
-        # answer = input("Do you want to capture set number of frames? y/n")
-        # if answer == '' or answer == 'y':
-        time.sleep(1)
-        self._rdma_ctrl_iface.udp_rdma_write(address=address1, #HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL['addr'],
-                                    data=0x100, burst_len=1)
-        print("Frame limited mode")
-        self._rdma_ctrl_iface.udp_rdma_write(address=address2, #HEX_REGISTERS.HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER['addr'],
-                                    data=number_frames, burst_len=1)
-        print("Number of frames set to 0x{0:X}".format(number_frames))
-        # else:
-        #     print("Free acquisition mode")
-
-    def data_en(self, address1, enable=True):
-        # print(f"   {address1:X}")
-        if enable:
-            self._rdma_ctrl_iface.udp_rdma_write(address=address1, #HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'],
-                                          data=0x1, burst_len=1)
-        else:
-            self._rdma_ctrl_iface.udp_rdma_write(address=address1, #HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'],
-                                          data=0x0, burst_len=1)
-
 
 class VsrModule(VsrAssembly):
     """A child class, which inherits methods and attributes from :class:`rdma_control.VsrAssembly`.
@@ -967,8 +933,10 @@ class VsrModule(VsrAssembly):
         self.set_adc_output_phase("540")
         self.vcal_enabled = True
         # Control row, column calibration masks:
-        self.column_calibration_mask = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
-        self.row_calibration_mask = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
+        self.column_calibration_mask_asic1 = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
+        self.column_calibration_mask_asic2 = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
+        self.row_calibration_mask_asic1 = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
+        self.row_calibration_mask_asic2 = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
 
         self.DAC_SCALE_FACTOR = 0.732
 
@@ -1795,7 +1763,7 @@ class VsrModule(VsrAssembly):
         for s_addr in en_start_addrs:
             self._fpga_reg_write_burst(s_addr, set_row_column_mask(all_as_value=0xff))
 
-    def set_all_columns_cal(self, col_mask, asic=1):
+    def set_all_columns_cal(self, asic=1):
         """Writes the supplied mask to enable Calibration for Columns of the target ASIC.
 
         Args:
@@ -1809,10 +1777,15 @@ class VsrModule(VsrAssembly):
         """
         if asic == 2:
             en_start_addrs = [VSR_FPGA_REGISTERS.REG184['addr']]
+            col_mask = self.column_calibration_mask_asic2
         else:
             en_start_addrs = [VSR_FPGA_REGISTERS.REG87['addr']]
+            col_mask = self.column_calibration_mask_asic1
         for s_addr in en_start_addrs:
             self._fpga_reg_write_burst(s_addr, set_row_column_mask(row_col_mask=col_mask))
+        if self.debug:
+            print("[DEBUG]: ASIC{} VsrModule.set_all_columns_cal: {} start_address: {} ({})".format(
+                asic, [hex(c) for c in col_mask], en_start_addrs[0], en_start_addrs))
 
     def disable_all_columns_cal(self, asic=1):
         """Writes the masks to disable Calibration for Columns of the target ASIC.
@@ -1831,7 +1804,7 @@ class VsrModule(VsrAssembly):
         for s_addr in en_start_addrs:
             self._fpga_reg_write_burst(s_addr, set_row_column_mask(all_as_value=0xff))
 
-    def set_all_rows_cal(self, row_mask, asic=1):
+    def set_all_rows_cal(self, asic=1):
         """Writes the supplied mask to enable Calibration for Rows of the target ASIC.
 
         Args:
@@ -1845,10 +1818,15 @@ class VsrModule(VsrAssembly):
         """
         if asic == 2:
             en_start_addrs = [VSR_FPGA_REGISTERS.REG154['addr']]
+            row_mask = self.row_calibration_mask_asic2
         else:
             en_start_addrs = [VSR_FPGA_REGISTERS.REG57['addr']]
+            row_mask = self.row_calibration_mask_asic1
         for s_addr in en_start_addrs:
             self._fpga_reg_write_burst(s_addr, set_row_column_mask(row_col_mask=row_mask))
+        if self.debug:
+            print("[DEBUG]: ASIC{} VsrModule.set_all_rows_cal: {} start_address: {}".format(
+                asic, [hex(c) for c in row_mask], en_start_addrs))
 
     def enable_all_rows_cal(self, asic=1):
         """Writes the masks to enable Calibration for Rows of the target ASIC.
@@ -1897,8 +1875,8 @@ class VsrModule(VsrAssembly):
         """
         self.enable_all_columns(asic=asic)
         if self.vcal_enabled:
-            self.set_all_columns_cal(col_mask=self.column_calibration_mask)
-            self.set_all_rows_cal(row_mask=self.row_calibration_mask)
+            self.set_all_columns_cal(asic=asic)
+            self.set_all_rows_cal(asic=asic)
         else:
             self.disable_all_columns_cal(asic=asic)
             self.disable_all_rows_cal(asic=asic)
@@ -2498,7 +2476,7 @@ class VsrModule(VsrAssembly):
         """
         self.vcal_enabled = vcal_enabled
 
-    def set_column_calibration_mask(self, column_calibration_mask):
+    def set_column_calibration_mask(self, column_calibration_mask, asic):
         """Sets the VSR column calibration mask.
 
         Args:
@@ -2507,9 +2485,15 @@ class VsrModule(VsrAssembly):
         Returns:
             Nothing.
         """
-        self.column_calibration_mask = column_calibration_mask
+        if self.debug:
+            print("[DEBUG]: ASIC{} VsrModule.set_column_calibration_mask: {}".format(
+                asic, [hex(c) for c in column_calibration_mask]))
+        if asic == 1:
+            self.column_calibration_mask_asic1 = column_calibration_mask
+        else:
+            self.column_calibration_mask_asic2 = column_calibration_mask
 
-    def set_row_calibration_mask(self, row_calibration_mask):
+    def set_row_calibration_mask(self, row_calibration_mask, asic):
         """Sets the VSR row calibration mask.
 
         Args:
@@ -2518,7 +2502,13 @@ class VsrModule(VsrAssembly):
         Returns:
             Nothing.
         """
-        self.row_calibration_mask = row_calibration_mask
+        if self.debug:
+            print("[DEBUG]: ASIC {} VsrModule.set_row_calibration_mask: {}".format(
+                asic, [hex(c) for c in row_calibration_mask]))
+        if asic == 1:
+            self.row_calibration_mask_asic1 = row_calibration_mask
+        else:
+            self.row_calibration_mask_asic2 = row_calibration_mask
 
     # From HexitecFem - Will be removed later
 
