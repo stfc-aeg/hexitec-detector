@@ -7,6 +7,8 @@ from udpcore.UdpCore import *
 import ALL_RDMA_REGISTERS as HEX_REGISTERS
 
 
+DAC_SCALE_FACTOR = 0.732
+
 def get_env_values(vsrs):
 
     for vsr in vsrs:
@@ -115,6 +117,63 @@ def convert_bias_to_dac_values(hv):
     # print(" Conv'd to aSp_L: {}".format(hv_lsb))
     return hv_msb, hv_lsb
 
+def convert_string_exponential_to_integer(exponent):
+    """Convert aspect format to fit dac format.
+
+    Aspect's exponent format looks like: 1,003000E+2
+    Convert to float (eg: 100.3), rounding to nearest
+    int before scaling to fit DAC range.
+    """
+    number_string = str(exponent)
+    number_string = number_string.replace(",", ".")
+    number_float = float(number_string)
+    number_int = int(round(number_float))
+    return number_int
+
+def _extract_exponential(parameter_dict, descriptor, bit_range):
+    """Extract exponential descriptor from parameter_dict, check it's within bit_range."""
+    valid_range = [0, 1 << bit_range]
+    setting = -1
+    try:
+        unscaled_setting = parameter_dict   # [descriptor]
+        scaled_setting = convert_string_exponential_to_integer(unscaled_setting)
+        if scaled_setting >= valid_range[0] and scaled_setting <= valid_range[1]:
+            setting = int(scaled_setting // DAC_SCALE_FACTOR)
+        else:
+            print("Error parsing %s, got: %s (scaled: % s) but valid range: %s-%s" %
+                    (descriptor, unscaled_setting, scaled_setting, valid_range[0],
+                    valid_range[1]))
+            setting = -1
+    except KeyError:
+        raise Exception("ERROR: No '%s' Key defined!" % descriptor)
+    return setting
+
+def convert_aspect_float_to_dac_value(number_float):
+    """Convert aspect float format to fit dac format.
+
+    Convert float (eg: 1.3V) to mV (*1000), scale to fit DAC range
+    before rounding to nearest int.
+    """
+    milli_volts = number_float * 1000
+    number_scaled = int(round(milli_volts // DAC_SCALE_FACTOR))
+    return number_scaled
+
+def _extract_float(parameter_dict, descriptor):
+    """Extract descriptor from parameter_dict, check within 0.0 - 3.0 (hardcoded) range."""
+    valid_range = [0.0, 3.0]
+    setting = -1
+    try:
+        setting = float(parameter_dict)  # [descriptor])
+        if setting >= valid_range[0] and setting <= valid_range[1]:
+            # Convert from volts to DAQ format
+            setting = convert_aspect_float_to_dac_value(setting)
+        else:
+            print("Error parsing float %s, got: %s but valid range: %s-%s" %
+                    (descriptor, setting, valid_range[0], valid_range[1]))
+            setting = -1
+    except KeyError:
+        raise Exception("Missing Key: '%s'" % descriptor)
+    return setting
 
 if __name__ == '__main__':
     hostname = os.getenv('HOSTNAME').split('.')[0]
@@ -197,11 +256,11 @@ if __name__ == '__main__':
     vcal_enabled = True
     print(f" *** VCAL: {vcal_enabled}")
     vcal_param = "0.10"
-    vcal = vsrs[0]._extract_float(vcal_param, 'Control-Settings/VCAL')
+    vcal = _extract_float(vcal_param, 'Control-Settings/VCAL')
     print(f"  vcal: {vcal} (0x{vcal:x}) from input: {vcal_param}")
 
     umid_param = "1,00000E+3"
-    umid = vsrs[0]._extract_exponential(umid_param, 'Control-Settings/Uref_mid', bit_range=12)
+    umid = _extract_exponential(umid_param, 'Control-Settings/Uref_mid', bit_range=12)
     print(f"  umid: {umid} (0x{umid:x}) from input: {umid_param}")
 
     # # Clear vcal pattern

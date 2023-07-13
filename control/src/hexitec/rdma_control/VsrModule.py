@@ -3,7 +3,7 @@
 # Electronic System Design Group, Technology Department,
 # Science and Technology Facilities Council
 # Licensed under the BSD 3-Clause license. See LICENSE file in the project root for details.
-"""Classes and functions to connect to, and interact with aSpect VSR modules in Hexitec 2x\ `N` 
+"""Classes and functions to connect to, and interact with aSpect VSR modules in Hexitec 2x\ `N`
 based systems.
 
 .. important::
@@ -31,10 +31,11 @@ def get_vsr_cmd_char(code):
 
         Args:
             code (:obj:`str`): from:
-                `"start"`, `"end"`, `"resp"`, `"bcast"`, `"whois"`, `"get_env"`, '"enable"', '"disable"',
-                `"adc_dac_ctrl"`, `"fpga_reg_write"`, `"fpga_reg_read"`, `"fpga_reg_set_bit"`,
-                `"fpga_reg_clr_bit"`, `"fpga_reg_write_burst"`, `"fpga_reg_write_stream"`,
-                `"fpga_active_reg_readback"`, `"write_dac_values"`, `"write_dac_values"`
+                `"start"`, `"end"`, `"resp"`, `"bcast"`, `"whois"`, `"get_env"`, '"enable"',
+                '"disable"', `"adc_dac_ctrl"`, `"fpga_reg_write"`, `"fpga_reg_read"`,
+                `"fpga_reg_set_bit"`, `"fpga_reg_clr_bit"`, `"fpga_reg_write_burst"`,
+                `"fpga_reg_write_stream"`, `"fpga_active_reg_readback"`, `"write_dac_values"`,
+                `"write_dac_values"`
 
         Returns:
             :obj:`int`: cmd/character to place in VSR UART command sequences, can also be used to
@@ -161,7 +162,6 @@ def unpack_data_for_vsr_write(dat, mask=0xFFF, nof_bytes=2):
     Returns:
         :obj:`list` of ASCII coded hex values for :argument:`dat`.
     """
-    #print(f" *** dat: ({dat}) {dat}")
     unpacked_dat = list()
     for i in range(0, nof_bytes):
         shifted = ((dat & mask) >> (i * 8)) & 0xFF
@@ -937,8 +937,6 @@ class VsrModule(VsrAssembly):
         self.column_calibration_mask_asic2 = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
         self.row_calibration_mask_asic1 = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
         self.row_calibration_mask_asic2 = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
-
-        self.DAC_SCALE_FACTOR = 0.732
 
     def _get_env_sensors(self):
         vsr_d = list()  # empty VSR data list to pass to: self.uart_write()
@@ -2033,7 +2031,7 @@ class VsrModule(VsrAssembly):
         tmp_dict = dict()
         for val in dac_values:
             wr_cmd.extend(unpack_data_for_vsr_write(val, mask=dac_mask, nof_bytes=nof_bytes))
-        #print("Send to UART: {} ".format(' '.join("0x{0:02X}".format(x) for x in wr_cmd)))
+        # print("Send to UART: {} ".format(' '.join("0x{0:02X}".format(x) for x in wr_cmd)))
         self._uart_write(address, vsr_cmd, wr_cmd)
         resp = self._rdma_ctrl_iface.uart_read()
         resp = self._check_uart_response(resp)
@@ -2380,9 +2378,6 @@ class VsrModule(VsrAssembly):
         hv_address = 0xC0
         self.enable_vsr(init_time=0.5, addr=hv_address)
         current_dac_vals = self.write_power_board_dac_values(hv_address, hv_msb, hv_lsb)
-        # Necessary to enable HV again?(!)
-        #self.enable_vsr(init_time=0.5, addr=hv_address)
-        #print(" enabled HV 2nd time!")
 
     def hv_off(self):
         """Switch HV off."""
@@ -2403,37 +2398,21 @@ class VsrModule(VsrAssembly):
         address = self.addr
         if addr:
             address = addr
-        dac_mask = 0xFFF  # Limit the DAC to 12 bits.
-        nof_bytes = 2  # Each value unpacks into this many bytes.
         vsr_cmd = get_vsr_cmd_char("write_dac_values")
-        padding = [0x30, 0x30, 0x30, 0x30]
-        # Should be:
-        #dac_values = [#padding, padding, padding,
-        #    hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
-        #    #padding, padding, padding, padding]
-        #
-        dac_values = [#padding, padding, padding,
-            #0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
-            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
-            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
-            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
+        # padding = [0x30, 0x30, 0x30, 0x30]
+        dac_values = [  # padding, padding, padding,
+            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+            0x30, 0x30, 0x30, 0x30,
             # Actual HV values:
             hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
-            #padding, padding, padding, padding]
-            #0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
-            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
-            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1],
-            hv_msb[0], hv_msb[1], hv_lsb[0], hv_lsb[1]]
+            # padding, padding, padding, padding]
+            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
         wr_cmd = list()
         tmp_dict = dict()
-        #print(f" dac_values: {dac_values}");import sys;sys.exit(0)
         for val in dac_values:
-            #wr_cmd.extend(unpack_data_for_vsr_write(val, mask=dac_mask, nof_bytes=nof_bytes))
             wr_cmd.append(val)
-        #print("Send to UART: {} ".format(' '.join("0x{0:02X}".format(x) for x in wr_cmd)))
-        #print(type(wr_cmd))
-        #print(len(wr_cmd))
+        # print("Send to UART: {} ".format(' '.join("0x{0:02X}".format(x) for x in wr_cmd)))
         self._uart_write(address, vsr_cmd, wr_cmd)
         resp = self._rdma_ctrl_iface.uart_read()
         resp = self._check_uart_response(resp)
@@ -2509,64 +2488,3 @@ class VsrModule(VsrAssembly):
             self.row_calibration_mask_asic1 = row_calibration_mask
         else:
             self.row_calibration_mask_asic2 = row_calibration_mask
-
-    # From HexitecFem - Will be removed later
-
-    def convert_string_exponential_to_integer(self, exponent):
-        """Convert aspect format to fit dac format.
-
-        Aspect's exponent format looks like: 1,003000E+2
-        Convert to float (eg: 100.3), rounding to nearest
-        int before scaling to fit DAC range.
-        """
-        number_string = str(exponent)
-        number_string = number_string.replace(",", ".")
-        number_float = float(number_string)
-        number_int = int(round(number_float))
-        return number_int
-        # number_scaled = int(number_int // self.DAC_SCALE_FACTOR)
-
-    def _extract_exponential(self, parameter_dict, descriptor, bit_range):
-        """Extract exponential descriptor from parameter_dict, check it's within bit_range."""
-        valid_range = [0, 1 << bit_range]
-        setting = -1
-        try:
-            unscaled_setting = parameter_dict   # [descriptor]
-            scaled_setting = self.convert_string_exponential_to_integer(unscaled_setting)
-            if scaled_setting >= valid_range[0] and scaled_setting <= valid_range[1]:
-                setting = int(scaled_setting // self.DAC_SCALE_FACTOR)
-            else:
-                print("Error parsing %s, got: %s (scaled: % s) but valid range: %s-%s" %
-                      (descriptor, unscaled_setting, scaled_setting, valid_range[0],
-                       valid_range[1]))
-                setting = -1
-        except KeyError:
-            raise Exception("ERROR: No '%s' Key defined!" % descriptor)
-        return setting
-
-    def convert_aspect_float_to_dac_value(self, number_float):
-        """Convert aspect float format to fit dac format.
-
-        Convert float (eg: 1.3V) to mV (*1000), scale to fit DAC range
-        before rounding to nearest int.
-        """
-        milli_volts = number_float * 1000
-        number_scaled = int(round(milli_volts // self.DAC_SCALE_FACTOR))
-        return number_scaled
-
-    def _extract_float(self, parameter_dict, descriptor):
-        """Extract descriptor from parameter_dict, check within 0.0 - 3.0 (hardcoded) range."""
-        valid_range = [0.0, 3.0]
-        setting = -1
-        try:
-            setting = float(parameter_dict)  # [descriptor])
-            if setting >= valid_range[0] and setting <= valid_range[1]:
-                # Convert from volts to DAQ format
-                setting = self.convert_aspect_float_to_dac_value(setting)
-            else:
-                print("Error parsing float %s, got: %s but valid range: %s-%s" %
-                      (descriptor, setting, valid_range[0], valid_range[1]))
-                setting = -1
-        except KeyError:
-            raise Exception("Missing Key: '%s'" % descriptor)
-        return setting
