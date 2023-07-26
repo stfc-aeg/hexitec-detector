@@ -111,6 +111,7 @@ class HexitecFem():
         self.vsr_addr_mapping = {1: 0x90, 2: 0x91, 3: 0x92, 4: 0x93, 5: 0x94, 6: 0x95}
         self.broadcast_VSRs = None
         self.vsr_list = []
+        self.vcal_enabled = 0
 
         # Acquisition completed, note completion timestamp
         self.acquisition_completed = False
@@ -196,6 +197,7 @@ class HexitecFem():
             "vsr_asic2_list": (lambda: self.asic2_list, None),
             "vsr_adc_list": (lambda: self.adc_list, None),
             "vsr_hv_list": (lambda: self.hv_list, None),
+            "vcal_enabled": (lambda: self.vcal_enabled, None),
             "vsr_sync_list": (lambda: self.sync_list, None)
         }
         self.waited = 0.0
@@ -363,9 +365,9 @@ class HexitecFem():
             self.connect()
             self.data_path_reset()
             self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
-                                        data=0x0,  burst_len=1)
+                                          data=0x0,  burst_len=1)
             self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
-                                        data=0x1, burst_len=1)
+                                          data=0x1, burst_len=1)
 
             self.hardware_connected = True
             self._set_status_message("Camera connected.")
@@ -502,12 +504,12 @@ class HexitecFem():
         # TODO Address hack of: Add start, end characters at respective ends of cmd:
         cmd.insert(0, 0x23)
         cmd.append(0xd)
-        # print(" *FEM Send to UART: {}  ({})".format(' '.join("0x{0:02X}".format(x) for x in cmd), cmd))
+        # print(" FEM -> UART: {} ({})".format(' '.join("0x{0:02X}".format(x) for x in cmd), cmd))
         self.x10g_rdma.uart_write(cmd)
 
     def read_response(self):
         """Read a VSR's microcontroller response, passed on by the FEM."""
-        counter = self.x10g_rdma.uart_read_wait()
+        _ = self.x10g_rdma.uart_read_wait()
         # print(f"  read_resp, counter: {counter}")
         response = self.x10g_rdma.uart_read()
         # print("R: {}.  ({}). {}".format(
@@ -577,7 +579,10 @@ class HexitecFem():
             logging.debug("Reset frame number")
             self.frame_reset_to_zero()
 
-            logging.debug(f"Set number frames to: {self.number_frames})")
+            logging.debug("Reset path and clear buffers")
+            self.data_path_reset()
+
+            logging.debug(f"Set number frames to: {self.number_frames}")
             self.set_nof_frames(self.number_frames)
 
             # input("Press enter to enable data (200 ms)")
@@ -732,66 +737,21 @@ class HexitecFem():
             self.hardware_busy = True
             self.parent.software_state = "Offsets"
 
-            for vsr in self.vsr_list:
-                self._set_status_message(f"VSR{vsr.slot}: Collecting offsets..")
-                vsr.collect_offsets()
-
-            # vsrs_register_24 = self.read_receive_from_all(HexitecFem.READ_REG_VALUE, 0x32, 0x34)
-            # logging.debug("Reading back register 24; {}".format(vsrs_register_24))
-
-            # # 1. System is fully initialised (Done already)
-
-            # # 2. Stop the state machine
-
-            # self.write_receive_to_all(HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x31)
-
-            # # 3. Set reg 0x24 to 0x22
-
-            # logging.debug("Gathering offsets..")
-            # # Send reg value; Register 0x24, bits5,1: disable VCAL, capture average picture:
-            # self.write_receive_to_all(HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x32)
-
-            # # 4. Start the state machine
-
-            # self.write_receive_to_all(HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31)
-
-            # # 5. Wait > 8192 * frame time (~1 second, @ 9118.87Hz)
-
-            # expected_duration = 8192 / self.parent.fem.frame_rate
-            # timeout = (expected_duration * 1.2) + 1
-            # # print(" *** expected: {} timeout: {}".format(expected_duration, timeout))
-            # poll_beginning = time.time()
-            # self._set_status_message("Collecting dark images..")
-            # dc_captured = False
-            # while not dc_captured:
-            #     vsrs_register_89 = self.read_receive_from_all(
-            #         HexitecFem.READ_REG_VALUE, 0x38, 0x39)
-            #     dc_captured = self.are_capture_dc_ready(vsrs_register_89)
-            #     if self.debug:   # pragma: no coverage
-            #         logging.debug("Register 0x89: {0}, Done? {1} Timing: {2:2.5} s".format(
-            #             vsrs_register_89, dc_captured, time.time() - poll_beginning))
-            #     if time.time() - poll_beginning > timeout:
-            #         raise HexitecFemError("Dark images timed out. R.89: {}".format(
-            #             vsrs_register_89))
-            # # poll_ending = time.time()
-            # # print(" *** collect offsets polling took: {0} seconds @ {1:4.1f}Hz**".format(
-            # #     poll_ending - poll_beginning, self.parent.fem.frame_rate))
-
-            # # 6. Stop state machine
-            # self.write_receive_to_all(HexitecFem.CLR_REG_BIT, 0x30, 0x31, 0x30, 0x31)
-
-            # # 7. Set reg 0x24 to 0x28
-
-            # logging.debug("Offsets collected")
-            # # Send reg value; Register 0x24, bits5,3: disable VCAL, enable spectroscopic mode:
-            # self.write_receive_to_all(HexitecFem.SEND_REG_VALUE, 0x32, 0x34, 0x32, 0x38)
-
-            # # 8. Start state machine
-
-            # self.write_receive_to_all(HexitecFem.SET_REG_BIT, 0x30, 0x31, 0x30, 0x31)
-
-            # logging.debug("Ensure VCAL remains on")
-            # self.write_receive_to_all(HexitecFem.CLR_REG_BIT, 0x32, 0x34, 0x32, 0x30)
+            # 2. Stop the state machine
+            self.stop_sm()
+            # 3. Set register 0x24 to 0x22
+            self.set_dc_controls(True, False)
+            # 4. Start the state machine
+            self.start_sm()
+            # 5. Wait > 8182 * frame time (~1 second, 9118.87Hz)
+            self.await_dc_captured()
+            # 6. Stop state machine
+            self.stop_sm()
+            # (7. Setting Register 0x24 to 0x28 - Redundant)
+            # 8. Start state machine
+            self.start_sm()
+            # Ensure VCAL remains on:
+            self.clr_dc_controls(False, False)
 
             self._set_status_message("Offsets collections operation completed.")
             self.parent.software_state = "Idle"
@@ -810,6 +770,58 @@ class HexitecFem():
         except Exception as e:
             self.flag_error("Failed to collect offsets", str(e))
         self.hardware_busy = False
+
+    def stop_sm(self):
+        """Stop the state machine in VSRs."""
+        for vsr in self.vsr_list:
+            vsr.disable_sm()
+
+    def set_dc_controls(self, capt_avg_pict, spectroscopic_mode_en):
+        """Set DC control(s) in all VSRs."""
+        for vsr in self.vsr_list:
+            vsr.set_dc_control_bits(capt_avg_pict, self.vcal_enabled, spectroscopic_mode_en)
+
+    def clr_dc_controls(self, capt_avg_pict, spectroscopic_mode_en):
+        """Clear DC control(s) in all VSRs."""
+        for vsr in self.vsr_list:
+            vsr.clr_dc_control_bits(capt_avg_pict, self.vcal_enabled, spectroscopic_mode_en)
+
+    def start_sm(self):
+        """Start the state machine in VSRs."""
+        for vsr in self.vsr_list:
+            vsr.enable_sm()
+
+    def await_dc_captured(self):
+        """Wait for the Dark Correction frames to be collected."""
+        expected_duration = 8192 / self.parent.fem.frame_rate
+        timeout = (expected_duration * 1.2) + 1
+        poll_beginning = time.time()
+        self._set_status_message("Collecting dark images..")
+        dc_ready = False
+        while not dc_ready:
+            dc_statuses = self.check_dc_statuses()
+            dc_ready = self.are_dc_ready(dc_statuses)
+            if self.debug:   # pragma: no coverage
+                logging.debug("Register 0x89: {0}, Done? {1} Timing: {2:2.5} s".format(
+                    dc_statuses, dc_ready, time.time() - poll_beginning))
+            if time.time() - poll_beginning > timeout:
+                raise HexitecFemError("Dark images timed out. R.89: {}".format(dc_statuses))
+
+    def check_dc_statuses(self):
+        """Check Register 89 status in all VSRs."""
+        replies = []
+        for vsr in self.vsr_list:
+            replies.append(vsr.read_pll_status())
+        return replies
+
+    def are_dc_ready(self, dc_statuses):
+        """Check whether bit 0: 'Capture DC ready' set."""
+        all_dc_ready = True
+        for status in dc_statuses:
+            dc_ready = status & 1
+            if not dc_ready:
+                all_dc_ready = False
+        return all_dc_ready
 
     def load_enables_settings(self, vsr, address_h, address_l,
                               enables_settings, enables_defaults):
@@ -996,40 +1008,68 @@ class HexitecFem():
         Initialise, load enables, set up state machine, write to DAC and enable ADCs.
         """
         try:
-            beginning = time.time()
+            # Token VCAL pattern until initialise_vsr() sets entire VSR configuration
+            column_calibration_mask_asic1 = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11]
+            row_calibration_mask_asic1 = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11]
+            column_calibration_mask_asic2 = [0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33]
+            row_calibration_mask_asic2 = [0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33]
+            pattern = 0x1
+            vcal = 136   # (0x88) from input: 0.10
+            umid = 1366  # (0x556) from input: 1,00000E+3
+
+            expected_duration = 8192 / self.parent.fem.frame_rate
+            timeout = (expected_duration * 1.2) + 1
             self.hardware_busy = True
             for vsr in self.vsr_list:
                 logging.debug(" --- Initialising VSR: 0x{0:X} ---".format(vsr.addr))
                 self._set_status_message("Initialising VSR{}..".format(vsr.addr-143))
+#
+                vsr.enable_vcal(self.vcal_enabled)
+                asic = 1
+                vsr.set_column_calibration_mask(column_calibration_mask_asic1, asic)
+                vsr.set_row_calibration_mask(row_calibration_mask_asic1, asic)
+                asic = 2
+                vsr.set_column_calibration_mask(column_calibration_mask_asic2, asic)
+                vsr.set_row_calibration_mask(row_calibration_mask_asic2, asic)
+                # Set VCAL magnitude; 0x0CC (.15V) 111 (0.2) 155 (0.25) 199 (.3)
+                vsr.set_dac_vcal(vcal)
+                # Set umid magnitude; 0x0555 (1.0V)
+                vsr.set_dac_umid(umid)
+#
                 self.initialise_vsr(vsr)
                 # Check PLLs locked
                 bPolling = True
                 time_taken = 0
+                beginning = time.time()
                 while bPolling:
                     pll_lock = vsr.read_pll_status()
                     if pll_lock & 1:
                         bPolling = False
                     else:
-                        # print(" R.89: {} {}".format(r89_value, r89_value[1], ord(r89_value[1])))
                         time.sleep(0.1)
                         time_taken += 0.1
-                    if time_taken > 4:
-                        raise HexitecFemError("Timed out polling register 0x89;PLL still disabled")
+                    if time.time() - beginning > timeout:
+                        logging.error("VSR{0:X} R.89 took long: {1:2.5} s".format(
+                            vsr.addr-143, time_taken))
+                        raise HexitecFemError("Timed out awaiting DC Capture Ready")
+
+                logging.debug("VSR{1:X} DC Capture ready took: {0:2.5} s".format(
+                    time_taken, vsr.addr-143))
 
             logging.debug("LVDS Training")
-            self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'], data=0x10,
-                                        burst_len=1, comment=" ")  # EN_TRAINING
+            self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'],
+                                          data=0x10, burst_len=1, comment=" ")  # EN_TRAINING
             time.sleep(0.2)
-            self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'], data=0x00,
-                                        burst_len=1, comment=" ")  # Disable training
+            self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'],
+                                          data=0x00, burst_len=1, comment=" ")  # Disable training
 
             number_vsrs = len(self.vsr_addr_mapping.keys())
             vsr_lock_status = self.x10g_rdma.udp_rdma_read(address=0x3e8, burst_len=number_vsrs)
             for vsr in self.vsr_list:
                 if vsr_lock_status[vsr.slot-1] == 255:
-                    logging.debug(f"[INFO]  VSR{vsr.slot} lock_status: {vsr_lock_status[vsr.slot-1]}")
+                    logging.debug(f"VSR{vsr.slot} lock_status: {vsr_lock_status[vsr.slot-1]}")
                 else:
-                    logging.error(f"[ERROR] VSR{vsr.slot} lock_status: {vsr_lock_status[vsr.slot-1]}")
+                    logging.error(f"VSR{vsr.slot} lock_status: {vsr_lock_status[vsr.slot-1]}")
 
             vsr_status_addr = HEX_REGISTERS.HEXITEC_2X6_VSR0_STATUS['addr']
             for vsr in self.vsr_list:
@@ -1131,6 +1171,15 @@ class HexitecFem():
             vcal2_vcal1_high = vcal2_vcal1 >> 8
             value_018 = self.convert_to_aspect_format(vcal2_vcal1_low)
             value_019 = self.convert_to_aspect_format(vcal2_vcal1_high)
+        vcal_on = self._extract_integer(self.hexitec_parameters, 'Control-Settings/vcal_enabled',
+                                        bit_range=1)
+        if vcal_on > -1:
+            if vcal_on == 0:
+                self.vcal_enabled = False
+            else:
+                self.vcal_enabled = True
+        # print(f"  self.vcal_enabled = {self.vcal_enabled}, vcal_on = {vcal_on}")
+        # time.sleep(1)
         """
         90	42	01	10	;Select external Clock
         90	42	07	03	;Enable PLLs
@@ -1222,7 +1271,6 @@ class HexitecFem():
         # #             { 0x40 0x0A 0x01      "Enable_Triggered_SM_Start" }
         # # }
 
-        # TODO Move calling vsr.initialise() at the end of initialise_vsr()
         vsr.initialise()
 
     def read_and_response(self, vsr, address_h, address_l, delay=False):
@@ -1821,7 +1869,8 @@ class HexitecFem():
         logging.debug("Going to set HV bias to -{} volts".format(self.bias_level))
         self._set_status_message(f"HV bias set to -{self.bias_level} V")
         hv_msb, hv_lsb = self.convert_bias_to_dac_values(self.bias_level)
-        print(f" HV Bias (-{self.bias_level}) : {hv_msb[0]:X} {hv_msb[1]:X} | {hv_lsb[0]:X} {hv_lsb[1]:X}")
+        print(f" HV Bias (-{self.bias_level}) : {hv_msb[0]:X} {hv_msb[1]:X}",
+              " | {hv_lsb[0]:X} {hv_lsb[1]:X}")
 
         self.vsr_list[0].hv_on(hv_msb, hv_lsb)
         self.hv_bias_enabled = True
@@ -1898,9 +1947,9 @@ class HexitecFem():
     def frame_reset_to_zero(self):
         """Reset Firmware frame number to 0."""
         self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_LOWER['addr'],
-                                            data=0x0, burst_len=1)
+                                      data=0x0, burst_len=1)
         self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_UPPER['addr'],
-                                            data=0x0, burst_len=1)
+                                      data=0x0, burst_len=1)
         self.set_bit(HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL, "FRAME_COUNTER_LOAD")
         self.reset_bit(HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL, "FRAME_COUNTER_LOAD")
 
@@ -1909,7 +1958,7 @@ class HexitecFem():
         # Frame limited mode
         self.set_bit(HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL, "ACQ_NOF_FRAMES_EN")
         self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER['addr'],
-                                    data=number_frames, burst_len=1)
+                                      data=number_frames, burst_len=1)
         logging.debug("Number of frames set to 0x{0:X}".format(number_frames))
 
     def data_en(self, enable=True):
@@ -1917,7 +1966,6 @@ class HexitecFem():
             self.set_bit(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL, "DATA_EN")
         else:
             self.reset_bit(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL, "DATA_EN")
-
 
 
 class HexitecFemError(Exception):   # pragma: no cover

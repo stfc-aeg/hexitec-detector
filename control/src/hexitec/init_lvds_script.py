@@ -9,6 +9,7 @@ import ALL_RDMA_REGISTERS as HEX_REGISTERS
 
 DAC_SCALE_FACTOR = 0.732
 
+
 def get_env_values(vsrs):
 
     for vsr in vsrs:
@@ -117,6 +118,7 @@ def convert_bias_to_dac_values(hv):
     # print(" Conv'd to aSp_L: {}".format(hv_lsb))
     return hv_msb, hv_lsb
 
+
 def convert_string_exponential_to_integer(exponent):
     """Convert aspect format to fit dac format.
 
@@ -130,6 +132,7 @@ def convert_string_exponential_to_integer(exponent):
     number_int = int(round(number_float))
     return number_int
 
+
 def _extract_exponential(parameter_dict, descriptor, bit_range):
     """Extract exponential descriptor from parameter_dict, check it's within bit_range."""
     valid_range = [0, 1 << bit_range]
@@ -141,12 +144,13 @@ def _extract_exponential(parameter_dict, descriptor, bit_range):
             setting = int(scaled_setting // DAC_SCALE_FACTOR)
         else:
             print("Error parsing %s, got: %s (scaled: % s) but valid range: %s-%s" %
-                    (descriptor, unscaled_setting, scaled_setting, valid_range[0],
-                    valid_range[1]))
+                  (descriptor, unscaled_setting, scaled_setting, valid_range[0],
+                   valid_range[1]))
             setting = -1
     except KeyError:
         raise Exception("ERROR: No '%s' Key defined!" % descriptor)
     return setting
+
 
 def convert_aspect_float_to_dac_value(number_float):
     """Convert aspect float format to fit dac format.
@@ -157,6 +161,7 @@ def convert_aspect_float_to_dac_value(number_float):
     milli_volts = number_float * 1000
     number_scaled = int(round(milli_volts // DAC_SCALE_FACTOR))
     return number_scaled
+
 
 def _extract_float(parameter_dict, descriptor):
     """Extract descriptor from parameter_dict, check within 0.0 - 3.0 (hardcoded) range."""
@@ -169,11 +174,97 @@ def _extract_float(parameter_dict, descriptor):
             setting = convert_aspect_float_to_dac_value(setting)
         else:
             print("Error parsing float %s, got: %s but valid range: %s-%s" %
-                    (descriptor, setting, valid_range[0], valid_range[1]))
+                  (descriptor, setting, valid_range[0], valid_range[1]))
             setting = -1
     except KeyError:
         raise Exception("Missing Key: '%s'" % descriptor)
     return setting
+
+
+def collect_offsets(vsrs, vcal_enabled):
+    """Collect offsets across all VSRs in one fell swoop."""
+    # 2. Stop the state machine
+    stop_sm(vsrs)
+    # 3. Set register 0x24 to 0x22
+    set_dc_controls(vsrs, True, vcal_enabled, False)
+    # 4. Start the state machine
+    start_sm(vsrs)
+    # 5. Wait > 8182 * frame time (~1 second, 9118.87Hz)
+    await_dc_captured(vsrs)
+    # 6. Stop state machine
+    stop_sm(vsrs)
+    # (7. Setting Register 0x24 to 0x28 - Redundant)
+    # 8. Start state machine
+    start_sm(vsrs)
+    # Ensure VCAL remains on:
+    clr_dc_controls(vsrs, False, vcal_enabled, False)
+
+
+def stop_sm(vsrs):
+    """Stop the state machine in VSRs."""
+    for vsr in vsrs:
+        # if vsr.slot == 1:
+        #     vsr.debug = True
+        vsr.disable_sm()
+        # vsr.debug = False
+
+
+def set_dc_controls(vsrs, capt_avg_pict, vcal_pulse_disable, spectroscopic_mode_en):
+    """Set DC control(s) in all VSRs."""
+    for vsr in vsrs:
+        # if vsr.slot == 1:
+        #     vsr.debug = True
+        vsr.set_dc_control_bits(capt_avg_pict, vcal_pulse_disable, spectroscopic_mode_en)
+        # vsr.debug = False
+
+
+def clr_dc_controls(vsrs, capt_avg_pict, vcal_pulse_disable, spectroscopic_mode_en):
+    """Clear DC control(s) in all VSRs."""
+    for vsr in vsrs:
+        # if vsr.slot == 1:
+        #     vsr.debug = True
+        vsr.clr_dc_control_bits(capt_avg_pict, vcal_pulse_disable, spectroscopic_mode_en)
+        # vsr.debug = False
+
+
+def start_sm(vsrs):
+    """Start the state machine in VSRs."""
+    for vsr in vsrs:
+        # if vsr.slot == 1:
+        #     vsr.debug = True
+        vsr.enable_sm()
+        # vsr.debug = False
+
+
+def await_dc_captured(vsrs):
+    """Wait for the Dark Correction frames to be collected."""
+    poll_beginning = time.time()
+    dc_ready = False
+    while not dc_ready:
+        dc_statuses = check_dc_statuses(vsrs)
+        dc_ready = are_dc_ready(dc_statuses)
+    poll_ending = time.time()
+    print("[INFO] Collect offsets polling took: {0} seconds ".format(
+        round(poll_ending - poll_beginning, 2)))
+
+
+def check_dc_statuses(vsrs):
+    """Check Register 89 status of all six VSRs."""
+    replies = []
+    for vsr in vsrs:
+        replies.append(vsr.read_pll_status())
+    return replies
+
+
+def are_dc_ready(dc_statuses):
+    """Check whether bit 0: 'Capture DC ready' set in Register 89."""
+    all_dc_ready = True
+    for status in dc_statuses:
+        dc_ready = status & 1
+        if not dc_ready:
+            all_dc_ready = False
+    return all_dc_ready
+
 
 if __name__ == '__main__':
     hostname = os.getenv('HOSTNAME').split('.')[0]
@@ -228,10 +319,12 @@ if __name__ == '__main__':
         print(f" .enable_vsr()    took: {ending - finished_modules}")
     print("Module(s) & VSR(s) ready")
 
-    """:obj:`dict` A dictionary mapping VSR slot to VSR addr. This is hardware build dependent and can be determined by :meth:`VsrModule.lookup`"""
+    """:obj:`dict` A dictionary mapping VSR slot to VSR addr. This is hardware build dependent and
+    can be determined by :meth:`VsrModule.lookup`"""
     vsrs = list()
     for vsr in vsr_addr_mapping.keys():
-        vsrs.append(VsrModule(Hex2x6CtrlRdma, slot=vsr, init_time=10, addr_mapping=vsr_addr_mapping))
+        vsrs.append(VsrModule(Hex2x6CtrlRdma, slot=vsr, init_time=10,
+                              addr_mapping=vsr_addr_mapping))
 
     get_env_values(vsrs)
     time.sleep(1)
@@ -288,7 +381,7 @@ if __name__ == '__main__':
         column_calibration_mask_asic1 = list_of_patterns
         row_calibration_mask_asic1 = list_of_patterns
         pattern += 1
-
+        print(f"[INFO]  VSR{vsr.slot} ASIC: {asic} pattern: 0x{pattern:X}")
         vsr.set_column_calibration_mask(column_calibration_mask_asic1, asic)
         vsr.set_row_calibration_mask(row_calibration_mask_asic1, asic)
 
@@ -297,6 +390,7 @@ if __name__ == '__main__':
         column_calibration_mask_asic1 = list_of_patterns
         row_calibration_mask_asic1 = list_of_patterns
         pattern += 1
+        print(f"[INFO]  VSR{vsr.slot} ASIC: {asic} pattern: 0x{pattern:X}")
         vsr.set_column_calibration_mask(column_calibration_mask_asic1, asic)
         vsr.set_row_calibration_mask(row_calibration_mask_asic1, asic)
 
@@ -308,11 +402,17 @@ if __name__ == '__main__':
     print("Init VSRs")
     for vsr in vsrs:
         vsr.initialise()
+        tOut = 0
         while True:
             pll_lock = vsr.read_pll_status()
             if pll_lock & 1:
+                print(f"[INFO] VSR{vsr.slot} PLL locked in {tOut} s")
+                break
+            if tOut > 10:
+                print(f"[ERROR] VSR{vsr.slot} PLL timed out!")
                 break
             time.sleep(0.1)
+            tOut += 0.1
         print("-" * 80)
 
     Hex2x6CtrlRdma.udp_rdma_write(address=HEXITEC_2X6_VSR_DATA_CTRL['addr'], data=0x10,
@@ -340,8 +440,7 @@ if __name__ == '__main__':
     print("fpga state machine enabled")
 
     print("-=-=-=-=- Dark Images -=-=-=-=-")
-    for vsr in vsrs:
-        vsr.collect_offsets()
+    collect_offsets(vsrs, vcal_enabled)
     print("-=-=-=-=-     Done    -=-=-=-=-")
 
     # Hex2x6CtrlRdma.dbg = True
@@ -349,7 +448,7 @@ if __name__ == '__main__':
     frame_reset_to_zero()
 
     print("  Set number of frames")
-    set_nof_frames(8)
+    set_nof_frames(18)
 
     # input("Press enter to enable data (200 ms)")
     print("  Enable data")

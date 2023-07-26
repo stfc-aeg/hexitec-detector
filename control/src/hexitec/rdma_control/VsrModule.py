@@ -918,7 +918,7 @@ class VsrModule(VsrAssembly):
         super().__init__(rdma_ctrl_iface, slot=slot, init_time=init_time, addr_mapping=addr_mapping)
         self.rows1_clock = 1
         self.s1sph = 1
-        self.sphs2 = 6
+        self.sphs2 = 1
         self.gain = "high"
         self.adc_clock_delay = 2
         self.adc_signal_delay = 10
@@ -933,10 +933,10 @@ class VsrModule(VsrAssembly):
         self.set_adc_output_phase("540")
         self.vcal_enabled = True
         # Control row, column calibration masks:
-        self.column_calibration_mask_asic1 = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
-        self.column_calibration_mask_asic2 = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
-        self.row_calibration_mask_asic1 = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
-        self.row_calibration_mask_asic2 = [0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03]
+        self.column_calibration_mask_asic1 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
+        self.column_calibration_mask_asic2 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
+        self.row_calibration_mask_asic1 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
+        self.row_calibration_mask_asic2 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
 
     def _get_env_sensors(self):
         vsr_d = list()  # empty VSR data list to pass to: self.uart_write()
@@ -1604,6 +1604,7 @@ class VsrModule(VsrAssembly):
         Returns:
             Nothing.
         """
+        # print(f"  VSR.set_dc_control_bits({capt_avg_pict}, {vcal_pulse_disable}, {spectroscopic_mode_en})")
         ctrl_reg = self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr'])
         if capt_avg_pict:
             ctrl_reg = rdma.set_field(VSR_FPGA_REGISTERS.REG36, "CAPT_AVG_PICT", ctrl_reg, 1)
@@ -1629,6 +1630,7 @@ class VsrModule(VsrAssembly):
         Returns:
             Nothing.
         """
+        # print(f"  VSR.clr_dc_control_bits({capt_avg_pict}, {vcal_pulse_disable}, {spectroscopic_mode_en})")
         ctrl_reg = self._fpga_reg_read(VSR_FPGA_REGISTERS.REG36['addr'])
         if capt_avg_pict:
             ctrl_reg = rdma.clr_field(VSR_FPGA_REGISTERS.REG36, "CAPT_AVG_PICT", ctrl_reg)
@@ -2316,63 +2318,6 @@ class VsrModule(VsrAssembly):
             print(f"[ERROR]: VSR{self.slot}: Error obtaining HV value: {e}")
             return -1
 
-    # Added to implement coll_offsets() tasks
-
-    def collect_offsets(self):
-        """HexitecRdmaStatuses.collect_offsets() ported by CA."""
-        # print(f" *** [INFO]: VSR{self.slot}: Collecting offsets...")
-        # 2. Stop the state machine
-        # write_receive_to_all(vsr_list, 0x43, 0x30, 0x31, 0x30, 0x31)
-        self.disable_sm()
-
-        # 3. Set reg 0x24 to 0x22
-        # print("Gathering offsets..")
-        # # Send reg value; Register 0x24, bits5,1: disable VCAL, capture average picture:
-        # write_receive_to_all(vsr_list, 0x40, 0x32, 0x34, 0x32, 0x32)
-        self.set_dc_control_bits(capt_avg_pict=True, vcal_pulse_disable=self.vcal_enabled,
-                                 spectroscopic_mode_en=False)
-        # 4. Start the state machine
-        # write_receive_to_all(vsr_list, 0x42, 0x30, 0x31, 0x30, 0x31)
-        self.enable_sm()
-
-        # 5. Wait > 8192 * frame time (~1 second, @ 9118.87Hz)
-        expected_duration = 8192 / 9118.87
-        timeout = (expected_duration * 1.2) + 1
-        poll_beginning = time.time()
-        dc_captured = False
-        while not dc_captured:
-            reg = self.read_pll_status()
-            if reg & 1 == 1:
-                dc_captured = True
-            if time.time() - poll_beginning > timeout:
-                raise Exception("Collecting dark images timed out!")
-        # t_after = time.time()
-        # time_taken = round(t_after - poll_beginning, 3)
-        # print(f" Coll_offs took: {time_taken}, reg: {reg}")
-
-        # 6. Stop state machine
-        # write_receive_to_all(vsr_list, 0x43, 0x30, 0x31, 0x30, 0x31)
-        self.disable_sm()
-
-        # 7. Set reg 0x24 to 0x28
-        # print("Offsets collected")
-        # # Send reg value; Register 0x24, bits5,3: disable VCAL, enable spectroscopic mode:
-        # write_receive_to_all(vsr_list, 0x40, 0x32, 0x34, 0x32, 0x38)
-        # TODO Redundant because changing 0x2A -> 0x2A
-        # self.set_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=False,
-        #                          spectroscopic_mode_en=True)  # 1229
-
-        # 8. Start state machine
-        # write_receive_to_all(vsr_list, 0x42, 0x30, 0x31, 0x30, 0x31)
-        self.enable_sm()
-
-        # print("Ensure VCAL remains on")
-        # write_receive_to_all(vsr_list, 0x43, 0x32, 0x34, 0x32, 0x30)
-        self.clr_dc_control_bits(capt_avg_pict=False, vcal_pulse_disable=self.vcal_enabled,
-                                 spectroscopic_mode_en=False)
-
-        print(f"[INFO]: VSR{self.slot}: Offsets Collected.")
-
     def hv_on(self, hv_msb, hv_lsb):
         """Switch HV on."""
         hv_address = 0xC0
@@ -2482,7 +2427,7 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         if self.debug:
-            print("[DEBUG]: ASIC {} VsrModule.set_row_calibration_mask: {}".format(
+            print("[DEBUG]: ASIC{} VsrModule.set_row_calibration_mask: {}".format(
                 asic, [hex(c) for c in row_calibration_mask]))
         if asic == 1:
             self.row_calibration_mask_asic1 = row_calibration_mask
