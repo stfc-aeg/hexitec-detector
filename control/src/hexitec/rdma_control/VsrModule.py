@@ -2410,8 +2410,12 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         if self.debug:
-            print("[DEBUG]: ASIC{} VsrModule.set_column_calibration_mask: {}".format(
-                asic, [hex(c) for c in column_calibration_mask]))
+            print("[DEBUG]: ASIC{} VsrModule.set_column_calibration_mask (Len: {}) -> {}".format(
+                asic, len(column_calibration_mask), [hex(c) for c in column_calibration_mask]))
+        if len(column_calibration_mask) > 10:
+            print("[WARN]: ASIC{} column_calibration_mask too long (Len: {})".format(
+                asic, len(column_calibration_mask)))
+            column_calibration_mask = column_calibration_mask[:10]
         if asic == 1:
             self.column_calibration_mask_asic1 = column_calibration_mask
         else:
@@ -2427,8 +2431,12 @@ class VsrModule(VsrAssembly):
             Nothing.
         """
         if self.debug:
-            print("[DEBUG]: ASIC{} VsrModule.set_row_calibration_mask: {}".format(
-                asic, [hex(c) for c in row_calibration_mask]))
+            print("[DEBUG]: ASIC{} VsrModule.set_row_calibration_mask (Len: {}) ->    {}".format(
+                asic, len(row_calibration_mask), [hex(c) for c in row_calibration_mask]))
+        if len(row_calibration_mask) > 10:
+            print("[WARN]: ASIC{} row_calibration_mask too long ({})".format(
+                asic, len(row_calibration_mask)))
+            row_calibration_mask = row_calibration_mask[:10]
         if asic == 1:
             self.row_calibration_mask_asic1 = row_calibration_mask
         else:

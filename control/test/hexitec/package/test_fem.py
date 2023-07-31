@@ -2026,8 +2026,7 @@ class TestFem(unittest.TestCase):
     def test_extract_80_bits(self):
         """Test function correctly extracts 80 bits from 4 channels."""
         vsr = 1
-        all_80b = [(70, 70), (70, 70), (70, 70), (70, 70), (70, 70), (70, 70), (70, 70),
-                   (70, 70), (70, 70), (70, 70)]
+        all_80b = [255, 255, 255, 255, 255, 255, 255, 255, 255, 255]
 
         self.test_fem.fem.hexitec_parameters = \
             {'Sensor-Config_V1_S1/ColumnEn_1stChannel': '11111111111111111111',
@@ -2043,25 +2042,25 @@ class TestFem(unittest.TestCase):
         vsr = 1
 
         channel1 = self.test_fem.fem._extract_80_bits("ColumnEn_", vsr, 1, "Channel")
-        assert channel1[0] == (-1, -1)
+        assert channel1 == [-1]
 
         self.test_fem.fem.hexitec_parameters['Sensor-Config_V1_S1/ColumnEn_1stChannel'] = \
             '11111111111111111111'
 
         channel2 = self.test_fem.fem._extract_80_bits("ColumnEn_", vsr, 1, "Channel")
-        assert channel2[0] == (-1, -1)
+        assert channel2 == [-1]
 
         self.test_fem.fem.hexitec_parameters['Sensor-Config_V1_S1/ColumnEn_2ndChannel'] = \
             '11111111111111111111'
 
         channel3 = self.test_fem.fem._extract_80_bits("ColumnEn_", vsr, 1, "Channel")
-        assert channel3[0] == (-1, -1)
+        assert channel3 == [-1]
 
         self.test_fem.fem.hexitec_parameters['Sensor-Config_V1_S1/ColumnEn_3rdChannel'] = \
             '11111111111111111111'
 
         channel4 = self.test_fem.fem._extract_80_bits("ColumnEn_", vsr, 1, "Channel")
-        assert channel4[0] == (-1, -1)
+        assert channel4 == [-1]
 
     def test_extract_channel_data_fails_wrong_value_length(self):
         """Test function fails if provided value is a wrong length."""
