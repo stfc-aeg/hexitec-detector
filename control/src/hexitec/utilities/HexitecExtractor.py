@@ -44,7 +44,7 @@ class HexitecExtractor(object):
         self.filename = filename
         self.filename_h5 = self.determine_h5_file(filename)
         if self.extended_headers:
-            self.HEADER_SIZE = 64
+            self.HEADER_SIZE = 16
         else:
             self.HEADER_SIZE = 8
 
@@ -69,6 +69,7 @@ class HexitecExtractor(object):
         index = 0
         if self.extended_headers:
             index = 1
+        # print(f"  SoF - header[index]: {header[1]:X} & SOF: {self.SOF:X}")
         if int(header[index]) & self.SOF:
             sof_detected = True
         return sof_detected
@@ -79,9 +80,19 @@ class HexitecExtractor(object):
         index = 0
         if self.extended_headers:
             index = 1
+        # print(f"  EoF - header[index]: {header[1]:X} & EOF: {self.EOF:X}")
         if int(header[index]) & self.EOF:
             eof_detected = True
         return eof_detected
+
+    def extract_packet_number(self, header):
+        """Extract packet number from header."""
+        packet_number = 0
+        index = 0
+        if self.extended_headers:
+            index = 1
+            packet_number = int(header[index]) & 0xFF
+        return packet_number
 
     def decode_pcap(self):
         """Extract extended header-sized UDP data from file."""
@@ -89,6 +100,11 @@ class HexitecExtractor(object):
         frames = []
         num_packets = 0
         num_frames = 0
+        previous_packet_number = -1
+        current_packet_number = 0
+
+        packet_loss = False
+        packet_size = 0
 
         # Create a PCAP reader instance
         packets = PcapReader(self.filename)
@@ -100,9 +116,27 @@ class HexitecExtractor(object):
             payload = bytes(packet[UDP].payload)
             # Read frame header
             header = np.frombuffer(payload[:self.HEADER_SIZE], dtype=np.uint64)
-            # # DBG:
-            # if num_packets < 20:
-            #     print("   header: {}".format(' '.join("0x{0:016X}".format(x) for x in header)))
+            current_packet_number = self.extract_packet_number(header)
+            # Packet number follow last packet numbers or it's a new frame?
+            if (current_packet_number - 1) == previous_packet_number:
+                pass
+            elif (previous_packet_number == 19) and (current_packet_number == 0):
+                pass
+            else:
+                if (previous_packet_number == -1) and (current_packet_number != 0):
+                    print(f"First packet: 0x{current_packet_number:X} (frame: 0x{header[0]:X})")
+                    print("Exiting..")
+                    import sys
+                    sys.exit(-1)
+                print(" *** Packet Loss! Last packet number: 0x{0:02X} Current: 0x{1:02X}. Frame: 0x{2:X}".format(
+                    previous_packet_number, current_packet_number, header[0]))
+                # print("   header: {}".format(' '.join("0x{0:016X}".format(x) for x in header)))
+                # print(f"  Payload is of size: {len(payload[self.HEADER_SIZE:])}")
+                # import sys;sys.exit(1)
+                packet_size = len(payload[self.HEADER_SIZE:])
+                packet_loss = True
+                break
+            previous_packet_number = current_packet_number
 
             # If this is a start of frame packet, reset frame data
             if self.sof_detected(header):
@@ -115,15 +149,29 @@ class HexitecExtractor(object):
             if self.eof_detected(header):
                 frame = np.frombuffer(frame_data, dtype=np.uint16)
                 # # DEBUGGING: Trying to intentionally set few first pixel values to a known range of values
-                # if (num_packets < 7):
+                # if (num_packets < 23):
                 #     # frame[:10] = range(0, 10) # ValueError: assignment destination is read-only
                 #     print(" frame[:10] = {} ({})".format(frame[:10], len(frame)))
                 frames.append(frame)
                 num_frames += 1
             num_packets += 1
 
-        # Convert frame list to 3D numpy array
-        frames = np.array(frames)
+        # If packet loss, remove data from incomplete frame
+        if packet_loss:
+            print("packet loss detected - Make amends")
+            if previous_packet_number < 13:
+                print(f"Chopping off {previous_packet_number} packets worth")
+                packet_fragment = packet_size * previous_packet_number
+                frame_data = frame_data[:-packet_fragment]
+
+        try:
+            # Convert frame list to 3D numpy array
+            frames = np.array(frames)
+            print(f" Maximum value: {frames.max()}")
+        except ValueError as e:
+            print("Cannot convert data into numpy array - Missing packet(s)?")
+            print(f"Python Exception: {e}")
+            sys.exit(1)
 
         print("Decoded {} frames from {} packets in PCAP file {}".format(num_frames, num_packets, self.filename))
 
@@ -151,7 +199,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=desc)
 
     parser.add_argument('--extended_headers', "-e", action="store_true",
-                        help="Extended headers (64 bytes, or 8 bytes)")
+                        help="Extended headers (16 bytes, or 8 bytes)")
     parser.add_argument('--rows', '-r', type=int, default=160,
                         help='set number of rows in frame')
     parser.add_argument('--columns', '-c', type=int, default=160,
