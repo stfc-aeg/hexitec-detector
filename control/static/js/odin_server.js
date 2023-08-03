@@ -279,6 +279,26 @@ function poll_fem()
             document.querySelector('#odin-control-error').innerHTML = "Polling FR: " + error.message;
         });
 
+        // Polls Proxy adapter for leak detector information
+        hexitec_endpoint.get_url('/api/' + api_version + '/proxy/')
+        .then(result => {
+            var results = result["value"];
+            var system = result["leak"]["system"];
+            var outlets = system["outlets"];
+            var packet_info = result["leak"]["system"]["packet_info"];
+            // Expand leak detector parameter coverage
+
+            // Update GUI
+            var ld_fault = JSON.stringify(packet_info["fault"], null, 4);
+            var ld_chiller_state = outlets["chiller"]["state"];
+            document.querySelector('#ld_fault').innerHTML = ld_fault;
+            document.querySelector('#ld_chiller_state').innerHTML = ld_chiller_state;
+
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = "Polling Leak: " + error.message;
+        });
+
         // http://localhost:8888/api/0.1/hexitec/fp/status/error/2
         // Polls the fem for hardware status, environmental data, etc
         hexitec_endpoint.get_url(hexitec_url + 'fp/status/')
@@ -906,6 +926,17 @@ function changeNextFrameEnable()
     });
 };
 
+function changeChillerEnable()
+{
+    ld_chiller_enable = document.getElementById('ld_chiller_control_radio1').checked;
+
+    ld_chiller_enable = JSON.stringify(ld_chiller_enable);
+    hexitec_endpoint.put_url(ld_chiller_enable, 'api/' + api_version + '/proxy/leak/system/outlets/chiller/state')
+    .catch(error => {
+        console.log("LD CHILLER Enable: couldn't be changed: " + error.message);
+    });
+};
+
 // Function only ever called from HTML page
 function changeCalibrationEnable()
 {
@@ -1139,6 +1170,32 @@ function lv_dataset_changed()
 
 function update_ui_with_odin_settings()
 {
+    hexitec_endpoint.get_url('/api/' + api_version + '/proxy/')
+    .then(result => {
+        // Update GUI with leak detector information
+        var system = result["leak"]["system"];
+        var outlets = system["outlets"];
+        var packet_info = result["leak"]["system"]["packet_info"];
+        var ld_chiller_state = outlets["chiller"]["state"];
+        document.querySelector('#ld_chiller_state').innerHTML = ld_chiller_state;
+        // Expand leak detector parameter coverage
+
+        if (ld_chiller_state === true)
+        {
+            document.querySelector('#ld_chiller_control_radio1').checked = true;    // Enables
+            console.log("chiller is enabled");
+        }
+        else
+        {
+            document.querySelector('#ld_chiller_control_radio2').checked = true;    // Disables
+            console.log("chiller is disabled");
+        }
+
+    })
+    .catch(error => {
+        console.log("update_ui_with_odin_settings() ERROR: " + error.message);
+    });
+
     hexitec_endpoint.get_url(hexitec_url + 'detector')
     .then(result => {
         const daq_config = result["detector"]["daq"]["config"];
