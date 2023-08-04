@@ -1435,7 +1435,24 @@
                           </div>
                         </td>
                       </tr>
-                      <!-- Placeholder for DAQ button -->
+                      <!--DAQ button-->
+                      <tr>
+                        <td>
+                          DAQ button &nbsp;
+                        </td>
+                        <td>
+                          <div class="row sidebar-row vertical-align">
+                            <div class="col-xs-7">
+                              <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                                <input type="radio" class="btn-check" name="ld_DAQ_control_radio" id="ld_DAQ_control_radio1" autocomplete="off" onclick="changeDAQEnable()">
+                                <label class="btn btn-outline-primary" for="ld_DAQ_control_radio1">On</label>
+                                <input type="radio" class="btn-check" name="ld_DAQ_control_radio" id="ld_DAQ_control_radio2" autocomplete="off" onclick="changeDAQEnable()" checked>
+                                <label class="btn btn-outline-primary" for="ld_DAQ_control_radio2">Off</label>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
 
                     </tbody>
                   </table>
