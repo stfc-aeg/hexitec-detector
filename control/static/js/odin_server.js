@@ -222,6 +222,44 @@ function toggle_ui_elements(bBool) {
     document.querySelector('#hexitec-config-text').disabled = bBool;
 }
 
+function update_ui_with_leak_detector_settings(result){
+    var results = result["value"];
+    var system = result["leak"]["system"];
+    var outlets = system["outlets"];
+    var packet_info = result["leak"]["system"]["packet_info"];
+
+    var ld_warning = system["warning"];
+    var ld_chiller_state = outlets["chiller"]["state"];
+    var ld_chiller_enable = outlets["chiller"]["enabled"];
+    var ld_daq_state = outlets["daq"]["state"];
+    var ld_daq_enable = outlets["chiller"]["enabled"];
+    var ld_fault = system["fault"]
+
+    document.querySelector('#ld_warning').innerHTML = ld_warning;
+    document.querySelector('#ld_fault').innerHTML = ld_fault;
+    document.querySelector('#ld_chiller_state').innerHTML = ld_chiller_state;
+    document.querySelector('#ld_chiller_enabled').innerHTML = ld_chiller_enable;
+    document.querySelector('#ld_daq_enabled').innerHTML = ld_daq_enable;
+    document.querySelector('#ld_daq_state').innerHTML = ld_daq_state;
+
+
+    // Expand leak detector parameter coverage
+
+    if (ld_chiller_state === true) {
+        document.querySelector('#ld_chiller_control_radio1').checked = true;    // Enables
+    }
+    else {
+        document.querySelector('#ld_chiller_control_radio2').checked = true;    // Disables
+    }
+
+    if (ld_daq_state === true) {
+        document.querySelector('#ld_DAQ_control_radio1').checked = true;    // Enables
+    }
+    else {
+        document.querySelector('#ld_DAQ_control_radio2').checked = true;    // Disables
+    }
+}
+
 function poll_fem() {
     // Check whether odin_server is running
     hexitec_endpoint.get_url(hexitec_url + 'detector')
@@ -267,45 +305,7 @@ function poll_fem() {
             // Polls Proxy adapter for leak detector information
             hexitec_endpoint.get_url('/api/' + api_version + '/proxy/')
                 .then(result => {
-                    var results = result["value"];
-                    var system = result["leak"]["system"];
-                    var outlets = system["outlets"];
-                    var packet_info = result["leak"]["system"]["packet_info"];
-                    var ld_warning = system["warning"];
-                    console.log("hello world")
-
-                    // Expand leak detector parameter coverage
-
-                    // Update GUI
-                    var ld_fault = JSON.stringify(system["fault"], null, 4);
-                    var ld_chiller_state = outlets["chiller"]["state"];
-                    var ld_chiller_enable = outlets["chiller"]["enabled"];
-                    var ld_daq_state = outlets["daq"]["state"];
-                    var ld_daq_enable = outlets["daq"]["enabled"];
-
-                    document.querySelector('#ld_warning').innerHTML = ld_warning;
-                    document.querySelector('#ld_fault').innerHTML = ld_fault;
-                    document.querySelector('#ld_chiller_state').innerHTML = ld_chiller_state;
-                    document.querySelector('#ld_chiller_enabled').innerHTML = ld_chiller_enable;
-                    document.querySelector('#ld_daq_enabled').innerHTML = ld_daq_enable;
-                    document.querySelector('#ld_daq_state').innerHTML = ld_daq_state;
-
-                    if (ld_chiller_state === true) {
-                        document.querySelector('#ld_chiller_control_radio1').checked = true;    // Enables
-                    }
-                    else {
-                        document.querySelector('#ld_chiller_control_radio2').checked = true;    // Disables
-                    }
-        
-                    if (ld_daq_state === true) {
-                        document.querySelector('#ld_DAQ_control_radio1').checked = true;    // Enables
-                    }
-                    else {
-                        document.querySelector('#ld_DAQ_control_radio2').checked = true;    // Disables
-                    }
-
-
-
+                    update_ui_with_leak_detector_settings(result)
                 })
                 .catch(error => {
                     document.querySelector('#odin-control-error').innerHTML = "Polling Leak: " + error.message;
@@ -1130,43 +1130,7 @@ function update_ui_with_odin_settings() {
     hexitec_endpoint.get_url('/api/' + api_version + '/proxy/')
         .then(result => {
             // Update GUI with leak detector information
-            var results = result["value"];
-            var system = result["leak"]["system"];
-            var outlets = system["outlets"];
-            var packet_info = result["leak"]["system"]["packet_info"];
-            var ld_warning = system["warning"];
-
-
-            var ld_chiller_state = outlets["chiller"]["state"];
-            var ld_chiller_enable = outlets["chiller"]["enabled"];
-            var ld_daq_state = outlets["daq"]["state"];
-            var ld_daq_enable = outlets["chiller"]["enabled"];
-            var ld_fault = system["fault"]
-
-            document.querySelector('#ld_daq_state').innerHTML = ld_daq_state;
-            document.querySelector('#ld_warning').innerHTML = ld_warning;
-            document.querySelector('#ld_fault').innerHTML = ld_fault;
-            document.querySelector('#ld_chiller_state').innerHTML = ld_chiller_state;
-            document.querySelector('#ld_chiller_enabled').innerHTML = ld_chiller_enable;
-            document.querySelector('#ld_daq_enabled').innerHTML = ld_daq_enable;
-
-
-            // Expand leak detector parameter coverage
-
-            if (ld_chiller_state === true) {
-                document.querySelector('#ld_chiller_control_radio1').checked = true;    // Enables
-            }
-            else {
-                document.querySelector('#ld_chiller_control_radio2').checked = true;    // Disables
-            }
-
-            if (ld_daq_state === true) {
-                document.querySelector('#ld_DAQ_control_radio1').checked = true;    // Enables
-            }
-            else {
-                document.querySelector('#ld_DAQ_control_radio2').checked = true;    // Disables
-            }
-
+            update_ui_with_leak_detector_settings(result)
         })
         .catch(error => {
             console.log("update_ui_with_odin_settings() ERROR: " + error.message);
