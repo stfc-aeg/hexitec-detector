@@ -84,4 +84,34 @@ class AdapterEndpoint
         return result;
     }
 
+    async put_url(data, url='')
+    {
+        const response = await fetch(
+            url,
+            {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(data)
+            }
+        );
+
+        if (!response.ok) {
+            var message;
+            try {
+                const err_result = await response.json();
+                message = err_result.error;
+            }
+            catch
+            {
+                message = `PUT request to ${url} failed with status ${response.status}`;
+            }
+            throw new Error(message);
+        }
+        const result = await response.json();
+        return result;
+    }
+
 }

@@ -271,12 +271,13 @@ function poll_fem() {
                     var system = result["leak"]["system"];
                     var outlets = system["outlets"];
                     var packet_info = result["leak"]["system"]["packet_info"];
-                    var ld_warning = packet_info["warning"];
+                    var ld_warning = system["warning"];
+                    console.log("hello world")
 
                     // Expand leak detector parameter coverage
 
                     // Update GUI
-                    var ld_fault = JSON.stringify(packet_info["fault"], null, 4);
+                    var ld_fault = JSON.stringify(system["fault"], null, 4);
                     var ld_chiller_state = outlets["chiller"]["state"];
                     var ld_chiller_enable = outlets["chiller"]["enabled"];
                     var ld_daq_state = outlets["daq"]["state"];
@@ -302,6 +303,8 @@ function poll_fem() {
                     else {
                         document.querySelector('#ld_DAQ_control_radio2').checked = true;    // Disables
                     }
+
+
 
                 })
                 .catch(error => {
@@ -1131,15 +1134,14 @@ function update_ui_with_odin_settings() {
             var system = result["leak"]["system"];
             var outlets = system["outlets"];
             var packet_info = result["leak"]["system"]["packet_info"];
-            var ld_warning = packet_info["warning"];
+            var ld_warning = system["warning"];
 
 
             var ld_chiller_state = outlets["chiller"]["state"];
             var ld_chiller_enable = outlets["chiller"]["enabled"];
             var ld_daq_state = outlets["daq"]["state"];
             var ld_daq_enable = outlets["chiller"]["enabled"];
-
-            var ld_warning = packet_info["warning"];
+            var ld_fault = system["fault"]
 
             document.querySelector('#ld_daq_state').innerHTML = ld_daq_state;
             document.querySelector('#ld_warning').innerHTML = ld_warning;
