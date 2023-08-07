@@ -282,8 +282,8 @@ function poll_fem() {
             // Polls the fem(s) for hardware status, environmental data, etc
             hexitec_endpoint.get_url(hexitec_url + 'fr/status/')
                 .then(result => {
-                    var numNodes = result["value"].length;
-                    for (var i = 0; i < numNodes; i++) {
+                    var numNodes = result["value"].length + 1;
+                    for (var i = 1; i < numNodes; i++) {
                         const frames = result["value"][i].frames;
                         const decoder = result["value"][i].decoder;
                         const buffers = result["value"][i].buffers;
@@ -317,8 +317,8 @@ function poll_fem() {
                 .then(result => {
                     // // Print all errors reported by one FP:
                     // console.log("    [val][1].error: " + JSON.stringify(result["value"][1].error, null, 4));
-                    var numNodes = result["value"].length;
-                    for (var i = 0; i < numNodes; i++) {
+                    var numNodes = result["value"].length + 1;
+                    for (var i = 1; i < numNodes; i++) {
                         // Print all error(s) belonging to specified node:
                         // console.log( i + " results: " + result["value"][i].error);
                         if (result["value"][i].error === undefined) {
