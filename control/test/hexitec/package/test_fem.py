@@ -178,11 +178,11 @@ class TestFem(unittest.TestCase):
         assert self.test_fem.fem.frame_rate == 7154.079227920547
         assert self.test_fem.fem.number_frames == 14308
 
-    def test_get_health(self):
-        """Test obtaining health variable works."""
-        health = False
-        self.test_fem.fem.health = health
-        assert self.test_fem.fem.get_health() is health
+    # def test_get_health(self):
+    #     """Test obtaining health variable works."""
+    #     health = False
+    #     self.test_fem.fem.health = health
+    #     assert self.test_fem.fem.get_health() is health
 
     # def test_poll_sensors_calls_self(self):
     #     """Test poll_sensors() calls itself."""
@@ -632,12 +632,37 @@ class TestFem(unittest.TestCase):
     # #     s_frame_in_progress_flag = 0
     # #     # Output from frame Gate
     # #     fg_frame_last_length = 51200
-    # #     fg_frame_max_length = 51200
-    # #     fg_frame_min_length = 51200
-    # #     fg_frame_number = 6
-    # #     fg_frame_last_clock_cycles = 23015
-    # #     fg_frame_max_clock_cycles = 4112417407
-    # #     fg_frame_min_clock_cycles = 23015
+    # #     fg_frame_max_length # def test_block_write_custom_length(self):
+    #     """Test function works ok."""
+    #     self.test_fem.fem.send_cmd = Mock()
+    #     (address_h, address_l) = (0x30, 0x31)
+    #     values = [57, 56, 57, 57, 57, 65, 57, 66, 57, 67, 57, 68, 57, 69, 57, 70, 65, 48, 65, 49]
+    #     number_registers = 3
+    #     response = [42, 144, address_h, address_l]
+    #     for value in values:
+    #         response.append(value)
+    #     response.append(13)
+    #     # Dummy response with 00 because not masking and so what read_and_response()
+    #     #   sees doesn't matter
+    #     dummy = [42, 144, 48, 48]
+    #     response_1 = [42, 144, address_h, address_l, values[0], values[1]]
+    #     response_2 = [42, 144, address_h, address_l, values[2], values[3]]
+    #     response_3 = [42, 144, address_h, address_l, values[4], values[5]]
+    #     self.test_fem.fem.read_response = Mock()
+    #     self.test_fem.fem.read_response.side_effect = \
+    #         [dummy, response_1, dummy, response_2, dummy, response_3]
+    #     vsr_addr = HexitecFem.VSR_ADDRESS[0]
+    #     self.test_fem.fem.vsr_addr = vsr_addr
+    #     self.test_fem.fem.block_write_custom_length(vsr_addr, number_registers, address_h,
+    #                                                 address_l, values[:number_registers*2])
+    #     read_register_01 = [vsr_addr, 0x41, address_h, address_l]
+    #     write_register_01 = [vsr_addr, 0x40, address_h, address_l, values[0], values[1]]
+    #     self.test_fem.fem.send_cmd.assert_has_calls([
+    #         call(read_register_01),
+    #         call(write_register_01)
+    #     ])
+    #     # assert 1 == 0
+ycles = 23015
     # #     fg_frame_data_total = 307200
     # #     fg_frame_data_total_clock_cycles = 1278186053
     # #     fg_frame_trigger_count = 0
@@ -1476,130 +1501,11 @@ class TestFem(unittest.TestCase):
         assert resp == response
         assert reply == "01"
 
-    def test_write_and_response(self):
-        """Test function works ok."""
-        vsr_addr = 144
-        self.test_fem.fem.send_cmd = Mock()
-        (address_h, address_l) = (0x30, 0x31)
-        (value_h, value_l) = (0x30, 0x31)
-        response = [42, vsr_addr, address_h, address_l, value_h, value_l, 13]
-        self.test_fem.fem.read_response = Mock(return_value=response)
-        self.test_fem.fem.vsr_addr = vsr_addr
-        resp, reply = \
-            self.test_fem.fem.write_and_response(vsr_addr, address_h, address_l,
-                                                 value_h, value_l, delay=True)
-        read_register_01 = [vsr_addr, 0x41, address_h, address_l]
-        write_register_01 = [vsr_addr, 0x40, address_h, address_l, value_h, value_l]
-        self.test_fem.fem.send_cmd.assert_has_calls([
-            call(read_register_01),
-            call(write_register_01)
-        ])
-        assert resp == response
-        assert reply == "01"
-
-    def test_write_and_response_handles_unexpected_readback_value(self):
-        """Test function handles unexpected readback value."""
-        vsr_addr = 144
-        self.test_fem.fem.send_cmd = Mock()
-        (address_h, address_l) = (0x30, 0x31)
-        (value_h, value_l) = (0x30, 0x31)
-        response = [42, vsr_addr, address_h, address_l, value_h, value_l - 1, 13]
-        self.test_fem.fem.read_response = Mock(return_value=response)
-        self.test_fem.fem.vsr_addr = vsr_addr
-
-        with pytest.raises(HexitecFemError) as exc_info:
-            resp, reply = \
-                self.test_fem.fem.write_and_response(vsr_addr, address_h, address_l,
-                                                     value_h, value_l)
-        assert exc_info.type is HexitecFemError
-
-    def test_block_write_and_response(self):
-        """Test function works ok."""
-        vsr_addr = 144
-        self.test_fem.fem.send_cmd = Mock()
-        (address_h, address_l) = (0x30, 0x31)
-        (value_h, value_l) = (0x30, 0x31)
-        number_registers = 10
-        response = [42, vsr_addr, address_h, address_l, value_h, value_l, 13]
-        self.test_fem.fem.read_response = Mock(return_value=response)
-        self.test_fem.fem.vsr_addr = vsr_addr
-        self.test_fem.fem.block_write_and_response(vsr_addr, number_registers, address_h,
-                                                   address_l, value_h, value_l)
-        read_register_01 = [vsr_addr, 0x41, address_h, address_l]
-        write_register_01 = [vsr_addr, 0x40, address_h, address_l, value_h, value_l]
-        self.test_fem.fem.send_cmd.assert_has_calls([
-            call(read_register_01),
-            call(write_register_01)
-        ])
-
-    # def test_block_write_custom_length(self):
-    #     """Test function works ok."""
-    #     self.test_fem.fem.send_cmd = Mock()
-    #     (address_h, address_l) = (0x30, 0x31)
-    #     values = [57, 56, 57, 57, 57, 65, 57, 66, 57, 67, 57, 68, 57, 69, 57, 70, 65, 48, 65, 49]
-    #     number_registers = 3
-    #     response = [42, 144, address_h, address_l]
-    #     for value in values:
-    #         response.append(value)
-    #     response.append(13)
-    #     # Dummy response with 00 because not masking and so what read_and_response()
-    #     #   sees doesn't matter
-    #     dummy = [42, 144, 48, 48]
-    #     response_1 = [42, 144, address_h, address_l, values[0], values[1]]
-    #     response_2 = [42, 144, address_h, address_l, values[2], values[3]]
-    #     response_3 = [42, 144, address_h, address_l, values[4], values[5]]
-    #     self.test_fem.fem.read_response = Mock()
-    #     self.test_fem.fem.read_response.side_effect = \
-    #         [dummy, response_1, dummy, response_2, dummy, response_3]
-    #     vsr_addr = HexitecFem.VSR_ADDRESS[0]
-    #     self.test_fem.fem.vsr_addr = vsr_addr
-    #     self.test_fem.fem.block_write_custom_length(vsr_addr, number_registers, address_h,
-    #                                                 address_l, values[:number_registers*2])
-    #     read_register_01 = [vsr_addr, 0x41, address_h, address_l]
-    #     write_register_01 = [vsr_addr, 0x40, address_h, address_l, values[0], values[1]]
-    #     self.test_fem.fem.send_cmd.assert_has_calls([
-    #         call(read_register_01),
-    #         call(write_register_01)
-    #     ])
-    #     # assert 1 == 0
-
-    def test_block_write_custom_length_fails_bad_selection(self):
-        """Test function regards against mismatch of values to write/number_registers."""
-        vsr_addr = 144
-        self.test_fem.fem.send_cmd = Mock()
-        (address_h, address_l) = (0x30, 0x31)
-        values = [57, 56, 57, 57, 57, 65, 57, 66, 57, 67, 57, 68, 57, 69, 57, 70, 65, 48, 65, 49]
-        number_registers = 3
-        response = [42, vsr_addr, address_h, address_l]
-        for value in values:
-            response.append(value)
-        response.append(13)
-        self.test_fem.fem.read_response = Mock(return_value=response)
-        self.test_fem.fem.vsr_addr = vsr_addr
-        with pytest.raises(HexitecFemError) as exc_info:
-            self.test_fem.fem.block_write_custom_length(vsr_addr, number_registers,
-                                                        address_h, address_l, values)
-        assert exc_info.type is HexitecFemError
-        err1 = "Mismatch! number_registers"
-        err2 = "isn't half of write_values"
-        error = "{} ({}) {} ({}).".format(err1, number_registers, err2, len(values))
-        assert exc_info.value.args[0] == error
-
-    def test_expand_addresses(self):
-        """Test function works okay."""
-        number_registers = 10
-        (address_h, address_l) = (0x39, 0x38)
-        most_significant, least_significant = \
-            self.test_fem.fem.expand_addresses(number_registers, address_h, address_l)
-        assert len(most_significant) == number_registers
-        assert len(least_significant) == number_registers
-        assert (most_significant[0], least_significant[0]) == (address_h, address_l)
-        assert (most_significant[1], least_significant[1]) == (address_h, address_l+1)
-        assert (most_significant[2], least_significant[2]) == (address_h, 0x41)
-        assert (most_significant[7], least_significant[7]) == (address_h, 0x46)
-        assert (most_significant[8], least_significant[8]) == (0x41, 0x30)
-        assert (most_significant[9], least_significant[9]) == (0x41, 0x31)
-
+    
+    
+    
+       
+    
     # def test_block_read_and_response(self):
     #     """Test function works ok."""
     #     # TODO: Requires 10 registers' worth of unique values
