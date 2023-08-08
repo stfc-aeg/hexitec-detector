@@ -1498,24 +1498,24 @@ class HexitecFem():
             value -= 0x37
         return value
 
-    # def mask_aspect_encoding(self, value_h, value_l, resp):
-    #     """Mask values honouring aspect encoding.
+    def mask_aspect_encoding(self, value_h, value_l, resp):
+        """Mask values honouring aspect encoding.
 
-    #     Aspect: 0x30 = 1, 0x31 = 1, .., 0x39 = 9, 0x41 = A, 0x42 = B, .., 0x46 = F.
-    #     Therefore increase values between 0x39 and 0x41 by 7 to match aspect's legal range.
-    #     I.e. 0x39 | 0x32 = 0x3B, + 7 = 0x42.
-    #     """
-    #     value_h = self.translate_to_normal_hex(value_h)
-    #     value_l = self.translate_to_normal_hex(value_l)
-    #     resp[0] = self.translate_to_normal_hex(resp[0])
-    #     resp[1] = self.translate_to_normal_hex(resp[1])
-    #     masked_h = value_h | resp[0]
-    #     masked_l = value_l | resp[1]
-    #     # print("h: {0:X} r: {1:X} = {2:X} masked: {3:X} I.e. {4:X}".format(
-    #     #     value_h, resp[0], value_h | resp[0], masked_h, self.HEX_ASCII_CODE[masked_h]))
-    #     # print("l: {0:X} r: {1:X} = {2:X} masked: {3:X} I.e. {4:X}".format(
-    #     #     value_l, resp[1], value_l | resp[1], masked_l, self.HEX_ASCII_CODE[masked_l]))
-    #     return self.HEX_ASCII_CODE[masked_h], self.HEX_ASCII_CODE[masked_l]
+        Aspect: 0x30 = 1, 0x31 = 1, .., 0x39 = 9, 0x41 = A, 0x42 = B, .., 0x46 = F.
+        Therefore increase values between 0x39 and 0x41 by 7 to match aspect's legal range.
+        I.e. 0x39 | 0x32 = 0x3B, + 7 = 0x42.
+        """
+        value_h = self.translate_to_normal_hex(value_h)
+        value_l = self.translate_to_normal_hex(value_l)
+        resp[0] = self.translate_to_normal_hex(resp[0])
+        resp[1] = self.translate_to_normal_hex(resp[1])
+        masked_h = value_h | resp[0]
+        masked_l = value_l | resp[1]
+        # print("h: {0:X} r: {1:X} = {2:X} masked: {3:X} I.e. {4:X}".format(
+        #     value_h, resp[0], value_h | resp[0], masked_h, self.HEX_ASCII_CODE[masked_h]))
+        # print("l: {0:X} r: {1:X} = {2:X} masked: {3:X} I.e. {4:X}".format(
+        #     value_l, resp[1], value_l | resp[1], masked_l, self.HEX_ASCII_CODE[masked_l]))
+        return self.HEX_ASCII_CODE[masked_h], self.HEX_ASCII_CODE[masked_l]
 
 
 
