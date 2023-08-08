@@ -1072,6 +1072,23 @@ class HexitecFem():
         vsr.initialise()
 
 
+    def read_and_response(self, vsr, address_h, address_l, delay=False):
+        """Send a read and read the reply."""
+        if delay:
+            time.sleep(0.1)
+        self.send_cmd([vsr, 0x41, address_h, address_l])
+        if delay:
+            time.sleep(0.1)
+        resp = self.read_response()  # ie resp = [42, 144, 48, 49, 13]
+        # Omit start char, vsr address and end char
+        reply = resp[2:-1]
+        # Turn list of integers into ASCII string
+        reply = "{}".format(''.join([chr(x) for x in reply]))
+        # print(" RR. reply: {} (resp: {})".format(reply, resp))      # ie reply = '01'
+        return resp, reply
+
+
+
     
     def block_read_and_response(self, vsr, number_registers, address_h, address_l):
         """Read from address_h, address_l of vsr, covering number_registers registers."""

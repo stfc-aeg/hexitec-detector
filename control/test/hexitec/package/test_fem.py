@@ -923,7 +923,6 @@ class TestFem(unittest.TestCase):
     # #         call([vsr1, HexitecFem.CLR_REG_BIT, 0x32, 0x34, 0x32, 0x30]),
     # #         call([vsr2, HexitecFem.CLR_REG_BIT, 0x32, 0x34, 0x32, 0x30]),
 
-
     def test_collect_offsets_handles_hardware_disconnected(self):
         """Test function handles hardware disconnected."""
         self.test_fem.fem.hardware_connected = False
