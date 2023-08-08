@@ -662,7 +662,6 @@ class TestFem(unittest.TestCase):
     #         call(write_register_01)
     #     ])
     #     # assert 1 == 0
-ycles = 23015
     # #     fg_frame_data_total = 307200
     # #     fg_frame_data_total_clock_cycles = 1278186053
     # #     fg_frame_trigger_count = 0
@@ -924,7 +923,7 @@ ycles = 23015
     # #         call([vsr1, HexitecFem.CLR_REG_BIT, 0x32, 0x34, 0x32, 0x30]),
     # #         call([vsr2, HexitecFem.CLR_REG_BIT, 0x32, 0x34, 0x32, 0x30]),
 
-    # @pytest.mark.slow
+
     def test_collect_offsets_handles_hardware_disconnected(self):
         """Test function handles hardware disconnected."""
         self.test_fem.fem.hardware_connected = False
@@ -1501,11 +1500,6 @@ ycles = 23015
         assert resp == response
         assert reply == "01"
 
-    
-    
-    
-       
-    
     # def test_block_read_and_response(self):
     #     """Test function works ok."""
     #     # TODO: Requires 10 registers' worth of unique values
