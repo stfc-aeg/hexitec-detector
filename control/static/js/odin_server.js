@@ -282,20 +282,20 @@ function poll_fem() {
             // Polls the fem(s) for hardware status, environmental data, etc
             hexitec_endpoint.get_url(hexitec_url + 'fr/status/')
                 .then(result => {
-                    var numNodes = result["value"].length + 1;
-                    for (var i = 1; i < numNodes; i++) {
+                    var numNodes = result["value"].length;
+                    for (var i = 0; i < numNodes; i++) {
                         const frames = result["value"][i].frames;
                         const decoder = result["value"][i].decoder;
                         const buffers = result["value"][i].buffers;
-                        document.querySelector('#frames_received' + i).innerHTML = frames.received;
-                        document.querySelector('#frames_released' + i).innerHTML = frames.released;
-                        document.querySelector('#frames_dropped' + i).innerHTML = frames.dropped;
-                        document.querySelector('#frames_timedout' + i).innerHTML = frames.timedout;
+                        document.querySelector('#frames_received' + (i+1)).innerHTML = frames.received;
+                        document.querySelector('#frames_released' + (i+1)).innerHTML = frames.released;
+                        document.querySelector('#frames_dropped' + (i+1)).innerHTML = frames.dropped;
+                        document.querySelector('#frames_timedout' + (i+1)).innerHTML = frames.timedout;
 
-                        document.querySelector('#fem_packets_lost' + i).innerHTML = decoder.fem_packets_lost;
-                        document.querySelector('#packets_lost' + i).innerHTML = decoder.packets_lost;
-                        document.querySelector('#buffers_empty' + i).innerHTML = buffers.empty;
-                        document.querySelector('#buffers_mapped' + i).innerHTML = buffers.mapped;
+                        document.querySelector('#fem_packets_lost' + (i+1)).innerHTML = decoder.fem_packets_lost;
+                        document.querySelector('#packets_lost' + (i+1)).innerHTML = decoder.packets_lost;
+                        document.querySelector('#buffers_empty' + (i+1)).innerHTML = buffers.empty;
+                        document.querySelector('#buffers_mapped' + (i+1)).innerHTML = buffers.mapped;
                     }
                 })
                 .catch(error => {
@@ -317,17 +317,17 @@ function poll_fem() {
                 .then(result => {
                     // // Print all errors reported by one FP:
                     // console.log("    [val][1].error: " + JSON.stringify(result["value"][1].error, null, 4));
-                    var numNodes = result["value"].length + 1;
-                    for (var i = 1; i < numNodes; i++) {
+                    var numNodes = result["value"].length;
+                    for (var i = 0; i < numNodes; i++) {
                         // Print all error(s) belonging to specified node:
                         // console.log( i + " results: " + result["value"][i].error);
                         if (result["value"][i].error === undefined) {
                             // Current node not configured, clear any previous error(s)
-                            document.querySelector('#fp_errors' + i).innerHTML = 0;
+                            document.querySelector('#fp_errors' + (i+1)).innerHTML = 0;
                         }
                         else {
                             var numErrors = result["value"][i].error.length;
-                            document.querySelector('#fp_errors' + i).innerHTML = numErrors;
+                            document.querySelector('#fp_errors' + (i+1)).innerHTML = numErrors;
                             for (var j = 0; j < numErrors; j++) {
                                 // Report all nodes error(s)
                                 // console.log(" Node" + i + ", Err" + j + " : " + result["value"][i].error[j]);
