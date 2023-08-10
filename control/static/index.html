@@ -87,8 +87,8 @@
       </div> <!-- col-sm-12 -->
 
     <ul class="nav nav-tabs" role="tablist">  <!-- accesskey="c" -->
-      <li class="nav-item" role="presentation"><a class="nav-link active" aria-selected="True"          accesskey="s" data-bs-toggle="tab" type="button" role="tab" aria-controls="visualisation" data-bs-target="#visualisation">&nbsp;&nbsp;Visualisation</a></li>
-      <!-- <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"          accesskey="s" data-bs-toggle="tab" type="button" role="tab" aria-controls="visualisation" data-bs-target="#visualisation">&nbsp;&nbsp;Visualisation</a></li> -->
+      <!-- <li class="nav-item" role="presentation"><a class="nav-link active" aria-selected="True"          accesskey="s" data-bs-toggle="tab" type="button" role="tab" aria-controls="visualisation" data-bs-target="#visualisation">&nbsp;&nbsp;Visualisation</a></li> -->
+      <li class="nav-item" role="presentation"><a class="nav-link active" aria-selected="False"          accesskey="s" data-bs-toggle="tab" type="button" role="tab" aria-controls="visualisation" data-bs-target="#visualisation">&nbsp;&nbsp;Visualisation</a></li>
 
       <!-- <li class="nav-item" role="presentation"><a class="nav-link active" aria-selected="True"    accesskey="t" data-bs-toggle="tab" type="button" role="tab" aria-controls="processing" data-bs-target="#processing">Processing</a></li> -->
       <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"    accesskey="t" data-bs-toggle="tab" type="button" role="tab" aria-controls="processing" data-bs-target="#processing">Processing</a></li>
@@ -96,7 +96,8 @@
       <!-- <li class="nav-item" role="presentation"><a class="nav-link active" aria-selected="True"          accesskey="u" data-bs-toggle="tab" type="button" role="tab" aria-controls="health" data-bs-target="#health">Health</a></li> -->
       <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"          accesskey="u" data-bs-toggle="tab" type="button" role="tab" aria-controls="health" data-bs-target="#health">Health</a></li>
 
-      <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"          accesskey="o" data-bs-toggle="tab" type="button" role="tab" aria-controls="debug" data-bs-target="#debug">Debug</a></li>
+      <li class="nav-item" role="presentation"><a class="nav-link " aria-selected="False"          accesskey="o" data-bs-toggle="tab" type="button" role="tab" aria-controls="debug" data-bs-target="#debug">Debug</a></li>
+      <!-- <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"          accesskey="o" data-bs-toggle="tab" type="button" role="tab" aria-controls="debug" data-bs-target="#debug">Debug</a></li> -->
 
       <!-- <li class="nav-item" role="presentation"><a class="nav-link active" aria-selected="True"                  data-bs-toggle="tab" type="button" role="tab" aria-controls="logging" data-bs-target="#logging">Logging</a></li> -->
       <li class="nav-item" role="presentation"><a class="nav-link" aria-selected="False"                        data-bs-toggle="tab" type="button" role="tab" aria-controls="logging" data-bs-target="#logging">Logging</a></li>
@@ -1143,36 +1144,68 @@
                           <td><span id="acquire_time" style="float:right">&nbsp;</span></td>
                         </tr>
                         <tr>
-                          <td>N0.FEM packets_lost</td>
-                          <td><span id="fem_packets_lost0" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N0.FR packets_lost</td>
-                          <td><span id="packets_lost0" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N0.Buffers empty</td>
-                          <td><span id="buffers_empty0" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N0.Buffers mapped</td>
-                          <td><span id="buffers_mapped0" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>N1.FEM packets_lost</td>
+                          <td>Node1.FEM packets_lost</td>
                           <td><span id="fem_packets_lost1" style="float:right">&nbsp;</span></td>
                         </tr>
                         <tr>
-                          <td>N1.FR packets_lost</td>
+                          <td>Node1.FR packets_lost</td>
                           <td><span id="packets_lost1" style="float:right">&nbsp;</span></td>
                         </tr>
                         <tr>
-                          <td>N1.Buffers empty</td>
+                          <td>Node1.Buffers empty</td>
                           <td><span id="buffers_empty1" style="float:right">&nbsp;</span></td>
                         </tr>
                         <tr>
-                          <td>N1.Buffers mapped</td>
+                          <td>Node1.Buffers mapped</td>
                           <td><span id="buffers_mapped1" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Node2.FEM packets_lost</td>
+                          <td><span id="fem_packets_lost2" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Node2.FR packets_lost</td>
+                          <td><span id="packets_lost2" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Node2.Buffers empty</td>
+                          <td><span id="buffers_empty2" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Node2.Buffers mapped</td>
+                          <td><span id="buffers_mapped2" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Node3.FEM packets_lost</td>
+                          <td><span id="fem_packets_lost3" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Node3.FR packets_lost</td>
+                          <td><span id="packets_lost3" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Node3.Buffers empty</td>
+                          <td><span id="buffers_empty3" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Node3.Buffers mapped</td>
+                          <td><span id="buffers_mapped3" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Node4.FEM packets_lost</td>
+                          <td><span id="fem_packets_lost4" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Node4.FR packets_lost</td>
+                          <td><span id="packets_lost4" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Node4.Buffers empty</td>
+                          <td><span id="buffers_empty4" style="float:right">&nbsp;</span></td>
+                        </tr>
+                        <tr>
+                          <td>Node4.Buffers mapped</td>
+                          <td><span id="buffers_mapped4" style="float:right">&nbsp;</span></td>
                         </tr>
                       </tbody>
                   </table>
@@ -1185,36 +1218,68 @@
                     </thead>
                     <tbody>
                       <tr>
-                        <td>N0.Received</td>
-                        <td><span id="frames_received0" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N0.Released</td>
-                        <td><span id="frames_released0" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N0.Dropped</td>
-                        <td><span id="frames_dropped0" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N0.Timed out</td>
-                        <td><span id="frames_timedout0" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N1.Received</td>
+                        <td>Node1.Received</td>
                         <td><span id="frames_received1" style="float:right">&nbsp;</span></td>
                       </tr>
                       <tr>
-                        <td>N1.Released</td>
+                        <td>Node1.Released</td>
                         <td><span id="frames_released1" style="float:right">&nbsp;</span></td>
                       </tr>
                       <tr>
-                        <td>N1.Dropped</td>
+                        <td>Node1.Dropped</td>
                         <td><span id="frames_dropped1" style="float:right">&nbsp;</span></td>
                       </tr>
                       <tr>
-                        <td>N1.Timed out</td>
+                        <td>Node1.Timed out</td>
                         <td><span id="frames_timedout1" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node2.Received</td>
+                        <td><span id="frames_received2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node2.Released</td>
+                        <td><span id="frames_released2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node2.Dropped</td>
+                        <td><span id="frames_dropped2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node2.Timed out</td>
+                        <td><span id="frames_timedout2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node3.Received</td>
+                        <td><span id="frames_received3" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node3.Released</td>
+                        <td><span id="frames_released3" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node3.Dropped</td>
+                        <td><span id="frames_dropped3" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node3.Timed out</td>
+                        <td><span id="frames_timedout3" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node4.Received</td>
+                        <td><span id="frames_received4" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node4.Released</td>
+                        <td><span id="frames_released4" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node4.Dropped</td>
+                        <td><span id="frames_dropped4" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node4.Timed out</td>
+                        <td><span id="frames_timedout4" style="float:right">&nbsp;</span></td>
                       </tr>
                     </tbody>
                   </table>
@@ -1298,8 +1363,8 @@
                       </td>
                       <td>
                         <select class="double-width" onchange="numberNodesChange(this.value)">
-                          <option value="1">1</option>
-                          <option selected="selected" value="2">2</option>
+                          <option selected="selected" value="1">1</option>
+                          <option value="2">2</option>
                           <option value="3">3</option>
                         </select>
                       </td>
@@ -1318,13 +1383,113 @@
                     </thead>
                     <tbody>
                       <tr>
-                        <td>N0.FP Errors</td>
-                        <td><span id="fp_errors0" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>N1.FP Errors</td>
+                        <td>Node1.FP Errors</td>
                         <td><span id="fp_errors1" style="float:right">&nbsp;</span></td>
                       </tr>
+                      <tr>
+                        <td>Node2.FP Errors</td>
+                        <td><span id="fp_errors2" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node3.FP Errors</td>
+                        <td><span id="fp_errors3" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Node4.FP Errors</td>
+                        <td><span id="fp_errors4" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <!-- <tr>
+                        <td>daq stop</td>
+                        <td><span id="daq_stop" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>fem not busy</td>
+                        <td><span id="fem_not_busy" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Offsets TS</td>
+                        <td><span id="offsets_ts" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>vsr1_sync</td>
+                        <td><span id="vsr1_sync" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>vsr2_sync</td>
+                        <td><span id="vsr2_sync" style="float:right">&nbsp;</span></td>
+                      </tr> -->
+                    </tbody>
+                  </table>
+
+                  <table class="table table-striped" style="width=100%">
+                    <thead>
+                      <tr>
+                        <th>Leak Detector</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Fault</td>
+                        <td><span id="ld_fault" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Warning</td>
+                        <td><span id="ld_warning" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Chiller State</td>
+                        <td><span id="ld_chiller_state" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>DAQ State</td>
+                        <td><span id="ld_daq_state" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>Chiller Enabled?</td>
+                        <td><span id="ld_chiller_enabled" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <tr>
+                        <td>DAQ Enabled?</td>
+                        <td><span id="ld_daq_enabled" style="float:right">&nbsp;</span></td>
+                      </tr>
+                      <!-- Implement Chiller button -->
+                      <tr>
+                        <td>
+                          Chiller Control&nbsp;
+                        </td>
+                        <td>
+                          <div class="row sidebar-row vertical-align">
+                            <div class="col-xs-7">
+                              <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                                <input type="radio" class="btn-check" name="ld_chiller_control_radio" id="ld_chiller_control_radio1" autocomplete="off" onclick="changeChillerEnable()">
+                                <label class="btn btn-outline-primary" for="ld_chiller_control_radio1">On</label>
+                                <input type="radio" class="btn-check" name="ld_chiller_control_radio" id="ld_chiller_control_radio2" autocomplete="off" onclick="changeChillerEnable()" checked>
+                                <label class="btn btn-outline-primary" for="ld_chiller_control_radio2">Off</label>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      <!--DAQ button-->
+                      <tr>
+                        <td>
+                          DAQ button &nbsp;
+                        </td>
+                        <td>
+                          <div class="row sidebar-row vertical-align">
+                            <div class="col-xs-7">
+                              <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                                <input type="radio" class="btn-check" name="ld_DAQ_control_radio" id="ld_DAQ_control_radio1" autocomplete="off" onclick="changeDAQEnable()">
+                                <label class="btn btn-outline-primary" for="ld_DAQ_control_radio1">On</label>
+                                <input type="radio" class="btn-check" name="ld_DAQ_control_radio" id="ld_DAQ_control_radio2" autocomplete="off" onclick="changeDAQEnable()" checked>
+                                <label class="btn btn-outline-primary" for="ld_DAQ_control_radio2">Off</label>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+
                     </tbody>
                   </table>
 
