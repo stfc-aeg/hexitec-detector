@@ -27,6 +27,6 @@ python-dateutil==2.8.1
 pyzmq==22.0.2
 six==1.15.0
 toml==0.10.2
-tornado==6.1
+tornado==6.3.3
 tox==3.22.0
 virtualenv==20.4.2
