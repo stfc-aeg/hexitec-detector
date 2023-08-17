@@ -316,11 +316,19 @@ function poll_fem() {
             hexitec_endpoint.get_url(hexitec_url + 'fp/status/')
                 .then(result => {
                     // // Print all errors reported by one FP:
-                    // console.log("    [val][1].error: " + JSON.stringify(result["value"][1].error, null, 4));
+                    // console.log("   ParameterTree: " + JSON.stringify(result["value"], null, 4));
                     var numNodes = result["value"].length;
                     for (var i = 0; i < numNodes; i++) {
-                        // Print all error(s) belonging to specified node:
-                        // console.log( i + " results: " + result["value"][i].error);
+
+                        if (result["value"][i].histogram === undefined) {
+                            // Current node not configured, clear any previous value(s)
+                            document.querySelector('#fp_processed' + (i+1)).innerHTML = 0;
+                        }
+                        else {
+                            var processed = result["value"][i].histogram.frames_processed
+                            document.querySelector('#fp_processed' + (i+1)).innerHTML = processed;
+                        }
+
                         if (result["value"][i].error === undefined) {
                             // Current node not configured, clear any previous error(s)
                             document.querySelector('#fp_errors' + (i+1)).innerHTML = 0;
