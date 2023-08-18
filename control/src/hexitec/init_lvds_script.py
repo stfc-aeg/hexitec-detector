@@ -381,7 +381,7 @@ if __name__ == '__main__':
         column_calibration_mask_asic1 = list_of_patterns
         row_calibration_mask_asic1 = list_of_patterns
         pattern += 1
-        print(f"[INFO]  VSR{vsr.slot} ASIC: {asic} pattern: 0x{pattern:X}")
+        # print(f"[INFO]  VSR{vsr.slot} ASIC: {asic} pattern: 0x{pattern:X}")
         vsr.set_column_calibration_mask(column_calibration_mask_asic1, asic)
         vsr.set_row_calibration_mask(row_calibration_mask_asic1, asic)
 
@@ -390,7 +390,7 @@ if __name__ == '__main__':
         column_calibration_mask_asic1 = list_of_patterns
         row_calibration_mask_asic1 = list_of_patterns
         pattern += 1
-        print(f"[INFO]  VSR{vsr.slot} ASIC: {asic} pattern: 0x{pattern:X}")
+        # print(f"[INFO]  VSR{vsr.slot} ASIC: {asic} pattern: 0x{pattern:X}")
         vsr.set_column_calibration_mask(column_calibration_mask_asic1, asic)
         vsr.set_row_calibration_mask(row_calibration_mask_asic1, asic)
 
@@ -448,7 +448,7 @@ if __name__ == '__main__':
     frame_reset_to_zero()
 
     print("  Set number of frames")
-    set_nof_frames(18)
+    set_nof_frames(8)
 
     # input("Press enter to enable data (200 ms)")
     print("  Enable data")
