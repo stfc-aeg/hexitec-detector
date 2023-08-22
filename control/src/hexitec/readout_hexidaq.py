@@ -1,4 +1,3 @@
-import os.path
 import time
 from RdmaUdp import *
 from boardcfgstatus.BoardCfgStatus import *
@@ -267,20 +266,9 @@ def are_dc_ready(dc_statuses):
 
 
 if __name__ == '__main__':
-    hostname = os.getenv('HOSTNAME').split('.')[0]
-    print(f"Running on: {hostname}")
-    if hostname.lower() == "te7hexidaq":
-        Hex2x6CtrlRdma = RdmaUDP(local_ip="10.0.3.1", local_port=61649,
-                                 rdma_ip="10.0.3.2", rdma_port=61648,
-                                 debug=False, uart_offset=0xC)
-    elif hostname.lower() == "te7wendolene":
-        Hex2x6CtrlRdma = RdmaUDP(local_ip="192.168.4.1", local_port=61649,
-                                 rdma_ip="192.168.4.2", rdma_port=61648,
-                                 debug=False, uart_offset=0xC)
-    else:
-        Hex2x6CtrlRdma = RdmaUDP(local_ip="192.168.4.1", local_port=61649,
-                                 rdma_ip="192.168.4.2", rdma_port=61648,
-                                 debug=False, uart_offset=0xC)
+    Hex2x6CtrlRdma = RdmaUDP(local_ip="10.0.3.1", local_port=61649,
+                             rdma_ip="10.0.3.2", rdma_port=61648,
+                             debug=False, uart_offset=0xC)
 
     # Reset the datapath
     print("Reset output path")
