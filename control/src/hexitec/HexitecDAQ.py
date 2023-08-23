@@ -108,12 +108,12 @@ class HexitecDAQ():
         self.shutdown_processing = False
 
         self.lvframes_dataset_name = "raw_frames"
-        self.lvframes_socket_addr = "tcp://127.0.0.1:5020"
+        self.lvframes_socket_addr = "tcp://192.168.0.52:5020"
         self.lvframes_frequency = 0
         self.lvframes_per_second = 2
 
         self.lvspectra_dataset_name = "summed_spectra"
-        self.lvspectra_socket_addr = "tcp://127.0.0.1:5021"
+        self.lvspectra_socket_addr = "tcp://192.168.0.52:5021"
         self.lvspectra_frequency = 0
         self.lvspectra_per_second = 1
 
