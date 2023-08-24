@@ -46,3 +46,26 @@ if __name__ == '__main__':
     data_lane2.set_src_ip(ip="10.0.1.102")
     data_lane2.set_src_mac(mac="62:00:00:00:01:0C")
     data_lane2.set_src_dst_port(port=0xF0D1F0D0)
+
+    print("adding farmo!")
+
+    data_lane2.set_lut_mode_ip(["10.0.1.3", "10.0.1.3", "10.0.1.3", "10.0.1.3", "10.0.1.3",
+                                "10.0.1.3", "10.0.1.3", "10.0.1.3"])
+
+    data_lane1.set_lut_mode_ip(["10.0.1.2", "10.0.1.2", "10.0.1.2", "10.0.1.2", "10.0.1.2",
+                                "10.0.1.2", "10.0.1.2", "10.0.1.2"])
+
+    data_lane2.set_lut_mode_mac(["5c:6f:69:f8:a3:e0", "5c:6f:69:f8:a3:e0", "5c:6f:69:f8:a3:e0",
+                                 "5c:6f:69:f8:a3:e0", "5c:6f:69:f8:a3:e0", "5c:6f:69:f8:a3:e0",
+                                 "5c:6f:69:f8:a3:e0", "5c:6f:69:f8:a3:e0"])
+
+    data_lane1.set_lut_mode_mac(["5c:6f:69:f8:57:d0", "5c:6f:69:f8:57:d0", "5c:6f:69:f8:57:d0",
+                                 "5c:6f:69:f8:57:d0", "5c:6f:69:f8:57:d0", "5c:6f:69:f8:57:d0",
+                                 "5c:6f:69:f8:57:d0", "5c:6f:69:f8:57:d0"])
+
+    data_lane2.set_lut_mode_port([61649, 61649, 61649, 61649, 61649, 61649, 61649, 61649])
+
+    data_lane1.set_lut_mode_port([61649, 61649, 61649, 61649, 61649, 61649, 61649, 61649])
+
+    data_lane1.set_lut_mode()  # enp2s0f1
+    data_lane2.set_lut_mode()  # enp2s0f2
