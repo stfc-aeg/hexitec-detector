@@ -147,8 +147,8 @@ SMB5_IN            SMB In 5                                ``0x0004_0000``  Read
       4: FMC_QSFP1_MODPRES [ rotate = 270 ]
       5: FMC_QSFP2_MODPRES [ rotate = 270 ]
       6-7:  [ rotate = 270, color = lightgrey ]
-      8-11: FMC_QSFP1_LANE_UP
-      12-15: FMC_QSFP2_LANE_UP
+      8-11: FMC_QSFP1_LANE_UP 
+      12-15: FMC_QSFP2_LANE_UP 
       16: SMB1_IN [ rotate = 270 ]
       17: SMB3_IN [ rotate = 270 ]
       18: SMB5_IN [ rotate = 270 ]
@@ -266,7 +266,7 @@ TX_DATA           Data to send via UART       ``0x0000_FF00``  Read/Write      `
       1: TX_FILL_STRB [ rotate = 270 ]
       2: TX_BUFF_STRB [ rotate = 270 ]
       3-7:  [ color = lightgrey ]
-      8-15: TX_DATA
+      8-15: TX_DATA 
       16-31:  [ color = lightgrey ]
    }
 
@@ -359,8 +359,8 @@ RX_DATA           Received data from UART       ``0x00FF_0000``  Read/Write     
       3: RX_BUFF_EMTY [ rotate = 270 ]
       4: RX_PKT_DONE [ rotate = 270 ]
       5-7:  [ rotate = 270, color = lightgrey ]
-      8-15: RX_BUFF_LEVEL
-      16-23: RX_DATA
+      8-15: RX_BUFF_LEVEL 
+      16-23: RX_DATA 
       24-31:  [ color = lightgrey ]
    }
 
@@ -463,9 +463,9 @@ PWR_SEQ_DISABLE   Disable the VSR power sequencer logic  ``0x4000_0000``  Read/W
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-5: VSR_EN
+      0-5: VSR_EN 
       6-7:  [ rotate = 270, color = lightgrey ]
-      8-13: HV_EN
+      8-13: HV_EN 
       14-29:  [ color = lightgrey ]
       30: PWR_SEQ_DISABLE [ rotate = 270 ]
       31:  [ rotate = 270, color = lightgrey ]
@@ -594,7 +594,7 @@ TRAINING_PATTERN  Training pattern           ``0xFFFF_0000``  Read/Write      ``
       5-7:  [ rotate = 270, color = lightgrey ]
       8: SYNTH_DATA_EN [ rotate = 270 ]
       9-15:  [ color = lightgrey ]
-      16-31: TRAINING_PATTERN
+      16-31: TRAINING_PATTERN 
    }
 
 """
@@ -633,7 +633,7 @@ HEXITEC_2X6_SMB_CFG = { 'addr': 36,
 """
 
 HEXITEC_2X6_HEXITEC_CTRL = { 'addr': 40,
-  'description': 'Hexitec 2x6 output datapath control',
+  'description': 'exitec 2x6 output datapath control',
   'fields': [ { 'description': 'Hexitec 2x6 output datapath reset',
                 'is_bit': True,
                 'mask': 1,
@@ -648,14 +648,14 @@ HEXITEC_2X6_HEXITEC_CTRL = { 'addr': 40,
   'shiftr': 0}
 """:const:`HEXITEC_2X6_HEXITEC_CTRL` generated from `XML2VHDL` output.
 
-================  ===================================  ===============  ==============  ===============
+================  ==================================  ===============  ==============  ===============
 **Register**
 **Name:**         HEXITEC_2X6_HEXITEC_CTRL
 **Address:**      ``0x0000_0028``
-**Description:**  Hexitec 2x6 output datapath control
-**Bit Fields**    **Description**                      **Mask**         **Permission**  **Reset Value**
-HEXITEC_RST       Hexitec 2x6 output datapath reset    ``0x0000_0001``  Read/Write      ``0x0000_0000``
-================  ===================================  ===============  ==============  ===============
+**Description:**  exitec 2x6 output datapath control
+**Bit Fields**    **Description**                     **Mask**         **Permission**  **Reset Value**
+HEXITEC_RST       Hexitec 2x6 output datapath reset   ``0x0000_0001``  Read/Write      ``0x0000_0000``
+================  ==================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -704,7 +704,7 @@ USE_EXT_ADDRS     Use fixed external addresses  ``0x0000_00FF``  Read/Write     
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-7: USE_EXT_ADDRS
+      0-7: USE_EXT_ADDRS 
       8-31:  [ color = lightgrey ]
    }
 
@@ -745,6 +745,38 @@ UART_LOOPBACK_EN  UART loopback enable         ``0x0000_0001``  Read/Write      
 
       0: UART_LOOPBACK_EN [ rotate = 270 ]
       1-31:  [ color = lightgrey ]
+   }
+
+"""
+
+HEXITEC_2X6_NOF_LUT_MODE_ENTRIES = { 'addr': 72,
+  'description': 'Number of udp destinations per lane',
+  'fields': [],
+  'mask': 4294967295,
+  'name': 'HEXITEC_2X6_NOF_LUT_MODE_ENTRIES',
+  'nof_bits': 32,
+  'reset_value': '0x0',
+  'shiftr': 0}
+""":const:`HEXITEC_2X6_NOF_LUT_MODE_ENTRIES` generated from `XML2VHDL` output.
+
+================  ===================================
+**Register**
+**Name:**         HEXITEC_2X6_NOF_LUT_MODE_ENTRIES
+**Address:**      ``0x0000_0048``
+**Description:**  Number of udp destinations per lane
+**Permission:**   Read/Write
+**Reset Value:**  ``0x0000_0000``
+================  ===================================
+
+.. packetdiag::
+
+   packetdiag {
+      colwidth = 32
+      node_height = 144
+      scale_direction = right_to_left
+      scale_interval = 8
+
+      0-31: NOF_LUT_MODE_ENTRIES 
    }
 
 """
@@ -995,7 +1027,7 @@ HEXITEC_2X6_FRAME_PRELOAD_LOWER = { 'addr': 272,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: FRAME_PRELOAD_LOWER
+      0-31: FRAME_PRELOAD_LOWER 
    }
 
 """
@@ -1027,7 +1059,7 @@ HEXITEC_2X6_FRAME_PRELOAD_UPPER = { 'addr': 276,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: FRAME_PRELOAD_UPPER
+      0-31: FRAME_PRELOAD_UPPER 
    }
 
 """
@@ -1059,7 +1091,7 @@ HEXITEC_2X6_PACKET_PRELOAD_LOWER = { 'addr': 280,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: PACKET_PRELOAD_LOWER
+      0-31: PACKET_PRELOAD_LOWER 
    }
 
 """
@@ -1091,7 +1123,7 @@ HEXITEC_2X6_PACKET_PRELOAD_UPPER = { 'addr': 284,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: PACKET_PRELOAD_UPPER
+      0-31: PACKET_PRELOAD_UPPER 
    }
 
 """
@@ -1123,7 +1155,7 @@ HEXITEC_2X6_FRAME_NUMBER_LOWER = { 'addr': 288,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: FRAME_NUMBER_LOWER
+      0-31: FRAME_NUMBER_LOWER 
    }
 
 """
@@ -1155,7 +1187,7 @@ HEXITEC_2X6_FRAME_NUMBER_UPPER = { 'addr': 292,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: FRAME_NUMBER_UPPER
+      0-31: FRAME_NUMBER_UPPER 
    }
 
 """
@@ -1187,7 +1219,7 @@ HEXITEC_2X6_PACKET_NUMBER_LOWER = { 'addr': 296,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: PACKET_NUMBER_LOWER
+      0-31: PACKET_NUMBER_LOWER 
    }
 
 """
@@ -1219,7 +1251,7 @@ HEXITEC_2X6_PACKET_NUMBER_UPPER = { 'addr': 300,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: PACKET_NUMBER_UPPER
+      0-31: PACKET_NUMBER_UPPER 
    }
 
 """
@@ -1251,7 +1283,7 @@ HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER = { 'addr': 304,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: ACQ_NOF_FRAMES_LOWER
+      0-31: ACQ_NOF_FRAMES_LOWER 
    }
 
 """
@@ -1283,7 +1315,7 @@ HEXITEC_2X6_ACQ_NOF_FRAMES_UPPER = { 'addr': 308,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: ACQ_NOF_FRAMES_UPPER
+      0-31: ACQ_NOF_FRAMES_UPPER 
    }
 
 """
@@ -1321,7 +1353,7 @@ LOCKED            locked                   ``0x0000_00FF``  Read/Write      ``0x
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-7: LOCKED
+      0-7: LOCKED 
       8-31:  [ color = lightgrey ]
    }
 
@@ -1360,7 +1392,7 @@ LOCKED            locked                   ``0x0000_00FF``  Read/Write      ``0x
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-7: LOCKED
+      0-7: LOCKED 
       8-31:  [ color = lightgrey ]
    }
 
@@ -1399,7 +1431,7 @@ LOCKED            locked                   ``0x0000_00FF``  Read/Write      ``0x
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-7: LOCKED
+      0-7: LOCKED 
       8-31:  [ color = lightgrey ]
    }
 
@@ -1438,7 +1470,7 @@ LOCKED            locked                   ``0x0000_00FF``  Read/Write      ``0x
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-7: LOCKED
+      0-7: LOCKED 
       8-31:  [ color = lightgrey ]
    }
 
@@ -1477,7 +1509,7 @@ LOCKED            locked                   ``0x0000_00FF``  Read/Write      ``0x
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-7: LOCKED
+      0-7: LOCKED 
       8-31:  [ color = lightgrey ]
    }
 
@@ -1516,7 +1548,7 @@ LOCKED            locked                   ``0x0000_00FF``  Read/Write      ``0x
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-7: LOCKED
+      0-7: LOCKED 
       8-31:  [ color = lightgrey ]
    }
 
@@ -1572,9 +1604,9 @@ MAJOR             2 digit hex readable major                                    
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-11: MICRO
-      12-23: MINOR
-      24-31: MAJOR
+      0-11: MICRO 
+      12-23: MINOR 
+      24-31: MAJOR 
    }
 
 """
@@ -1607,7 +1639,7 @@ BOARD_BUILD_INFO_GIT_HASH = { 'addr': 32772,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: GIT_HASH
+      0-31: GIT_HASH 
    }
 
 """
@@ -1661,9 +1693,9 @@ YEAR              4 digit hex readable year                             ``0xFFFF
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-7: DAY
-      8-15: MONTH
-      16-31: YEAR
+      0-7: DAY 
+      8-15: MONTH 
+      16-31: YEAR 
    }
 
 """
@@ -1717,9 +1749,9 @@ HOUR              2 digit hex readable hour                                  ``0
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-7: SECONDS
-      8-15: MINUTE
-      16-23: HOUR
+      0-7: SECONDS 
+      8-15: MINUTE 
+      16-23: HOUR 
       24-31:  [ color = lightgrey ]
    }
 
@@ -1752,7 +1784,7 @@ BOARD_BUILD_INFO_DNA_0 = { 'addr': 32784,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DNA_0
+      0-31: DNA_0 
    }
 
 """
@@ -1784,7 +1816,7 @@ BOARD_BUILD_INFO_DNA_1 = { 'addr': 32788,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DNA_1
+      0-31: DNA_1 
    }
 
 """
@@ -1816,7 +1848,7 @@ BOARD_BUILD_INFO_DNA_2 = { 'addr': 32792,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DNA_2
+      0-31: DNA_2 
    }
 
 """
@@ -1921,7 +1953,7 @@ BOARD_BUILD_INFO_SCRATCH_1 = { 'addr': 32816,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: SCRATCH_1
+      0-31: SCRATCH_1 
    }
 
 """
@@ -1954,7 +1986,7 @@ BOARD_BUILD_INFO_SCRATCH_2 = { 'addr': 32820,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: SCRATCH_2
+      0-31: SCRATCH_2 
    }
 
 """
@@ -1987,7 +2019,7 @@ BOARD_BUILD_INFO_SCRATCH_3 = { 'addr': 32824,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: SCRATCH_3
+      0-31: SCRATCH_3 
    }
 
 """
@@ -2020,7 +2052,7 @@ BOARD_BUILD_INFO_SCRATCH_4 = { 'addr': 32828,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: SCRATCH_4
+      0-31: SCRATCH_4 
    }
 
 """
@@ -2031,7 +2063,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER = { 'addr': 131072,
   'mask': 4294967295,
   'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER',
   'nof_bits': 32,
-  'reset_value': '0x00000201',
+  'reset_value': '0x00000FF00',
   'shiftr': 0}
 """:const:`UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER` generated from `XML2VHDL` output.
 
@@ -2041,7 +2073,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER = { 'addr': 131072,
 **Address:**      ``0x0002_0000``
 **Description:**  Source MAC Address Lower
 **Permission:**   Read/Write
-**Reset Value:**  ``0x0000_0201``
+**Reset Value:**  ``0x0000_FF00``
 ================  ================================================
 
 .. packetdiag::
@@ -2052,7 +2084,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER = { 'addr': 131072,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: SRC_MAC_ADDR_LOWER
+      0-31: SRC_MAC_ADDR_LOWER 
    }
 
 """
@@ -2084,7 +2116,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER = { 'addr': 131076,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-15: SRC_MAC_ADDR_UPPER
+      0-15: SRC_MAC_ADDR_UPPER 
       16-31:  [ color = lightgrey ]
    }
 
@@ -2117,7 +2149,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER = { 'addr': 131084,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DST_MAC_ADDR_LOWER
+      0-31: DST_MAC_ADDR_LOWER 
    }
 
 """
@@ -2149,7 +2181,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER = { 'addr': 131088,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-15: DST_MAC_ADDR_UPPER
+      0-15: DST_MAC_ADDR_UPPER 
       16-31:  [ color = lightgrey ]
    }
 
@@ -2182,7 +2214,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_DST_IP_ADDR = { 'addr': 131108,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DST_IP_ADDR
+      0-31: DST_IP_ADDR 
    }
 
 """
@@ -2193,7 +2225,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_IP_ADDR = { 'addr': 131112,
   'mask': 4294967295,
   'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_IP_ADDR',
   'nof_bits': 32,
-  'reset_value': '0xC0A8020B',
+  'reset_value': '0xE0000001',
   'shiftr': 0}
 """:const:`UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_IP_ADDR` generated from `XML2VHDL` output.
 
@@ -2203,7 +2235,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_IP_ADDR = { 'addr': 131112,
 **Address:**      ``0x0002_0028``
 **Description:**  UDP Source IP Address
 **Permission:**   Read/Write
-**Reset Value:**  ``0xC0A8_020B``
+**Reset Value:**  ``0xE000_0001``
 ================  =========================================
 
 .. packetdiag::
@@ -2214,7 +2246,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_SRC_IP_ADDR = { 'addr': 131112,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: SRC_IP_ADDR
+      0-31: SRC_IP_ADDR 
    }
 
 """
@@ -2233,7 +2265,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_UDP_PORTS = { 'addr': 131116,
                 'mask': 4294901760,
                 'name': 'DST_PORT',
                 'nof_bits': 16,
-                'reset_value': '0xf0d1',
+                'reset_value': '0xf0d0',
                 'shiftr': 16}],
   'mask': 4294967295,
   'name': 'UDP_CORE_0_0_UDP_CORE_CONTROL_UDP_PORTS',
@@ -2249,7 +2281,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_UDP_PORTS = { 'addr': 131116,
 **Description:**  UDP Ports
 **Bit Fields**    **Description**                          **Mask**         **Permission**  **Reset Value**
 SRC_PORT          UDP Source Port                          ``0x0000_FFFF``  Read/Write      ``0x0000_F0D0``
-DST_PORT          UDP Destination Port                     ``0xFFFF_0000``  Read/Write      ``0x0000_F0D1``
+DST_PORT          UDP Destination Port                     ``0xFFFF_0000``  Read/Write      ``0x0000_F0D0``
 ================  =======================================  ===============  ==============  ===============
 
 .. packetdiag::
@@ -2260,8 +2292,8 @@ DST_PORT          UDP Destination Port                     ``0xFFFF_0000``  Read
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-15: SRC_PORT
-      16-31: DST_PORT
+      0-15: SRC_PORT 
+      16-31: DST_PORT 
    }
 
 """
@@ -2273,7 +2305,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_FILTER_CONTROL = { 'addr': 131128,
                 'mask': 1,
                 'name': 'BROADCAST_EN',
                 'nof_bits': 1,
-                'reset_value': '1',
+                'reset_value': '0',
                 'shiftr': 0},
               { 'description': 'Enables ARPs',
                 'is_bit': True,
@@ -2309,7 +2341,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_FILTER_CONTROL = { 'addr': 131128,
                 'mask': 65536,
                 'name': 'DST_MAC_CHK_EN',
                 'nof_bits': 1,
-                'reset_value': '1',
+                'reset_value': '0',
                 'shiftr': 16},
               { 'description': 'Check Source MAC address Field Of Incoming '
                                'Packet',
@@ -2392,12 +2424,12 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_FILTER_CONTROL = { 'addr': 131128,
 **Address:**        ``0x0002_0038``
 **Description:**    Controls the level of filtering in the UDP core Rx
 **Bit Fields**      **Description**                                                   **Mask**         **Permission**  **Reset Value**
-BROADCAST_EN        Enables Broadcast Recieving                                       ``0x0000_0001``  Read/Write      ``0x0000_0001``
+BROADCAST_EN        Enables Broadcast Recieving                                       ``0x0000_0001``  Read/Write      ``0x0000_0000``
 ARP_EN              Enables ARPs                                                      ``0x0000_0002``  Read/Write      ``0x0000_0001``
 PING_EN             Enables Pings                                                     ``0x0000_0004``  Read/Write      ``0x0000_0001``
 PASS_UNS_ETHTYPE    Enable Passing of Unsupported Ethernet Packets                    ``0x0000_0100``  Read/Write      ``0x0000_0001``
 PASS_UNS_IPV4       Enable Passing of Unsupported IPv4 Packets                        ``0x0000_0200``  Read/Write      ``0x0000_0001``
-DST_MAC_CHK_EN      Check Dest MAC address Field Of Incoming Packet                   ``0x0001_0000``  Read/Write      ``0x0000_0001``
+DST_MAC_CHK_EN      Check Dest MAC address Field Of Incoming Packet                   ``0x0001_0000``  Read/Write      ``0x0000_0000``
 SRC_MAC_CHK_EN      Check Source MAC address Field Of Incoming Packet                 ``0x0002_0000``  Read/Write      ``0x0000_0000``
 DST_IP_CHK_EN       Check Dest IP address Field Of Incoming Packet                    ``0x0004_0000``  Read/Write      ``0x0000_0001``
 SRC_IP_CHK_EN       Check Source IP address Field Of Incoming Packet                  ``0x0008_0000``  Read/Write      ``0x0000_0000``
@@ -2534,7 +2566,7 @@ UDP_LENGTH         UDP Length For Fixed Packet Length - Currently Unused        
       7: TUSER_SRC_PRT [ rotate = 270 ]
       8-14:  [ color = lightgrey ]
       15: RESET_N [ rotate = 270 ]
-      16-31: UDP_LENGTH
+      16-31: UDP_LENGTH 
    }
 
 """
@@ -2566,7 +2598,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_UDP_COUNT = { 'addr': 131148,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: UDP_COUNT
+      0-31: UDP_COUNT 
    }
 
 """
@@ -2598,7 +2630,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_PING_COUNT = { 'addr': 131152,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: PING_COUNT
+      0-31: PING_COUNT 
    }
 
 """
@@ -2630,7 +2662,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_ARP_COUNT = { 'addr': 131156,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: ARP_COUNT
+      0-31: ARP_COUNT 
    }
 
 """
@@ -2662,7 +2694,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_UNS_ETYPE_COUNT = { 'addr': 131160,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: UNS_ETYPE_COUNT
+      0-31: UNS_ETYPE_COUNT 
    }
 
 """
@@ -2694,7 +2726,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_UNS_PRO_COUNT = { 'addr': 131164,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: UNS_PRO_COUNT
+      0-31: UNS_PRO_COUNT 
    }
 
 """
@@ -2726,7 +2758,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_MAC_COUNT = { 'addr': 131168,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DROPPED_MAC_COUNT
+      0-31: DROPPED_MAC_COUNT 
    }
 
 """
@@ -2758,7 +2790,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_IP_COUNT = { 'addr': 131172,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DROPPED_IP_COUNT
+      0-31: DROPPED_IP_COUNT 
    }
 
 """
@@ -2790,7 +2822,7 @@ UDP_CORE_0_0_UDP_CORE_CONTROL_DROPPED_PORT_COUNT = { 'addr': 131176,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DROPPED_PORT_COUNT
+      0-31: DROPPED_PORT_COUNT 
    }
 
 """
@@ -2801,7 +2833,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER = { 'addr': 139264,
   'mask': 4294967295,
   'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER',
   'nof_bits': 32,
-  'reset_value': '0x00000201',
+  'reset_value': '0x00000FF00',
   'shiftr': 0}
 """:const:`UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER` generated from `XML2VHDL` output.
 
@@ -2811,7 +2843,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER = { 'addr': 139264,
 **Address:**      ``0x0002_2000``
 **Description:**  Source MAC Address Lower
 **Permission:**   Read/Write
-**Reset Value:**  ``0x0000_0201``
+**Reset Value:**  ``0x0000_FF00``
 ================  ================================================
 
 .. packetdiag::
@@ -2822,7 +2854,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER = { 'addr': 139264,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: SRC_MAC_ADDR_LOWER
+      0-31: SRC_MAC_ADDR_LOWER 
    }
 
 """
@@ -2854,7 +2886,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER = { 'addr': 139268,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-15: SRC_MAC_ADDR_UPPER
+      0-15: SRC_MAC_ADDR_UPPER 
       16-31:  [ color = lightgrey ]
    }
 
@@ -2887,7 +2919,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER = { 'addr': 139276,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DST_MAC_ADDR_LOWER
+      0-31: DST_MAC_ADDR_LOWER 
    }
 
 """
@@ -2919,7 +2951,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER = { 'addr': 139280,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-15: DST_MAC_ADDR_UPPER
+      0-15: DST_MAC_ADDR_UPPER 
       16-31:  [ color = lightgrey ]
    }
 
@@ -2952,7 +2984,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_DST_IP_ADDR = { 'addr': 139300,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DST_IP_ADDR
+      0-31: DST_IP_ADDR 
    }
 
 """
@@ -2963,7 +2995,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_IP_ADDR = { 'addr': 139304,
   'mask': 4294967295,
   'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_IP_ADDR',
   'nof_bits': 32,
-  'reset_value': '0xC0A8020B',
+  'reset_value': '0xE0000001',
   'shiftr': 0}
 """:const:`UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_IP_ADDR` generated from `XML2VHDL` output.
 
@@ -2973,7 +3005,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_IP_ADDR = { 'addr': 139304,
 **Address:**      ``0x0002_2028``
 **Description:**  UDP Source IP Address
 **Permission:**   Read/Write
-**Reset Value:**  ``0xC0A8_020B``
+**Reset Value:**  ``0xE000_0001``
 ================  =========================================
 
 .. packetdiag::
@@ -2984,7 +3016,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_SRC_IP_ADDR = { 'addr': 139304,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: SRC_IP_ADDR
+      0-31: SRC_IP_ADDR 
    }
 
 """
@@ -3003,7 +3035,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_UDP_PORTS = { 'addr': 139308,
                 'mask': 4294901760,
                 'name': 'DST_PORT',
                 'nof_bits': 16,
-                'reset_value': '0xf0d1',
+                'reset_value': '0xf0d0',
                 'shiftr': 16}],
   'mask': 4294967295,
   'name': 'UDP_CORE_0_1_UDP_CORE_CONTROL_UDP_PORTS',
@@ -3019,7 +3051,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_UDP_PORTS = { 'addr': 139308,
 **Description:**  UDP Ports
 **Bit Fields**    **Description**                          **Mask**         **Permission**  **Reset Value**
 SRC_PORT          UDP Source Port                          ``0x0000_FFFF``  Read/Write      ``0x0000_F0D0``
-DST_PORT          UDP Destination Port                     ``0xFFFF_0000``  Read/Write      ``0x0000_F0D1``
+DST_PORT          UDP Destination Port                     ``0xFFFF_0000``  Read/Write      ``0x0000_F0D0``
 ================  =======================================  ===============  ==============  ===============
 
 .. packetdiag::
@@ -3030,8 +3062,8 @@ DST_PORT          UDP Destination Port                     ``0xFFFF_0000``  Read
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-15: SRC_PORT
-      16-31: DST_PORT
+      0-15: SRC_PORT 
+      16-31: DST_PORT 
    }
 
 """
@@ -3043,7 +3075,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_FILTER_CONTROL = { 'addr': 139320,
                 'mask': 1,
                 'name': 'BROADCAST_EN',
                 'nof_bits': 1,
-                'reset_value': '1',
+                'reset_value': '0',
                 'shiftr': 0},
               { 'description': 'Enables ARPs',
                 'is_bit': True,
@@ -3079,7 +3111,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_FILTER_CONTROL = { 'addr': 139320,
                 'mask': 65536,
                 'name': 'DST_MAC_CHK_EN',
                 'nof_bits': 1,
-                'reset_value': '1',
+                'reset_value': '0',
                 'shiftr': 16},
               { 'description': 'Check Source MAC address Field Of Incoming '
                                'Packet',
@@ -3162,12 +3194,12 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_FILTER_CONTROL = { 'addr': 139320,
 **Address:**        ``0x0002_2038``
 **Description:**    Controls the level of filtering in the UDP core Rx
 **Bit Fields**      **Description**                                                   **Mask**         **Permission**  **Reset Value**
-BROADCAST_EN        Enables Broadcast Recieving                                       ``0x0000_0001``  Read/Write      ``0x0000_0001``
+BROADCAST_EN        Enables Broadcast Recieving                                       ``0x0000_0001``  Read/Write      ``0x0000_0000``
 ARP_EN              Enables ARPs                                                      ``0x0000_0002``  Read/Write      ``0x0000_0001``
 PING_EN             Enables Pings                                                     ``0x0000_0004``  Read/Write      ``0x0000_0001``
 PASS_UNS_ETHTYPE    Enable Passing of Unsupported Ethernet Packets                    ``0x0000_0100``  Read/Write      ``0x0000_0001``
 PASS_UNS_IPV4       Enable Passing of Unsupported IPv4 Packets                        ``0x0000_0200``  Read/Write      ``0x0000_0001``
-DST_MAC_CHK_EN      Check Dest MAC address Field Of Incoming Packet                   ``0x0001_0000``  Read/Write      ``0x0000_0001``
+DST_MAC_CHK_EN      Check Dest MAC address Field Of Incoming Packet                   ``0x0001_0000``  Read/Write      ``0x0000_0000``
 SRC_MAC_CHK_EN      Check Source MAC address Field Of Incoming Packet                 ``0x0002_0000``  Read/Write      ``0x0000_0000``
 DST_IP_CHK_EN       Check Dest IP address Field Of Incoming Packet                    ``0x0004_0000``  Read/Write      ``0x0000_0001``
 SRC_IP_CHK_EN       Check Source IP address Field Of Incoming Packet                  ``0x0008_0000``  Read/Write      ``0x0000_0000``
@@ -3237,7 +3269,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_IFG = { 'addr': 139328,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-15: IFG
+      0-15: IFG 
       16-31:  [ color = lightgrey ]
    }
 
@@ -3337,7 +3369,7 @@ UDP_LENGTH         UDP Length For Fixed Packet Length - Currently Unused        
       7: TUSER_SRC_PRT [ rotate = 270 ]
       8-14:  [ color = lightgrey ]
       15: RESET_N [ rotate = 270 ]
-      16-31: UDP_LENGTH
+      16-31: UDP_LENGTH 
    }
 
 """
@@ -3369,7 +3401,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_UDP_COUNT = { 'addr': 139340,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: UDP_COUNT
+      0-31: UDP_COUNT 
    }
 
 """
@@ -3401,7 +3433,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_PING_COUNT = { 'addr': 139344,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: PING_COUNT
+      0-31: PING_COUNT 
    }
 
 """
@@ -3433,7 +3465,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_ARP_COUNT = { 'addr': 139348,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: ARP_COUNT
+      0-31: ARP_COUNT 
    }
 
 """
@@ -3465,7 +3497,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_UNS_ETYPE_COUNT = { 'addr': 139352,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: UNS_ETYPE_COUNT
+      0-31: UNS_ETYPE_COUNT 
    }
 
 """
@@ -3497,7 +3529,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_UNS_PRO_COUNT = { 'addr': 139356,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: UNS_PRO_COUNT
+      0-31: UNS_PRO_COUNT 
    }
 
 """
@@ -3529,7 +3561,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_MAC_COUNT = { 'addr': 139360,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DROPPED_MAC_COUNT
+      0-31: DROPPED_MAC_COUNT 
    }
 
 """
@@ -3561,7 +3593,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_IP_COUNT = { 'addr': 139364,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DROPPED_IP_COUNT
+      0-31: DROPPED_IP_COUNT 
    }
 
 """
@@ -3593,7 +3625,7 @@ UDP_CORE_0_1_UDP_CORE_CONTROL_DROPPED_PORT_COUNT = { 'addr': 139368,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DROPPED_PORT_COUNT
+      0-31: DROPPED_PORT_COUNT 
    }
 
 """
@@ -3604,7 +3636,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER = { 'addr': 147456,
   'mask': 4294967295,
   'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER',
   'nof_bits': 32,
-  'reset_value': '0x00000201',
+  'reset_value': '0x00000FF00',
   'shiftr': 0}
 """:const:`UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER` generated from `XML2VHDL` output.
 
@@ -3614,7 +3646,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER = { 'addr': 147456,
 **Address:**      ``0x0002_4000``
 **Description:**  Source MAC Address Lower
 **Permission:**   Read/Write
-**Reset Value:**  ``0x0000_0201``
+**Reset Value:**  ``0x0000_FF00``
 ================  ================================================
 
 .. packetdiag::
@@ -3625,7 +3657,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_LOWER = { 'addr': 147456,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: SRC_MAC_ADDR_LOWER
+      0-31: SRC_MAC_ADDR_LOWER 
    }
 
 """
@@ -3657,7 +3689,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_MAC_ADDR_UPPER = { 'addr': 147460,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-15: SRC_MAC_ADDR_UPPER
+      0-15: SRC_MAC_ADDR_UPPER 
       16-31:  [ color = lightgrey ]
    }
 
@@ -3690,7 +3722,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_DST_MAC_ADDR_LOWER = { 'addr': 147468,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DST_MAC_ADDR_LOWER
+      0-31: DST_MAC_ADDR_LOWER 
    }
 
 """
@@ -3722,7 +3754,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_DST_MAC_ADDR_UPPER = { 'addr': 147472,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-15: DST_MAC_ADDR_UPPER
+      0-15: DST_MAC_ADDR_UPPER 
       16-31:  [ color = lightgrey ]
    }
 
@@ -3755,7 +3787,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_DST_IP_ADDR = { 'addr': 147492,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DST_IP_ADDR
+      0-31: DST_IP_ADDR 
    }
 
 """
@@ -3766,7 +3798,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_IP_ADDR = { 'addr': 147496,
   'mask': 4294967295,
   'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_IP_ADDR',
   'nof_bits': 32,
-  'reset_value': '0xC0A8020B',
+  'reset_value': '0xE0000001',
   'shiftr': 0}
 """:const:`UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_IP_ADDR` generated from `XML2VHDL` output.
 
@@ -3776,7 +3808,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_IP_ADDR = { 'addr': 147496,
 **Address:**      ``0x0002_4028``
 **Description:**  UDP Source IP Address
 **Permission:**   Read/Write
-**Reset Value:**  ``0xC0A8_020B``
+**Reset Value:**  ``0xE000_0001``
 ================  =========================================
 
 .. packetdiag::
@@ -3787,7 +3819,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_SRC_IP_ADDR = { 'addr': 147496,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: SRC_IP_ADDR
+      0-31: SRC_IP_ADDR 
    }
 
 """
@@ -3806,7 +3838,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_UDP_PORTS = { 'addr': 147500,
                 'mask': 4294901760,
                 'name': 'DST_PORT',
                 'nof_bits': 16,
-                'reset_value': '0xf0d1',
+                'reset_value': '0xf0d0',
                 'shiftr': 16}],
   'mask': 4294967295,
   'name': 'UDP_CORE_0_2_UDP_CORE_CONTROL_UDP_PORTS',
@@ -3822,7 +3854,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_UDP_PORTS = { 'addr': 147500,
 **Description:**  UDP Ports
 **Bit Fields**    **Description**                          **Mask**         **Permission**  **Reset Value**
 SRC_PORT          UDP Source Port                          ``0x0000_FFFF``  Read/Write      ``0x0000_F0D0``
-DST_PORT          UDP Destination Port                     ``0xFFFF_0000``  Read/Write      ``0x0000_F0D1``
+DST_PORT          UDP Destination Port                     ``0xFFFF_0000``  Read/Write      ``0x0000_F0D0``
 ================  =======================================  ===============  ==============  ===============
 
 .. packetdiag::
@@ -3833,8 +3865,8 @@ DST_PORT          UDP Destination Port                     ``0xFFFF_0000``  Read
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-15: SRC_PORT
-      16-31: DST_PORT
+      0-15: SRC_PORT 
+      16-31: DST_PORT 
    }
 
 """
@@ -3846,7 +3878,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_FILTER_CONTROL = { 'addr': 147512,
                 'mask': 1,
                 'name': 'BROADCAST_EN',
                 'nof_bits': 1,
-                'reset_value': '1',
+                'reset_value': '0',
                 'shiftr': 0},
               { 'description': 'Enables ARPs',
                 'is_bit': True,
@@ -3882,7 +3914,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_FILTER_CONTROL = { 'addr': 147512,
                 'mask': 65536,
                 'name': 'DST_MAC_CHK_EN',
                 'nof_bits': 1,
-                'reset_value': '1',
+                'reset_value': '0',
                 'shiftr': 16},
               { 'description': 'Check Source MAC address Field Of Incoming '
                                'Packet',
@@ -3965,12 +3997,12 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_FILTER_CONTROL = { 'addr': 147512,
 **Address:**        ``0x0002_4038``
 **Description:**    Controls the level of filtering in the UDP core Rx
 **Bit Fields**      **Description**                                                   **Mask**         **Permission**  **Reset Value**
-BROADCAST_EN        Enables Broadcast Recieving                                       ``0x0000_0001``  Read/Write      ``0x0000_0001``
+BROADCAST_EN        Enables Broadcast Recieving                                       ``0x0000_0001``  Read/Write      ``0x0000_0000``
 ARP_EN              Enables ARPs                                                      ``0x0000_0002``  Read/Write      ``0x0000_0001``
 PING_EN             Enables Pings                                                     ``0x0000_0004``  Read/Write      ``0x0000_0001``
 PASS_UNS_ETHTYPE    Enable Passing of Unsupported Ethernet Packets                    ``0x0000_0100``  Read/Write      ``0x0000_0001``
 PASS_UNS_IPV4       Enable Passing of Unsupported IPv4 Packets                        ``0x0000_0200``  Read/Write      ``0x0000_0001``
-DST_MAC_CHK_EN      Check Dest MAC address Field Of Incoming Packet                   ``0x0001_0000``  Read/Write      ``0x0000_0001``
+DST_MAC_CHK_EN      Check Dest MAC address Field Of Incoming Packet                   ``0x0001_0000``  Read/Write      ``0x0000_0000``
 SRC_MAC_CHK_EN      Check Source MAC address Field Of Incoming Packet                 ``0x0002_0000``  Read/Write      ``0x0000_0000``
 DST_IP_CHK_EN       Check Dest IP address Field Of Incoming Packet                    ``0x0004_0000``  Read/Write      ``0x0000_0001``
 SRC_IP_CHK_EN       Check Source IP address Field Of Incoming Packet                  ``0x0008_0000``  Read/Write      ``0x0000_0000``
@@ -4107,7 +4139,7 @@ UDP_LENGTH         UDP Length For Fixed Packet Length - Currently Unused        
       7: TUSER_SRC_PRT [ rotate = 270 ]
       8-14:  [ color = lightgrey ]
       15: RESET_N [ rotate = 270 ]
-      16-31: UDP_LENGTH
+      16-31: UDP_LENGTH 
    }
 
 """
@@ -4139,7 +4171,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_UDP_COUNT = { 'addr': 147532,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: UDP_COUNT
+      0-31: UDP_COUNT 
    }
 
 """
@@ -4171,7 +4203,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_PING_COUNT = { 'addr': 147536,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: PING_COUNT
+      0-31: PING_COUNT 
    }
 
 """
@@ -4203,7 +4235,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_ARP_COUNT = { 'addr': 147540,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: ARP_COUNT
+      0-31: ARP_COUNT 
    }
 
 """
@@ -4235,7 +4267,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_UNS_ETYPE_COUNT = { 'addr': 147544,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: UNS_ETYPE_COUNT
+      0-31: UNS_ETYPE_COUNT 
    }
 
 """
@@ -4267,7 +4299,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_UNS_PRO_COUNT = { 'addr': 147548,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: UNS_PRO_COUNT
+      0-31: UNS_PRO_COUNT 
    }
 
 """
@@ -4299,7 +4331,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_MAC_COUNT = { 'addr': 147552,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DROPPED_MAC_COUNT
+      0-31: DROPPED_MAC_COUNT 
    }
 
 """
@@ -4331,7 +4363,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_IP_COUNT = { 'addr': 147556,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DROPPED_IP_COUNT
+      0-31: DROPPED_IP_COUNT 
    }
 
 """
@@ -4363,7 +4395,7 @@ UDP_CORE_0_2_UDP_CORE_CONTROL_DROPPED_PORT_COUNT = { 'addr': 147560,
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-31: DROPPED_PORT_COUNT
+      0-31: DROPPED_PORT_COUNT 
    }
 
 """
@@ -4456,7 +4488,7 @@ RSV_0             Reserved             ``0xFFFF_FFF0``  Read/Write      ``0x0000
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-3: RKEY
+      0-3: RKEY 
       4-31: RSV_0 [ color = lightgrey ]
    }
 
@@ -4730,7 +4762,7 @@ RSV_0             Reserved         ``0xFFFF_FC00``  Read/Write      ``0x0000_000
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-7: TX_DATA
+      0-7: TX_DATA 
       8: START [ rotate = 270 ]
       9: STOP [ rotate = 270 ]
       10-31: RSV_0 [ color = lightgrey ]
@@ -4779,7 +4811,7 @@ RSV_0             Reserved         ``0xFFFF_FF00``  Read/Write      ``0x0000_000
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-7: RX_DATA
+      0-7: RX_DATA 
       8-31: RSV_0 [ color = lightgrey ]
    }
 
@@ -4826,7 +4858,7 @@ RSV_0             Reserved                    ``0xFFFF_FFF0``  Read/Write      `
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-3: TX_OCY
+      0-3: TX_OCY 
       4-31: RSV_0 [ color = lightgrey ]
    }
 
@@ -4873,7 +4905,7 @@ RSV_0             Reserved                    ``0xFFFF_FFF0``  Read/Write      `
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-3: RX_OCY
+      0-3: RX_OCY 
       4-31: RSV_0 [ color = lightgrey ]
    }
 
@@ -4920,8 +4952,9 @@ RSV_0             Reserved                                       ``0xFFFF_FFF0``
       scale_direction = right_to_left
       scale_interval = 8
 
-      0-3: COMP_VAL
+      0-3: COMP_VAL 
       4-31: RSV_0 [ color = lightgrey ]
    }
 
 """
+
