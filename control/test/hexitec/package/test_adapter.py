@@ -265,10 +265,7 @@ class TestDetector(unittest.TestCase):
 
             mock_fem.assert_called_with(
                 parent=detector,
-                server_ctrl_ip_addr=defaults.fem["server_ctrl_ip"],
-                camera_ctrl_ip_addr=defaults.fem["camera_ctrl_ip"],
-                server_data_ip_addr=defaults.fem["server_data_ip"],
-                camera_data_ip_addr=defaults.fem["camera_data_ip"]
+                config=defaults.fem
             )
 
     def test_update_meta(self):

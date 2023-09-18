@@ -436,7 +436,7 @@ if __name__ == '__main__':
     frame_reset_to_zero()
 
     print("  Set number of frames")
-    set_nof_frames(8)
+    set_nof_frames(10)
 
     # input("Press enter to enable data (200 ms)")
     print("  Enable data")

@@ -16,8 +16,8 @@ import configparser
 import os
 
 # # # from hexitec.test_ui.RdmaUDP import RdmaUDP
-# # from hexitec.RdmaUDP import RdmaUDP     # Satisfy tox
 from RdmaUdp import *
+from udpcore.UdpCore import *
 from boardcfgstatus.BoardCfgStatus import *
 from hexitec_vsr.VsrModule import VsrModule
 import hexitec.ALL_RDMA_REGISTERS as HEX_REGISTERS
@@ -62,26 +62,66 @@ class HexitecFem():
 
     UART_MAX_RETRIES = 15001
 
-    def __init__(self, parent,
-                 server_ctrl_ip_addr='10.0.2.2', camera_ctrl_ip_addr='10.0.2.1',
-                 server_data_ip_addr='10.0.4.2', camera_data_ip_addr='10.0.4.1'):
+    def __init__(self, parent, config):
         """
         Initialize the HexitecFem object.
 
         This constructor initializes the HexitecFem object.
         :param parent: Reference to adapter object
-        :param server_ctrl_ip_addr: PC interface for control path
-        :param camera_ctrl_ip_addr: FEM interface for control path
-        :param server_data_ip_addr: PC interface for data path
-        :param camera_data_ip_addr: FEM interface for data path
+        :param config: dictionary of configuration settings
         """
         # Give access to parent class (Hexitec)
         self.parent = parent
         self.x10g_rdma = None
 
         # 10G RDMA IP addresses
-        self.server_ctrl_ip_addr = server_ctrl_ip_addr
-        self.camera_ctrl_ip_addr = camera_ctrl_ip_addr
+        self.server_ctrl_ip = config.get("server_ctrl_ip")
+        self.camera_ctrl_ip = config.get("camera_ctrl_ip")
+        self.server_ctrl_mac = config.get("server_ctrl_mac")
+        self.camera_ctrl_mac = config.get("camera_ctrl_mac")
+        self.server_ctrl_port = int(config.get("server_ctrl_port"))
+        self.camera_ctrl_port = int(config.get("camera_ctrl_port"))
+        self.control_interface_name = config.get("control_interface_name")
+        self.control_qsfp_idx = int(config.get("control_qsfp_idx", 1))
+        self.control_lane = int(config.get("control_lane", 1))
+        self.data1_interface_name = config.get("data1_interface_name")
+        self.data1_qsfp_idx = int(config.get("data1_qsfp_idx", 1))
+        self.data1_lane = int(config.get("data1_lane", 2))
+        self.data2_interface_name = config.get("data2_interface_name")
+        self.data2_qsfp_idx = int(config.get("data2_qsfp_idx", 1))
+        self.data2_lane = int(config.get("data2_lane", 3))
+
+        src_dst_port_int = (self.server_ctrl_port << 16) + self.camera_ctrl_port
+        self.src_dst_port = src_dst_port_int
+
+        self.farm_server_1_ip = config.get("farm_server_1_ip")
+        self.farm_server_1_mac = config.get("farm_server_1_mac")
+        self.farm_camera_1_ip = config.get("farm_camera_1_ip")
+        self.farm_camera_1_mac = config.get("farm_camera_1_mac")
+        self.farm_server_2_ip = config.get("farm_server_2_ip")
+        self.farm_server_2_mac = config.get("farm_server_2_mac")
+        self.farm_camera_2_ip = config.get("farm_camera_2_ip")
+        self.farm_camera_2_mac = config.get("farm_camera_2_mac")
+
+        self.farm_target_1_ip = config.get("farm_target_1_ip")
+        self.farm_target_1_mac = config.get("farm_target_1_mac")
+        self.farm_target_1_port = config.get("farm_target_1_port")
+        # print(f" farm_target_1_port = {self.farm_target_1_port} ({type(self.farm_target_1_port)})")
+        # Farm mode parameters may contain one or more entries
+        self.farm_target_1_ip = self.extract_string_parameters(self.farm_target_1_ip)
+        self.farm_target_1_mac = self.extract_string_parameters(self.farm_target_1_mac)
+        self.farm_target_1_port = self.extract_int_parameters(self.farm_target_1_port)
+
+        # # Check Farm mode not mismatched configuration
+        # print(f"  FEM,  server_ctrl_ip = {self.server_ctrl_ip}")
+        # print(f"        camera_ctrl_ip = {self.camera_ctrl_ip}")
+        # print(f"        server_ctrl_mac = {self.server_ctrl_mac}")
+        # print(f"        camera_ctrl_mac = {self.camera_ctrl_mac}")
+        # print(f"        server_ctrl_port = {self.server_ctrl_port}")
+        # print(f"        control_interface_name = {self.control_interface_name}")
+        # print(f"        control_qsfp_idx = {self.control_qsfp_idx}")
+        # print(f"        control_lane = {self.control_lane}")
+        # print(f"        camera_ctrl_ip = {self.camera_ctrl_ip}")
 
         self.number_frames = 10
 
@@ -106,6 +146,7 @@ class HexitecFem():
         self.duration_remaining = 0
         self.bias_level = 0
         self.gain_integer = -1
+        self.gain_string = "high"
         self.adc1_delay = -1
         self.delay_sync_signals = -1
         self.vcal_on = -1
@@ -213,16 +254,314 @@ class HexitecFem():
         self.error_list = []
         self.error_count = 0
 
+        self.cold_start = True
+        self.data_lane1 = None
+        self.data_lane2 = None
+
+        # Check Farm mode configuration not mismatched
+        num_ips = len(self.farm_target_1_ip)
+        num_macs = len(self.farm_target_1_mac)
+        num_ports = len(self.farm_target_1_port)
+        if (num_ips != num_macs) or (num_macs != num_ports):
+            self._set_status_message(f"Farm Mode: IP/MAC/port mismatch ({num_ips}/{num_macs}/{num_ports})")
+
+        self.number_nodes = num_ips
+        self.parent.set_number_nodes(self.number_nodes)
+        # print(f"        farm_target_1_ip = {self.farm_target_1_ip}")
+        # print(f"        farm_target_1_mac = {self.farm_target_1_mac}")
+        # print(f"        farm_target_1_port = {self.farm_target_1_port}")
+        # print("[E ")
+        # time.sleep(2)
+
+    def extract_string_parameters(self, param):
+        """Extract one or more string parameters."""
+        return param.split(" ")
+
+    def extract_int_parameters(self, param):
+        """Extract one or more int parameters."""
+        string_list = self.extract_string_parameters(param)
+        int_list = []
+        for index in string_list:
+            int_list.append(int(index))
+        return int_list
+
     def __del__(self):
         """Ensure rdma connection closed."""
         if self.x10g_rdma is not None:
             self.x10g_rdma.close()
 
-    def connect(self, bDebug=False):
+    def prepare_hardware(self, bDebug=False):
+        """Prepare hardware connection."""
+        try:
+            print(" fem.prepare_hardware() called!")
+            # Configure control, data lines unless already configured
+            if self.cold_start:
+                self.configure_camera_interfaces()
+                self.cold_start = False
+            else:
+                self.connect()
+                # Power up the VSRs
+                print("calling power_up_modules() !");self.power_up_modules()
+        except socket_error as e:
+            raise socket_error("Failed to prepare hardware connection: %s" % e)
+        return
+
+    def configure_camera_interfaces(self):
+        """Configure IP, Mac and port parameters for detector's Control and Data interfaces."""
+        Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
+                                 rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
+                                 multicast=True, debug=False)
+        # print(f"          Ctrl_lane,  iface_name={self.control_interface_name}")
+        # print(f"                        qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
+        # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
+
+        # print(f"       O  set_dst_mac({self.server_ctrl_mac})")
+        # print("          set_dst_mac(5c:6f:69:f8:6b:a0)")
+
+        # print(f"       O  set_dst_ip({self.server_ctrl_ip})")
+        # print("          set_dst_ip(10.0.1.1)")
+        # print(f"       O  self.server_ctrl_port = {self.server_ctrl_port}")
+        # print(f"       O  self.camera_ctrl_port = {self.camera_ctrl_port}")
+
+        # print(f"       O  set_src_dst_port({self.src_dst_port})")
+        # print("          set_src_dst_port(0xF0D1F0D0)")
+        # print(f"       O  set_src_mac({self.camera_ctrl_mac})")
+        # print("          set_src_mac(62:00:00:00:01:0A)")
+
+        # print(f"       O  set_src_ip({self.camera_ctrl_ip})")
+        # print("          set_src_ip(10.0.1.100)")
+
+        # print(f"          Ctrl_lane,  iface_name={self.control_interface_name}")
+        # print(f"                        qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
+        # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
+        ctrl_lane = \
+            UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface_name,
+                    qsfp_idx=self.control_qsfp_idx, lane=self.control_lane)
+
+        self._set_status_message("Set Control params..")
+        IOLoop.instance().call_later(2, self.configure_control_with_multicast, Hex2x6CtrlRdma, ctrl_lane)
+
+    def configure_control_with_multicast(self, Hex2x6CtrlRdma, ctrl_lane):
+        """Configure Control link's parameters."""
+        # print("  configure_control_with_multicast() O vs Hardcoded")
+        # print(f"   {self.server_ctrl_mac} {type(self.server_ctrl_mac)} vs 5c:6f:69:f8:6b:a0")
+        ctrl_lane.set_dst_mac(mac=self.server_ctrl_mac, response_check=False)
+
+        # print(f"   {self.server_ctrl_ip} {type(self.server_ctrl_ip)} vs 10.0.1.1")
+        ctrl_lane.set_dst_ip(ip=self.server_ctrl_ip, response_check=False)
+
+        # print(f"   {self.src_dst_port} {type(self.src_dst_port)} vs 0xF0D1F0D0")
+        ctrl_lane.set_src_dst_port(port=self.src_dst_port, response_check=False)
+
+        # print(f"   {self.camera_ctrl_mac} {type(self.camera_ctrl_mac)} vs 62:00:00:00:01:0A")
+        ctrl_lane.set_src_mac(mac=self.camera_ctrl_mac, response_check=False)
+
+        # print(f"   {self.camera_ctrl_ip} {type(self.camera_ctrl_ip)} vs 10.0.1.100")
+        ctrl_lane.set_src_ip(ip=self.camera_ctrl_ip, response_check=False)
+
+        # Close multicast connection and reconnect directly to Control interface
+        Hex2x6CtrlRdma.__del__()
+
+        Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
+                                 rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
+                                 multicast=False, debug=False)
+        # print(f"          Ctrl_lane,  iface_name={self.control_interface_name}")
+        # print(f"                        qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
+        # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
+
+        ctrl_lane = \
+            UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface_name,
+                    qsfp_idx=self.control_qsfp_idx, lane=self.control_lane)
+        self._set_status_message("Setting Data Lane 1..")
+        IOLoop.instance().call_later(2, self.setup_data_lane_1, Hex2x6CtrlRdma, ctrl_lane)
+
+    def setup_data_lane_1(self, Hex2x6CtrlRdma, ctrl_lane):
+        """Setup Data Lane 1's parameters."""
+        ctrl_lane.set_filtering(enable=True, response_check=True)
+        ctrl_lane.set_arp_timeout_length()
+
+        # print(f"         Data 1_lane, iface_name={self.data1_interface_name}")
+        # print(f"                        qsfp_idx={self.data1_qsfp_idx} lane={self.data1_lane}")
+        # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=2)")
+        self.data_lane1 = \
+            UdpCore(Hex2x6CtrlRdma, ctrl_flag=False, iface_name=self.data1_interface_name,
+                    qsfp_idx=self.data1_qsfp_idx, lane=self.data1_lane)
+        self._set_status_message("Setting Data Lane 2..")
+        IOLoop.instance().call_later(2, self.setup_data_lane_2, Hex2x6CtrlRdma, ctrl_lane)
+
+    def setup_data_lane_2(self, Hex2x6CtrlRdma, ctrl_lane):
+        """Setup Data Lane 2's parameters."""
+        # print(f"         Data 2_lane, iface_name={self.data2_interface_name}")
+        # print(f"                        qsfp_idx={self.data2_qsfp_idx} lane={self.data2_lane}")
+        # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=3)")
+
+        self.data_lane2 = \
+            UdpCore(Hex2x6CtrlRdma, ctrl_flag=False, iface_name=self.data2_interface_name,
+                    qsfp_idx=self.data2_qsfp_idx, lane=self.data2_lane)
+        self._set_status_message("Configuring Farm Mode..")
+        IOLoop.instance().call_later(2, self.setup_farm_mode, Hex2x6CtrlRdma, ctrl_lane)
+
+    def setup_farm_mode(self, Hex2x6CtrlRdma, ctrl_lane):
+        """Configure data lanes for Farm Mode."""
+        # Source = Camera, Destination: PC
+        try:
+            # print("  setup_farm_mode() O vs Hardcoded")
+            # print(f"   d_1 {self.farm_server_1_ip} vs 10.0.1.2")
+            self.data_lane1.set_dst_ip(ip=self.farm_server_1_ip)
+
+            # print(f"   d_1 {self.farm_server_1_mac} vs 5c:6f:69:f8:57:d0")
+            self.data_lane1.set_dst_mac(mac=self.farm_server_1_mac)
+
+            # print(f"   d_1 {self.farm_camera_1_ip} vs 10.0.1.101")
+            self.data_lane1.set_src_ip(ip=self.farm_camera_1_ip)
+
+            # print(f"   d_1 {self.farm_camera_1_mac} vs 62:00:00:00:01:0B")
+            self.data_lane1.set_src_mac(mac=self.farm_camera_1_mac)
+
+            # print(f"   d_1 O  set_src_dst_port({self.src_dst_port})")
+            # print("          set_src_dst_port(0xF0D1F0D0)")
+            self.data_lane1.set_src_dst_port(port=self.src_dst_port)
+
+            # print(f"---d_2 {self.farm_server_2_ip} vs 10.0.1.3")
+            self.data_lane2.set_dst_ip(ip=self.farm_server_2_ip)
+
+            # print(f"   d_2 {self.farm_server_2_mac} vs 5c:6f:69:f8:a3:e0")
+            self.data_lane2.set_dst_mac(mac=self.farm_server_2_mac)
+
+            # print(f"   d_2 {self.farm_camera_2_ip} vs 10.0.1.102")
+            self.data_lane2.set_src_ip(ip=self.farm_camera_2_ip)
+
+            # print(f"   d_2 {self.farm_camera_2_mac} vs 62:00:00:00:01:0C")
+            self.data_lane2.set_src_mac(mac=self.farm_camera_2_mac)
+
+            # print(f"       O  set_src_dst_port({self.src_dst_port})")
+            # print("          set_src_dst_port(0xF0D1F0D0)")
+            self.data_lane1.set_src_dst_port(port=self.src_dst_port)
+
+            print("[E Configuring Farm Mode")
+
+            # Configure farm mode node(s), determine how many LUT entries to use
+            if self.number_nodes == 1:
+                self.setup_1_farm_node()
+                lut_entries = 1
+            elif self.number_nodes <= 2:
+                self.setup_2_farm_nodes()
+                lut_entries = 1
+            elif self.number_nodes == 3:
+                self.setup_3_farm_nodes()
+                lut_entries = 3
+            elif self.number_nodes == 4:
+                self.setup_4_farm_nodes()
+                lut_entries = 2
+            elif self.number_nodes == 5:
+                lut_entries = 5
+            elif self.number_nodes == 6:
+                lut_entries = 3
+            elif self.number_nodes == 7:
+                lut_entries = 7
+            elif self.number_nodes == 8:
+                lut_entries = 4
+
+            Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_NOF_LUT_MODE_ENTRIES['addr'],
+                                          data=lut_entries, burst_len=1)
+            print(f"Configuring for {lut_entries} lut entries (That's {self.number_nodes} nodes)")
+
+            self.data_lane1.set_lut_mode()  # enp2s0f1
+            self.data_lane2.set_lut_mode()  # enp2s0f2
+
+            Hex2x6CtrlRdma.__del__()
+
+            self.connect()
+            # Power up the VSRs
+            print("calling power_up_modules() !");self.power_up_modules()
+        except socket_error as e:
+            self.hardware_connected = False
+            self.hardware_busy = False
+            self.flag_error("Farm Mode Config failed", str(e))
+
+    def setup_1_farm_node(self):
+        """Configure all data sent to same receiver."""
+        print("  setting up 1 farm node..")
+        node_ip = self.farm_target_1_ip[0]
+        node_mac = self.farm_target_1_mac[0]
+        node_port = self.farm_target_1_port[0]
+
+        # [print(f" ip:   {x}") for x in self.farm_target_1_ip]
+        # [print(f" mac:  {x}") for x in self.farm_target_1_mac]
+        # [print(f" port: {x}") for x in self.farm_target_1_port]
+        self.data_lane1.set_lut_mode_ip([node_ip])
+        self.data_lane2.set_lut_mode_ip([node_ip])
+        self.data_lane1.set_lut_mode_mac([node_mac])
+        self.data_lane2.set_lut_mode_mac([node_mac])
+        self.data_lane1.set_lut_mode_port([node_port])
+        self.data_lane2.set_lut_mode_port([node_port])
+        # time.sleep(2)
+
+    def setup_2_farm_nodes(self):
+        """Configure data sent to two receivers."""
+        print("   Setting up 2 farm nodes..")
+        node_ip1, node_ip2 = self.farm_target_1_ip[0], self.farm_target_1_ip[1]
+        node_mac1, node_mac2 = self.farm_target_1_mac[0], self.farm_target_1_mac[1]
+        node_port1, node_port2 = self.farm_target_1_port[0], self.farm_target_1_port[1]
+
+        # [print(f" ip:   {x}") for x in self.farm_target_1_ip]
+        # [print(f" mac:  {x}") for x in self.farm_target_1_mac]
+        # [print(f" port: {x}") for x in self.farm_target_1_port]
+        self.data_lane1.set_lut_mode_ip([node_ip1])
+        self.data_lane2.set_lut_mode_ip([node_ip2])
+        self.data_lane1.set_lut_mode_mac([node_mac1])
+        self.data_lane2.set_lut_mode_mac([node_mac2])
+        self.data_lane1.set_lut_mode_port([node_port1])
+        self.data_lane2.set_lut_mode_port([node_port2])
+        # time.sleep(2)
+
+    def setup_3_farm_nodes(self):
+        """Configure data sent to three receivers."""
+        print("   Setting up 3 farm nodes..")
+        node_ip1, node_ip2, node_ip3 = self.farm_target_1_ip[0], self.farm_target_1_ip[1], \
+            self.farm_target_1_ip[2]
+        node_mac1, node_mac2, node_mac3 = self.farm_target_1_mac[0], self.farm_target_1_mac[1], \
+            self.farm_target_1_mac[2]
+        node_port1, node_port2, node_port3 = self.farm_target_1_port[0], self.farm_target_1_port[1], \
+            self.farm_target_1_port[2]
+
+        # [print(f" ip:   {x}") for x in self.farm_target_1_ip]
+        # [print(f" mac:  {x}") for x in self.farm_target_1_mac]
+        # [print(f" port: {x}") for x in self.farm_target_1_port]
+        self.data_lane1.set_lut_mode_ip([node_ip1, node_ip3, node_ip2])
+        self.data_lane2.set_lut_mode_ip([node_ip2, node_ip1, node_ip3])
+        self.data_lane1.set_lut_mode_mac([node_mac1, node_mac3, node_mac2])
+        self.data_lane2.set_lut_mode_mac([node_mac2, node_mac1, node_mac3])
+        self.data_lane1.set_lut_mode_port([node_port1, node_port3, node_port2])
+        self.data_lane2.set_lut_mode_port([node_port2, node_port1, node_port3])
+        # time.sleep(2)
+
+    def setup_4_farm_nodes(self):
+        """Configure data sent to two receivers."""
+        print("   Setting up 4 farm nodes..")
+        node_ip1, node_ip2, node_ip3, node_ip4 = self.farm_target_1_ip[0], \
+            self.farm_target_1_ip[1], self.farm_target_1_ip[2], self.farm_target_1_ip[3]
+        node_mac1, node_mac2, node_mac3, node_mac4 = self.farm_target_1_mac[0], \
+            self.farm_target_1_mac[1], self.farm_target_1_mac[2], self.farm_target_1_mac[3]
+        node_port1, node_port2, node_port3, node_port4 = self.farm_target_1_port[0], \
+            self.farm_target_1_port[1], self.farm_target_1_port[2], self.farm_target_1_port[3]
+
+        # [print(f" ip:   {x}") for x in self.farm_target_1_ip]
+        # [print(f" mac:  {x}") for x in self.farm_target_1_mac]
+        # [print(f" port: {x}") for x in self.farm_target_1_port]
+        self.data_lane1.set_lut_mode_ip([node_ip1, node_ip3])
+        self.data_lane2.set_lut_mode_ip([node_ip2, node_ip4])
+        self.data_lane1.set_lut_mode_mac([node_mac1, node_mac3])
+        self.data_lane2.set_lut_mode_mac([node_mac2, node_mac4])
+        self.data_lane1.set_lut_mode_port([node_port1, node_port3])
+        self.data_lane2.set_lut_mode_port([node_port2, node_port4])
+        # time.sleep(2)
+
+    def connect(self):
         """Set up hardware connection."""
         try:
-            self.x10g_rdma = RdmaUDP(local_ip=self.server_ctrl_ip_addr, local_port=61649,
-                                     rdma_ip=self.camera_ctrl_ip_addr, rdma_port=61648,
+            self.x10g_rdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
+                                     rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
                                      debug=False, uart_offset=0xC)
             self.broadcast_VSRs = \
                 VsrModule(self.x10g_rdma, slot=0, init_time=0, addr_mapping=self.vsr_addr_mapping)
@@ -358,7 +697,7 @@ class HexitecFem():
             else:
                 self._set_status_error("")
             self.hardware_busy = True
-            self.power_up_modules()
+            self.prepare_hardware()
         except HexitecFemError as e:
             self.flag_error("Error", str(e))
             self._set_status_message("Is the camera powered?")
@@ -368,7 +707,6 @@ class HexitecFem():
     def power_up_modules(self):
         """Power up and enable VSRs."""
         try:
-            self.connect()
             self.data_path_reset()
             self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
                                           data=0x0,  burst_len=1)
@@ -620,8 +958,10 @@ class HexitecFem():
                 self.acquire_data_completed()
                 return
             else:
-                status = self.x10g_rdma.udp_rdma_read(address=HEX_REGISTERS.HEXITEC_2X6_HEADER_STATUS['addr'],
-                                                      burst_len=1)[0]
+                status = \
+                    self.x10g_rdma.udp_rdma_read(
+                        address=HEX_REGISTERS.HEXITEC_2X6_HEADER_STATUS['addr'],
+                        burst_len=1)[0]
                 # 0 during data transmission, 65536 when completed
                 self.all_data_sent = (status & 65536)
                 # print(f"   *** all_data_sent: {self.all_data_sent:X} status: {status:X}")
@@ -839,31 +1179,31 @@ class HexitecFem():
         logging.debug("Loading Power, Cal and Read Enables")
         # logging.debug("Column Read Enable")
 
-        # Column Read Enable ASIC1 (Reg 0x61) - checked 2
-        asic1_col_read_enable = self._extract_80_bits("ColumnEn_", vsr_num, 1, "Channel")
-        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        # self.load_enables_settings(vsr, 0x36, 0x31, asic1_col_read_enable, enables_defaults)
+        # # Column Read Enable ASIC1 (Reg 0x61) - checked 2
+        # asic1_col_read_enable = self._extract_80_bits("ColumnEn_", vsr_num, 1, "Channel")
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # # self.load_enables_settings(vsr, 0x36, 0x31, asic1_col_read_enable, enables_defaults)
 
-        # Column Read Enable ASIC2 (Reg 0xC2) - checked 1
-        asic2_col_read_enable = self._extract_80_bits("ColumnEn_", vsr_num, 2, "Channel")
-        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        # self.load_enables_settings(vsr, 0x43, 0x32, asic2_col_read_enable, enables_defaults)
+        # # Column Read Enable ASIC2 (Reg 0xC2) - checked 1
+        # asic2_col_read_enable = self._extract_80_bits("ColumnEn_", vsr_num, 2, "Channel")
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # # self.load_enables_settings(vsr, 0x43, 0x32, asic2_col_read_enable, enables_defaults)
 
         logging.debug("Column Power Enable")
 
-        # Column Power Enable ASIC1 (Reg 0x4D) - checked 2
-        asic1_col_power_enable = self._extract_80_bits("ColumnPwr", vsr_num, 1, "Channel")
-        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        # self.load_enables_settings(vsr, 0x34, 0x44, asic1_col_power_enable, enables_defaults)
+        # # Column Power Enable ASIC1 (Reg 0x4D) - checked 2
+        # asic1_col_power_enable = self._extract_80_bits("ColumnPwr", vsr_num, 1, "Channel")
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # # self.load_enables_settings(vsr, 0x34, 0x44, asic1_col_power_enable, enables_defaults)
 
-        # Column Power Enable ASIC2 (Reg 0xAE) - checked 1
-        asic2_col_power_enable = self._extract_80_bits("ColumnPwr", vsr_num, 2, "Channel")
-        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        # self.load_enables_settings(vsr, 0x41, 0x45, asic2_col_power_enable, enables_defaults)
+        # # Column Power Enable ASIC2 (Reg 0xAE) - checked 1
+        # asic2_col_power_enable = self._extract_80_bits("ColumnPwr", vsr_num, 2, "Channel")
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # # self.load_enables_settings(vsr, 0x41, 0x45, asic2_col_power_enable, enables_defaults)
 
         logging.debug("Column Calibration Enable")
 
@@ -888,31 +1228,31 @@ class HexitecFem():
 
         logging.debug("Row Read Enable")
 
-        # Row Read Enable ASIC1 (Reg 0x43) - chcked 5
-        asic1_row_enable = self._extract_80_bits("RowEn_", vsr_num, 1, "Block")
-        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        # self.load_enables_settings(vsr, 0x34, 0x33, asic1_row_enable, enables_defaults)
+        # # Row Read Enable ASIC1 (Reg 0x43) - chcked 5
+        # asic1_row_enable = self._extract_80_bits("RowEn_", vsr_num, 1, "Block")
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # # self.load_enables_settings(vsr, 0x34, 0x33, asic1_row_enable, enables_defaults)
 
-        # Row Read Enable ASIC2 (Reg 0xA4) - checked 4
-        asic2_row_enable = self._extract_80_bits("RowEn_", vsr_num, 2, "Block")
-        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        # self.load_enables_settings(vsr, 0x41, 0x34, asic2_row_enable, enables_defaults)
+        # # Row Read Enable ASIC2 (Reg 0xA4) - checked 4
+        # asic2_row_enable = self._extract_80_bits("RowEn_", vsr_num, 2, "Block")
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # # self.load_enables_settings(vsr, 0x41, 0x34, asic2_row_enable, enables_defaults)
 
         logging.debug("Row Power Enable")
 
-        # Row Power Enable ASIC1 (Reg 0x2F) - checked 5
-        asic1_row_power_enable = self._extract_80_bits("RowPwr", vsr_num, 1, "Block")
-        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        # self.load_enables_settings(vsr, 0x32, 0x46, asic1_row_power_enable, enables_defaults)
+        # # Row Power Enable ASIC1 (Reg 0x2F) - checked 5
+        # asic1_row_power_enable = self._extract_80_bits("RowPwr", vsr_num, 1, "Block")
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # # self.load_enables_settings(vsr, 0x32, 0x46, asic1_row_power_enable, enables_defaults)
 
-        # Row Power Enable ASIC2 (Reg 0x90) - chcked 4
-        asic2_row_power_enable = self._extract_80_bits("RowPwr", vsr_num, 2, "Block")
-        enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-                            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
-        # self.load_enables_settings(vsr, 0x39, 0x30, asic2_row_power_enable, enables_defaults)
+        # # Row Power Enable ASIC2 (Reg 0x90) - chcked 4
+        # asic2_row_power_enable = self._extract_80_bits("RowPwr", vsr_num, 2, "Block")
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
+        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # # self.load_enables_settings(vsr, 0x39, 0x30, asic2_row_power_enable, enables_defaults)
 
         logging.debug("Row Calibration Enable")
 
@@ -963,7 +1303,6 @@ class HexitecFem():
 
     def read_register07(self, vsr_number):  # pragma: no coverage
         """Read out register 07."""
-        # time.sleep(0.25)
         (address_h, address_l) = (0x30, 0x37)
         # print("Read Register 0x{0}{1}".format(address_h-0x30, address_l-0x30))
         return self.get_vsr_register_value(vsr_number, address_h, address_l)
@@ -1093,7 +1432,7 @@ class HexitecFem():
                 vcal_high_reply, vcal_low_reply,
                 gain_reply))
         print(" All vsrs, reg07: {}".format(reg07))
-        print("           reg89: {}".format(reg89))
+        print("          reg89: {}".format(reg89))
 
     def initialise_vsr(self, vsr):  # pragma: no coverage
         """Initialise a VSR."""
@@ -1411,7 +1750,8 @@ class HexitecFem():
                 self.vsrs_selected = vsrs_selected
                 self.populate_vsr_addr_mapping(self.vsrs_selected)
 
-            self.gain_integer = self._extract_integer(self.hexitec_parameters, 'Control-Settings/Gain', bit_range=1)
+            self.gain_integer = \
+                self._extract_integer(self.hexitec_parameters, 'Control-Settings/Gain', bit_range=1)
             if self.gain_integer > -1:
                 if self.gain_integer == 0:
                     self.gain_string = "high"
@@ -1419,10 +1759,12 @@ class HexitecFem():
                     self.gain_string = "low"
             self.adc1_delay = self._extract_integer(
                 self.hexitec_parameters, 'Control-Settings/ADC1 Delay', bit_range=2)
-            self.delay_sync_signals = self._extract_integer(
-                self.hexitec_parameters, 'Control-Settings/delay sync signals', bit_range=8)
-            self.vcal_on = self._extract_integer(self.hexitec_parameters, 'Control-Settings/vcal_enabled',
-                                            bit_range=1)
+            self.delay_sync_signals = \
+                self._extract_integer(self.hexitec_parameters,
+                                      'Control-Settings/delay sync signals', bit_range=8)
+            self.vcal_on = \
+                self._extract_integer(self.hexitec_parameters, 'Control-Settings/vcal_enabled',
+                                      bit_range=1)
             if self.vcal_on > -1:
                 if self.vcal_on == 0:
                     self.vcal_enabled = False
@@ -1431,7 +1773,7 @@ class HexitecFem():
             self.vcal2_vcal1 = self._extract_integer(
                 self.hexitec_parameters, 'Control-Settings/VCAL2 -> VCAL1', bit_range=15)
             self.umid_value = self._extract_exponential(self.hexitec_parameters,
-                                                'Control-Settings/Uref_mid', bit_range=12)
+                                                        'Control-Settings/Uref_mid', bit_range=12)
             self.vcal_value = self._extract_float(self.hexitec_parameters, 'Control-Settings/VCAL')
             # print("\n *** self.umid_value: {0} \n".format(self.umid_value))
 
@@ -1557,35 +1899,35 @@ class HexitecFem():
 
         bDebug = False
 
-        int_list = [-1]
+        string_list = [-1]
 
         key = 'Sensor-Config_V%s_S%s/%s1st%s' % (vsr, asic, param, channel_or_block)
         try:
             first_channel = self.extract_channel_data(self.hexitec_parameters, key)
         except KeyError:
             logging.debug("WARNING: Missing key %s - was .ini file loaded?" % key)
-            return int_list
+            return string_list
 
         key = 'Sensor-Config_V%s_S%s/%s2nd%s' % (vsr, asic, param, channel_or_block)
         try:
             second_channel = self.extract_channel_data(self.hexitec_parameters, key)
         except KeyError:
             logging.debug("WARNING: Missing key %s - was .ini file loaded?" % key)
-            return int_list
+            return string_list
 
         key = 'Sensor-Config_V%s_S%s/%s3rd%s' % (vsr, asic, param, channel_or_block)
         try:
             third_channel = self.extract_channel_data(self.hexitec_parameters, key)
         except KeyError:
             logging.debug("WARNING: Missing key %s - was .ini file loaded?" % key)
-            return int_list
+            return string_list
 
         key = 'Sensor-Config_V%s_S%s/%s4th%s' % (vsr, asic, param, channel_or_block)
         try:
             fourth_channel = self.extract_channel_data(self.hexitec_parameters, key)
         except KeyError:
             logging.debug("WARNING: Missing key %s - was .ini file loaded?" % key)
-            return int_list
+            return string_list
 
         entirety = first_channel + second_channel + third_channel + fourth_channel
         if bDebug:  # pragma: no cover
@@ -1608,14 +1950,14 @@ class HexitecFem():
             byte_list.append(entirety[index:index + 8])
 
         # Convert strings into 8 byte integers
-        int_list = []
+        string_list = []
         for binary in byte_list:
             int_byte = int(binary, 2)
-            int_list.append(int_byte)
+            string_list.append(int_byte)
             if bDebug:  # pragma: no cover
                 print("\t\tVSR: %s   bin: %s dec: %s" % (vsr, binary, "{:02x}".format(int_byte)))
 
-        return int_list
+        return string_list
 
     def extract_channel_data(self, parameter_dict, key):
         """Extract value of key from parameters_dict's dictionary."""

@@ -34,9 +34,26 @@ class FemTestFixture(object):
                 """
                 server_ctrl_ip = 127.0.0.1,
                 camera_ctrl_ip = 127.0.0.1,
+                server_ctrl_port = 61649,
+                camera_ctrl_port = 61648,
+                farm_target_1_ip = 127.0.0.1,
+                farm_target_1_mac = 62:00:00:00:01:0C,
+                farm_target_1_port = 61649,
                 server_data_ip = 127.0.0.1,
                 camera_data_ip = 127.0.0.1
                 """
+        }
+
+        self.config = {
+                "server_ctrl_ip": "127.0.0.1",
+                "camera_ctrl_ip": "127.0.0.1",
+                "server_ctrl_port": "61649",
+                "camera_ctrl_port": "61648",
+                "farm_target_1_ip": "127.0.0.1",
+                "farm_target_1_mac": "62:00:00:00:01:0C",
+                "farm_target_1_port": "61649",
+                "server_data_ip": "127.0.0.1",
+                "camera_data_ip": "127.0.0.1"
         }
 
         with patch("hexitec.HexitecDAQ.ParameterTree"):
@@ -44,8 +61,7 @@ class FemTestFixture(object):
             self.detector = self.adapter.hexitec  # shortcut, makes assert lines shorter
 
             with patch("hexitec.HexitecFem.RdmaUDP"):
-                self.fem = HexitecFem(self.detector, self.ip,
-                                      self.ip, self.ip, self.ip)
+                self.fem = HexitecFem(self.detector, self.config)
                 self.fem.connect()
 
         # Construct paths relative to current working directory
@@ -198,12 +214,21 @@ class TestFem(unittest.TestCase):
 
     def test_connect_hardware_handles_Exception(self):
         """Test that connecting with hardware handles failure."""
-        self.test_fem.fem.power_up_modules = Mock(side_effect = Exception(""))
+        self.test_fem.fem.prepare_hardware = Mock(side_effect = Exception(""))
         self.test_fem.fem.connect_hardware("test")
         assert self.test_fem.fem._get_status_error() == "Camera connection"
 
-    def test_connect_hardware(self):
-        """Test connecting with hardware works."""
+    def test_connect_hardware_from_cold(self):
+        """Test connecting with hardware from cold works (setup Control interface)."""
+        self.test_fem.fem.prepare_hardware = Mock()
+        with patch("hexitec.HexitecFem.RdmaUDP"):
+            self.test_fem.fem.connect_hardware("test")
+            assert self.test_fem.fem.hardware_busy is True
+            self.test_fem.fem.prepare_hardware.assert_called()
+
+    def test_connect_hardware_working_called_not_cold(self):
+        """Test connecting with hardware not from cold works (Control interface already setup)."""
+        self.test_fem.fem.cold_start = False
         with patch("hexitec.HexitecFem.RdmaUDP"):
             self.test_fem.fem.connect_hardware("test")
             assert self.test_fem.fem.hardware_connected is True
@@ -278,8 +303,8 @@ class TestFem(unittest.TestCase):
 
     def test_power_up_modules_flags_socket_error(self):
         """Test function will handle if not all of selected HVs are powered on."""
-        self.test_fem.fem.connect = Mock()
-        self.test_fem.fem.connect.side_effect = socket_error()
+        self.test_fem.fem.data_path_reset = Mock()
+        self.test_fem.fem.data_path_reset.side_effect = socket_error()
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.hardware_busy = True
 

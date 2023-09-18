@@ -266,8 +266,8 @@ def are_dc_ready(dc_statuses):
 
 
 if __name__ == '__main__':
-    Hex2x6CtrlRdma = RdmaUDP(local_ip="10.0.3.1", local_port=61649,
-                             rdma_ip="10.0.3.2", rdma_port=61648,
+    Hex2x6CtrlRdma = RdmaUDP(local_ip="10.0.1.1", local_port=61649,
+                             rdma_ip="10.0.1.100", rdma_port=61648,
                              debug=False, uart_offset=0xC)
 
     # Reset the datapath
@@ -369,7 +369,7 @@ if __name__ == '__main__':
         column_calibration_mask_asic1 = list_of_patterns
         row_calibration_mask_asic1 = list_of_patterns
         pattern += 1
-        print(f"[INFO]  VSR{vsr.slot} ASIC: {asic} pattern: 0x{pattern:X}")
+        # print(f"[INFO]  VSR{vsr.slot} ASIC: {asic} pattern: 0x{pattern:X}")
         vsr.set_column_calibration_mask(column_calibration_mask_asic1, asic)
         vsr.set_row_calibration_mask(row_calibration_mask_asic1, asic)
 
@@ -378,7 +378,7 @@ if __name__ == '__main__':
         column_calibration_mask_asic1 = list_of_patterns
         row_calibration_mask_asic1 = list_of_patterns
         pattern += 1
-        print(f"[INFO]  VSR{vsr.slot} ASIC: {asic} pattern: 0x{pattern:X}")
+        # print(f"[INFO]  VSR{vsr.slot} ASIC: {asic} pattern: 0x{pattern:X}")
         vsr.set_column_calibration_mask(column_calibration_mask_asic1, asic)
         vsr.set_row_calibration_mask(row_calibration_mask_asic1, asic)
 
@@ -436,7 +436,7 @@ if __name__ == '__main__':
     frame_reset_to_zero()
 
     print("  Set number of frames")
-    set_nof_frames(18)
+    set_nof_frames(10)
 
     # input("Press enter to enable data (200 ms)")
     print("  Enable data")

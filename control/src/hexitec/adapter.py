@@ -201,7 +201,7 @@ class Hexitec():
         for key, value in options.items():
             if "fem" in key:
                 fem_info = value.split(',')
-                print("fem_info: {}".format(fem_info))
+                # print(f" ({type(fem_info)}) fem_info: {fem_info}")
                 fem_info = [(i.split('=')[0], i.split('=')[1])
                             for i in fem_info]
                 fem_dict = {fem_key.strip(): fem_value.strip()
@@ -209,20 +209,17 @@ class Hexitec():
                 logging.debug("From options: {}".format(fem_dict))
                 self.fem = HexitecFem(
                     self,
-                    fem_dict.get("server_ctrl_ip", defaults.fem["server_ctrl_ip"]),
-                    fem_dict.get("camera_ctrl_ip", defaults.fem["camera_ctrl_ip"]),
-                    fem_dict.get("server_data_ip", defaults.fem["server_data_ip"]),
-                    fem_dict.get("camera_data_ip", defaults.fem["camera_data_ip"])
+                    fem_dict
                 )
-
         if not self.fem:
             logging.error("Using default HexitecFem values!")
+            fem_dict = {
+                "server_ctrl_ip": defaults.fem["server_ctrl_ip"],
+                "camera_ctrl_ip": defaults.fem["camera_ctrl_ip"]
+            }
             self.fem = HexitecFem(
                 parent=self,
-                server_ctrl_ip_addr=defaults.fem["server_ctrl_ip"],
-                camera_ctrl_ip_addr=defaults.fem["camera_ctrl_ip"],
-                server_data_ip_addr=defaults.fem["server_data_ip"],
-                camera_data_ip_addr=defaults.fem["camera_data_ip"]
+                config=fem_dict
             )
 
         self.fem_health = True
@@ -241,7 +238,7 @@ class Hexitec():
         self.status_message = ""
         self.status_error = ""
         self.elog = ""
-        self.number_nodes = 2   # 1
+        self.number_nodes = 1
         # Software states:
         #   Cold, Environs, Initialising, Offsets, Disconnected, Idle, Acquiring, Error, Cleared
         self.software_state = "Cold"
@@ -714,9 +711,6 @@ class HexitecDetectorDefaults():
         self.save_file = "a"
         self.number_frames = 10
         self.fem = {
-            "id": 0,
             "server_ctrl_ip": "10.0.2.2",
-            "camera_ctrl_ip": "10.0.2.1",
-            "server_data_ip": "10.0.4.2",
-            "camera_data_ip": "10.0.4.1"
+            "camera_ctrl_ip": "10.0.2.1"
         }

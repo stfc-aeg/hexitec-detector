@@ -128,7 +128,7 @@ class HexitecDAQ():
         self.rows, self.columns = 160, 160
         self.pixels = self.rows * self.columns
         self.number_frames = 10
-        self.number_nodes = 2   # 1
+        self.number_nodes = 1
         # Status variables
         self.in_error = False
         self.daq_ready = False
