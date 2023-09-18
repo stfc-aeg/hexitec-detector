@@ -331,9 +331,9 @@ class HexitecFem():
         # print(f"       O  set_src_ip({self.camera_ctrl_ip})")
         # print("          set_src_ip(10.0.1.100)")
 
-        # print(f"          Ctrl_lane,  iface_name={self.control_interface_name}")
-        # print(f"                        qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
-        # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
+        # print(f"        Ctrl_lane,  iface_name={self.control_interface_name}")
+        # print(f"                      qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
+        # print("        CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
         ctrl_lane = \
             UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface_name,
                     qsfp_idx=self.control_qsfp_idx, lane=self.control_lane)
@@ -365,9 +365,9 @@ class HexitecFem():
         Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
                                  rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
                                  multicast=False, debug=False)
-        # print(f"          Ctrl_lane,  iface_name={self.control_interface_name}")
-        # print(f"                        qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
-        # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
+        # print(f"        Ctrl_lane,  iface_name={self.control_interface_name}")
+        # print(f"                      qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
+        # print("        CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
 
         ctrl_lane = \
             UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface_name,
@@ -438,34 +438,32 @@ class HexitecFem():
             # print("          set_src_dst_port(0xF0D1F0D0)")
             self.data_lane1.set_src_dst_port(port=self.src_dst_port)
 
-            print("[E Configuring Farm Mode")
+            # print("[E Configuring Farm Mode\n - Nodes: {self._nodes}")
+            # time.sleep(2)
 
             # Configure farm mode node(s), determine how many LUT entries to use
-            if self.number_nodes == 1:
-                self.setup_1_farm_node()
-                lut_entries = 1
-            elif self.number_nodes <= 2:
-                self.setup_2_farm_nodes()
-                lut_entries = 1
-            elif self.number_nodes == 3:
-                self.setup_3_farm_nodes()
-                lut_entries = 3
-            elif self.number_nodes == 4:
-                self.setup_4_farm_nodes()
-                lut_entries = 2
-            elif self.number_nodes == 5:
-                lut_entries = 5
-            elif self.number_nodes == 6:
-                lut_entries = 3
-            elif self.number_nodes == 7:
-                lut_entries = 7
-            elif self.number_nodes == 8:
-                lut_entries = 4
+            if (self.number_nodes % 2 == 1):
+                # Odd number of nodes
+                lut_entries = self.number_nodes
+            else:
+                # Even number of nodes
+                lut_entries = self.number_nodes // 2
+
+            ip_lut1, ip_lut2 = self.populate_lists(self.farm_target_1_ip)
+            mac_lut1, mac_lut2 = self.populate_lists(self.farm_target_1_mac)
+            port_lut1, port_lut2 = self.populate_lists(self.farm_target_1_port)
+
+            self.data_lane1.set_lut_mode_ip(ip_lut1)
+            self.data_lane2.set_lut_mode_ip(ip_lut2)
+            self.data_lane1.set_lut_mode_mac(mac_lut1)
+            self.data_lane2.set_lut_mode_mac(mac_lut2)
+            self.data_lane1.set_lut_mode_port(port_lut1)
+            self.data_lane2.set_lut_mode_port(port_lut2)
 
             Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_NOF_LUT_MODE_ENTRIES['addr'],
                                           data=lut_entries, burst_len=1)
-            print(f"Configuring for {lut_entries} lut entries (That's {self.number_nodes} nodes)")
-
+            # print(f"\n Configuring for {lut_entries} lut entries\n ({self.number_nodes} nodes)")
+            # time.sleep(3)
             self.data_lane1.set_lut_mode()  # enp2s0f1
             self.data_lane2.set_lut_mode()  # enp2s0f2
 
@@ -479,83 +477,26 @@ class HexitecFem():
             self.hardware_busy = False
             self.flag_error("Farm Mode Config failed", str(e))
 
-    def setup_1_farm_node(self):
-        """Configure all data sent to same receiver."""
-        print("  setting up 1 farm node..")
-        node_ip = self.farm_target_1_ip[0]
-        node_mac = self.farm_target_1_mac[0]
-        node_port = self.farm_target_1_port[0]
+    def populate_lists(self, nodes):
+        """Spread entries of one list into 2 lists, of equal lengths.
 
-        # [print(f" ip:   {x}") for x in self.farm_target_1_ip]
-        # [print(f" mac:  {x}") for x in self.farm_target_1_mac]
-        # [print(f" port: {x}") for x in self.farm_target_1_port]
-        self.data_lane1.set_lut_mode_ip([node_ip])
-        self.data_lane2.set_lut_mode_ip([node_ip])
-        self.data_lane1.set_lut_mode_mac([node_mac])
-        self.data_lane2.set_lut_mode_mac([node_mac])
-        self.data_lane1.set_lut_mode_port([node_port])
-        self.data_lane2.set_lut_mode_port([node_port])
-        # time.sleep(2)
-
-    def setup_2_farm_nodes(self):
-        """Configure data sent to two receivers."""
-        print("   Setting up 2 farm nodes..")
-        node_ip1, node_ip2 = self.farm_target_1_ip[0], self.farm_target_1_ip[1]
-        node_mac1, node_mac2 = self.farm_target_1_mac[0], self.farm_target_1_mac[1]
-        node_port1, node_port2 = self.farm_target_1_port[0], self.farm_target_1_port[1]
-
-        # [print(f" ip:   {x}") for x in self.farm_target_1_ip]
-        # [print(f" mac:  {x}") for x in self.farm_target_1_mac]
-        # [print(f" port: {x}") for x in self.farm_target_1_port]
-        self.data_lane1.set_lut_mode_ip([node_ip1])
-        self.data_lane2.set_lut_mode_ip([node_ip2])
-        self.data_lane1.set_lut_mode_mac([node_mac1])
-        self.data_lane2.set_lut_mode_mac([node_mac2])
-        self.data_lane1.set_lut_mode_port([node_port1])
-        self.data_lane2.set_lut_mode_port([node_port2])
-        # time.sleep(2)
-
-    def setup_3_farm_nodes(self):
-        """Configure data sent to three receivers."""
-        print("   Setting up 3 farm nodes..")
-        node_ip1, node_ip2, node_ip3 = self.farm_target_1_ip[0], self.farm_target_1_ip[1], \
-            self.farm_target_1_ip[2]
-        node_mac1, node_mac2, node_mac3 = self.farm_target_1_mac[0], self.farm_target_1_mac[1], \
-            self.farm_target_1_mac[2]
-        node_port1, node_port2, node_port3 = self.farm_target_1_port[0], self.farm_target_1_port[1], \
-            self.farm_target_1_port[2]
-
-        # [print(f" ip:   {x}") for x in self.farm_target_1_ip]
-        # [print(f" mac:  {x}") for x in self.farm_target_1_mac]
-        # [print(f" port: {x}") for x in self.farm_target_1_port]
-        self.data_lane1.set_lut_mode_ip([node_ip1, node_ip3, node_ip2])
-        self.data_lane2.set_lut_mode_ip([node_ip2, node_ip1, node_ip3])
-        self.data_lane1.set_lut_mode_mac([node_mac1, node_mac3, node_mac2])
-        self.data_lane2.set_lut_mode_mac([node_mac2, node_mac1, node_mac3])
-        self.data_lane1.set_lut_mode_port([node_port1, node_port3, node_port2])
-        self.data_lane2.set_lut_mode_port([node_port2, node_port1, node_port3])
-        # time.sleep(2)
-
-    def setup_4_farm_nodes(self):
-        """Configure data sent to two receivers."""
-        print("   Setting up 4 farm nodes..")
-        node_ip1, node_ip2, node_ip3, node_ip4 = self.farm_target_1_ip[0], \
-            self.farm_target_1_ip[1], self.farm_target_1_ip[2], self.farm_target_1_ip[3]
-        node_mac1, node_mac2, node_mac3, node_mac4 = self.farm_target_1_mac[0], \
-            self.farm_target_1_mac[1], self.farm_target_1_mac[2], self.farm_target_1_mac[3]
-        node_port1, node_port2, node_port3, node_port4 = self.farm_target_1_port[0], \
-            self.farm_target_1_port[1], self.farm_target_1_port[2], self.farm_target_1_port[3]
-
-        # [print(f" ip:   {x}") for x in self.farm_target_1_ip]
-        # [print(f" mac:  {x}") for x in self.farm_target_1_mac]
-        # [print(f" port: {x}") for x in self.farm_target_1_port]
-        self.data_lane1.set_lut_mode_ip([node_ip1, node_ip3])
-        self.data_lane2.set_lut_mode_ip([node_ip2, node_ip4])
-        self.data_lane1.set_lut_mode_mac([node_mac1, node_mac3])
-        self.data_lane2.set_lut_mode_mac([node_mac2, node_mac4])
-        self.data_lane1.set_lut_mode_port([node_port1, node_port3])
-        self.data_lane2.set_lut_mode_port([node_port2, node_port4])
-        # time.sleep(2)
+        I.e. even length: [1, 2, 3, 4] -> [1, 3], [2, 4]
+        or uneven length: [1, 2, 3] -> [1, 3, 2], [2, 1, 3]"""
+        number_nodes = len(nodes)
+        original_number_nodes = number_nodes
+        if number_nodes % 2 == 1:
+            number_nodes = number_nodes * 2
+        lut1 = []
+        lut2 = []
+        for index in range(number_nodes):
+            i = index % original_number_nodes
+            if (index % 2) == 1:  # Odd
+                lut2.append(nodes[i])
+                # print(f" {index}: {nodes[i]} ->LUT2")
+            else:  # Even (includes 0..)
+                lut1.append(nodes[i])
+                # print(f" {index}: {nodes[i]} ->LUT1")
+        return lut1, lut2
 
     def connect(self):
         """Set up hardware connection."""
