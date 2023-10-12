@@ -1038,7 +1038,7 @@ class HexitecDAQ():
 
         # Enable live view for first node only
         live_view_selected = True
-
+        logging.debug("Sending configuration to %s FP(s)" % self.number_nodes)
         # Loop over node(s)
         for index in range(self.number_nodes):
             self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,

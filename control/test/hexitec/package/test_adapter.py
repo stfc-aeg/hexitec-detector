@@ -27,9 +27,7 @@ class DetectorAdapterTestFixture(object):
         self.options = {
             "fem":
                 """
-                server_ctrl_ip = 127.0.0.1,
                 camera_ctrl_ip = 127.0.0.1,
-                server_data_ip = 127.0.0.1,
                 camera_data_ip = 127.0.0.1
                 """
         }

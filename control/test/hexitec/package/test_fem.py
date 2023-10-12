@@ -17,7 +17,7 @@ from socket import error as socket_error
 from datetime import datetime
 
 if sys.version_info[0] == 3:  # pragma: no cover
-    from unittest.mock import Mock, call, patch
+    from unittest.mock import Mock, call, patch, mock_open
 else:                         # pragma: no cover
     from mock import Mock, call, patch
 
@@ -32,28 +32,12 @@ class FemTestFixture(object):
         self.options = {
             "fem":
                 """
-                server_ctrl_ip = 127.0.0.1,
-                camera_ctrl_ip = 127.0.0.1,
-                server_ctrl_port = 61649,
-                camera_ctrl_port = 61648,
-                farm_target_1_ip = 127.0.0.1,
-                farm_target_1_mac = 62:00:00:00:01:0C,
-                farm_target_1_port = 61649,
-                server_data_ip = 127.0.0.1,
-                camera_data_ip = 127.0.0.1
+                farm_mode = /some/config.json
                 """
         }
 
         self.config = {
-                "server_ctrl_ip": "127.0.0.1",
-                "camera_ctrl_ip": "127.0.0.1",
-                "server_ctrl_port": "61649",
-                "camera_ctrl_port": "61648",
-                "farm_target_1_ip": "127.0.0.1",
-                "farm_target_1_mac": "62:00:00:00:01:0C",
-                "farm_target_1_port": "61649",
-                "server_data_ip": "127.0.0.1",
-                "camera_data_ip": "127.0.0.1"
+                "farm_mode": "/some/config.json"
         }
 
         with patch("hexitec.HexitecDAQ.ParameterTree"):
@@ -78,6 +62,36 @@ class TestFem(unittest.TestCase):
     def setUp(self):
         """Set up test fixture for each unit test."""
         self.test_fem = FemTestFixture()
+        farm_mode_json = {
+            "camera_ctrl_ip": "10.0.1.100",
+            "camera_ctrl_mac": "62:00:00:00:01:0A",
+            "server_ctrl_port": "61649",
+            "camera_ctrl_port": "61648",
+            "control_interface": "lo",
+            "control_lane": "1",
+            "data1_interface": "lo",
+            "data1_lane": "2",
+            "data2_interface": "lo",
+            "data2_lane": "3",
+            "farm_server_1_ip": "10.0.1.2",
+            "farm_server_1_mac": "5c:6f:69:f8:57:d0",
+            "farm_camera_1_ip": "10.0.1.101",
+            "farm_camera_1_mac": "62:00:00:00:01:0B",
+            "farm_server_2_ip": "10.0.1.3",
+            "farm_server_2_mac": "5c:6f:69:f8:a3:e0",
+            "farm_camera_2_ip": "10.0.1.102",
+            "farm_camera_2_mac": "62:00:00:00:01:0C",
+            "farm_target_ip": "10.0.1.2 10.0.1.3",
+            "farm_target_mac": "5c:6f:69:f8:57:d0 5c:6f:69:f8:a3:e0",
+            "farm_target_port": "61649 61649"
+            }
+        self.test_fem.fem.verify_parameters = False
+        with patch('json.load') as mock_load:
+            with patch("builtins.open", mock_open(read_data="data")):
+                # self.test_fem.fem.verify_farm_mode_parameters = Mock()
+                mock_load.return_value = farm_mode_json
+                self.test_fem.fem.prepare_farm_mode()
+        self.test_fem.fem.verify_parameters = True
 
     def tearDown(self):
         """Tear down test fixture after each unit test."""
@@ -106,7 +120,7 @@ class TestFem(unittest.TestCase):
         datestamp = self.test_fem.fem.create_timestamp()
         log_messages = [(datestamp, 'Initialised OK.')]
         self.test_fem.fem.last_message_timestamp = "something"
-        self.test_fem.fem.get_log_messsages("")
+        self.test_fem.fem.get_log_messages("")
         # Test part of timestamp, as milliseconds will not agree anyway
         assert self.test_fem.fem.log_messages[0][:-4] == log_messages[0][:-4]
         assert self.test_fem.fem.log_messages[0][1] == log_messages[0][1]
@@ -115,13 +129,13 @@ class TestFem(unittest.TestCase):
         """Test the function displays all messages."""
         datestamp = self.test_fem.fem.create_timestamp()
         log_messages = [(datestamp, 'Initialised OK.')]
-        self.test_fem.fem.get_log_messsages("")
+        self.test_fem.fem.get_log_messages("")
         # Test part of timestamp, as milliseconds will not agree anyway
         assert self.test_fem.fem.log_messages[0][:-4] == log_messages[0][:-4]
         assert self.test_fem.fem.log_messages[0][1] == log_messages[0][1]
 
     # TODO Update when Hardware available to test firmware info
-    def test_read_sensors_working_ok(self):
+    def test_read_sensorsworking_ok(self):
         """Test the read_sensors function works."""
         with patch('hexitec.HexitecFem.RdmaUDP'):
             self.test_fem.fem.vsr_addr = 144
@@ -206,33 +220,60 @@ class TestFem(unittest.TestCase):
     #         self.test_fem.fem.poll_sensors()
     #         mock_loop.instance().call_later.assert_called_with(3.0, self.test_fem.fem.poll_sensors)
 
-    def test_connect_hardware_fails(self):
-        """Test that connecting with hardware handles failure."""
+    def test_connect_hardware_already_connected_fails(self):
+        """Test that connecting with connection already established handles failure."""
         self.test_fem.fem.hardware_connected = True
-        self.test_fem.fem.connect_hardware("test")
-        assert self.test_fem.fem._get_status_error() == "Error: Connection already established"
+        self.test_fem.fem.connect_hardware()
+        assert self.test_fem.fem._get_status_error() == "Connection Error: Connection already established"
 
     def test_connect_hardware_handles_Exception(self):
         """Test that connecting with hardware handles failure."""
-        self.test_fem.fem.prepare_hardware = Mock(side_effect = Exception(""))
-        self.test_fem.fem.connect_hardware("test")
-        assert self.test_fem.fem._get_status_error() == "Camera connection"
+        self.test_fem.fem.configure_camera_interfaces = Mock(side_effect=HexitecFemError(""))
+        self.test_fem.fem.connect_hardware()
+        assert self.test_fem.fem._get_status_error() == "Connection Error"
 
-    def test_connect_hardware_from_cold(self):
-        """Test connecting with hardware from cold works (setup Control interface)."""
-        self.test_fem.fem.prepare_hardware = Mock()
+    def test_prepare_farm_mode(self):
+        """Test that function works okay."""
+        self.test_fem.fem.load_farm_mode_json_parameters = Mock()
+        self.test_fem.fem.verify_farm_mode_parameters = Mock()
+        rc = self.test_fem.fem.prepare_farm_mode()
+        self.test_fem.fem.load_farm_mode_json_parameters.assert_called()
+        self.test_fem.fem.verify_farm_mode_parameters.assert_called()
+        assert rc is True
+
+    def test_prepare_farm_mode_handles_error(self):
+        """Test that function handles bad json parameter(s)."""
+        self.test_fem.fem.load_farm_mode_json_parameters = Mock(side_effect=HexitecFemError(""))
+        rc = self.test_fem.fem.prepare_farm_mode()
+        assert rc is False
+
+    def test_verify_farm_mode_parameters(self):
+        """Test that Farm mode parameters can be verified."""
+        self.test_fem.fem.load_farm_mode_json_parameters = Mock()
+        self.test_fem.fem.verify_farm_mode_parameters("lo")
+        ip = '127.0.0.1'
+        mac = '00:00:00:00:00:00'
+        assert self.test_fem.fem.server_ctrl_ip == ip
+        assert self.test_fem.fem.server_ctrl_mac == mac
+        assert self.test_fem.fem.number_nodes == 2
+
+    def test_prepare_hardware(self):
+        """Test prepare hardware work OK."""
+        self.test_fem.fem.prepare_farm_mode = Mock(return_value=True)
+        self.test_fem.fem.configure_camera_interfaces = Mock()
         with patch("hexitec.HexitecFem.RdmaUDP"):
-            self.test_fem.fem.connect_hardware("test")
-            assert self.test_fem.fem.hardware_busy is True
-            self.test_fem.fem.prepare_hardware.assert_called()
+            success = self.test_fem.fem.prepare_hardware()
+            assert success is True
 
-    def test_connect_hardware_working_called_not_cold(self):
-        """Test connecting with hardware not from cold works (Control interface already setup)."""
-        self.test_fem.fem.cold_start = False
+    def test_prepare_hardware_handles_error(self):
+        """Test prepare hardware handle error(s)."""
+        self.test_fem.fem.prepare_farm_mode = Mock(return_value=False)
+        self.test_fem.fem.power_up_modules = Mock()
         with patch("hexitec.HexitecFem.RdmaUDP"):
-            self.test_fem.fem.connect_hardware("test")
-            assert self.test_fem.fem.hardware_connected is True
+            success = self.test_fem.fem.prepare_hardware()
+            assert success is False
 
+    # def test
     def test_initialise_hardware_fails_if_not_connected(self):
         """Test function fails when no connection established."""
         self.test_fem.fem.initialise_hardware()
@@ -334,7 +375,7 @@ class TestFem(unittest.TestCase):
     def test_collect_data_fails_without_connection(self):
         """Test function fails without established hardware connection."""
         self.test_fem.fem.hardware_connected = False
-        self.test_fem.fem.collect_data("test")
+        self.test_fem.fem.collect_data()
         error = "Failed to collect data: No connection established"
         assert self.test_fem.fem._get_status_error() == error
 

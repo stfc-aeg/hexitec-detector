@@ -200,8 +200,9 @@ class Hexitec():
         self.fem = None
         for key, value in options.items():
             if "fem" in key:
+                # print(f"* value = {value}")
                 fem_info = value.split(',')
-                # print(f" ({type(fem_info)}) fem_info: {fem_info}")
+                # print(f" ** ({type(fem_info)}) fem_info: {fem_info}")
                 fem_info = [(i.split('=')[0], i.split('=')[1])
                             for i in fem_info]
                 fem_dict = {fem_key.strip(): fem_value.strip()
@@ -214,7 +215,7 @@ class Hexitec():
         if not self.fem:
             logging.error("Using default HexitecFem values!")
             fem_dict = {
-                "server_ctrl_ip": defaults.fem["server_ctrl_ip"],
+                "control_interface": defaults.fem["control_interface"],
                 "camera_ctrl_ip": defaults.fem["camera_ctrl_ip"]
             }
             self.fem = HexitecFem(
@@ -650,10 +651,18 @@ class Hexitec():
 
     def commit_configuration(self, msg):
         """Push HexitecDAQ's 'config/' ParameterTree settings into FP's plugins."""
-        self.daq.commit_configuration()
-        # Clear cold initialisation if first config commit
-        if self.cold_initialisation:
-            self.cold_initialisation = False
+        try:
+            if self.fem.prepare_hardware():
+                print(f"[E SUCCESS! In adp.commit_configuration, fem.prepare_hardware returned True")
+                self.daq.commit_configuration()
+                # Clear cold initialisation if first config commit
+                if self.cold_initialisation:
+                    self.cold_initialisation = False
+            else:
+                print(f"[E FAIL! In adp.commit_configuration, fem.prepare_hardware returned False")
+        except Exception as e:
+            # self.fem.flag_error(str(e))
+            print(f"\n e {str(e)}")
 
     def hv_on(self, msg):
         """Switch HV on."""
@@ -711,6 +720,6 @@ class HexitecDetectorDefaults():
         self.save_file = "a"
         self.number_frames = 10
         self.fem = {
-            "server_ctrl_ip": "10.0.2.2",
-            "camera_ctrl_ip": "10.0.2.1"
+            "control_interface": "enp94s0f2",
+            "camera_ctrl_ip": "10.0.3.1"
         }

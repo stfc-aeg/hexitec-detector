@@ -29,15 +29,7 @@ class DAQTestFixture(object):
         self.options = {
             "fem":
                 """
-                server_ctrl_ip = 127.0.0.1,
-                camera_ctrl_ip = 127.0.0.1,
-                server_ctrl_port = 61649,
-                camera_ctrl_port = 61648,
-                farm_target_1_ip = 127.0.0.1,
-                farm_target_1_mac = 62:00:00:00:01:0C,
-                farm_target_1_port = 61649,
-                server_data_ip = 127.0.0.1,
-                camera_data_ip = 127.0.0.1
+                farm_mode = /some/config.json
                 """
         }
         self.file_dir = "/fake/directory/"

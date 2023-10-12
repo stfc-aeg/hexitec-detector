@@ -13,9 +13,11 @@ import time
 from datetime import datetime
 import logging
 import configparser
+import psutil
+from json.decoder import JSONDecodeError
+import json
 import os
 
-# # # from hexitec.test_ui.RdmaUDP import RdmaUDP
 from RdmaUdp import *
 from udpcore.UdpCore import *
 from boardcfgstatus.BoardCfgStatus import *
@@ -70,58 +72,32 @@ class HexitecFem():
         :param parent: Reference to adapter object
         :param config: dictionary of configuration settings
         """
+        # Construct path to hexitec source code
+        cwd = os.getcwd()
+        index = cwd.rfind("control")
+        self.base_path = cwd[:index]
+
         # Give access to parent class (Hexitec)
         self.parent = parent
         self.x10g_rdma = None
 
         # 10G RDMA IP addresses
-        self.server_ctrl_ip = config.get("server_ctrl_ip")
-        self.camera_ctrl_ip = config.get("camera_ctrl_ip")
-        self.server_ctrl_mac = config.get("server_ctrl_mac")
-        self.camera_ctrl_mac = config.get("camera_ctrl_mac")
-        self.server_ctrl_port = int(config.get("server_ctrl_port"))
-        self.camera_ctrl_port = int(config.get("camera_ctrl_port"))
-        self.control_interface_name = config.get("control_interface_name")
-        self.control_qsfp_idx = int(config.get("control_qsfp_idx", 1))
-        self.control_lane = int(config.get("control_lane", 1))
-        self.data1_interface_name = config.get("data1_interface_name")
-        self.data1_qsfp_idx = int(config.get("data1_qsfp_idx", 1))
-        self.data1_lane = int(config.get("data1_lane", 2))
-        self.data2_interface_name = config.get("data2_interface_name")
-        self.data2_qsfp_idx = int(config.get("data2_qsfp_idx", 1))
-        self.data2_lane = int(config.get("data2_lane", 3))
+        self.server_ctrl_ip = None
+        self.server_ctrl_mac = None
+        self.server_ctrl_ip = "10.0.1.1"
+        self.camera_ctrl_ip = "10.0.1.100"
+        self.server_ctrl_port = 61649
+        self.camera_ctrl_port = 61648
 
-        src_dst_port_int = (self.server_ctrl_port << 16) + self.camera_ctrl_port
-        self.src_dst_port = src_dst_port_int
+        self.farm_mode_prepared = False
+        self.farm_mode_file = config.get("farm_mode", None)
 
-        self.farm_server_1_ip = config.get("farm_server_1_ip")
-        self.farm_server_1_mac = config.get("farm_server_1_mac")
-        self.farm_camera_1_ip = config.get("farm_camera_1_ip")
-        self.farm_camera_1_mac = config.get("farm_camera_1_mac")
-        self.farm_server_2_ip = config.get("farm_server_2_ip")
-        self.farm_server_2_mac = config.get("farm_server_2_mac")
-        self.farm_camera_2_ip = config.get("farm_camera_2_ip")
-        self.farm_camera_2_mac = config.get("farm_camera_2_mac")
-
-        self.farm_target_1_ip = config.get("farm_target_1_ip")
-        self.farm_target_1_mac = config.get("farm_target_1_mac")
-        self.farm_target_1_port = config.get("farm_target_1_port")
-        # print(f" farm_target_1_port = {self.farm_target_1_port} ({type(self.farm_target_1_port)})")
-        # Farm mode parameters may contain one or more entries
-        self.farm_target_1_ip = self.extract_string_parameters(self.farm_target_1_ip)
-        self.farm_target_1_mac = self.extract_string_parameters(self.farm_target_1_mac)
-        self.farm_target_1_port = self.extract_int_parameters(self.farm_target_1_port)
-
-        # # Check Farm mode not mismatched configuration
-        # print(f"  FEM,  server_ctrl_ip = {self.server_ctrl_ip}")
-        # print(f"        camera_ctrl_ip = {self.camera_ctrl_ip}")
-        # print(f"        server_ctrl_mac = {self.server_ctrl_mac}")
-        # print(f"        camera_ctrl_mac = {self.camera_ctrl_mac}")
-        # print(f"        server_ctrl_port = {self.server_ctrl_port}")
-        # print(f"        control_interface_name = {self.control_interface_name}")
-        # print(f"        control_qsfp_idx = {self.control_qsfp_idx}")
-        # print(f"        control_lane = {self.control_lane}")
-        # print(f"        camera_ctrl_ip = {self.camera_ctrl_ip}")
+        # print(f"  cwd = {os.getcwd()}")
+        # print(f"  self.base_path = {self.base_path}")
+        # print(f"  old farm_mode_file = {self.farm_mode_file}")
+        self.farm_mode_file = self.base_path + self.farm_mode_file
+        # print(f"  new farm_mode_file = {self.farm_mode_file}")
+        print(f"  FEM.__init__ farm_mode_file = {self.farm_mode_file}")
 
         self.number_frames = 10
 
@@ -130,11 +106,6 @@ class HexitecFem():
         self.ignore_busy = False
 
         self.health = True
-
-        # Construct path to hexitec source code
-        cwd = os.getcwd()
-        index = cwd.rfind("control")
-        self.base_path = cwd[:index]
 
         # Variables supporting frames to duration conversion
         self.row_s1 = 135
@@ -225,7 +196,7 @@ class HexitecFem():
             "health": (lambda: self.health, None),
             "errors_history": (lambda: self.errors_history, None),
             'log_messages': (lambda: self.log_messages, None),
-            'last_message_timestamp': (lambda: self.last_message_timestamp, self.get_log_messsages),
+            'last_message_timestamp': (lambda: self.last_message_timestamp, self.get_log_messages),
             "status_message": (self._get_status_message, None),
             "status_error": (self._get_status_error, None),
             "number_frames": (self.get_number_frames, self.set_number_frames),
@@ -250,32 +221,100 @@ class HexitecFem():
         self.waited = 0.0
 
         self.param_tree = ParameterTree(param_tree_dict)
-        # Track any readback inaccurate value(s)
-        self.error_list = []
-        self.error_count = 0
 
         self.cold_start = True
         self.data_lane1 = None
         self.data_lane2 = None
+        self.number_nodes = None
+        self.verify_parameters = True
 
-        # Check Farm mode configuration not mismatched
-        num_ips = len(self.farm_target_1_ip)
-        num_macs = len(self.farm_target_1_mac)
-        num_ports = len(self.farm_target_1_port)
-        if (num_ips != num_macs) or (num_macs != num_ports):
-            self._set_status_message(f"Farm Mode: IP/MAC/port mismatch ({num_ips}/{num_macs}/{num_ports})")
+    def load_farm_mode_json_parameters(self):
+        """Load Farm Mode settings from file."""
+        try:
+            print(" isfile? {}".format(os.path.isfile(self.farm_mode_file)))
+            print(" current folder: {}".format(os.getcwd()))
+            print("[E file: {}".format(self.farm_mode_file))
+            if not self.farm_mode_file:
+                raise FileNotFoundError("File undefined")
 
-        self.number_nodes = num_ips
-        self.parent.set_number_nodes(self.number_nodes)
-        # print(f"        farm_target_1_ip = {self.farm_target_1_ip}")
-        # print(f"        farm_target_1_mac = {self.farm_target_1_mac}")
-        # print(f"        farm_target_1_port = {self.farm_target_1_port}")
-        # print("[E ")
-        # time.sleep(2)
+            with open(self.farm_mode_file, "r") as f:
+                config = json.load(f)
+                # print(f" -> config: {config} ({type(config)})")
+                self.camera_ctrl_ip = config.get("camera_ctrl_ip")
+                self.camera_ctrl_mac = config.get("camera_ctrl_mac")
+                self.server_ctrl_port = int(config.get("server_ctrl_port"))
+                self.camera_ctrl_port = int(config.get("camera_ctrl_port"))
+                self.control_interface = config.get("control_interface")
+                self.control_qsfp_idx = int(config.get("control_qsfp_idx", 1))  # Not from .json
+                self.control_lane = int(config.get("control_lane", 1))
+                self.data1_interface = config.get("data1_interface")
+                self.data1_lane = int(config.get("data1_lane", 2))
+                self.data2_interface = config.get("data2_interface")
+                self.data2_lane = int(config.get("data2_lane", 3))
+
+                src_dst_port_int = (self.server_ctrl_port << 16) + self.camera_ctrl_port
+                self.src_dst_port = src_dst_port_int
+
+                self.farm_server_1_ip = config.get("farm_server_1_ip")
+                self.farm_server_1_mac = config.get("farm_server_1_mac")
+                self.farm_camera_1_ip = config.get("farm_camera_1_ip")
+                self.farm_camera_1_mac = config.get("farm_camera_1_mac")
+                self.farm_server_2_ip = config.get("farm_server_2_ip")
+                self.farm_server_2_mac = config.get("farm_server_2_mac")
+                self.farm_camera_2_ip = config.get("farm_camera_2_ip")
+                self.farm_camera_2_mac = config.get("farm_camera_2_mac")
+
+                self.farm_target_ip = config.get("farm_target_ip")
+                self.farm_target_mac = config.get("farm_target_mac")
+                self.farm_target_port = config.get("farm_target_port")
+                # print(f" farm_target_port = {self.farm_target_port} ({type(self.farm_target_port)})")
+                # Farm mode parameters may contain one or more entries
+                # print(f"!!control_interface = {self.control_interface}")
+                # print("  produces: ", self.extract_interface_parameters(self.control_interface))
+                iface = self.control_interface
+                self.server_ctrl_ip, self.server_ctrl_mac = self.extract_interface_parameters(iface)
+                # print(f"  self.farm_target_ip = {self.extract_string_parameters(self.farm_target_ip)}")
+                # print(f"  self.farm_target_mac = {self.extract_string_parameters(self.farm_target_mac)}")
+                # print(f"  self.farm_target_port = {self.extract_int_parameters(self.farm_target_port)}")
+                self.farm_target_ip = self.extract_string_parameters(self.farm_target_ip)
+                self.farm_target_mac = self.extract_string_parameters(self.farm_target_mac)
+                self.farm_target_port = self.extract_int_parameters(self.farm_target_port)
+        except FileNotFoundError as e:
+            # print("Loading Farm Mode config:", str(e))
+            raise HexitecFemError("Farm Mode: No Config File: ", str(e))
+        except JSONDecodeError as e:
+            # print("Loading Farm Mode config - Bad json?", str(e))
+            raise HexitecFemError("Farm Mode: Bad json: ", str(e))
+        # except TypeError as e:
+        #     print(" Farm mode file not specified!")
+        #     raise HexitecFemError("Farm Mode: No Config File: ", str(e))
+        # import sys;sys.exit()
+
+    def extract_interface_parameters(self, iface):
+        """Extract IP, Mac addresses from specified interface."""
+        ip_address = None
+        mac_address = None
+        if_addrs = psutil.net_if_addrs()
+        interfaces = if_addrs.keys()
+        if iface not in interfaces:
+            raise HexitecFemError(f"Unknown interface: '{iface}'!")
+        # Sort through interface names, addresses
+        for interface_name, interface_addresses in if_addrs.items():
+            if iface in interface_name:
+                for interface_param in interface_addresses:
+                    if str(interface_param.family) == "AddressFamily.AF_INET":
+                        ip_address = str(interface_param.address)
+                    if str(interface_param.family) == "AddressFamily.AF_PACKET":
+                        mac_address = str(interface_param.address)
+        return ip_address, mac_address
 
     def extract_string_parameters(self, param):
         """Extract one or more string parameters."""
-        return param.split(" ")
+        try:
+            s = param.split(" ")
+        except AttributeError as e:
+            raise HexitecFemError(f"Undefined param '{param}'")
+        return s
 
     def extract_int_parameters(self, param):
         """Extract one or more int parameters."""
@@ -290,28 +329,78 @@ class HexitecFem():
         if self.x10g_rdma is not None:
             self.x10g_rdma.close()
 
+    def prepare_farm_mode(self):
+        """Load and verify farm mode parameters."""
+        configOK = True
+        try:
+            # print("[E pfm")
+            self.load_farm_mode_json_parameters()
+
+            # # Check Farm mode not mismatched configuration
+            # print(f"  FEM,* server_ctrl_ip = {self.server_ctrl_ip}")
+            # print(f"        camera_ctrl_ip = {self.camera_ctrl_ip}")
+            # print(f"      * server_ctrl_mac = {self.server_ctrl_mac}")
+            # print(f"        camera_ctrl_mac = {self.camera_ctrl_mac}")
+            # print(f"        server_ctrl_port = {self.server_ctrl_port}")
+            # print(f"        control_interface = {self.control_interface}")
+            # print(f"        control_qsfp_idx = {self.control_qsfp_idx}")
+            # print(f"        control_lane = {self.control_lane}")
+
+            # Avoid verification, if unit testing..
+            if self.verify_parameters:
+                iface = self.control_interface
+                self.verify_farm_mode_parameters(iface)
+            self.farm_mode_prepared = True
+        except HexitecFemError as e:
+            configOK = False
+            self.flag_error("Prepare Farm Mode Error", str(e))
+            # raise HexitecFemError(e)
+        return configOK
+
+
+    def verify_farm_mode_parameters(self, iface):
+        """Verify farm mode parameters correctly set."""
+        self.server_ctrl_ip, self.server_ctrl_mac = self.extract_interface_parameters(iface)
+
+        # print(f" vfmp,* server_ctrl_ip = {self.server_ctrl_ip}")
+        # print(f"        camera_ctrl_ip = {self.camera_ctrl_ip}")
+        # print(f"      * server_ctrl_mac = {self.server_ctrl_mac}")
+
+        # Check Farm mode configuration not mismatched
+        num_ips = len(self.farm_target_ip)
+        num_macs = len(self.farm_target_mac)
+        num_ports = len(self.farm_target_port)
+        if (num_ips != num_macs) or (num_macs != num_ports):
+            e = f"Farm Mode: IP/MAC/port mismatch ({num_ips}/{num_macs}/{num_ports})"
+            # self._set_status_message(e)
+            raise HexitecFemError(e)
+
+        logging.debug(" Updating number of nodes <-- !!!!!")
+        self.number_nodes = num_ips
+        self.parent.set_number_nodes(self.number_nodes)
+        print(f" HexitecFem [E number_nodes: {self.number_nodes} <-- !!!!!")
+        print(f" HexitecFem [E @ timestamp: {time.time()}")
+        # print(f"        farm_target_ip = {self.farm_target_ip}")
+        # print(f"        farm_target_mac = {self.farm_target_mac}")
+        # print(f"        farm_target_port = {self.farm_target_port}")
+        # print("[E ")
+        # time.sleep(2)
+
     def prepare_hardware(self, bDebug=False):
         """Prepare hardware connection."""
-        try:
-            print(" fem.prepare_hardware() called!")
-            # Configure control, data lines unless already configured
-            if self.cold_start:
-                self.configure_camera_interfaces()
-                self.cold_start = False
-            else:
-                self.connect()
-                # Power up the VSRs
-                print("calling power_up_modules() !");self.power_up_modules()
-        except socket_error as e:
-            raise socket_error("Failed to prepare hardware connection: %s" % e)
-        return
+        success = self.prepare_farm_mode()
+        if not success:
+            print("[E prepare_farm_mode() return False")
+        else:
+            print("[E prepare_farm_mode() return True True True")
+        return success
 
     def configure_camera_interfaces(self):
         """Configure IP, Mac and port parameters for detector's Control and Data interfaces."""
         Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
                                  rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
                                  multicast=True, debug=False)
-        # print(f"          Ctrl_lane,  iface_name={self.control_interface_name}")
+        # print(f"          Ctrl_lane,  iface_name={self.control_interface}")
         # print(f"                        qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
         # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
 
@@ -331,11 +420,11 @@ class HexitecFem():
         # print(f"       O  set_src_ip({self.camera_ctrl_ip})")
         # print("          set_src_ip(10.0.1.100)")
 
-        # print(f"        Ctrl_lane,  iface_name={self.control_interface_name}")
+        # print(f"        Ctrl_lane,  iface_name={self.control_interface}")
         # print(f"                      qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
         # print("        CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
         ctrl_lane = \
-            UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface_name,
+            UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface,
                     qsfp_idx=self.control_qsfp_idx, lane=self.control_lane)
 
         self._set_status_message("Set Control params..")
@@ -343,103 +432,95 @@ class HexitecFem():
 
     def configure_control_with_multicast(self, Hex2x6CtrlRdma, ctrl_lane):
         """Configure Control link's parameters."""
-        # print("  configure_control_with_multicast() O vs Hardcoded")
-        # print(f"   {self.server_ctrl_mac} {type(self.server_ctrl_mac)} vs 5c:6f:69:f8:6b:a0")
-        ctrl_lane.set_dst_mac(mac=self.server_ctrl_mac, response_check=False)
+        try:
+            # print("  configure_control_with_multicast() O vs Hardcoded")
+            # print(f"   {self.server_ctrl_mac} {type(self.server_ctrl_mac)} vs 5c:6f:69:f8:6b:a0")
+            ctrl_lane.set_dst_mac(mac=self.server_ctrl_mac, response_check=False)
 
-        # print(f"   {self.server_ctrl_ip} {type(self.server_ctrl_ip)} vs 10.0.1.1")
-        ctrl_lane.set_dst_ip(ip=self.server_ctrl_ip, response_check=False)
+            # print(f"   {self.server_ctrl_ip} {type(self.server_ctrl_ip)} vs 10.0.1.1")
+            ctrl_lane.set_dst_ip(ip=self.server_ctrl_ip, response_check=False)
 
-        # print(f"   {self.src_dst_port} {type(self.src_dst_port)} vs 0xF0D1F0D0")
-        ctrl_lane.set_src_dst_port(port=self.src_dst_port, response_check=False)
+            # print(f"   {self.src_dst_port} {type(self.src_dst_port)} vs 0xF0D1F0D0")
+            ctrl_lane.set_src_dst_port(port=self.src_dst_port, response_check=False)
 
-        # print(f"   {self.camera_ctrl_mac} {type(self.camera_ctrl_mac)} vs 62:00:00:00:01:0A")
-        ctrl_lane.set_src_mac(mac=self.camera_ctrl_mac, response_check=False)
+            # print(f"   {self.camera_ctrl_mac} {type(self.camera_ctrl_mac)} vs 62:00:00:00:01:0A")
+            ctrl_lane.set_src_mac(mac=self.camera_ctrl_mac, response_check=False)
 
-        # print(f"   {self.camera_ctrl_ip} {type(self.camera_ctrl_ip)} vs 10.0.1.100")
-        ctrl_lane.set_src_ip(ip=self.camera_ctrl_ip, response_check=False)
+            # print(f"   {self.camera_ctrl_ip} {type(self.camera_ctrl_ip)} vs 10.0.1.100")
+            ctrl_lane.set_src_ip(ip=self.camera_ctrl_ip, response_check=False)
 
-        # Close multicast connection and reconnect directly to Control interface
-        Hex2x6CtrlRdma.__del__()
+            # Close multicast connection and reconnect directly to Control interface
+            Hex2x6CtrlRdma.__del__()
 
-        Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
-                                 rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
-                                 multicast=False, debug=False)
-        # print(f"        Ctrl_lane,  iface_name={self.control_interface_name}")
-        # print(f"                      qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
-        # print("        CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
+            Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
+                                    rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
+                                    multicast=False, debug=False)
+            # print(f"        Ctrl_lane,  iface_name={self.control_interface}")
+            # print(f"                      qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
+            # print("        CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
 
-        ctrl_lane = \
-            UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface_name,
-                    qsfp_idx=self.control_qsfp_idx, lane=self.control_lane)
-        self._set_status_message("Setting Data Lane 1..")
-        IOLoop.instance().call_later(2, self.setup_data_lane_1, Hex2x6CtrlRdma, ctrl_lane)
+            ctrl_lane = \
+                UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface,
+                        qsfp_idx=self.control_qsfp_idx, lane=self.control_lane)
+            self._set_status_message("Setting Data Lane 1..")
+            IOLoop.instance().call_later(2, self.setup_data_lane_1, Hex2x6CtrlRdma, ctrl_lane)
+        except socket_error as e:
+            self.hardware_connected = False
+            self.hardware_busy = False
+            self.flag_error("Setup Control", str(e))
 
     def setup_data_lane_1(self, Hex2x6CtrlRdma, ctrl_lane):
         """Setup Data Lane 1's parameters."""
-        ctrl_lane.set_filtering(enable=True, response_check=True)
-        ctrl_lane.set_arp_timeout_length()
+        try:
+            ctrl_lane.set_filtering(enable=True, response_check=True)
+            ctrl_lane.set_arp_timeout_length()
 
-        # print(f"         Data 1_lane, iface_name={self.data1_interface_name}")
-        # print(f"                        qsfp_idx={self.data1_qsfp_idx} lane={self.data1_lane}")
-        # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=2)")
-        self.data_lane1 = \
-            UdpCore(Hex2x6CtrlRdma, ctrl_flag=False, iface_name=self.data1_interface_name,
-                    qsfp_idx=self.data1_qsfp_idx, lane=self.data1_lane)
-        self._set_status_message("Setting Data Lane 2..")
-        IOLoop.instance().call_later(2, self.setup_data_lane_2, Hex2x6CtrlRdma, ctrl_lane)
+            # print(f"[E       Data 1_lane, iface_name={self.data1_interface}")
+            # print(f"                        qsfp_idx={1} lane={self.data1_lane}")
+            # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=2)")
+            self.data_lane1 = \
+                UdpCore(Hex2x6CtrlRdma, ctrl_flag=False, iface_name=self.data1_interface,
+                        qsfp_idx=1, lane=self.data1_lane)
+            self._set_status_message("Setting Data Lane 2..")
+            IOLoop.instance().call_later(2, self.setup_data_lane_2, Hex2x6CtrlRdma, ctrl_lane)
+        except socket_error as e:
+            self.hardware_connected = False
+            self.hardware_busy = False
+            self.flag_error("Setup Data Lane 1", str(e))
 
     def setup_data_lane_2(self, Hex2x6CtrlRdma, ctrl_lane):
         """Setup Data Lane 2's parameters."""
-        # print(f"         Data 2_lane, iface_name={self.data2_interface_name}")
-        # print(f"                        qsfp_idx={self.data2_qsfp_idx} lane={self.data2_lane}")
-        # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=3)")
+        try:
+            # print(f"         Data 2_lane, iface_name={self.data2_interface}")
+            # print(f"                        qsfp_idx={1} lane={self.data2_lane}")
+            # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=3)")
 
-        self.data_lane2 = \
-            UdpCore(Hex2x6CtrlRdma, ctrl_flag=False, iface_name=self.data2_interface_name,
-                    qsfp_idx=self.data2_qsfp_idx, lane=self.data2_lane)
-        self._set_status_message("Configuring Farm Mode..")
-        IOLoop.instance().call_later(2, self.setup_farm_mode, Hex2x6CtrlRdma, ctrl_lane)
+            self.data_lane2 = \
+                UdpCore(Hex2x6CtrlRdma, ctrl_flag=False, iface_name=self.data2_interface,
+                        qsfp_idx=1, lane=self.data2_lane)
+            self._set_status_message("Configuring Farm Mode..")
+            IOLoop.instance().call_later(2, self.setup_farm_mode, Hex2x6CtrlRdma, ctrl_lane)
+        except socket_error as e:
+            self.hardware_connected = False
+            self.hardware_busy = False
+            self.flag_error("Setup Data Lane 2", str(e))
 
     def setup_farm_mode(self, Hex2x6CtrlRdma, ctrl_lane):
         """Configure data lanes for Farm Mode."""
         # Source = Camera, Destination: PC
         try:
-            # print("  setup_farm_mode() O vs Hardcoded")
-            # print(f"   d_1 {self.farm_server_1_ip} vs 10.0.1.2")
+            self.data_lane1.set_src_dst_port(port=self.src_dst_port)#
             self.data_lane1.set_dst_ip(ip=self.farm_server_1_ip)
-
-            # print(f"   d_1 {self.farm_server_1_mac} vs 5c:6f:69:f8:57:d0")
             self.data_lane1.set_dst_mac(mac=self.farm_server_1_mac)
-
-            # print(f"   d_1 {self.farm_camera_1_ip} vs 10.0.1.101")
             self.data_lane1.set_src_ip(ip=self.farm_camera_1_ip)
-
-            # print(f"   d_1 {self.farm_camera_1_mac} vs 62:00:00:00:01:0B")
             self.data_lane1.set_src_mac(mac=self.farm_camera_1_mac)
-
-            # print(f"   d_1 O  set_src_dst_port({self.src_dst_port})")
-            # print("          set_src_dst_port(0xF0D1F0D0)")
             self.data_lane1.set_src_dst_port(port=self.src_dst_port)
 
-            # print(f"---d_2 {self.farm_server_2_ip} vs 10.0.1.3")
             self.data_lane2.set_dst_ip(ip=self.farm_server_2_ip)
-
-            # print(f"   d_2 {self.farm_server_2_mac} vs 5c:6f:69:f8:a3:e0")
             self.data_lane2.set_dst_mac(mac=self.farm_server_2_mac)
-
-            # print(f"   d_2 {self.farm_camera_2_ip} vs 10.0.1.102")
             self.data_lane2.set_src_ip(ip=self.farm_camera_2_ip)
-
-            # print(f"   d_2 {self.farm_camera_2_mac} vs 62:00:00:00:01:0C")
             self.data_lane2.set_src_mac(mac=self.farm_camera_2_mac)
-
-            # print(f"       O  set_src_dst_port({self.src_dst_port})")
-            # print("          set_src_dst_port(0xF0D1F0D0)")
             self.data_lane1.set_src_dst_port(port=self.src_dst_port)
-
-            # print("[E Configuring Farm Mode\n - Nodes: {self._nodes}")
-            # time.sleep(2)
 
             # Configure farm mode node(s), determine how many LUT entries to use
             if (self.number_nodes % 2 == 1):
@@ -449,9 +530,9 @@ class HexitecFem():
                 # Even number of nodes
                 lut_entries = self.number_nodes // 2
 
-            ip_lut1, ip_lut2 = self.populate_lists(self.farm_target_1_ip)
-            mac_lut1, mac_lut2 = self.populate_lists(self.farm_target_1_mac)
-            port_lut1, port_lut2 = self.populate_lists(self.farm_target_1_port)
+            ip_lut1, ip_lut2 = self.populate_lists(self.farm_target_ip)
+            mac_lut1, mac_lut2 = self.populate_lists(self.farm_target_mac)
+            port_lut1, port_lut2 = self.populate_lists(self.farm_target_port)
 
             self.data_lane1.set_lut_mode_ip(ip_lut1)
             self.data_lane2.set_lut_mode_ip(ip_lut2)
@@ -471,7 +552,8 @@ class HexitecFem():
 
             self.connect()
             # Power up the VSRs
-            print("calling power_up_modules() !");self.power_up_modules()
+            # print("calling power_up_modules() !")
+            self.power_up_modules()
         except socket_error as e:
             self.hardware_connected = False
             self.hardware_busy = False
@@ -633,17 +715,35 @@ class HexitecFem():
     def connect_hardware(self, msg=None):
         """Establish Hardware connection."""
         try:
+            if not self.farm_mode_prepared:
+                # print("Go to jail without passing Go")
+                self.parent.software_state = "Cold"
+                # time.sleep(3)
+                return
             if self.hardware_connected:
                 raise HexitecFemError("Connection already established")
             else:
                 self._set_status_error("")
             self.hardware_busy = True
-            self.prepare_hardware()
+            self.hardware_connected = True
+            # Configure control, data lines unless already configured
+            if self.cold_start:
+                self.configure_camera_interfaces()
+                self.cold_start = False
+            else:
+                self.connect()
+                # Power up the VSRs
+                # print("calling power_up_modules() !")
+                self.power_up_modules()
         except HexitecFemError as e:
-            self.flag_error("Error", str(e))
+            self.flag_error("Connection Error", str(e))
+            self.hardware_connected = False
+            self.hardware_busy = False
+        except socket.error as e:
+            self.flag_error("Connection Error", str(e))
             self._set_status_message("Is the camera powered?")
-        except Exception as e:
-            self.flag_error("Camera connection", str(e))
+            self.hardware_connected = False
+            self.hardware_busy = False
 
     def power_up_modules(self):
         """Power up and enable VSRs."""
@@ -707,6 +807,7 @@ class HexitecFem():
             self._set_status_message("Waiting {} seconds (VSRs booting)".format(powering_delay))
             IOLoop.instance().call_later(powering_delay, self.cam_connect)
         except socket_error as e:
+            self.flag_error("Power up modules Error", str(e))
             self.hardware_connected = False
             self.hardware_busy = False
             raise HexitecFemError(e)
@@ -2069,7 +2170,7 @@ class HexitecFem():
         """Returns timestamp of now."""
         return '{}'.format(datetime.now().strftime(HexitecFem.DATE_FORMAT))
 
-    def get_log_messsages(self, last_message_timestamp):
+    def get_log_messages(self, last_message_timestamp):
         """This method gets the log messages that are appended to the log message deque by the
         log function, and adds them to the log_messages variable. If a last message timestamp is
         provided, it will only get the subsequent log messages if there are any, otherwise it will
