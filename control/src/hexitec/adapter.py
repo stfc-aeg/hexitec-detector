@@ -571,6 +571,12 @@ class Hexitec():
         self.total_delay = 0
         self.number_frames_to_request = self.number_frames
 
+        # Issue reset to histogram
+        command = "config/histogram/reset_histograms"
+        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+        request.body = "{}".format(1)
+        self.adapters["fp"].put(command, request)
+
         self.daq_target = time.time()
         self.daq.prepare_daq(self.number_frames)
         # Acquisition starts here

@@ -6,7 +6,7 @@
     "shared_buffer_name": "HexitecFrameBuffer2",
     "rx_address": "10.0.1.3",
     "rx_ports": "61649",
-    "max_buffer_mem": 60000000000001,
+    "max_buffer_mem": 8000000000,
     "decoder_path": "lib/",
     "decoder_type": "Hexitec",
     "decoder_config": {
