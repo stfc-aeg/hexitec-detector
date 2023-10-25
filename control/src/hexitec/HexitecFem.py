@@ -218,7 +218,6 @@ class HexitecFem():
             "vcal_enabled": (lambda: self.vcal_enabled, None),
             "vsr_sync_list": (lambda: self.sync_list, None)
         }
-        self.waited = 0.0
 
         self.param_tree = ParameterTree(param_tree_dict)
 
@@ -231,9 +230,6 @@ class HexitecFem():
     def load_farm_mode_json_parameters(self):
         """Load Farm Mode settings from file."""
         try:
-            print(" isfile? {}".format(os.path.isfile(self.farm_mode_file)))
-            print(" current folder: {}".format(os.getcwd()))
-            print("[E file: {}".format(self.farm_mode_file))
             if not self.farm_mode_file:
                 raise FileNotFoundError("File undefined")
 
@@ -288,7 +284,6 @@ class HexitecFem():
         # except TypeError as e:
         #     print(" Farm mode file not specified!")
         #     raise HexitecFemError("Farm Mode: No Config File: ", str(e))
-        # import sys;sys.exit()
 
     def extract_interface_parameters(self, iface):
         """Extract IP, Mac addresses from specified interface."""
@@ -378,8 +373,6 @@ class HexitecFem():
         logging.debug(" Updating number of nodes <-- !!!!!")
         self.number_nodes = num_ips
         self.parent.set_number_nodes(self.number_nodes)
-        print(f" HexitecFem [E number_nodes: {self.number_nodes} <-- !!!!!")
-        print(f" HexitecFem [E @ timestamp: {time.time()}")
         # print(f"        farm_target_ip = {self.farm_target_ip}")
         # print(f"        farm_target_mac = {self.farm_target_mac}")
         # print(f"        farm_target_port = {self.farm_target_port}")
@@ -389,10 +382,10 @@ class HexitecFem():
     def prepare_hardware(self, bDebug=False):
         """Prepare hardware connection."""
         success = self.prepare_farm_mode()
-        if not success:
-            print("[E prepare_farm_mode() return False")
-        else:
-            print("[E prepare_farm_mode() return True True True")
+        # if not success:
+        #     print("[E prepare_farm_mode() return False")
+        # else:
+        #     print("[E prepare_farm_mode() return True True True")
         return success
 
     def configure_camera_interfaces(self):
@@ -954,8 +947,6 @@ class HexitecFem():
             print("   Register 0x8{}, VSR2: {} VSR1: {}".format(index, vsr2, vsr1))
         print("__________________________________________________________")
 
-    # TODO: Reconstruct when data readout available
-    # @run_on_executor(executor='thread_executor')
     def acquire_data(self):
         """Acquire data, poll fem for completion and read out fem monitors."""
         try:
@@ -971,6 +962,9 @@ class HexitecFem():
             logging.debug(f"Set number frames to: {self.number_frames}")
             self.set_nof_frames(self.number_frames)
 
+            # How to convert datetime object to float?
+            self.acquire_timestamp = time.time()    # Utilised by adapter's watchdog
+
             # input("Press enter to enable data (200 ms)")
             logging.debug("Enable data")
             self.data_en(enable=True)
@@ -980,23 +974,16 @@ class HexitecFem():
             logging.debug("Disable data")
             self.data_en(enable=False)
 
-            # How to convert datetime object to float?
-            self.acquire_timestamp = time.time()    # Utilised by adapter's watchdog
-
-            self.waited = 0.1
             IOLoop.instance().call_later(0.1, self.check_acquire_finished)
         except Exception as e:
             self.flag_error("Failed to start acquire_data", str(e))
 
     def check_acquire_finished(self):
         """Check whether all data transferred, until completed or cancelled by user."""
-        # print(" \n fem.acquire_data()")
         try:
-            # delay = 0.10
-            # reply = 0
             # Stop if user clicked on Cancel button
             if (self.stop_acquisition):
-                logging.debug(" -=-=-=- HexitecFem told to cancel acquisition -=-=-=-")
+                logging.debug("Acquisition manually canceled")
                 self.acquire_data_completed()
                 return
             else:
@@ -1009,22 +996,13 @@ class HexitecFem():
                 # print(f"   *** all_data_sent: {self.all_data_sent:X} status: {status:X}")
                 if self.all_data_sent == 0:
                     # print(" *** Awaiting data.. ***")
-                    IOLoop.instance().call_later(0.5, self.check_acquire_finished)
+                    IOLoop.instance().call_later(0.1, self.check_acquire_finished)
                     return
                 else:
                     # print(" *** Data Received! ***" )
                     # Original code resumes here: #
                     self.acquire_data_completed()
                     return
-                # else:
-                #     self.waited += delay
-                #     if self.duration_enabled:
-                #         self.duration_remaining = round((self.duration - self.waited), 1)
-                #         if self.duration_remaining < 0:
-                #             self.duration_remaining = 0
-                #         # print("\t dur'n_remain'g: {} secs".format(self.duration_remaining))
-                #     IOLoop.instance().call_later(delay, self.check_acquire_finished)
-                #     return
         except HexitecFemError as e:
             self.flag_error("Failed to collect data", str(e))
         except Exception as e:
@@ -1051,18 +1029,6 @@ class HexitecFem():
             self.acquisition_completed = True
             self._set_status_message("User cancelled collection")
             return
-        else:
-            waited = str(round(self.waited, 3))
-            logging.debug("Capturing {} frames took {} s".format(str(self.number_frames), waited))
-            duration = "Requested {} frame(s), took {} seconds".format(self.number_frames, waited)
-            self._set_status_message(duration)
-            # Save duration to separate parameter tree entry:
-            self.acquisition_duration = duration
-
-        logging.debug("Acquisition Completed, enable signal cleared")
-
-        # Fem finished sending data/monitoring info, clear hardware busy
-        self.hardware_busy = False
 
         # Workout exact duration of fem data transmission:
         self.acquire_time = float(self.acquire_stop_time.split("_")[1]) \
@@ -1070,6 +1036,17 @@ class HexitecFem():
         start_ = datetime.strptime(self.acquire_start_time, HexitecFem.DATE_FORMAT)
         stop_ = datetime.strptime(self.acquire_stop_time, HexitecFem.DATE_FORMAT)
         self.acquire_time = (stop_ - start_).total_seconds()
+
+        logging.debug("Capturing {} frames took {} seconds".format(str(self.number_frames), self.acquire_time))
+        duration = "Requested {} frame(s), took {} seconds".format(self.number_frames, self.acquire_time)
+        self._set_status_message(duration)
+        # Save duration to separate parameter tree entry:
+        self.acquisition_duration = duration
+
+        logging.debug("Acquisition Completed, enable signal cleared")
+
+        # Fem finished sending data/monitoring info, clear hardware busy
+        self.hardware_busy = False
 
         # Wrap up by updating GUI
 
