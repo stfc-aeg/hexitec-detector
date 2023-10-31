@@ -13,16 +13,12 @@ namespace FrameProcessor
 {
   const std::string HexitecReorderPlugin::CONFIG_DROPPED_PACKETS    = "packets_lost";
   const std::string HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT     = "sensors_layout";
-  const std::string HexitecReorderPlugin::CONFIG_RESET_FRAME_NUMBER = "reset_frame_number";
-  const std::string HexitecReorderPlugin::CONFIG_FRAME_NUMBER       = "frame_number";
 
   /**
    * The constructor sets up logging used within the class.
    */
   HexitecReorderPlugin::HexitecReorderPlugin() :
-      packets_lost_(0),
-      frame_number_(0),
-      reset_frame_number_(false)
+      packets_lost_(0)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecReorderPlugin");
@@ -73,8 +69,6 @@ namespace FrameProcessor
    * 
    * - sensors_layout_str_    <=> sensors_layout
    * - packets_lost_          <=> dropped_packets
-   * - reset_frame_number_    <=> reset_frame_number
-   * - frame_number_          <=> frame_number
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -93,17 +87,6 @@ namespace FrameProcessor
       packets_lost_ = config.get_param<unsigned int>(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS);
     }
 
-    if (config.has_param(HexitecReorderPlugin::CONFIG_RESET_FRAME_NUMBER))
-    {
-      reset_frame_number_ = config.get_param<bool>(HexitecReorderPlugin::CONFIG_RESET_FRAME_NUMBER);
-    }
-
-    if (config.has_param(HexitecReorderPlugin::CONFIG_FRAME_NUMBER))
-    {
-      frame_number_ = config.get_param<unsigned int>(HexitecReorderPlugin::CONFIG_FRAME_NUMBER);
-      LOG4CXX_DEBUG_LEVEL(1, logger_, "Reset frame_number to be " << frame_number_);
-    }
-
   }
 
   void HexitecReorderPlugin::requestConfiguration(OdinData::IpcMessage& reply)
@@ -112,8 +95,6 @@ namespace FrameProcessor
   	std::string base_str = get_name() + "/";
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_DROPPED_PACKETS, packets_lost_);
-    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_RESET_FRAME_NUMBER, reset_frame_number_);
-    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_FRAME_NUMBER, frame_number_);
   }
 
   /**
@@ -127,8 +108,6 @@ namespace FrameProcessor
     LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecReorderPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/packets_lost", packets_lost_);
-    status.set_param(get_name() + "/reset_frame_number", reset_frame_number_);
-    status.set_param(get_name() + "/frame_number", frame_number_);
   }
 
   /**
@@ -174,19 +153,7 @@ namespace FrameProcessor
     Hexitec::FrameHeader* hdr_ptr = static_cast<Hexitec::FrameHeader*>(frame->get_data_ptr());
     this->process_lost_packets(frame);
 
-    //TODO: Interrim fix: (until F/W amended)
-    if (reset_frame_number_)
-    {
-      //	Changes header's frame number.
-      hdr_ptr->frame_number = frame_number_;
-      // Change frame's frame number otherwise FP's will erroneously
-      //	display actual Hardware frame number
-      frame->set_frame_number(frame_number_);
-    }
-    else
-    {
-      frame->set_frame_number(hdr_ptr->frame_number);
-    }
+    frame->set_frame_number(hdr_ptr->frame_number);
 
     LOG4CXX_DEBUG_LEVEL(3, logger_, "Raw frame number: " << hdr_ptr->frame_number);
 
@@ -256,15 +223,13 @@ namespace FrameProcessor
       output_ptr = raw_frame->get_data_ptr();
 
       // Turn unsigned short raw pixel data into unsigned short frame
-      copy_pixels_without_reordering(static_cast<unsigned short *>(input_ptr),
-        static_cast<unsigned short *>(output_ptr));
+      memcpy(static_cast<unsigned short *>(output_ptr), static_cast<unsigned short *>(input_ptr),
+        image_pixels_ * sizeof(short));
 
       LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing raw_frames dataset, frame number: " <<
         raw_frame->get_frame_number());
       this->push(raw_frame);
 
-      // Manually update frame_number (until fixed in firmware)
-      frame_number_++;
     }
     catch (const std::exception& e)
     {
@@ -291,26 +256,9 @@ namespace FrameProcessor
    */
   void HexitecReorderPlugin::convert_pixels_without_reordering(unsigned short *in, float *out)
   {
-    int index = 0;
     for (int i=0; i<image_pixels_; i++)
     {
       // Do not reorder pixels:
-      out[i] = (float)in[i];
-    }
-  }
-
-  /**
-   * Convert an image's pixels from unsigned short to unsigned short data type.
-   *
-   * \param[in] in - Pointer to the incoming image data.
-   * \param[in] out - Pointer to the allocated memory where the converted image is written.
-   *
-   */
-  void HexitecReorderPlugin::copy_pixels_without_reordering(unsigned short *in, unsigned short *out)
-  {
-    int index = 0;
-    for (int i=0; i<image_pixels_; i++)
-    {
       out[i] = (float)in[i];
     }
   }

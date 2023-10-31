@@ -94,12 +94,6 @@ namespace FrameProcessor
       /** Packet loss counter **/
       int packets_lost_;
   
-      // Should frame number be reset before each new acquisition?
-      bool reset_frame_number_;
-      /** Overwrite UDP frame number until firmware resets
-       * it before each acquisition **/
-      uint32_t frame_number_;
-
       int fem_pixels_per_rows_;
       int fem_pixels_per_columns_;
       int fem_total_pixels_;

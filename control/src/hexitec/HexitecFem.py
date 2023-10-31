@@ -108,10 +108,10 @@ class HexitecFem():
         self.health = True
 
         # Variables supporting frames to duration conversion
-        self.row_s1 = 135
+        self.row_s1 = 1
         self.s1_sph = 1
-        self.sph_s2 = 5
-        self.frame_rate = 1589.34   # Corresponds to the above three settings
+        self.sph_s2 = 1
+        self.frame_rate = 9118.87   # Corresponds to the above three settings
         self.duration = 1
         self.duration_enabled = False
         self.duration_remaining = 0
@@ -951,6 +951,7 @@ class HexitecFem():
         """Acquire data, poll fem for completion and read out fem monitors."""
         try:
             logging.info("Initiate Data Capture")
+            self.acquire_time = 0
             self.acquire_start_time = self.create_timestamp()
 
             logging.debug("Reset frame number")
@@ -983,7 +984,7 @@ class HexitecFem():
         try:
             # Stop if user clicked on Cancel button
             if (self.stop_acquisition):
-                logging.debug("Acquisition manually canceled")
+                logging.debug("Manual cancellation initiated")
                 self.acquire_data_completed()
                 return
             else:

@@ -234,8 +234,6 @@ namespace FrameProcessor
           this->push(summed_frame);
           images_written_++;
         }
-        else
-          LOG4CXX_TRACE(logger_, "Skipping frame: " << frame_number);
       }
       catch (const std::exception& e)
       {
