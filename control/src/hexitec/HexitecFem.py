@@ -502,7 +502,6 @@ class HexitecFem():
         """Configure data lanes for Farm Mode."""
         # Source = Camera, Destination: PC
         try:
-            self.data_lane1.set_src_dst_port(port=self.src_dst_port)#
             self.data_lane1.set_dst_ip(ip=self.farm_server_1_ip)
             self.data_lane1.set_dst_mac(mac=self.farm_server_1_mac)
             self.data_lane1.set_src_ip(ip=self.farm_camera_1_ip)
@@ -513,7 +512,7 @@ class HexitecFem():
             self.data_lane2.set_dst_mac(mac=self.farm_server_2_mac)
             self.data_lane2.set_src_ip(ip=self.farm_camera_2_ip)
             self.data_lane2.set_src_mac(mac=self.farm_camera_2_mac)
-            self.data_lane1.set_src_dst_port(port=self.src_dst_port)
+            self.data_lane2.set_src_dst_port(port=self.src_dst_port)
 
             # Configure farm mode node(s), determine how many LUT entries to use
             if (self.number_nodes % 2 == 1):
@@ -964,7 +963,7 @@ class HexitecFem():
             self.set_nof_frames(self.number_frames)
 
             # How to convert datetime object to float?
-            self.acquire_timestamp = time.time()    # Utilised by adapter's watchdog
+            self.acquire_timestamp = time.time()    # Utilised by adapter's check_fem_watchdog
 
             # input("Press enter to enable data (200 ms)")
             logging.debug("Enable data")
@@ -984,7 +983,7 @@ class HexitecFem():
         try:
             # Stop if user clicked on Cancel button
             if (self.stop_acquisition):
-                logging.debug("Manual cancellation initiated")
+                logging.debug("Acquire cancellation initiated")
                 self.acquire_data_completed()
                 return
             else:
@@ -1012,7 +1011,6 @@ class HexitecFem():
         # Acquisition interrupted
         self.acquisition_completed = True
 
-    # TODO: To be expanded
     def acquire_data_completed(self):
         """Reset variables and read out Firmware monitors post data transfer."""
         # print("\n fem.acquire_data_completed()")
@@ -1028,7 +1026,7 @@ class HexitecFem():
             self.stop_acquisition = False
             self.hardware_busy = False
             self.acquisition_completed = True
-            self._set_status_message("User cancelled collection")
+            self._set_status_message("Acquire cancelled")
             return
 
         # Workout exact duration of fem data transmission:
@@ -1159,7 +1157,7 @@ class HexitecFem():
 
     def await_dc_captured(self):
         """Wait for the Dark Correction frames to be collected."""
-        expected_duration = 8192 / self.parent.fem.frame_rate
+        expected_duration = 8192 / self.frame_rate
         timeout = (expected_duration * 1.2) + 1
         poll_beginning = time.time()
         self._set_status_message("Collecting dark images..")
@@ -1334,7 +1332,7 @@ class HexitecFem():
         Initialise, load enables, set up state machine, write to DAC and enable ADCs.
         """
         try:
-            expected_duration = 8192 / self.parent.fem.frame_rate
+            expected_duration = 8192 / self.frame_rate
             timeout = (expected_duration * 1.2) + 1
             self.hardware_busy = True
             for vsr in self.vsr_list:
