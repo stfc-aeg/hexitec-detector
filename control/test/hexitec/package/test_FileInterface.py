@@ -33,7 +33,7 @@ class AdapterTestFixture(object):
 
         self.options = {
             "directories":
-                "odin_data = {}config/".format(self.odin_data_path)
+                "odin_data = data/config/"
         }
 
         self.adapter = FileInterfaceAdapter(**self.options)

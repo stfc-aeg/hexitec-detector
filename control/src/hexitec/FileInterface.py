@@ -35,15 +35,20 @@ class FileInterfaceAdapter(ApiAdapter):
         This constructor initializes the FileInterfaceAdapter object.
         :param kwargs: keyword arguments specifying options
         """
+        # Construct path to source code
+        cwd = os.getcwd()
+        index = cwd.rfind("control")
+        base_path = cwd[:index]
+
         # Intialise superclass
         super(FileInterfaceAdapter, self).__init__(**kwargs)
         self.directories = {}
         if DIRECTORY_CONFIG_NAME in self.options:
             for directory_str in self.options[DIRECTORY_CONFIG_NAME].split(','):
-                logging.debug(directory_str)
+                # logging.debug(directory_str)
                 try:
                     (dir_name, path) = directory_str.split('=')
-                    self.directories[dir_name.strip()] = path.strip()
+                    self.directories[dir_name.strip()] = base_path + path.strip()
                 except ValueError:
                     logging.error("Illegal directory target specified for File Interface: %s",
                                   directory_str.strip())

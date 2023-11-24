@@ -113,7 +113,7 @@ class HexitecFem():
         self.sph_s2 = 1
         self.frame_rate = 9118.87   # Corresponds to the above three settings
         self.duration = 1
-        self.duration_enabled = False
+        self.duration_enable = False
         self.duration_remaining = 0
         self.bias_level = 0
         self.gain_integer = -1
@@ -442,29 +442,26 @@ class HexitecFem():
             # print(f"   {self.camera_ctrl_ip} {type(self.camera_ctrl_ip)} vs 10.0.1.100")
             ctrl_lane.set_src_ip(ip=self.camera_ctrl_ip, response_check=False)
 
-            # Close multicast connection and reconnect directly to Control interface
+            # Close multicast connection
             Hex2x6CtrlRdma.__del__()
 
-            Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
-                                    rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
-                                    multicast=False, debug=False)
-            # print(f"        Ctrl_lane,  iface_name={self.control_interface}")
-            # print(f"                      qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
-            # print("        CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
-
-            ctrl_lane = \
-                UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface,
-                        qsfp_idx=self.control_qsfp_idx, lane=self.control_lane)
             self._set_status_message("Setting Data Lane 1..")
-            IOLoop.instance().call_later(2, self.setup_data_lane_1, Hex2x6CtrlRdma, ctrl_lane)
+            IOLoop.instance().call_later(2, self.setup_data_lane_1)
         except socket_error as e:
             self.hardware_connected = False
             self.hardware_busy = False
             self.flag_error("Setup Control", str(e))
 
-    def setup_data_lane_1(self, Hex2x6CtrlRdma, ctrl_lane):
+    def setup_data_lane_1(self):
         """Setup Data Lane 1's parameters."""
         try:
+            # Connect with Control interface
+            Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
+                                    rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
+                                    multicast=False, debug=False)
+            ctrl_lane = \
+                UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface,
+                        qsfp_idx=self.control_qsfp_idx, lane=self.control_lane)
             ctrl_lane.set_filtering(enable=True, response_check=True)
             ctrl_lane.set_arp_timeout_length()
 
@@ -535,8 +532,6 @@ class HexitecFem():
 
             Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_NOF_LUT_MODE_ENTRIES['addr'],
                                           data=lut_entries, burst_len=1)
-            # print(f"\n Configuring for {lut_entries} lut entries\n ({self.number_nodes} nodes)")
-            # time.sleep(3)
             self.data_lane1.set_lut_mode()  # enp2s0f1
             self.data_lane2.set_lut_mode()  # enp2s0f2
 
@@ -655,9 +650,9 @@ class HexitecFem():
         self.health = True if error == "" else False
         self.status_error = str(error)
 
-    def set_duration_enable(self, duration_enabled):
+    def set_duration_enable(self, duration_enable):
         """Set duration (enable) or number of frames (disable)."""
-        self.duration_enabled = duration_enabled
+        self.duration_enable = duration_enable
 
     def get_number_frames(self):
         """Get number of frames."""
@@ -667,8 +662,6 @@ class HexitecFem():
         """Set number of frames, initialise frame_rate if not set."""
         if self.frame_rate == 0:
             self.calculate_frame_rate()
-        # print("\n\tfem.set_number_frames({}) > number_frames {} duration {}\n".format(
-        #     frames, self.number_frames, self.number_frames / self.frame_rate))
         if self.number_frames != frames:
             self.number_frames = frames
             self.duration = self.number_frames / self.frame_rate
@@ -682,8 +675,6 @@ class HexitecFem():
         """Set duration, calculate frames to acquire using frame rate."""
         if self.frame_rate == 0:
             self.calculate_frame_rate()
-        # print("\n\tfem.set_duration({}) frames {}\n".format(
-        #     duration, self.duration * self.frame_rate))
         self.duration = duration
         frames = self.duration * self.frame_rate
         self.number_frames = int(round(frames))
@@ -710,7 +701,6 @@ class HexitecFem():
             if not self.farm_mode_prepared:
                 # print("Go to jail without passing Go")
                 self.parent.software_state = "Cold"
-                # time.sleep(3)
                 return
             if self.hardware_connected:
                 raise HexitecFemError("Connection already established")
@@ -993,7 +983,6 @@ class HexitecFem():
                         burst_len=1)[0]
                 # 0 during data transmission, 65536 when completed
                 self.all_data_sent = (status & 65536)
-                # print(f"   *** all_data_sent: {self.all_data_sent:X} status: {status:X}")
                 if self.all_data_sent == 0:
                     # print(" *** Awaiting data.. ***")
                     IOLoop.instance().call_later(0.1, self.check_acquire_finished)
@@ -1684,7 +1673,7 @@ class HexitecFem():
         frame_rate = 1 / frame_time
 
         self.frame_rate = frame_rate
-        if self.duration_enabled:
+        if self.duration_enable:
             # print("\n\tfem.calculate_frame_rate() (duration {} setting parent's
             # number_frames {})\n".format(self.duration, self.number_frames))
             # With duration enabled, recalculate number of frames in case clocks changed

@@ -189,9 +189,9 @@ class TestFem(unittest.TestCase):
 
     def test_set_duration_enable(self):
         """Test set_duration_enable works."""
-        self.test_fem.fem.duration_enabled = False
+        self.test_fem.fem.duration_enable = False
         self.test_fem.fem.set_duration_enable(True)
-        assert self.test_fem.fem.duration_enabled is True
+        assert self.test_fem.fem.duration_enable is True
 
     def test_set_duration(self):
         """Test set_duration works."""

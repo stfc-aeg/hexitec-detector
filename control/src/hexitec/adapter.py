@@ -466,47 +466,46 @@ class Hexitec():
         """Load Odin's settings from file."""
         try:
             with open(self.odin_config_file, "r") as f:
-                print("\n adp.load_Odin()")
-                # import os
-                # print(" isfile? {}".format(os.path.isfile(self.odin_config_file)))
-                # print(" current folder: {}".format(os.getcwd()))
-                # print(" file: {}".format(self.odin_config_file))
                 config = json.load(f)
-                # print(" ({}) config = {}".format(type(config), config))
-                self.fem.hexitec_config = config["fem/hexitec_config"]
-                self.daq.file_name = config["daq/file_name"]
-                self.daq.file_dir = config["daq/file_dir"]
-                self.daq.addition_enable = config["daq/addition_enable"]
-                self.daq.pixel_grid_size = config["daq/pixel_grid_size"]
-                self.daq.calibration_enable = config["daq/calibration_enable"]
-                self.daq.gradients_filename = config["daq/gradients_filename"]
-                self.daq.intercepts_filename = config["daq/intercepts_filename"]
-                self.daq.discrimination_enable = config["daq/discrimination_enable"]
-                self.daq.bin_end = config["daq/bin_end"]
-                self.daq.bin_start = config["daq/bin_start"]
-                self.daq.bin_width = config["daq/bin_width"]
-                self.daq.max_frames_received = config["daq/max_frames_received"]
-                self.daq.pass_processed = config["daq/pass_processed"]
-                self.daq.pass_raw = config["daq/pass_raw"]
-                self.daq.lvframes_dataset_name = config["daq/lvframes_dataset_name"]
-                self.daq.lvframes_frequency = config["daq/lvframes_frequency"]
-                self.daq.lvframes_per_second = config["daq/lvframes_per_second"]
-                self.daq.lvspectra_frequency = config["daq/lvspectra_frequency"]
-                self.daq.lvspectra_per_second = config["daq/lvspectra_per_second"]
-                self.daq.next_frame_enable = config["daq/next_frame_enable"]
-                self.daq.threshold_lower = config["daq/threshold_lower"]
-                self.daq.threshold_upper = config["daq/threshold_upper"]
-                self.daq.image_frequency = config["daq/image_frequency"]
-                self.daq.threshold_filename = config["daq/threshold_filename"]
-                self.daq.threshold_mode = config["daq/threshold_mode"]
-                self.daq.threshold_value = config["daq/threshold_value"]
-                self.number_frames = config["number_frames"]
-                self.duration = config["duration"]
-                self.duration_enable = config["duration_enable"]
+                self.fem.set_hexitec_config(config["fem/hexitec_config"])
+                self.daq.set_file_name(config["daq/file_name"])
+                self.daq.set_data_dir(config["daq/file_dir"])
+                self.daq._set_addition_enable(config["daq/addition_enable"])
+                self.daq._set_pixel_grid_size(config["daq/pixel_grid_size"])
+                self.daq._set_calibration_enable(config["daq/calibration_enable"])
+                self.daq._set_gradients_filename(config["daq/gradients_filename"])
+                self.daq._set_intercepts_filename(config["daq/intercepts_filename"])
+                self.daq._set_discrimination_enable(config["daq/discrimination_enable"])
+                self.daq._set_bin_end(config["daq/bin_end"])
+                self.daq._set_bin_start(config["daq/bin_start"])
+                self.daq._set_bin_width(config["daq/bin_width"])
+                self.daq._set_max_frames_received(config["daq/max_frames_received"])
+                self.daq._set_pass_processed(config["daq/pass_processed"])
+                self.daq._set_pass_raw(config["daq/pass_raw"])
+                self.daq._set_lvframes_dataset_name(config["daq/lvframes_dataset_name"])
+                self.daq._set_lvframes_frequency(config["daq/lvframes_frequency"])
+                self.daq._set_lvframes_per_second(config["daq/lvframes_per_second"])
+                self.daq._set_lvspectra_frequency(config["daq/lvspectra_frequency"])
+                self.daq._set_lvspectra_per_second(config["daq/lvspectra_per_second"])
+                self.daq._set_next_frame_enable(config["daq/next_frame_enable"])
+                self.daq._set_threshold_lower(config["daq/threshold_lower"])
+                self.daq._set_threshold_upper(config["daq/threshold_upper"])
+                self.daq._set_image_frequency(config["daq/image_frequency"])
+                self.daq._set_threshold_filename(config["daq/threshold_filename"])
+                self.daq._set_threshold_mode(config["daq/threshold_mode"])
+                self.daq._set_threshold_value(config["daq/threshold_value"])
+                if config["duration_enable"]:
+                    self.set_duration(config["duration"])
+                    self.set_duration_enable(config["duration_enable"])
+                else:
+                    self.set_number_frames(config["number_frames"])
+                    self.set_duration_enable(config["duration_enable"])
         except FileNotFoundError as e:
             self.fem.flag_error("Loading Odin config - file missing", str(e))
         except JSONDecodeError as e:
             self.fem.flag_error("Loading Odin config - Bad json?", str(e))
+        except Exception as e:
+            self.fem.flag_error("Loading default Odin values", str(e))
 
     def set_duration_enable(self, duration_enable):
         """Set duration enable, calculating number of frames accordingly."""
@@ -516,8 +515,6 @@ class Hexitec():
         if duration_enable:
             self.set_duration(self.duration)
         else:
-            # print("\n\tadp.set_duration_enable({}) number_frames: {}\n".format(
-            #     duration_enable, self.number_frames))
             self.set_number_frames(self.number_frames)
 
     def set_number_frames(self, frames):
@@ -535,8 +532,6 @@ class Hexitec():
             raise ParameterTreeError("duration must be above 0!")
         self.duration = duration
         self.fem.set_duration(self.duration)
-        # print("\n\tadp.set_duration({}) number_frames {} -> {}\n".format(
-        #     duration, self.fem.get_number_frames(), self.number_frames))
         self.number_frames = self.fem.get_number_frames()
         self.daq.set_number_frames(self.number_frames)
 
