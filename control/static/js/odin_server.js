@@ -13,7 +13,6 @@ var raw_data_enable = false;
 var processed_data_enable = false;
 var addition_enable = false;
 var discrimination_enable = false;
-var next_frame_enable = false;
 var calibration_enable = false;
 var duration_enable = false;
 
@@ -890,16 +889,6 @@ function changeRawDataEnable() {
         });
 };
 
-function changeNextFrameEnable() {
-    next_frame_enable = document.getElementById('next_frame_radio1').checked;
-    next_frame_enable = JSON.stringify(next_frame_enable);
-    next_frame_enable = (next_frame_enable === "true");
-    hexitec_endpoint.put(next_frame_enable, 'detector/daq/config/next_frame/enable')
-        .catch(error => {
-            console.log("Next Frame couldn't be changed: " + error.message);
-        });
-};
-
 function changeChillerEnable() {
     ld_chiller_enable = document.getElementById('ld_chiller_control_radio1').checked;
     ld_chiller_enable = JSON.stringify(ld_chiller_enable);
@@ -1217,14 +1206,6 @@ function update_ui_with_odin_settings() {
             }
             else {
                 document.querySelector('#raw_data_radio2').checked = true;    // Disables raw dataset
-            }
-
-            next_frame_enable = daq_config.next_frame.enable;
-            if (next_frame_enable === true) {
-                document.querySelector('#next_frame_radio1').checked = true;
-            }
-            else {
-                document.querySelector('#next_frame_radio2').checked = true;
             }
 
             calibration_enable = daq_config.calibration.enable;

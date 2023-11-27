@@ -175,7 +175,6 @@ class DAQTestFixture(object):
                 'histogram':
                 {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10, 'max_frames_received': 10,
                  'pass_processed': False, 'pass_raw': True},
-                'next_frame': {'enable': False},
                 'threshold':
                 {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 120}},
                'sensors_layout': '2x6'},
@@ -943,16 +942,6 @@ class TestDAQ(unittest.TestCase):
         with pytest.raises(ParameterTreeError, match="lvspectra_per_second must be positive!"):
             self.test_daq.daq._set_lvspectra_per_second(-1)
 
-    def test_set_next_frame_enable(self):
-        """Test function sets next frame bool."""
-        next_frame_enable = True
-        self.test_daq.daq._set_next_frame_enable(next_frame_enable)
-        assert next_frame_enable is self.test_daq.daq.next_frame_enable
-
-        next_frame_enable = False
-        self.test_daq.daq._set_next_frame_enable(next_frame_enable)
-        assert next_frame_enable is self.test_daq.daq.next_frame_enable
-
     def test_set_pixel_grid_size(self):
         """Test function sets pixel grid size."""
         pixel_grid_size = 3
@@ -1180,7 +1169,6 @@ class TestDAQ(unittest.TestCase):
                  'lvspectra':
                     {'dataset_name': 'summed_spectra', 'frame_frequency': 0,
                      'live_view_socket_addr': 'tcp://127.0.0.1:5021', 'per_second': 1},
-                 'next_frame': {'enable': False},
                  'threshold':
                     {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 10},
                  'summed_image':
@@ -1217,7 +1205,6 @@ class TestDAQ(unittest.TestCase):
         #         'histogram': {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0,
         #                       'max_frames_received': 10,
         #                       'pass_processed': False, 'pass_raw': True},
-        #         'next_frame': {'enable': False},
         #         'threshold': {'threshold_filename': '', 'threshold_mode': 'value',
         #                       'threshold_value': 100}
         #     }
@@ -1262,7 +1249,7 @@ class TestDAQ(unittest.TestCase):
 
 # GFC will turn parameter tree into:
 #   OrderedDict([('threshold', {'threshold_value': 99,
-# 'threshold_filename': '', 'threshold_mode': 'none'}), ('next_frame', {'enable': True}),
+# 'threshold_filename': '', 'threshold_mode': 'none'}),
 # ('calibration', {'enable': False, 'intercepts_filename': '', 'gradients_filename': ''}),
 # ('addition', {'enable': False, 'pixel_grid_size': 3}), ('discrimination', {'enable': False,
 # 'pixel_grid_size': 5}), ('histogram', {'max_frames_received': 10, 'bin_end': 8000,

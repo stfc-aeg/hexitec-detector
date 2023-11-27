@@ -446,7 +446,6 @@ class Hexitec():
         config["daq/lvframes_per_second"] = self.daq.lvframes_per_second
         config["daq/lvspectra_frequency"] = self.daq.lvspectra_frequency
         config["daq/lvspectra_per_second"] = self.daq.lvspectra_per_second
-        config["daq/next_frame_enable"] = self.daq.next_frame_enable
         config["daq/threshold_lower"] = self.daq.threshold_lower
         config["daq/threshold_upper"] = self.daq.threshold_upper
         config["daq/image_frequency"] = self.daq.image_frequency
@@ -487,7 +486,6 @@ class Hexitec():
                 self.daq._set_lvframes_per_second(config["daq/lvframes_per_second"])
                 self.daq._set_lvspectra_frequency(config["daq/lvspectra_frequency"])
                 self.daq._set_lvspectra_per_second(config["daq/lvspectra_per_second"])
-                self.daq._set_next_frame_enable(config["daq/next_frame_enable"])
                 self.daq._set_threshold_lower(config["daq/threshold_lower"])
                 self.daq._set_threshold_upper(config["daq/threshold_upper"])
                 self.daq._set_image_frequency(config["daq/image_frequency"])

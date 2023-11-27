@@ -159,7 +159,6 @@ class GenerateConfigFiles():
         hexitec_plugins = {}
         hexitec_plugins['reorder'] = ["reorder", "Reorder", "Reorder"]
         hexitec_plugins['threshold'] = ["threshold", "Threshold", "Threshold"]
-        hexitec_plugins['next_frame'] = ["next_frame", "NextFrame", "NextFrame"]
         hexitec_plugins["calibration"] = ["calibration", "Calibration", "Calibration"]
         hexitec_plugins["addition"] = ["addition", "Addition", "Addition"]
         hexitec_plugins["discrimination"] = ["discrimination", "Discrimination", "Discrimination"]
@@ -188,9 +187,9 @@ class GenerateConfigFiles():
         # Extract configuration from HexitecDAQ config
         d = self.param_tree['config']
 
-        # Sort parameter tree dict into R, T, N, C, A, D, SI, H, LV plugin order
-        keyorder = ['reorder', 'threshold', 'next_frame', 'calibration', 'addition',
-                    'discrimination', 'summed_image', 'histogram', 'lvframes', 'lvspectra']
+        # Sort parameter tree dict into R, T, C, A, D, SI, H, LV plugin order
+        keyorder = ['reorder', 'threshold', 'calibration', 'addition', 'discrimination',
+                    'summed_image', 'histogram', 'lvframes', 'lvspectra']
         config = OrderedDict(sorted(d.items(), key=lambda i: keyorder.index(i[0])))
 
         # Determine plugin chain (to configure frameProcessor)
@@ -199,7 +198,7 @@ class GenerateConfigFiles():
         plugin_chain = ["reorder", "threshold"]
 
         # User selectable plugins
-        optional_plugins = ["next_frame", "calibration", "addition", "discrimination"]
+        optional_plugins = ["calibration", "addition", "discrimination"]
 
         # Any optional plugin(s) to be added?
         for key in config:
@@ -238,8 +237,13 @@ class GenerateConfigFiles():
             os_path = "_ubuntu"
 
         comma_or_blank = ""
+        # DEBUGGING:
+        # avoid = ['threshold', 'calibration', 'addition', 'summed_image', 'histogram']
+        avoid = []
         # Build config for Hexitec plugins (uniform naming)
         for plugin in plugin_chain:
+            if plugin in avoid:
+                continue
             if plugin in hexitec_plugins:
                 store_plugin_paths += '''%s
                 {
@@ -260,6 +264,8 @@ class GenerateConfigFiles():
 
         # Build config for Odin plugins (differing names)
         for plugin in plugin_chain:
+            if plugin in avoid:
+                continue
             if plugin in odin_plugins:
                 store_plugin_paths += ''',
                 {
@@ -311,6 +317,8 @@ class GenerateConfigFiles():
         previous_plugin = "frame_receiver"
         # Chain together all other selected plugins, from frame receiver until hdf
         for plugin in plugin_chain:
+            if plugin in avoid:
+                continue
             store_plugin_connect += ''',
                 {
                     "plugin": {
@@ -327,14 +335,14 @@ class GenerateConfigFiles():
         store_plugin_config = ""
         unique_setting = ""
         for plugin in plugin_chain:
+            if plugin in avoid:
+                continue
             # rinse and repeat for all (except live view, hdf, and blosc if selected)
             if plugin not in ["lvframes", "lvspectra", "hdf"]:
 
                 # Get unique_setting(s) according to plugin
                 if plugin == "threshold":
                     unique_setting = self.threshold_settings(config[plugin])
-                if plugin == "next_frame":
-                    pass    # Nowt extra
                 if plugin == "calibration":
                     unique_setting = self.calibration_settings(config[plugin])
                 if plugin == "discrimination" or plugin == "addition":
@@ -521,7 +529,6 @@ if __name__ == '__main__':  # pragma: no cover
                                 'live_view_socket_addr': 'tcp://127.0.0.1:5020', 'per_second': 2},
                    'lvspectra': {'dataset_name': 'summed_spectra', 'frame_frequency': 0,
                                  'live_view_socket_addr': 'tcp://127.0.0.1:5021', 'per_second': 1},
-                   'next_frame': {'enable': True},
                    'threshold': {'threshold_value': 99, 'threshold_filename': '',
                                  'threshold_mode': 'none'},
                    'summed_image': {'threshold_lower': 120, 'threshold_upper': 4800,

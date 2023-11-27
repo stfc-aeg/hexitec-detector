@@ -85,7 +85,6 @@ class HexitecDAQ():
         self.addition_enable = False
         self.discrimination_enable = False
         self.calibration_enable = False
-        self.next_frame_enable = False
 
         self.pixel_grid_size = 3
         self.gradients_filename = self.base_path + "data/config/m_2x6.txt"
@@ -216,9 +215,6 @@ class HexitecDAQ():
                                               self._set_lvspectra_socket_addr),
                     "per_second": (lambda: self.lvspectra_per_second,
                                    self._set_lvspectra_per_second)
-                },
-                "next_frame": {
-                    "enable": (lambda: self.next_frame_enable, self._set_next_frame_enable)
                 },
                 "summed_image": {
                     "threshold_lower": (lambda: self.threshold_lower,
@@ -353,7 +349,7 @@ class HexitecDAQ():
             #   selected, wait for hdf file to close
             IOLoop.instance().call_later(0.1, self.hdf_closing_loop)
         else:
-            # print("[E ? total_frames_processed ({}) == self.frames_processed ({}). shutdown_processing? {}".format(
+            # print("[E ? tot_frms_proc'd ({}) == s.frames_proc'd ({}). shutdown_proc'g? {}".format(
             #     total_frames_processed, self.frames_processed, self.shutdown_processing))
             # Not all frames processed yet; Check data still in flow
             if total_frames_processed == self.frames_processed:
@@ -522,9 +518,11 @@ class HexitecDAQ():
         # print(f"source files: {source_files}")
 
         # Loop over all source files, datasets
-        for source in source_files: # Go through all .h5 files
+        for source in source_files:
+            # Go through all .h5 files
             starting_time = time.time()
-            with h5py.File(source) as file: # Go through each file
+            with h5py.File(source) as file:
+                # Go through each file
                 if number_of_datasets != len(file.keys()):
                     e = f"Expected {number_of_datasets} not {len(file.keys())} datasets in {source} !"
                     logging.error("VDS Error: {}".format(e))
@@ -971,9 +969,6 @@ class HexitecDAQ():
             raise ParameterTreeError("lvspectra_per_second must be positive!")
         self.lvspectra_per_second = lvspectra_per_second
 
-    def _set_next_frame_enable(self, next_frame_enable):
-        self.next_frame_enable = next_frame_enable
-
     def _set_pixel_grid_size(self, size):
         if (size in [3, 5]):
             self.pixel_grid_size = size
@@ -1096,7 +1091,7 @@ class HexitecDAQ():
 
         # send command to all FP plugins, then FR
         plugins = ['addition', 'calibration', 'discrimination', 'histogram', 'reorder',
-                   'next_frame', 'threshold']
+                   'threshold']
 
         for plugin in plugins:
             command = "config/" + plugin + "/sensors_layout"

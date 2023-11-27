@@ -37,7 +37,6 @@ class ObjectTestFixture(object):
                        'lvspectra': {'dataset_name': 'summed_spectra', 'frame_frequency': 0,
                                      'live_view_socket_addr': 'tcp://127.0.0.1:5021',
                                      'per_second': 1},
-                       'next_frame': {'enable': True},
                        'threshold': {'threshold_value': 99, 'threshold_filename': '',
                                      'threshold_mode': 'none'},
                        'summed_image': {'threshold_lower': 120, 'threshold_upper': 4800,
@@ -192,58 +191,54 @@ class TestObject(unittest.TestCase):
         assert d['index'] == store_temp_name[5:]
         assert d['value'][0]['plugin']['load']['index'] == 'reorder'
         assert d['value'][1]['plugin']['load']['index'] == 'threshold'
-        assert d['value'][2]['plugin']['load']['index'] == 'next_frame'
-        assert d['value'][3]['plugin']['load']['index'] == 'calibration'
-        assert d['value'][4]['plugin']['load']['index'] == 'addition'
-        assert d['value'][5]['plugin']['load']['index'] == 'summed_image'
-        assert d['value'][6]['plugin']['load']['index'] == 'histogram'
-        assert d['value'][7]['plugin']['load']['index'] == 'lvframes'
-        assert d['value'][8]['plugin']['load']['index'] == 'lvspectra'
-        assert d['value'][9]['plugin']['load']['index'] == 'blosc'
-        assert d['value'][10]['plugin']['load']['index'] == 'hdf'
-        assert d['value'][11]['plugin'] == {'connect': {'index': 'lvframes',
+        assert d['value'][2]['plugin']['load']['index'] == 'calibration'
+        assert d['value'][3]['plugin']['load']['index'] == 'addition'
+        assert d['value'][4]['plugin']['load']['index'] == 'summed_image'
+        assert d['value'][5]['plugin']['load']['index'] == 'histogram'
+        assert d['value'][6]['plugin']['load']['index'] == 'lvframes'
+        assert d['value'][7]['plugin']['load']['index'] == 'lvspectra'
+        assert d['value'][8]['plugin']['load']['index'] == 'blosc'
+        assert d['value'][9]['plugin']['load']['index'] == 'hdf'
+        assert d['value'][10]['plugin'] == {'connect': {'index': 'lvframes',
                                             'connection': 'histogram'}}
-        assert d['value'][12]['plugin'] == {'connect': {'index': 'lvspectra',
+        assert d['value'][11]['plugin'] == {'connect': {'index': 'lvspectra',
                                             'connection': 'histogram'}}
-        assert d['value'][13]['plugin'] == {'connect': {'index': 'reorder',
+        assert d['value'][12]['plugin'] == {'connect': {'index': 'reorder',
                                             'connection': 'frame_receiver'}}
-        assert d['value'][14]['plugin'] == {'connect':
+        assert d['value'][13]['plugin'] == {'connect':
                                             {'index': 'threshold', 'connection': 'reorder'}}
+        assert d['value'][14]['plugin'] == {'connect':
+                                            {'index': 'calibration', 'connection': 'threshold'}}
         assert d['value'][15]['plugin'] == {'connect':
-                                            {'index': 'next_frame', 'connection': 'threshold'}}
-        assert d['value'][16]['plugin'] == {'connect':
-                                            {'index': 'calibration', 'connection': 'next_frame'}}
-        assert d['value'][17]['plugin'] == {'connect':
                                             {'index': 'addition', 'connection': 'calibration'}}
-        assert d['value'][18]['plugin'] == {'connect':
+        assert d['value'][16]['plugin'] == {'connect':
                                             {'index': 'summed_image', 'connection': 'addition'}}
-        assert d['value'][19]['plugin'] == {'connect':
+        assert d['value'][17]['plugin'] == {'connect':
                                             {'index': 'histogram', 'connection': 'summed_image'}}
-        assert d['value'][20]['plugin'] == {'connect':
+        assert d['value'][18]['plugin'] == {'connect':
                                             {'index': 'blosc', 'connection': 'histogram'}}
-        assert d['value'][21]['plugin'] == {'connect': {'index': 'hdf', 'connection': 'blosc'}}
-        assert d['value'][22] == {'reorder': sl_dic}
-        assert d['value'][23] == {'threshold':
+        assert d['value'][19]['plugin'] == {'connect': {'index': 'hdf', 'connection': 'blosc'}}
+        assert d['value'][20] == {'reorder': sl_dic}
+        assert d['value'][21] == {'threshold':
                                   {'threshold_file': '', 'threshold_value': 99,
                                    'threshold_mode': 'none', 'sensors_layout': sl_value}}
-        assert d['value'][24] == {'next_frame': sl_dic}
-        assert d['value'][25] == {'calibration':
+        assert d['value'][22] == {'calibration':
                                   {'gradients_file': '', 'intercepts_file': '',
                                    'sensors_layout': sl_value}}
-        assert d['value'][26] == {'addition': {'pixel_grid_size': 3, 'sensors_layout': sl_value}}
-        assert d['value'][27] == {'summed_image':
+        assert d['value'][23] == {'addition': {'pixel_grid_size': 3, 'sensors_layout': sl_value}}
+        assert d['value'][24] == {'summed_image':
                                   {'threshold_lower': 120, 'threshold_upper': 4800,
                                    'sensors_layout': sl_value}}
-        assert d['value'][28] == {'histogram':
+        assert d['value'][25] == {'histogram':
                                   {'bin_start': 0, 'bin_end': 8000, 'bin_width': 10.0,
                                    'max_frames_received': 10, 'pass_processed': True,
                                    'pass_raw': True, 'sensors_layout': sl_value}}
-        assert d['value'][29] == {'blosc': sl_dic}
-        assert d['value'][30] == {'lvframes':
+        assert d['value'][26] == {'blosc': sl_dic}
+        assert d['value'][27] == {'lvframes':
                                   {'frame_frequency': 0, 'per_second': 2,
                                    'live_view_socket_addr': 'tcp://127.0.0.1:5020',
                                    'dataset_name': 'raw_frames'}}
-        assert d['value'][31] == {'lvspectra':
+        assert d['value'][28] == {'lvspectra':
                                   {'frame_frequency': 0, 'per_second': 1,
                                    'live_view_socket_addr': 'tcp://127.0.0.1:5021',
                                    'dataset_name': 'summed_spectra'}}
@@ -262,11 +257,11 @@ class TestObject2(unittest.TestCase):
         """Test function fail on missing enable key."""
         # Function should fail if any optional plugin doesn't define the key 'enable'
         with pytest.raises(Exception) as exc_info:
-            # 'Pretend' next_frame doesn't have 'enable' key
-            self.test_detector_badadapter.adapter.param_tree['config']['next_frame'] = {}
+            # 'Pretend' addition doesn't have 'enable' key
+            self.test_detector_badadapter.adapter.param_tree['config']['addition'] = {}
             self.test_detector_badadapter.adapter.generate_config_files()
         assert exc_info.type is Exception
-        assert exc_info.value.args[0] == "Plugin %s missing 'enable' setting!" % 'next_frame'
+        assert exc_info.value.args[0] == "Plugin %s missing 'enable' setting!" % 'addition'
 
     def testing_ubuntu_config(self):
         """Test function."""
