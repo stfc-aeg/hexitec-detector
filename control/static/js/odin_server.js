@@ -291,7 +291,6 @@ function poll_fem() {
                         document.querySelector('#frames_dropped' + (i+1)).innerHTML = frames.dropped;
                         document.querySelector('#frames_timedout' + (i+1)).innerHTML = frames.timedout;
 
-                        document.querySelector('#fem_packets_lost' + (i+1)).innerHTML = decoder.fem_packets_lost;
                         document.querySelector('#packets_lost' + (i+1)).innerHTML = decoder.packets_lost;
                         document.querySelector('#buffers_empty' + (i+1)).innerHTML = buffers.empty;
                         document.querySelector('#buffers_mapped' + (i+1)).innerHTML = buffers.mapped;
@@ -363,6 +362,8 @@ function poll_fem() {
                     const received_remaining = result["detector"]["daq"]["status"]["received_remaining"];
                     const fraction_received = (frames_received / frames_expected).toFixed(2);
                     const fraction_processed = (frames_processed / frames_expected).toFixed(2);
+                    document.querySelector('#total_frames_expected').innerHTML = frames_expected;
+                    document.querySelector('#total_frames_processed').innerHTML = frames_processed;
                     // console.log(" rxd: " + frames_received + " " + received_remaining + " (" + fraction_received + ")" +
                     //         " proc'd: " + frames_processed + " " + processed_remaining + " (" + fraction_processed + ")" +
                     //         " tot: " + frames_expected);    /// DEBUGGING
