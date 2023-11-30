@@ -242,7 +242,7 @@ class GenerateConfigFiles():
         avoid = []
         # Build config for Hexitec plugins (uniform naming)
         for plugin in plugin_chain:
-            if plugin in avoid:
+            if plugin in avoid:     # pragma: no coverage
                 continue
             if plugin in hexitec_plugins:
                 store_plugin_paths += '''%s
@@ -264,7 +264,7 @@ class GenerateConfigFiles():
 
         # Build config for Odin plugins (differing names)
         for plugin in plugin_chain:
-            if plugin in avoid:
+            if plugin in avoid:     # pragma: no coverage
                 continue
             if plugin in odin_plugins:
                 store_plugin_paths += ''',
@@ -317,7 +317,7 @@ class GenerateConfigFiles():
         previous_plugin = "frame_receiver"
         # Chain together all other selected plugins, from frame receiver until hdf
         for plugin in plugin_chain:
-            if plugin in avoid:
+            if plugin in avoid:     # pragma: no coverage
                 continue
             store_plugin_connect += ''',
                 {
@@ -335,7 +335,7 @@ class GenerateConfigFiles():
         store_plugin_config = ""
         unique_setting = ""
         for plugin in plugin_chain:
-            if plugin in avoid:
+            if plugin in avoid:     # pragma: no coverage
                 continue
             # rinse and repeat for all (except live view, hdf, and blosc if selected)
             if plugin not in ["lvframes", "lvspectra", "hdf"]:
