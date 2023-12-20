@@ -106,6 +106,7 @@ class HexitecDAQ():
         self.processed_timestamp = 0
         self.frames_processed = 0
         self.shutdown_processing = False
+        self.processing_interruptable = False
 
         self.lvframes_dataset_name = "raw_frames"
         self.lvframes_socket_addr = "tcp://192.168.0.52:5020"
@@ -306,6 +307,8 @@ class HexitecDAQ():
         self.in_progress = True
         # Reset timeout watchdog
         self.processed_timestamp = time.time()
+        # Allow watchdog(s) to interrupt processing
+        self.processing_interruptable = True
         logging.debug("Starting File Writer")
         self.set_file_writing(True)
         # Diagnostics:
@@ -319,18 +322,18 @@ class HexitecDAQ():
         """Wait for acquisition to complete without blocking current thread."""
         bBusy = self.parent.fem.hardware_busy
         if bBusy:
+            # Reset timeout watchdog - Otherwise triggers if acquisition > few seconds
+            self.processed_timestamp = time.time()
             self.frames_received = self.get_total_frames_received()
             self.frames_processed = self.get_total_frames_processed(self.plugin)
             self.processed_remaining = self.number_frames - self.frames_processed
             self.received_remaining = self.number_frames - self.frames_received
-            # print("\n0\t rxd {} left: {} proc'd {} left: {}\n[E ".format(
+            # print("[E \n0\t rxd {} left: {} proc'd {} left: {}\n".format(
             #     self.frames_received, self.received_remaining, self.frames_processed,
             #     self.processed_remaining))
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
             self.fem_not_busy = '%s' % (datetime.datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
-            # Reset timeout watchdog
-            self.processed_timestamp = time.time()
             IOLoop.instance().call_later(0.5, self.processing_check_loop)
 
     def processing_check_loop(self):
@@ -339,7 +342,7 @@ class HexitecDAQ():
         total_frames_processed = self.get_total_frames_processed(self.plugin)
         self.frames_received = self.get_total_frames_received()
         self.received_remaining = self.number_frames - self.frames_received
-        # print("\nX\t rxd {} left: {} proc'd {} left: {}\n[E (Number_frames: {} total_frames_processed: {})".format(
+        # print("[E \nX\t rxd {} left: {} proc'd {} left: {}\n (Number_frames: {} total_frames_processed: {})".format(
         #     self.frames_received, self.received_remaining, self.frames_processed,
         #     self.processed_remaining, self.number_frames, total_frames_processed))
         if total_frames_processed == self.number_frames:
@@ -349,25 +352,26 @@ class HexitecDAQ():
             #   selected, wait for hdf file to close
             IOLoop.instance().call_later(0.1, self.hdf_closing_loop)
         else:
-            # print("[E ? tot_frms_proc'd ({}) == s.frames_proc'd ({}). shutdown_proc'g? {}".format(
+            # print("[E ? tot_frms_proc'd ({}) == s.frames_proc'd ({} = unreliable?!). shutdown_proc'g? {}".format(
             #     total_frames_processed, self.frames_processed, self.shutdown_processing))
             # Not all frames processed yet; Check data still in flow
             if total_frames_processed == self.frames_processed:
                 # No frames processed in at least 0.5 sec, did processing time out?
                 if self.shutdown_processing:
                     self.shutdown_processing = False
-                    self.in_progress = False
-                    self.daq_ready = True
-                    # Don't turn off FileWriterPlugin; EndOfAcquisition to flush out histograms
-                    self.daq_stop_time = '%s' % (datetime.datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
-                    self.file_writing = False
+                    self.processing_interruptable = False
+                    IOLoop.instance().add_callback(self.flush_data)
+                    logging.debug("Acquisition Completing gracefully (packet losses)")
+                    # All required frames acquired; if either of frames based datasets
+                    #   selected, wait for hdf file to close
+                    IOLoop.instance().call_later(1, self.hdf_closing_loop)
                     return
             else:
                 # Data still bein' processed
                 self.processed_timestamp = time.time()
                 self.frames_processed = total_frames_processed
                 self.processed_remaining = self.number_frames - self.frames_processed
-                # print("\n1\t rxd {} (left: {}) proc'd {} left: {}\n[E ".format(
+                # print("[E \n1\t rxd {} (left: {}) proc'd {} left: {}\n".format(
                 #     self.frames_received, self.received_remaining, self.frames_processed,
                 #     self.processed_remaining))
             # Wait 0.5 seconds and check again
@@ -421,6 +425,7 @@ class HexitecDAQ():
     def hdf_closing_loop(self):
         """Wait for processing to complete but don't block, before prep to write meta data."""
         if self.check_hdf_write_statuses():
+            # print(" DAQ Waiting, hdf_closing_loop()")
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
             self.hdf_file_location = self.file_dir + self.file_name + '.h5'
@@ -472,10 +477,11 @@ class HexitecDAQ():
             self.parent.fem.flag_error("Meta data writer unable to access file(s)!")
 
         hdf_file.close()
+        self.processing_interruptable = False
         self.in_progress = False
         self.daq_ready = True
 
-    def build_virtual_dataset(self, hdf_file):
+    def build_virtual_dataset(self, hdf_file):  # pragma: no cover
         """Map all node(s) H5 file(s) into meta's h5 file."""
         # Dirty hack for now..
         file_path = '/data/hxtdaq/node'
@@ -520,7 +526,6 @@ class HexitecDAQ():
         # Loop over all source files, datasets
         for source in source_files:
             # Go through all .h5 files
-            starting_time = time.time()
             with h5py.File(source) as file:
                 # Go through each file
                 if number_of_datasets != len(file.keys()):

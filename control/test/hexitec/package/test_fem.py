@@ -136,22 +136,54 @@ class TestFem(unittest.TestCase):
         assert self.test_fem.fem.log_messages[0][:-4] == log_messages[0][:-4]
         assert self.test_fem.fem.log_messages[0][1] == log_messages[0][1]
 
-    # TODO Update when Hardware available to test firmware info
-    def test_read_sensorsworking_ok(self):
+    @patch('hexitec_vsr.VsrModule')
+    def test_hv_off(self, mocked_vsr_module):
+        """Test function works ok."""
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
+        self.test_fem.fem.hv_bias_enabled = True
+        self.test_fem.fem.hv_off()
+        self.test_fem.fem.vsr_list[0].hv_off.assert_called()
+        assert self.test_fem.fem.hv_bias_enabled is False
+
+    # """
+    # version: v0.17.0
+    # date: 2023-11-23
+    # time: 11:33:26
+    # together: 2023-11-23 11:33:26
+    # """
+    # # TODO How to Mock rdma (object?) for BoardCfgStatus?
+    # @patch('boardcfgstatus.BoardCfgStatus')
+    # def test_read_sensors_including_firmware_info(self, cfg_status):
+    #     """Test the read_sensors function reads firmware info."""
+    #     with patch('hexitec.HexitecFem.RdmaUDP'):
+    #         self.test_fem.fem.read_firmware_version = True
+    #         cfg_status.get_fpga_fw_version.side_effect = "v0.17.0"
+    #         cfg_status.get_fpga_fw_version.side_effect = "2023-11-23"
+    #         cfg_status.get_fpga_fw_version.side_effect = "11:33:26"
+    #         self.test_fem.fem.x10g_rdma = Mock()
+    #         self.test_fem.fem.read_temperatures_humidity_values = Mock()
+    #         self.test_fem.fem.read_pwr_voltages = Mock()
+    #         self.test_fem.fem.read_sensors()
+    #         time.sleep(0.2)
+    #         # assert self.test_fem.fem.vsr_addr == 144
+    #         assert self.test_fem.fem.environs_in_progress is False
+    #         # assert self.test_fem.fem.parent.software_state == "Idle"
+    #         # assert self.test_fem.fem.firmware_date == firmware_date
+    #         # assert self.test_fem.fem.firmware_time == firmware_time
+    #         assert self.test_fem.fem.read_firmware_version is False
+    #         # assert self.test_fem.fem.firmware_date == ""
+
+    def test_read_sensors_working_ok(self):
         """Test the read_sensors function works."""
         with patch('hexitec.HexitecFem.RdmaUDP'):
-            self.test_fem.fem.vsr_addr = 144
-            self.test_fem.fem.read_firmware_version = True
-            # firmware_date = "11/03/2020"
-            # firmware_time = "09:43"
-            self.test_fem.fem.x10g_rdma.read = Mock()
-            self.test_fem.fem.x10g_rdma.read.side_effect = [285417504, 2371]
+            self.test_fem.fem.parent.software_state == "F"
+            self.test_fem.fem.read_firmware_version = False
             self.test_fem.fem.read_temperatures_humidity_values = Mock()
-            # self.test_fem.fem.read_temperatures
             self.test_fem.fem.read_pwr_voltages = Mock()
             self.test_fem.fem.read_sensors()
             time.sleep(0.2)
-            assert self.test_fem.fem.vsr_addr == 144
+            # assert self.test_fem.fem.vsr_addr == 144
             assert self.test_fem.fem.environs_in_progress is False
             assert self.test_fem.fem.parent.software_state == "Idle"
             # assert self.test_fem.fem.firmware_date == firmware_date
@@ -1145,24 +1177,6 @@ class TestFem(unittest.TestCase):
             assert exc_info.type is HexitecFemError
             assert exc_info.value.args[0] == "Invalid Hexadecimal value {0:X}".format(value)
 
-    def test_mask_aspect_encoding(self):
-        """Test function handles a few sample masking tasks."""
-        value_h, value_l = 0x31, 0x32
-        resp = [0x32, 0x34]
-        masked_h, masked_l = self.test_fem.fem.mask_aspect_encoding(value_h, value_l, resp)
-        assert (masked_h, masked_l) == (0x33, 0x36)
-
-        value_h, value_l = 0x31, 0x33
-        resp = [0x45, 0x39]
-        masked_h, masked_l = self.test_fem.fem.mask_aspect_encoding(value_h, value_l, resp)
-        assert (masked_h, masked_l) == (0x46, 0x42)
-
-    def test_convert_hex_to_hv(self):
-        """Test function works ok."""
-        hex_val = 0x0034
-        rc = self.test_fem.fem.convert_hex_to_hv(hex_val)
-        assert rc == 15.873015873015873
-
     def test_convert_hv_to_hex(self):
         """Test function works ok."""
         hv = 14
@@ -1177,16 +1191,18 @@ class TestFem(unittest.TestCase):
         assert hv_msb, hv_lsb == expected_values
 
     # TODO Update
-    # def test_hv_on(self):
-    #     """Test function works ok."""
-    #     self.test_fem.fem.send_cmd = Mock()
-    #     self.test_fem.fem.convert_bias_to_dac_values = Mock()
-    #     self.test_fem.fem.convert_bias_to_dac_values.return_value = [[1, 2], [3, 4]]
-    #     self.test_fem.fem.hv_bias_enabled = False
-    #     self.test_fem.fem.hv_on()
-    #     self.test_fem.fem.send_cmd.assert_called()
-    #     self.test_fem.fem.convert_bias_to_dac_values.assert_called()
-    #     assert self.test_fem.fem.hv_bias_enabled is True
+    @patch('hexitec_vsr.VsrModule')
+    def test_hv_on(self, mocked_vsr_module):
+        """Test function works ok."""
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
+        self.test_fem.fem.convert_bias_to_dac_values = Mock()
+        self.test_fem.fem.convert_bias_to_dac_values.return_value = [[1, 2], [3, 4]]
+        self.test_fem.fem.hv_bias_enabled = False
+        self.test_fem.fem.hv_on()
+        self.test_fem.fem.vsr_list[0].hv_on.assert_called()
+        self.test_fem.fem.convert_bias_to_dac_values.assert_called()
+        assert self.test_fem.fem.hv_bias_enabled is True
 
     @patch('hexitec_vsr.VsrModule')
     def test_hv_off(self, mocked_vsr_module):

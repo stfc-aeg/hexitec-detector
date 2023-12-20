@@ -49,16 +49,6 @@ class HexitecFem():
 
     DAC_SCALE_FACTOR = 0.732
 
-    SEND_REG_VALUE = 0x40   # Verified to work with F/W UART
-    READ_REG_VALUE = 0x41   # Verified to work with F/W UART
-    SET_REG_BIT = 0x42      # Tolerated in collect_offsets
-    CLR_REG_BIT = 0x43      # Not verified, unused
-    SEND_REG_BURST = 0x44   # Avoid - fills up UART (FIFO?)
-    READ_PWR_VOLT = 0x50    # Not used
-    WRITE_REG_VAL = 0x53    # Avoid
-    WRITE_DAC_VAL = 0x54    # Not used
-    CTRL_ADC_DAC = 0x55     # Not used
-
     # Define timestamp format
     DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
 
@@ -92,12 +82,7 @@ class HexitecFem():
         self.farm_mode_prepared = False
         self.farm_mode_file = config.get("farm_mode", None)
 
-        # print(f"  cwd = {os.getcwd()}")
-        # print(f"  self.base_path = {self.base_path}")
-        # print(f"  old farm_mode_file = {self.farm_mode_file}")
         self.farm_mode_file = self.base_path + self.farm_mode_file
-        # print(f"  new farm_mode_file = {self.farm_mode_file}")
-        print(f"  FEM.__init__ farm_mode_file = {self.farm_mode_file}")
 
         self.number_frames = 10
 
@@ -158,6 +143,7 @@ class HexitecFem():
         self.read_firmware_version = True
         self.firmware_date = "N/A"
         self.firmware_time = "N/A"
+        self.firmware_version = "N/A"
 
         # Variables supporting handling of ini-style hexitec config file
         self.hexitec_config = self.base_path + "control/config/hexitec_unified_CSD__performance.ini"
@@ -178,7 +164,7 @@ class HexitecFem():
 
         self.environs_in_progress = False
 
-        # Simulate (for now) whether Hardware finished sending data
+        # Did Hardware finish sending data
         self.all_data_sent = 0
 
         param_tree_dict = {
@@ -209,6 +195,7 @@ class HexitecFem():
             "hardware_busy": (lambda: self.hardware_busy, None),
             "firmware_date": (lambda: self.firmware_date, None),
             "firmware_time": (lambda: self.firmware_time, None),
+            "firmware_version": (lambda: self.firmware_version, None),
             "vsr_ambient_list": (lambda: self.ambient_list, None),
             "vsr_humidity_list": (lambda: self.humidity_list, None),
             "vsr_asic1_list": (lambda: self.asic1_list, None),
@@ -235,7 +222,6 @@ class HexitecFem():
 
             with open(self.farm_mode_file, "r") as f:
                 config = json.load(f)
-                # print(f" -> config: {config} ({type(config)})")
                 self.camera_ctrl_ip = config.get("camera_ctrl_ip")
                 self.camera_ctrl_mac = config.get("camera_ctrl_mac")
                 self.server_ctrl_port = int(config.get("server_ctrl_port"))
@@ -263,27 +249,18 @@ class HexitecFem():
                 self.farm_target_ip = config.get("farm_target_ip")
                 self.farm_target_mac = config.get("farm_target_mac")
                 self.farm_target_port = config.get("farm_target_port")
-                # print(f" farm_target_port = {self.farm_target_port} ({type(self.farm_target_port)})")
                 # Farm mode parameters may contain one or more entries
-                # print(f"!!control_interface = {self.control_interface}")
-                # print("  produces: ", self.extract_interface_parameters(self.control_interface))
                 iface = self.control_interface
                 self.server_ctrl_ip, self.server_ctrl_mac = self.extract_interface_parameters(iface)
-                # print(f"  self.farm_target_ip = {self.extract_string_parameters(self.farm_target_ip)}")
-                # print(f"  self.farm_target_mac = {self.extract_string_parameters(self.farm_target_mac)}")
-                # print(f"  self.farm_target_port = {self.extract_int_parameters(self.farm_target_port)}")
                 self.farm_target_ip = self.extract_string_parameters(self.farm_target_ip)
                 self.farm_target_mac = self.extract_string_parameters(self.farm_target_mac)
                 self.farm_target_port = self.extract_int_parameters(self.farm_target_port)
         except FileNotFoundError as e:
-            # print("Loading Farm Mode config:", str(e))
             raise HexitecFemError("Farm Mode: No Config File: ", str(e))
+        except TypeError as e:
+            raise HexitecFemError("Farm Mode: Config File: ", str(e))
         except JSONDecodeError as e:
-            # print("Loading Farm Mode config - Bad json?", str(e))
             raise HexitecFemError("Farm Mode: Bad json: ", str(e))
-        # except TypeError as e:
-        #     print(" Farm mode file not specified!")
-        #     raise HexitecFemError("Farm Mode: No Config File: ", str(e))
 
     def extract_interface_parameters(self, iface):
         """Extract IP, Mac addresses from specified interface."""
@@ -328,19 +305,7 @@ class HexitecFem():
         """Load and verify farm mode parameters."""
         configOK = True
         try:
-            # print("[E pfm")
             self.load_farm_mode_json_parameters()
-
-            # # Check Farm mode not mismatched configuration
-            # print(f"  FEM,* server_ctrl_ip = {self.server_ctrl_ip}")
-            # print(f"        camera_ctrl_ip = {self.camera_ctrl_ip}")
-            # print(f"      * server_ctrl_mac = {self.server_ctrl_mac}")
-            # print(f"        camera_ctrl_mac = {self.camera_ctrl_mac}")
-            # print(f"        server_ctrl_port = {self.server_ctrl_port}")
-            # print(f"        control_interface = {self.control_interface}")
-            # print(f"        control_qsfp_idx = {self.control_qsfp_idx}")
-            # print(f"        control_lane = {self.control_lane}")
-
             # Avoid verification, if unit testing..
             if self.verify_parameters:
                 iface = self.control_interface
@@ -349,16 +314,11 @@ class HexitecFem():
         except HexitecFemError as e:
             configOK = False
             self.flag_error("Prepare Farm Mode Error", str(e))
-            # raise HexitecFemError(e)
         return configOK
 
     def verify_farm_mode_parameters(self, iface):
         """Verify farm mode parameters correctly set."""
-        # print(f"  verify_farm_mode_parameters({iface})")
         self.server_ctrl_ip, self.server_ctrl_mac = self.extract_interface_parameters(iface)
-
-        # print(f" vfmp,* server_ctrl_ip = {self.server_ctrl_ip}")
-        # print(f"      * server_ctrl_mac = {self.server_ctrl_mac}")
 
         # Check Farm mode configuration not mismatched
         num_ips = len(self.farm_target_ip)
@@ -366,79 +326,35 @@ class HexitecFem():
         num_ports = len(self.farm_target_port)
         if (num_ips != num_macs) or (num_macs != num_ports):    # pragma: no cover
             e = f"Farm Mode: IP/MAC/port mismatch ({num_ips}/{num_macs}/{num_ports})"
-            # self._set_status_message(e)
             raise HexitecFemError(e)
 
-        # logging.debug(" Updating number of nodes <-- !!!!!")
         self.number_nodes = num_ips
         self.parent.set_number_nodes(self.number_nodes)
-        # print(f"        farm_target_ip = {self.farm_target_ip}")
-        # print(f"        farm_target_mac = {self.farm_target_mac}")
-        # print(f"        farm_target_port = {self.farm_target_port}")
-        # print("[E ")
-        # time.sleep(2)
 
     def prepare_hardware(self, bDebug=False):
         """Prepare hardware connection."""
-        success = self.prepare_farm_mode()
-        # if not success:
-        #     print("[E prepare_farm_mode() return False")
-        # else:
-        #     print("[E prepare_farm_mode() return True True True")
-        return success
+        return self.prepare_farm_mode()
 
     def configure_camera_interfaces(self):
         """Configure IP, Mac and port parameters for detector's Control and Data interfaces."""
         Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
                                  rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
                                  multicast=True, debug=False)
-        # print(f"          Ctrl_lane,  iface_name={self.control_interface}")
-        # print(f"                        qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
-        # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
-
-        # print(f"       O  set_dst_mac({self.server_ctrl_mac})")
-        # print("          set_dst_mac(5c:6f:69:f8:6b:a0)")
-
-        # print(f"       O  set_dst_ip({self.server_ctrl_ip})")
-        # print("          set_dst_ip(10.0.1.1)")
-        # print(f"       O  self.server_ctrl_port = {self.server_ctrl_port}")
-        # print(f"       O  self.camera_ctrl_port = {self.camera_ctrl_port}")
-
-        # print(f"       O  set_src_dst_port({self.src_dst_port})")
-        # print("          set_src_dst_port(0xF0D1F0D0)")
-        # print(f"       O  set_src_mac({self.camera_ctrl_mac})")
-        # print("          set_src_mac(62:00:00:00:01:0A)")
-
-        # print(f"       O  set_src_ip({self.camera_ctrl_ip})")
-        # print("          set_src_ip(10.0.1.100)")
-
-        # print(f"        Ctrl_lane,  iface_name={self.control_interface}")
-        # print(f"                      qsfp_idx={self.control_qsfp_idx} lane={self.control_lane}")
-        # print("        CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=1)")
         ctrl_lane = \
             UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface,
                     qsfp_idx=self.control_qsfp_idx, lane=self.control_lane)
 
         self._set_status_message("Set Control params..")
-        IOLoop.instance().call_later(2, self.configure_control_with_multicast, Hex2x6CtrlRdma, ctrl_lane)
+        IOLoop.instance().call_later(2, self.configure_control_with_multicast,
+                                     Hex2x6CtrlRdma, ctrl_lane)
 
     def configure_control_with_multicast(self, Hex2x6CtrlRdma, ctrl_lane):
         """Configure Control link's parameters."""
         try:
-            # print("  configure_control_with_multicast() O vs Hardcoded")
-            # print(f"   {self.server_ctrl_mac} {type(self.server_ctrl_mac)} vs 5c:6f:69:f8:6b:a0")
             ctrl_lane.set_dst_mac(mac=self.server_ctrl_mac, response_check=False)
-
-            # print(f"   {self.server_ctrl_ip} {type(self.server_ctrl_ip)} vs 10.0.1.1")
             ctrl_lane.set_dst_ip(ip=self.server_ctrl_ip, response_check=False)
-
-            # print(f"   {self.src_dst_port} {type(self.src_dst_port)} vs 0xF0D1F0D0")
             ctrl_lane.set_src_dst_port(port=self.src_dst_port, response_check=False)
-
-            # print(f"   {self.camera_ctrl_mac} {type(self.camera_ctrl_mac)} vs 62:00:00:00:01:0A")
             ctrl_lane.set_src_mac(mac=self.camera_ctrl_mac, response_check=False)
-
-            # print(f"   {self.camera_ctrl_ip} {type(self.camera_ctrl_ip)} vs 10.0.1.100")
             ctrl_lane.set_src_ip(ip=self.camera_ctrl_ip, response_check=False)
 
             # Close multicast connection
@@ -456,17 +372,14 @@ class HexitecFem():
         try:
             # Connect with Control interface
             Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
-                                    rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
-                                    multicast=False, debug=False)
+                                     rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
+                                     multicast=False, debug=False)
             ctrl_lane = \
                 UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface,
                         qsfp_idx=self.control_qsfp_idx, lane=self.control_lane)
             ctrl_lane.set_filtering(enable=True, response_check=True)
             ctrl_lane.set_arp_timeout_length()
 
-            # print(f"[E       Data 1_lane, iface_name={self.data1_interface}")
-            # print(f"                        qsfp_idx={1} lane={self.data1_lane}")
-            # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=2)")
             self.data_lane1 = \
                 UdpCore(Hex2x6CtrlRdma, ctrl_flag=False, iface_name=self.data1_interface,
                         qsfp_idx=1, lane=self.data1_lane)
@@ -480,10 +393,6 @@ class HexitecFem():
     def setup_data_lane_2(self, Hex2x6CtrlRdma, ctrl_lane):
         """Setup Data Lane 2's parameters."""
         try:
-            # print(f"         Data 2_lane, iface_name={self.data2_interface}")
-            # print(f"                        qsfp_idx={1} lane={self.data2_lane}")
-            # print("          CMP        iface_name=ens2f0np0,  qsfp_idx=1, lane=3)")
-
             self.data_lane2 = \
                 UdpCore(Hex2x6CtrlRdma, ctrl_flag=False, iface_name=self.data2_interface,
                         qsfp_idx=1, lane=self.data2_lane)
@@ -559,10 +468,8 @@ class HexitecFem():
             i = index % original_number_nodes
             if (index % 2) == 1:  # Odd
                 lut2.append(nodes[i])
-                # print(f" {index}: {nodes[i]} ->LUT2")
             else:  # Even (includes 0..)
                 lut1.append(nodes[i])
-                # print(f" {index}: {nodes[i]} ->LUT1")
         return lut1, lut2
 
     def connect(self):
@@ -571,7 +478,6 @@ class HexitecFem():
             self.x10g_rdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
                                      rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
                                      debug=False, uart_offset=0xC)
-
             self.broadcast_VSRs = \
                 VsrModule(self.x10g_rdma, slot=0, init_time=0, addr_mapping=self.vsr_addr_mapping)
             self.vsr_list = []
@@ -595,30 +501,28 @@ class HexitecFem():
     def read_sensors(self, msg=None):
         """Read environmental sensors and updates parameter tree with results."""
         try:
-            # TODO: Implement 2x6 version
             # Note once, when firmware was built
-            # if self.read_firmware_version:
-            #     fw_date = self.x10g_rdma.read(0x8008, burst_len=1, comment='FIRMWARE DATE')
-            #     fw_time = self.x10g_rdma.read(0x800C, burst_len=1, comment='FIRMWARE TIME')
-            #     fw_date = fw_date[0]
-            #     fw_time = fw_time[0]
-            #     fw_time = "{0:06X}".format(fw_time)
-            #     fw_date = "{0:08X}".format(fw_date)
-            #     year = fw_date[0:4]
-            #     month = fw_date[4:6]
-            #     day = fw_date[6:8]
-            #     self.firmware_date = "{0:.2}/{1:.2}/{2:.4}".format(day, month, year)
-            #     self.firmware_time = "{0:.2}:{1:.2}:{2:.4}".format(fw_time[0:2], fw_time[2:4],
-            #                                                        fw_time[4:6])
-            #     self.read_firmware_version = False
-            beginning = time.time()
+            if self.read_firmware_version:
+                board_status = BoardCfgStatus(self.x10g_rdma,
+                                              rdma_offset=rdma.get_id_offset(HEX_REGISTERS.IC_OFFSETS,
+                                                                             'BOARD_BUILD_INFO_ID'))
+                fw_version = board_status.get_fpga_fw_version()
+                build_date = board_status.get_fpga_build_date()
+                build_time = board_status.get_fpga_build_time()
+                # build_date_and_time = build_date + " " + build_time
+                # print(f"version: {fw_version}")
+                # print(f"date: {build_date}")
+                # print(f"time: {build_time}")
+                # print(f"together: {build_date_and_time}")
+                self.firmware_date = build_date
+                self.firmware_time = build_time
+                self.firmware_version = fw_version
+                self.read_firmware_version = False
             self.environs_in_progress = True
             self.parent.software_state = "Environs"
             for vsr in self.vsr_list:
                 self.read_temperatures_humidity_values(vsr)
                 self.read_pwr_voltages(vsr)  # pragma: no cover
-            ending = time.time()
-            print(" Environmental data took: {}".format(ending - beginning))
         except HexitecFemError as e:
             self.flag_error("Failed to read sensors", str(e))
         except Exception as e:
@@ -698,7 +602,6 @@ class HexitecFem():
         """Establish Hardware connection."""
         try:
             if not self.farm_mode_prepared:
-                # print("Go to jail without passing Go")
                 self.parent.software_state = "Cold"
                 return
             if self.hardware_connected:
@@ -908,7 +811,6 @@ class HexitecFem():
             # How to convert datetime object to float?
             self.acquire_timestamp = time.time()    # Utilised by adapter's check_fem_watchdog
 
-            # input("Press enter to enable data (200 ms)")
             logging.debug("Enable data")
             self.data_en(enable=True)
             time.sleep(0.2)
@@ -941,8 +843,6 @@ class HexitecFem():
                     IOLoop.instance().call_later(0.1, self.check_acquire_finished)
                     return
                 else:
-                    # print(" *** Data Received! ***" )
-                    # Original code resumes here: #
                     self.acquire_data_completed()
                     return
         except HexitecFemError as e:
@@ -955,7 +855,6 @@ class HexitecFem():
 
     def acquire_data_completed(self):
         """Reset variables and read out Firmware monitors post data transfer."""
-        # print("\n fem.acquire_data_completed()")
         self.acquire_stop_time = self.create_timestamp()
 
         if self.stop_acquisition:
@@ -978,8 +877,10 @@ class HexitecFem():
         stop_ = datetime.strptime(self.acquire_stop_time, HexitecFem.DATE_FORMAT)
         self.acquire_time = (stop_ - start_).total_seconds()
 
-        logging.debug("Capturing {} frames took {} seconds".format(str(self.number_frames), self.acquire_time))
-        duration = "Requested {} frame(s), took {} seconds".format(self.number_frames, self.acquire_time)
+        logging.debug("Capturing {} frames took {} seconds".format(str(self.number_frames),
+                                                                   self.acquire_time))
+        duration = "Requested {} frame(s), took {} seconds".format(self.number_frames,
+                                                                   self.acquire_time)
         self._set_status_message(duration)
         # Save duration to separate parameter tree entry:
         self.acquisition_duration = duration
@@ -1281,6 +1182,7 @@ class HexitecFem():
             logging.debug("Disabling training for vsr(s)..")
             for vsr in self.vsr_list:
                 vsr._disable_training()
+                # TODO start_trigger_sm() - Needed or not?
                 # vsr.start_trigger_sm()
                 # print(f"sm triggered for vsr{vsr.slot}")
             print("-"*10)
@@ -1289,9 +1191,8 @@ class HexitecFem():
             print("fpga state machine enabled")
 
             self._set_status_message("Initialisation completed. VSRs configured.")
-            print(" -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=-  -=-=-=- ")
-            ending = time.time()
-            print("     initialisation took: {}".format(ending-beginning))
+            # ending = time.time()
+            # print("     initialisation took: {}".format(ending-beginning))
 
             self.parent.software_state = "Idle"
         except HexitecFemError as e:
@@ -1401,18 +1302,9 @@ class HexitecFem():
 
         self.frame_rate = frame_rate
         if self.duration_enable:
-            # print("\n\tfem.calculate_frame_rate() (duration {} setting parent's
-            # number_frames {})\n".format(self.duration, self.number_frames))
             # With duration enabled, recalculate number of frames in case clocks changed
             self.set_duration(self.duration)
             self.parent.set_number_frames(self.number_frames)
-
-    def convert_list_to_string(self, int_list):
-        r"""Convert list of integer into ASCII string.
-
-        I.e. integer_list = [42, 144, 70, 70, 13], returns '*\x90FF\r'
-        """
-        return "{}".format(''.join([chr(x) for x in int_list]))
 
     def read_pwr_voltages(self, vsr):
         """Read and convert power data into voltages."""
@@ -1740,29 +1632,6 @@ class HexitecFem():
         else:
             value -= 0x37
         return value
-
-    def mask_aspect_encoding(self, value_h, value_l, resp):
-        """Mask values honouring aspect encoding.
-
-        Aspect: 0x30 = 1, 0x31 = 1, .., 0x39 = 9, 0x41 = A, 0x42 = B, .., 0x46 = F.
-        Therefore increase values between 0x39 and 0x41 by 7 to match aspect's legal range.
-        I.e. 0x39 | 0x32 = 0x3B, + 7 = 0x42.
-        """
-        value_h = self.translate_to_normal_hex(value_h)
-        value_l = self.translate_to_normal_hex(value_l)
-        resp[0] = self.translate_to_normal_hex(resp[0])
-        resp[1] = self.translate_to_normal_hex(resp[1])
-        masked_h = value_h | resp[0]
-        masked_l = value_l | resp[1]
-        # print("h: {0:X} r: {1:X} = {2:X} masked: {3:X} I.e. {4:X}".format(
-        #     value_h, resp[0], value_h | resp[0], masked_h, self.HEX_ASCII_CODE[masked_h]))
-        # print("l: {0:X} r: {1:X} = {2:X} masked: {3:X} I.e. {4:X}".format(
-        #     value_l, resp[1], value_l | resp[1], masked_l, self.HEX_ASCII_CODE[masked_l]))
-        return self.HEX_ASCII_CODE[masked_h], self.HEX_ASCII_CODE[masked_l]
-
-    def convert_hex_to_hv(self, hex_value):
-        """Convert hexadecimal value into HV voltage."""
-        return (hex_value / 0xFFF) * 1250
 
     def convert_hv_to_hex(self, hv_value):
         """Convert HV voltage into hexadecimal value."""

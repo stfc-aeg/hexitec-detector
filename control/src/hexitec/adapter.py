@@ -228,9 +228,8 @@ class Hexitec():
         self.acquisition_in_progress = False
 
         # Watchdog variables
-        self.error_margin = 400     # TODO: Revisit timeouts
         self.fem_tx_timeout = 5000
-        self.daq_rx_timeout = self.error_margin
+        self.daq_rx_timeout = 3
 
         # Store initialisation time
         self.init_time = time.time()
@@ -314,7 +313,8 @@ class Hexitec():
         self.check_fem_watchdog()
 
         # TODO: WATCHDOG, monitor HexitecDAQ rate of frames_processed updated.. (Break if stalled)
-        self.check_daq_watchdog()
+        if self.daq.processing_interruptable:
+            self.check_daq_watchdog()
 
         IOLoop.instance().call_later(1.0, self.polling)
 
@@ -343,7 +343,7 @@ class Hexitec():
         self.status_message = self.fem._get_status_message()
         self.system_health = self.system_health and self.fem_health
 
-    # TODO: Revisit and update once firmware data readout available
+    # TODO: Revisit and update once firmware data readout available - Redundant?
     def check_fem_watchdog(self):
         """Check data sent when FEM acquiring data."""
         if self.acquisition_in_progress:
@@ -370,16 +370,15 @@ class Hexitec():
             processed_timestamp = self.daq.processed_timestamp
             delta_time = time.time() - processed_timestamp
             if (delta_time > self.daq_rx_timeout):
-                logging.error("    DAQ -- PROCESSING TIMED OUT")
                 # DAQ: Timed out waiting for next frame to process
                 self.shutdown_processing()
-                logging.error("DAQ processing timed out; Saw %s expected %s frames" %
-                              (self.daq.frames_processed, self.daq.frame_end_acquisition))
-                self.fem._set_status_error("Processing timed out: {0:.2f} seconds \
-                    (exceeded {1:.2f}); Expected {2} got {3} frames\
-                        ".format(delta_time, self.daq_rx_timeout,
-                                 self.daq.frame_end_acquisition, self.daq.frames_processed))
-                self.fem._set_status_message("Processing abandoned")
+                logging.warning("DAQ processing timed out; Saw %s expected %s frames" %
+                                (self.daq.frames_processed, self.daq.number_frames))
+                # self.fem._set_status_error("Processing timed out: {0:.2f} seconds \
+                #     (exceeded {1:.2f}); Expected {2} got {3} frames\
+                #         ".format(delta_time, self.daq_rx_timeout,
+                #                  self.daq.number_frames, self.daq.frames_processed))
+                self.fem._set_status_message("Processed frames, some packet(s) loss")
 
     def shutdown_processing(self):
         """Stop processing in DAQ."""
@@ -652,16 +651,12 @@ class Hexitec():
         """Push HexitecDAQ's 'config/' ParameterTree settings into FP's plugins."""
         try:
             if self.fem.prepare_hardware():
-                print(f"[E SUCCESS! In adp.commit_configuration, fem.prepare_hardware returned True")
                 self.daq.commit_configuration()
                 # Clear cold initialisation if first config commit
                 if self.cold_initialisation:
                     self.cold_initialisation = False
-            else:
-                print(f"[E FAIL! In adp.commit_configuration, fem.prepare_hardware returned False")
         except Exception as e:
-            # self.fem.flag_error(str(e))
-            print(f"\n e {str(e)}")
+            self.fem.flag_error(str(e))
 
     def hv_on(self, msg):
         """Switch HV on."""
