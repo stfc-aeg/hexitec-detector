@@ -254,6 +254,19 @@ class TestFem(unittest.TestCase):
     #         self.test_fem.fem.poll_sensors()
     #         mock_loop.instance().call_later.assert_called_with(3.0, self.test_fem.fem.poll_sensors)
 
+    def test_connect_hardware_handle_cold_start(self):
+        """Test that connecting from 'cold' works OK."""
+        self.test_fem.fem.cold_start = True
+        self.test_fem.fem.connect_hardware()
+        assert self.test_fem.fem.cold_start == False
+
+    def test_connect_hardware_handle_non_cold_start(self):
+        """Test that connecting works OK."""
+        self.test_fem.fem.cold_start = False
+        self.test_fem.fem.connect = Mock()
+        self.test_fem.fem.connect_hardware()
+        self.test_fem.fem.connect.assert_called()
+
     def test_connect_hardware_already_connected_fails(self):
         """Test that connecting with connection already established handles failure."""
         self.test_fem.fem.hardware_connected = True
@@ -265,6 +278,13 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.configure_camera_interfaces = Mock(side_effect=HexitecFemError(""))
         self.test_fem.fem.connect_hardware()
         assert self.test_fem.fem._get_status_error() == "Connection Error"
+
+    def test_connect_hardware_without_farm_mpde_prepped(self):
+        """Test that connecting without farm mode established isn't allowed."""
+        self.test_fem.fem.parent.software_state = "Nowt"
+        self.test_fem.fem.farm_mode_prepared = False
+        self.test_fem.fem.connect_hardware()
+        assert self.test_fem.fem.parent.software_state == "Cold"
 
     def test_prepare_farm_mode(self):
         """Test that function works okay."""
@@ -338,7 +358,36 @@ class TestFem(unittest.TestCase):
             success = self.test_fem.fem.prepare_hardware()
             assert success is False
 
-    # def test
+    # TODO Refuses to improve coverage
+    # @patch('udpcore.UdpCore')
+    # @patch('RdmaUdp.RdmaUdp')
+    # def test_hv_on(self, mocked_core, mocked_rdma):
+    #     """Test function fails when no connection established."""
+    #     with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+    #         mocked_core.rdma_ip = "127.0.0.1"
+    #         mocked_rdma.rdma_ip = "127.0.0.1"
+    #         self.test_fem.fem.configure_camera_interfaces()
+    #         self.test_fem.fem._set_status_message.assert_called_with("Set Control Params..")
+    #         i = mock_loop.instance()
+    #         i.call_later.assert_called_with(2,
+    #                                         self.test_fem.fem.configure_control_with_multicast,
+    #                                         mocked_core, mocked_rdma)
+
+    def test_populate_lists(self):
+        """Test function works ok."""
+        self.test_fem.fem.farm_target_ip = ['10.0.1.2', '10.0.1.3', '10.0.1.4', '10.0.1.1']
+        ip_lut1 = ['10.0.1.2', '10.0.1.4']
+        ip_lut2 = ['10.0.1.3', '10.0.1.1']
+        self.test_fem.fem.farm_target_mac = ['5c:6f:69:f8:57:d0', '5c:6f:69:f8:a3:e0', '5c:6f:69:f8:7a:10']
+        mac_lut1 = ['5c:6f:69:f8:57:d0', '5c:6f:69:f8:7a:10', '5c:6f:69:f8:a3:e0']
+        mac_lut2 = ['5c:6f:69:f8:a3:e0', '5c:6f:69:f8:57:d0', '5c:6f:69:f8:7a:10']
+        lut1, lut2 = self.test_fem.fem.populate_lists(self.test_fem.fem.farm_target_ip)
+        assert lut1 == ip_lut1
+        assert lut2 == ip_lut2
+        lut1, lut2 = self.test_fem.fem.populate_lists(self.test_fem.fem.farm_target_mac)
+        assert lut1 == mac_lut1
+        assert lut2 == mac_lut2
+
     def test_initialise_hardware_fails_if_not_connected(self):
         """Test function fails when no connection established."""
         self.test_fem.fem.initialise_hardware()
