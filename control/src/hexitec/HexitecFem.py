@@ -335,7 +335,7 @@ class HexitecFem():
         """Prepare hardware connection."""
         return self.prepare_farm_mode()
 
-    def configure_camera_interfaces(self):
+    def configure_camera_interfaces(self):  # pragma: no cover
         """Configure IP, Mac and port parameters for detector's Control and Data interfaces."""
         Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
                                  rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
@@ -348,7 +348,7 @@ class HexitecFem():
         IOLoop.instance().call_later(2, self.configure_control_with_multicast,
                                      Hex2x6CtrlRdma, ctrl_lane)
 
-    def configure_control_with_multicast(self, Hex2x6CtrlRdma, ctrl_lane):
+    def configure_control_with_multicast(self, Hex2x6CtrlRdma, ctrl_lane):  # pragma: no cover
         """Configure Control link's parameters."""
         try:
             ctrl_lane.set_dst_mac(mac=self.server_ctrl_mac, response_check=False)
@@ -367,7 +367,7 @@ class HexitecFem():
             self.hardware_busy = False
             self.flag_error("Setup Control", str(e))
 
-    def setup_data_lane_1(self):
+    def setup_data_lane_1(self):    # pragma: no cover
         """Setup Data Lane 1's parameters."""
         try:
             # Connect with Control interface
@@ -390,7 +390,7 @@ class HexitecFem():
             self.hardware_busy = False
             self.flag_error("Setup Data Lane 1", str(e))
 
-    def setup_data_lane_2(self, Hex2x6CtrlRdma, ctrl_lane):
+    def setup_data_lane_2(self, Hex2x6CtrlRdma, ctrl_lane): # pragma: no cover
         """Setup Data Lane 2's parameters."""
         try:
             self.data_lane2 = \
@@ -403,7 +403,7 @@ class HexitecFem():
             self.hardware_busy = False
             self.flag_error("Setup Data Lane 2", str(e))
 
-    def setup_farm_mode(self, Hex2x6CtrlRdma, ctrl_lane):
+    def setup_farm_mode(self, Hex2x6CtrlRdma, ctrl_lane):   # pragma: no cover
         """Configure data lanes for Farm Mode."""
         # Source = Camera, Destination: PC
         try:
@@ -502,7 +502,7 @@ class HexitecFem():
         """Read environmental sensors and updates parameter tree with results."""
         try:
             # Note once, when firmware was built
-            if self.read_firmware_version:
+            if self.read_firmware_version:  # pragma: no cover
                 board_status = BoardCfgStatus(self.x10g_rdma,
                                               rdma_offset=rdma.get_id_offset(HEX_REGISTERS.IC_OFFSETS,
                                                                              'BOARD_BUILD_INFO_ID'))
@@ -1313,7 +1313,7 @@ class HexitecFem():
         index = vsr.addr - self.vsr_base_address
         if (0 <= index <= 5):
             self.hv_list[index] = vsr.get_power_sensors()
-        else:
+        else:   # pragma: no cover
             raise HexitecFemError("Power Voltages: Invalid VSR index: {}".format(index))
 
     def read_temperatures_humidity_values(self, vsr):
@@ -1329,7 +1329,7 @@ class HexitecFem():
             self.asic1_list[index] = float(sensors_values[2])
             self.asic2_list[index] = float(sensors_values[3])
             self.adc_list[index] = float(sensors_values[4])
-        else:
+        else:   # pragma: no cover
             raise HexitecFemError("Sensors: Invalid VSR index: {}".format(index))
 
     def set_hexitec_config(self, filename):

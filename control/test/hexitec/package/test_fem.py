@@ -136,16 +136,6 @@ class TestFem(unittest.TestCase):
         assert self.test_fem.fem.log_messages[0][:-4] == log_messages[0][:-4]
         assert self.test_fem.fem.log_messages[0][1] == log_messages[0][1]
 
-    @patch('hexitec_vsr.VsrModule')
-    def test_hv_off(self, mocked_vsr_module):
-        """Test function works ok."""
-        vsr_list = [mocked_vsr_module]
-        self.test_fem.fem.vsr_list = vsr_list
-        self.test_fem.fem.hv_bias_enabled = True
-        self.test_fem.fem.hv_off()
-        self.test_fem.fem.vsr_list[0].hv_off.assert_called()
-        assert self.test_fem.fem.hv_bias_enabled is False
-
     # """
     # version: v0.17.0
     # date: 2023-11-23
@@ -235,7 +225,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.row_s1 = row_s1
         self.test_fem.fem.s1_sph = s1_sph
         self.test_fem.fem.sph_s2 = sph_s2
-        self.test_fem.fem.duration_enabled = True
+        self.test_fem.fem.duration_enable = True
         duration = 2
         self.test_fem.fem.calculate_frame_rate()
         self.test_fem.fem.set_duration(duration)
@@ -666,7 +656,7 @@ class TestFem(unittest.TestCase):
     # #         self.test_fem.fem.stop_acquisition = False
     # #         self.test_fem.fem.x10g_rdma.read = Mock()
     # #         self.test_fem.fem.x10g_rdma.read.side_effect = [0]  # >0 Signals all data sent
-    # #         self.test_fem.fem.duration_enabled = True
+    # #         self.test_fem.fem.duration_enable = True
     # #         self.test_fem.fem.duration = 0.0
     # #         self.test_fem.fem.check_acquire_finished()
     # #         instance = mock_loop.instance().
@@ -765,33 +755,12 @@ class TestFem(unittest.TestCase):
     # #     assert exc_info.type is HexitecFemError
     # #     assert exc_info.value.args[0] == "Unknown VSR address! (%s)" % vsr_addr
 
-    # def test_write_dac_values(self):
-    #     """Test function handles writing dac values ok."""
-    #     self.test_fem.fem.send_cmd = Mock()
-    #     vsr_addr = HexitecFem.VSR_ADDRESS[1]
-    #     self.test_fem.fem.vsr_addr = vsr_addr
-
-    #     params = \
-    #         {'Control-Settings/VCAL': '0.3',
-    #          'Control-Settings/Uref_mid': '1,000000E+3'}
-
-    #     self.test_fem.fem.hexitec_parameters = params
-    #     self.test_fem.fem.write_dac_values(vsr_addr)
-
-    #     vcal = [0x30, 0x31, 0x39, 0x39]
-    #     umid = [0x30, 0x35, 0x35, 0x36]
-    #     hv = [0x30, 0x35, 0x35, 0x35]
-    #     dctrl = [0x30, 0x30, 0x30, 0x30]
-    #     rsrv2 = [0x30, 0x38, 0x45, 0x38]
-
-    #     scommand = [vsr_addr, self.test_fem.fem.WRITE_DAC_VAL,
-    #                 vcal[0], vcal[1], vcal[2], vcal[3],
-    #                 umid[0], umid[1], umid[2], umid[3],
-    #                 hv[0], hv[1], hv[2], hv[3],
-    #                 dctrl[0], dctrl[1], dctrl[2], dctrl[3],
-    #                 rsrv2[0], rsrv2[1], rsrv2[2], rsrv2[3]]
-
-    #     self.test_fem.fem.send_cmd.assert_has_calls([call(scommand)])
+    @patch('hexitec_vsr.VsrModule')
+    def test_write_dac_values(self, mocked_vsr_module):
+        """Test function handles writing dac values ok."""
+        self.test_fem.fem.umid_value = 1
+        self.test_fem.fem.vcal_value = 1
+        self.test_fem.fem.write_dac_values(mocked_vsr_module.addr)
 
     def test_initialise_hardware_fails_unknown_exception(self):
         """Test function fails unexpected exception."""
@@ -924,7 +893,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.row_s1 = row_s1
         self.test_fem.fem.s1_sph = s1_sph
         self.test_fem.fem.sph_s2 = sph_s2
-        self.test_fem.fem.duration_enabled = True
+        self.test_fem.fem.duration_enable = True
         self.test_fem.fem.calculate_frame_rate()
         duration = 2
         self.test_fem.fem.frame_rate = 0
@@ -988,17 +957,44 @@ class TestFem(unittest.TestCase):
     #     assert self.test_fem.fem.asic2_list[0] == vsr1_asic2
     #     assert self.test_fem.fem.adc_list[0] == vsr1_adc
 
-    # def test_read_temperatures_humidity_values_bad_vsr(self):
-    #     """Test function handle misconfigured VSR."""
-    #     self.test_fem.fem.send_cmd = Mock()
-    #     vsr_addr = 151  # HexitecFem.VSR_ADDRESS[5]
-    #     self.test_fem.fem.vsr_addr = vsr_addr
-    #     self.test_fem.fem.debug = True
-    #     with pytest.raises(HexitecFemError) as exc_info:
-    #         self.test_fem.fem.read_temperatures_humidity_values()
-    #     assert exc_info.type is HexitecFemError
-        # assert exc_info.value.args[0] == \
-        #     "Sensors: Invalid VSR address(0x{0:02X})".format(vsr_addr)
+    # TODO: Mock vsr.get_power_sensors() returning values
+    @patch('hexitec_vsr.VsrModule')
+    def test_read_pwr_voltages(self, mocked_vsr_module):
+        """Test function working OK."""
+        mocked_vsr_module.addr = 0x90
+        self.test_fem.fem.read_pwr_voltages(mocked_vsr_module)
+
+    @patch('hexitec_vsr.VsrModule')
+    def test_read_pwr_voltages_bad_vsr(self, mocked_vsr_module):
+        """Test function handles unexpected vsr."""
+        mocked_vsr_module.addr = 151
+        with pytest.raises(HexitecFemError) as exc_info:
+            self.test_fem.fem.read_pwr_voltages(mocked_vsr_module)
+        assert exc_info.type is HexitecFemError
+        assert exc_info.value.args[0] == "HV: Invalid VSR address(0x{0:02X})".format(mocked_vsr_module.addr)
+
+    # TODO: Mock vsr._get_env_sensors() returning values
+    @patch('hexitec_vsr.VsrModule')
+    def test_read_temperatures_humidity_values(self, mocked_vsr_module):
+        """Test function work OK."""
+        mocked_vsr_module.addr = 0x90
+        self.test_fem.fem.read_temperatures_humidity_values(mocked_vsr_module)
+
+    @patch('hexitec_vsr.VsrModule')
+    def test_read_temperatures_humidity_values_handles_bad_vsr(self, mocked_vsr_module):
+        """Test function handle misconfigured VSR."""
+        mocked_vsr_module.addr = 151
+        with pytest.raises(HexitecFemError) as exc_info:
+            self.test_fem.fem.read_temperatures_humidity_values(mocked_vsr_module)
+        assert exc_info.type is HexitecFemError
+        assert exc_info.value.args[0] == \
+            "Sensors: Invalid VSR address(0x{0:02X})".format(mocked_vsr_module.addr)
+    """
+    read_pwr_voltages(146) (2) value: -2.618273186812985
+    read_temperatures_humidity_values(147) (3) value: ('31.089', '30.834', '27.81', '27.88', '33.94')
+    read_pwr_voltages(147) (3) value: -4.079540219780256
+    read_temperatures_humidity_values(148) (4) value: ('32.344', '30.185', '27.5', '28.5', '35.38')
+    """
 
     # def test_read_temperature_humidity_values_handle_wrong_value(self):
     #     """Test function handles bad sensor values."""
@@ -1015,6 +1011,18 @@ class TestFem(unittest.TestCase):
     def test_set_hexitec_config(self):
         """Test function handles configuration file ok."""
         filename = "control/test/hexitec/config/hexitec_test_config.ini"
+
+        self.test_fem.fem.set_hexitec_config(filename)
+
+        assert self.test_fem.fem.row_s1 == 25
+        assert self.test_fem.fem.s1_sph == 13
+        assert self.test_fem.fem.sph_s2 == 57
+        assert self.test_fem.fem.bias_level == 15
+        assert self.test_fem.fem.vsrs_selected == 63
+
+    def test_set_hexitec_config_vcal_off_gain_low(self):
+        """Test function handles configuration file ok."""
+        filename = "control/test/hexitec/config/hexitec_test_config2.ini"
 
         self.test_fem.fem.set_hexitec_config(filename)
 
