@@ -112,6 +112,7 @@ class HexitecFem():
 
         self.vsrs_selected = 0
         self.vsr_addr_mapping = {1: 0x90, 2: 0x91, 3: 0x92, 4: 0x93, 5: 0x94, 6: 0x95}
+        self.number_vsrs = len(self.vsr_addr_mapping.keys())
         self.broadcast_VSRs = None
         self.vsr_list = []
         self.vcal_enabled = 0
@@ -390,7 +391,7 @@ class HexitecFem():
             self.hardware_busy = False
             self.flag_error("Setup Data Lane 1", str(e))
 
-    def setup_data_lane_2(self, Hex2x6CtrlRdma, ctrl_lane): # pragma: no cover
+    def setup_data_lane_2(self, Hex2x6CtrlRdma, ctrl_lane):     # pragma: no cover
         """Setup Data Lane 2's parameters."""
         try:
             self.data_lane2 = \
@@ -438,8 +439,8 @@ class HexitecFem():
             self.data_lane1.set_lut_mode_port(port_lut1)
             self.data_lane2.set_lut_mode_port(port_lut2)
 
-            Hex2x6CtrlRdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_NOF_LUT_MODE_ENTRIES['addr'],
-                                          data=lut_entries, burst_len=1)
+            address = HEX_REGISTERS.HEXITEC_2X6_NOF_LUT_MODE_ENTRIES['addr']
+            Hex2x6CtrlRdma.udp_rdma_write(address=address, data=lut_entries, burst_len=1)
             self.data_lane1.set_lut_mode()  # enp2s0f1
             self.data_lane2.set_lut_mode()  # enp2s0f2
 
@@ -501,6 +502,7 @@ class HexitecFem():
     def read_sensors(self, msg=None):
         """Read environmental sensors and updates parameter tree with results."""
         try:
+            self.hardware_busy = True
             # Note once, when firmware was built
             if self.read_firmware_version:  # pragma: no cover
                 board_status = BoardCfgStatus(self.x10g_rdma,
@@ -531,6 +533,7 @@ class HexitecFem():
             self.environs_in_progress = False
             self.parent.software_state = "Idle"
             self._set_status_message("VSRs sensors read")
+        self.hardware_busy = False
 
     def disconnect(self):
         """Disconnect hardware connection."""
@@ -586,18 +589,6 @@ class HexitecFem():
         """Get FEM health status."""
         return self.health
 
-    # # TODO: Still need IOLoop call if sensor polling is scrapped?
-    # def _start_polling(self):
-    #     IOLoop.instance().add_callback(self.poll_sensors)   # Not polling sensors
-
-    # # TODO: redundant ?
-    # def poll_sensors(self):
-    #     """Poll hardware while connected but not busy initialising, collecting offsets, etc."""
-    #     # if self.hardware_connected and (self.hardware_busy is False):
-    #     #     self.read_sensors()
-    #     #     print(" * poll_sensors() not reading sensors *")
-    #     IOLoop.instance().call_later(3.0, self.poll_sensors)
-
     def connect_hardware(self, msg=None):
         """Establish Hardware connection."""
         try:
@@ -623,7 +614,7 @@ class HexitecFem():
             self.hardware_connected = False
             self.hardware_busy = False
         except socket.error as e:
-            self.flag_error("Connection Error", str(e))
+            self.flag_error("Connection Socket Error", str(e))
             self._set_status_message("Is the camera powered?")
             self.hardware_connected = False
             self.hardware_busy = False
@@ -650,18 +641,6 @@ class HexitecFem():
                 error = "{}".format(vsr_statuses)
                 self.flag_error(message, error)
                 return
-            # TODO Tie-in rechecking against vsrs_selected?!
-            # self.x10g_rdma.enable_all_vsrs()
-            # expected_value = self.vsrs_selected
-            # read_value = self.x10g_rdma.power_status()
-            # # Ensure selected VSR(s) were switched on
-            # read_value = read_value & expected_value
-            # if (read_value == expected_value):
-            #     logging.debug("Power OK: 0x{0:08X}".format(read_value))
-            # else:
-            #     message = "Not all VSRs powered up"
-            #     error = "{}".format(vsr_statuses)
-            #     self.flag_error(message, error)
 
             # Switch HV on
             success = self.broadcast_VSRs.hv_enable()
@@ -673,19 +652,7 @@ class HexitecFem():
                 error = "{}".format(hv_statuses)
                 self.flag_error(message, error)
                 return
-            # TODO tie-in with check-in against vsrs_selected?!
-            # self.x10g_rdma.enable_all_hvs()
-            # expected_value = (self.vsrs_selected << 8) | self.vsrs_selected
-            # read_value = self.x10g_rdma.power_status()
-            # read_value = read_value & expected_value
-            # if (read_value == expected_value):
-            #     logging.debug("HV OK: 0x{0:08X}".format(read_value))
-            # else:
-            #     message = "Not all VSRs' HV on"
-            #     error = "Expected 0x{0:02X}, got 0x{1:02X}".format(expected_value, read_value)
-            #     self.flag_error(message, error)
-            # print("\n FAKE initialisation\n")
-            powering_delay = 10  # 1
+            powering_delay = 10
             logging.debug("VSRs enabled; Waiting {} seconds".format(powering_delay))
             self._set_status_message("Waiting {} seconds (VSRs booting)".format(powering_delay))
             IOLoop.instance().call_later(powering_delay, self.cam_connect_completed)
@@ -712,6 +679,7 @@ class HexitecFem():
         except Exception as e:
             error = "Camera initialisation failed"
             self.flag_error(error, str(e))
+        self.hardware_busy = False
 
     def collect_data(self, msg=None):
         """Acquire data from camera."""
@@ -731,8 +699,10 @@ class HexitecFem():
             self.acquire_data()
         except HexitecFemError as e:
             self.flag_error("Failed to collect data", str(e))
+            self.hardware_busy = False
         except Exception as e:
             self.flag_error("Data collection failed", str(e))
+            self.hardware_busy = False
 
     def disconnect_hardware(self, msg=None):
         """Disconnect camera."""
@@ -772,9 +742,6 @@ class HexitecFem():
         self._set_status_message("VSRs booted")
         self.hardware_busy = False
         self.parent.software_state = "Idle"
-        # # Start polling thread (connect successfully set up)
-        # if len(self.status_error) == 0:
-        #     self._start_polling()
 
     def cam_disconnect(self):
         """Send commands to disconnect camera."""
@@ -822,6 +789,7 @@ class HexitecFem():
             IOLoop.instance().call_later(0.1, self.check_acquire_finished)
         except Exception as e:
             self.flag_error("Failed to start acquire_data", str(e))
+            self.hardware_busy = False
 
     def check_acquire_finished(self):
         """Check whether all data transferred, until completed or cancelled by user."""
@@ -849,6 +817,7 @@ class HexitecFem():
             self.flag_error("Failed to collect data", str(e))
         except Exception as e:
             self.flag_error("Data collection failed", str(e))
+        self.hardware_busy = False
 
         # Acquisition interrupted
         self.acquisition_completed = True
@@ -1156,13 +1125,12 @@ class HexitecFem():
             self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'],
                                           data=0x00, burst_len=1, comment=" ")  # Disable training
 
-            number_vsrs = len(self.vsr_addr_mapping.keys())
-            vsr_lock_status = self.x10g_rdma.udp_rdma_read(address=0x3e8, burst_len=number_vsrs)
+            lock_status = self.x10g_rdma.udp_rdma_read(address=0x3e8, burst_len=self.number_vsrs)
             for vsr in self.vsr_list:
-                if vsr_lock_status[vsr.slot-1] == 255:
-                    logging.debug(f"VSR{vsr.slot} lock_status: {vsr_lock_status[vsr.slot-1]}")
+                if lock_status[vsr.slot-1] == 255:
+                    logging.debug(f"VSR{vsr.slot} lock_status: {lock_status[vsr.slot-1]}")
                 else:
-                    logging.error(f"VSR{vsr.slot} lock_status: {vsr_lock_status[vsr.slot-1]}")
+                    logging.error(f"VSR{vsr.slot} lock_status: {lock_status[vsr.slot-1]}")
 
             vsr_status_addr = HEX_REGISTERS.HEXITEC_2X6_VSR0_STATUS['addr']
             for vsr in self.vsr_list:
@@ -1182,18 +1150,11 @@ class HexitecFem():
             logging.debug("Disabling training for vsr(s)..")
             for vsr in self.vsr_list:
                 vsr._disable_training()
-                # TODO start_trigger_sm() - Needed or not?
-                # vsr.start_trigger_sm()
-                # print(f"sm triggered for vsr{vsr.slot}")
-            print("-"*10)
 
             self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x1, burst_len=1)
-            print("fpga state machine enabled")
+            logging.debug("fpga state machine enabled")
 
             self._set_status_message("Initialisation completed. VSRs configured.")
-            # ending = time.time()
-            # print("     initialisation took: {}".format(ending-beginning))
-
             self.parent.software_state = "Idle"
         except HexitecFemError as e:
             self.flag_error("Failed to initialise camera", str(e))
@@ -1311,10 +1272,8 @@ class HexitecFem():
         if vsr.addr not in self.vsr_addr_mapping.values():
             raise HexitecFemError("HV: Invalid VSR address(0x{0:02X})".format(vsr.addr))
         index = vsr.addr - self.vsr_base_address
-        if (0 <= index <= 5):
+        if (0 <= index <= self.number_vsrs-1):
             self.hv_list[index] = vsr.get_power_sensors()
-        else:   # pragma: no cover
-            raise HexitecFemError("Power Voltages: Invalid VSR index: {}".format(index))
 
     def read_temperatures_humidity_values(self, vsr):
         """Read and convert sensor data into temperatures and humidity values."""
@@ -1323,14 +1282,12 @@ class HexitecFem():
         sensors_values = vsr._get_env_sensors()
 
         index = vsr.addr - self.vsr_base_address
-        if (0 <= index <= 5):
+        if (0 <= index <= self.number_vsrs-1):
             self.ambient_list[index] = float(sensors_values[0])
             self.humidity_list[index] = float(sensors_values[1])
             self.asic1_list[index] = float(sensors_values[2])
             self.asic2_list[index] = float(sensors_values[3])
             self.adc_list[index] = float(sensors_values[4])
-        else:   # pragma: no cover
-            raise HexitecFemError("Sensors: Invalid VSR index: {}".format(index))
 
     def set_hexitec_config(self, filename):
         """Check whether file exists, load parameters from file."""

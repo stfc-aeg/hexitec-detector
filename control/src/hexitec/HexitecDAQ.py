@@ -128,6 +128,7 @@ class HexitecDAQ():
 
         self.rows, self.columns = 160, 160
         self.pixels = self.rows * self.columns
+        self.frames_expected = 10
         self.number_frames = 10
         self.number_nodes = 1
         # Status variables
@@ -166,11 +167,10 @@ class HexitecDAQ():
             "status": {
                 "in_progress": (lambda: self.in_progress, None),
                 "daq_ready": (lambda: self.daq_ready, None),
-                "frames_expected": (lambda: self.number_frames, None),
+                "frames_expected": (lambda: self.frames_expected, None),
                 "frames_received": (lambda: self.frames_received, None),
                 "frames_processed": (lambda: self.frames_processed, None),
-                "processed_remaining": (lambda: self.processed_remaining, None),
-                "received_remaining": (lambda: self.received_remaining, None)
+                "processed_remaining": (lambda: self.processed_remaining, None)
             },
             "config": {
                 "addition": {
@@ -300,6 +300,7 @@ class HexitecDAQ():
         self.frames_received = 0
         # Count hdf's frames_processed across node(s)
         self.frame_start_acquisition = self.get_total_frames_processed('hdf')
+        self.frames_expected = self.number_frames
         self.number_frames = number_frames
         logging.info("FRAME START ACQ: %d END ACQ: %d",
                      self.frame_start_acquisition,
@@ -327,10 +328,8 @@ class HexitecDAQ():
             self.frames_received = self.get_total_frames_received()
             self.frames_processed = self.get_total_frames_processed(self.plugin)
             self.processed_remaining = self.number_frames - self.frames_processed
-            self.received_remaining = self.number_frames - self.frames_received
-            # print("[E \n0\t rxd {} left: {} proc'd {} left: {}\n".format(
-            #     self.frames_received, self.received_remaining, self.frames_processed,
-            #     self.processed_remaining))
+            # print("[E \n0\t rxd {} proc'd {} left: {}\n".format(
+            #     self.frames_received, self.frames_processed, self.processed_remaining))
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
             self.fem_not_busy = '%s' % (datetime.datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
@@ -341,9 +340,8 @@ class HexitecDAQ():
         # Check HDF/histogram processing progress
         total_frames_processed = self.get_total_frames_processed(self.plugin)
         self.frames_received = self.get_total_frames_received()
-        self.received_remaining = self.number_frames - self.frames_received
-        # print("[E \nX\t rxd {} left: {} proc'd {} left: {}\n (Number_frames: {} total_frames_processed: {})".format(
-        #     self.frames_received, self.received_remaining, self.frames_processed,
+        # print("[E \nX\t rxd {} proc'd {} left: {}\n (Number_frames: {} total_frames_processed: {})".format(
+        #     self.frames_received, self.frames_processed,
         #     self.processed_remaining, self.number_frames, total_frames_processed))
         if total_frames_processed == self.number_frames:
             IOLoop.instance().add_callback(self.flush_data)
@@ -371,8 +369,8 @@ class HexitecDAQ():
                 self.processed_timestamp = time.time()
                 self.frames_processed = total_frames_processed
                 self.processed_remaining = self.number_frames - self.frames_processed
-                # print("[E \n1\t rxd {} (left: {}) proc'd {} left: {}\n".format(
-                #     self.frames_received, self.received_remaining, self.frames_processed,
+                # print("[E \n1\t rxd {} proc'd {} left: {}\n".format(
+                #     self.frames_received, self.frames_processed,
                 #     self.processed_remaining))
             # Wait 0.5 seconds and check again
             IOLoop.instance().call_later(.5, self.processing_check_loop)
@@ -407,8 +405,8 @@ class HexitecDAQ():
         self.set_file_writing(False)
         self.frames_processed = self.get_total_frames_processed(self.plugin)
         self.processed_remaining = self.number_frames - self.frames_processed
-        # print("\n2\t rxd {} (left: {}) proc'd {} left: {}\n".format(
-        #     self.frames_received, self.received_remaining, self.frames_processed,
+        # print("\n2\t rxd {} proc'd {} left: {}\n".format(
+        #     self.frames_received, self.frames_processed,
         #     self.processed_remaining))
 
     def check_hdf_write_statuses(self):
@@ -867,7 +865,6 @@ class HexitecDAQ():
         """Set number of frames to be acquired."""
         self.number_frames = number_frames
         self.processed_remaining = self.number_frames - self.frames_processed
-        self.received_remaining = self.number_frames - self.frames_received
 
     def set_number_nodes(self, nodes):
         """Set number of nodes."""
@@ -1199,8 +1196,8 @@ class HexitecDAQ():
 
             for param_key in self.param_tree.tree['config'].get(plugin):
 
-                # print("                   config/%s/%s" % (plugin, param_key), " -> ",
-                #       self.param_tree.tree['config'][plugin][param_key].get(""))
+                # print("  DEBUG            config/%s/%s" % (plugin, param_key), " -> ",
+                #     self.param_tree.tree['config'][plugin][param_key].get(""))
 
                 # Don't send histogram's pass_raw, pass_processed,
                 #   since Odin Control do not support bool
