@@ -449,7 +449,7 @@ class GenerateConfigFiles():
                     {
                         "file":
                         {
-                            "path": "/data/hexitec/"
+                            "path": "/tmp/"
                         }
                     }
                 }
