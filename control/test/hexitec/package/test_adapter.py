@@ -412,11 +412,14 @@ class TestDetector(unittest.TestCase):
     def test_save_odin_handles_exception(self):
         """Test function handles Exception."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
-        with patch('json.dump') as mock_dump:
-            mock_dump.side_effect = Exception()
-            self.test_adapter.detector.save_odin("")
-            m = "Saving Odin config"
-            self.test_adapter.detector.fem.flag_error.assert_called_with(m, "")
+        odin_config_file = self.test_adapter.detector.odin_config_file
+        with patch("builtins.open", mock_open(read_data="data")) as mock_file:
+            with patch('json.dump') as mock_dump:
+                mock_dump.side_effect = Exception()
+                self.test_adapter.detector.save_odin("")
+                m = "Saving Odin config"
+                self.test_adapter.detector.fem.flag_error.assert_called_with(m, "")
+                mock_file.assert_called_with(odin_config_file, "w")
 
     def test_load_odin(self):
         """Test function works ok."""
@@ -646,6 +649,15 @@ class TestDetector(unittest.TestCase):
         """Test function calls daq's commit_configuration."""
         self.test_adapter.detector.commit_configuration("")
         self.test_adapter.detector.daq.commit_configuration.assert_called()
+
+    def test_commit_configuration_handles_exception(self):
+        """Test function handles exception."""
+        e = "Error"
+        self.test_adapter.detector.fem.prepare_hardware = Mock()
+        self.test_adapter.detector.fem.prepare_hardware.side_effect = Exception(e)
+        self.test_adapter.detector.commit_configuration("")
+        self.test_adapter.detector.daq.commit_configuration.assert_not_called()
+        self.test_adapter.detector.fem.flag_error.assert_called_with(e)
 
     def test_hv_on(self):
         """Test function switches HV on."""
