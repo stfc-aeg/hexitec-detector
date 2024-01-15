@@ -27,7 +27,7 @@ var odin_cold_initialisation = true;
 // Called once, when page 1st loaded
 document.addEventListener("DOMContentLoaded", function () {
     hexitec_endpoint = new AdapterEndpoint("hexitec");
-    liveview_endpoint = new AdapterEndpoint("live_histogram");
+    livehisto_endpoint = new AdapterEndpoint("live_histogram");
     'use strict';
 
     document.querySelector('#odin-control-message').innerHTML = "Disconnected, Idle";
@@ -286,8 +286,6 @@ function poll_fem() {
                         const frames = result["value"][i].frames;
                         const decoder = result["value"][i].decoder;
                         const buffers = result["value"][i].buffers;
-                        document.querySelector('#frames_received' + (i+1)).innerHTML = frames.received;
-                        document.querySelector('#frames_released' + (i+1)).innerHTML = frames.released;
                         document.querySelector('#frames_dropped' + (i+1)).innerHTML = frames.dropped;
                         document.querySelector('#frames_timedout' + (i+1)).innerHTML = frames.timedout;
 
@@ -789,7 +787,7 @@ function bin_start_changed() {
             bin_start.classList.add('alert-danger');
         });
     // Support histogram (1D) Live view data
-    liveview_endpoint.put(parseFloat(bin_start.value), 'bin_start')
+    livehisto_endpoint.put(parseFloat(bin_start.value), 'bin_start')
         .catch(error => {
             console.log("Couldn't update bin_start");
         });
@@ -807,7 +805,7 @@ function bin_end_changed() {
             bin_end.classList.add('alert-danger');
         });
     // Support histogram (1D) Live view data
-    liveview_endpoint.put(parseFloat(bin_end.value), 'bin_end')
+    livehisto_endpoint.put(parseFloat(bin_end.value), 'bin_end')
         .catch(error => {
             console.log("Couldn't update bin_end");
         });
@@ -825,7 +823,7 @@ function bin_width_changed() {
             bin_width.classList.add('alert-danger');
         });
     // Support histogram (1D) Live view data
-    liveview_endpoint.put(parseFloat(bin_width.value), 'bin_width')
+    livehisto_endpoint.put(parseFloat(bin_width.value), 'bin_width')
         .catch(error => {
             console.log("Couldn't update bin_width");
         });
@@ -956,16 +954,16 @@ function configure_bin_labels(calibration_enable) {
     }
 }
 
-function sensorsLayoutChange(sensors_layout) {
-    // Sets hardware sensors Configuration; i.e. number of rows and columns of sensors
-    hexitec_endpoint.put({ "sensors_layout": sensors_layout }, 'detector/daq')
-        .then(result => {
-            document.querySelector('#sensors-layout-warning').innerHTML = "";
-        })
-        .catch(error => {
-            document.querySelector('#sensors-layout-warning').innerHTML = error.message;
-        });
-}
+// function sensorsLayoutChange(sensors_layout) {
+//     // Sets hardware sensors Configuration; i.e. number of rows and columns of sensors
+//     hexitec_endpoint.put({ "sensors_layout": sensors_layout }, 'detector/daq')
+//         .then(result => {
+//             document.querySelector('#sensors-layout-warning').innerHTML = "";
+//         })
+//         .catch(error => {
+//             document.querySelector('#sensors-layout-warning').innerHTML = error.message;
+//         });
+// }
 
 function numberNodesChange(number_nodes) {
     // Sets number of FR/FP (pair of) nodes
