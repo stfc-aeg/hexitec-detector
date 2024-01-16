@@ -219,6 +219,16 @@ function toggle_ui_elements(bBool) {
     document.querySelector('#hdf-file-path-text').disabled = bBool;
     document.querySelector('#hdf-file-name-text').disabled = bBool;
     document.querySelector('#hexitec-config-text').disabled = bBool;
+
+    document.querySelector('#lv_dataset_select').disabled = bBool;
+    document.querySelector('#lvframes-frame-frequency-text').disabled = bBool;
+    document.querySelector('#lvframes-per-second-text').disabled = bBool;
+    document.querySelector('#lvspectra-per-second-text').disabled = bBool;
+    document.querySelector('#lvspectra-frame-frequency-text').disabled = bBool;
+    document.querySelector('#lvframes-frame-frequency-text').disabled = bBool;
+    document.querySelector('#threshold-lower-text').disabled = bBool;
+    document.querySelector('#threshold-upper-text').disabled = bBool;
+    document.querySelector('#image-frequency-text').disabled = bBool;
 }
 
 function update_ui_with_leak_detector_settings(result){
