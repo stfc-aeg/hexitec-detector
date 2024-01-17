@@ -309,10 +309,7 @@ class Hexitec():
         # Poll FEM acquisition & health status
         self.poll_fem()
 
-        # Watchdog: Watch FEM in case no data from hardware triggered by fem.acquire_data()
-        self.check_fem_watchdog()
-
-        # TODO: WATCHDOG, monitor HexitecDAQ rate of frames_processed updated.. (Break if stalled)
+        # Monitor HexitecDAQ rate of frames_processed updated.. (Break if stalled)
         if self.daq.processing_interruptable:
             self.check_daq_watchdog()
 
@@ -342,23 +339,6 @@ class Hexitec():
         self.status_error = self.fem._get_status_error()
         self.status_message = self.fem._get_status_message()
         self.system_health = self.system_health and self.fem_health
-
-    # TODO: Revisit and update once firmware data readout available - Redundant?
-    def check_fem_watchdog(self):
-        """Check data sent when FEM acquiring data."""
-        if self.acquisition_in_progress:
-            # TODO: Monitor FEM in case no data following fem.acquire_data() call
-            if (self.fem.hardware_busy):
-                fem_begun = self.fem.acquire_timestamp
-                delta_time = time.time() - fem_begun
-                logging.debug("    FEM w-dog: {0:.2f} < {1:.2f}".format(delta_time,
-                                                                        self.fem_tx_timeout))
-                # if (delta_time > self.fem_tx_timeout):
-                #     self.fem.stop_acquisition = True
-                #     self.shutdown_processing()
-                #     logging.error("FEM data transmission timed out")
-                #     error = "Timed out waiting ({0:.2f} seconds) for FEM data".format(delta_time)
-                #     self.fem._set_status_message(error)
 
     def check_daq_watchdog(self):
         """Monitor DAQ's frames_processed while data processed.

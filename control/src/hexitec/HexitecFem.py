@@ -153,7 +153,6 @@ class HexitecFem():
         self.acquire_start_time = ""
         self.acquire_stop_time = ""
         self.acquire_time = 0.0
-        self.acquire_timestamp = 0
         self.offsets_timestamp = 0
 
         # Track history of errors
@@ -642,7 +641,7 @@ class HexitecFem():
                 self.flag_error(message, error)
                 return
 
-            # Switch HV on
+            # Switch HV (Power Board) on
             success = self.broadcast_VSRs.hv_enable()
             hv_statuses = self.broadcast_VSRs._get_status(hv=True, all_vsrs=True)
             logging.debug("HV Status: 0x{}".format(hv_statuses))
@@ -774,9 +773,6 @@ class HexitecFem():
 
             logging.debug(f"Set number frames to: {self.number_frames}")
             self.set_nof_frames(self.number_frames)
-
-            # How to convert datetime object to float?
-            self.acquire_timestamp = time.time()    # Utilised by adapter's check_fem_watchdog
 
             logging.debug("Enable data")
             self.data_en(enable=True)
