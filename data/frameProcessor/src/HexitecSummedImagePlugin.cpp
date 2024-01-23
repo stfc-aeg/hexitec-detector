@@ -37,6 +37,7 @@ namespace FrameProcessor
     image_frequency_ = 1;
     images_written_ = 0;
     reset_image_ = 0;
+    node_index_ = 1000;
   }
 
   /**
@@ -194,6 +195,10 @@ namespace FrameProcessor
     {
       try
       {
+	if (frame_number < node_index_)
+	{
+	  node_index_ = frame_number;
+	}
         if ((frame_number % image_frequency_) == 0)
         {
           // Create summed_image dataset
@@ -205,7 +210,7 @@ namespace FrameProcessor
           summed_image_meta.set_dimensions(dims);
           summed_image_meta.set_compression_type(no_compression);
           summed_image_meta.set_data_type(raw_32bit);
-          summed_image_meta.set_frame_number(frame_number);
+          summed_image_meta.set_frame_number(node_index_);
           summed_image_meta.set_dataset_name("summed_images");
 
           const std::size_t summed_image_size = image_width_ * image_height_ * sizeof(uint32_t);

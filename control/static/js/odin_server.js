@@ -286,8 +286,8 @@ function poll_fem() {
                         const frames = result["value"][i].frames;
                         const decoder = result["value"][i].decoder;
                         const buffers = result["value"][i].buffers;
-                        document.querySelector('#frames_received' + (i+1)).innerHTML = frames.received;
-                        document.querySelector('#frames_released' + (i+1)).innerHTML = frames.released;
+                        // document.querySelector('#frames_received' + (i+1)).innerHTML = frames.received;
+                        // document.querySelector('#frames_released' + (i+1)).innerHTML = frames.released;
                         document.querySelector('#frames_dropped' + (i+1)).innerHTML = frames.dropped;
                         document.querySelector('#frames_timedout' + (i+1)).innerHTML = frames.timedout;
 
@@ -956,16 +956,16 @@ function configure_bin_labels(calibration_enable) {
     }
 }
 
-function sensorsLayoutChange(sensors_layout) {
-    // Sets hardware sensors Configuration; i.e. number of rows and columns of sensors
-    hexitec_endpoint.put({ "sensors_layout": sensors_layout }, 'detector/daq')
-        .then(result => {
-            document.querySelector('#sensors-layout-warning').innerHTML = "";
-        })
-        .catch(error => {
-            document.querySelector('#sensors-layout-warning').innerHTML = error.message;
-        });
-}
+// function sensorsLayoutChange(sensors_layout) {
+//     // Sets hardware sensors Configuration; i.e. number of rows and columns of sensors
+//     hexitec_endpoint.put({ "sensors_layout": sensors_layout }, 'detector/daq')
+//         .then(result => {
+//             document.querySelector('#sensors-layout-warning').innerHTML = "";
+//         })
+//         .catch(error => {
+//             document.querySelector('#sensors-layout-warning').innerHTML = error.message;
+//         });
+// }
 
 function numberNodesChange(number_nodes) {
     // Sets number of FR/FP (pair of) nodes

@@ -81,6 +81,7 @@ namespace FrameProcessor
       int image_frequency_;
       int images_written_;
       int reset_image_;
+      int node_index_;
 
       void reset_summed_image_values();
   };
