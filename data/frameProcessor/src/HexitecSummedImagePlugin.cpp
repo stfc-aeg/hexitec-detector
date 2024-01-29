@@ -15,7 +15,6 @@ namespace FrameProcessor
   const std::string HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER  = "threshold_lower";
   const std::string HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER  = "threshold_upper";
   const std::string HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY  = "image_frequency";
-  const std::string HexitecSummedImagePlugin::CONFIG_IMAGES_WRITTEN   = "images_written";
   const std::string HexitecSummedImagePlugin::CONFIG_RESET_IMAGE      = "reset_image";
 
   /**
@@ -35,8 +34,8 @@ namespace FrameProcessor
     threshold_lower_ = 0;
     threshold_upper_ = 16382;
     image_frequency_ = 1;
-    images_written_ = 0;
     reset_image_ = 0;
+    node_index_ = 1000;
   }
 
   /**
@@ -125,7 +124,6 @@ namespace FrameProcessor
       {
         // Clear all pixels to be 0
         memset(summed_image_, 0, image_pixels_ * sizeof(uint32_t));
-        images_written_ = 0;
         reset_image_ = 0;
       }
     }
@@ -139,7 +137,6 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER, threshold_lower_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER, threshold_upper_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY, image_frequency_);
-    reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_IMAGES_WRITTEN, images_written_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_RESET_IMAGE, reset_image_);
   }
 
@@ -156,7 +153,6 @@ namespace FrameProcessor
     status.set_param(get_name() + "/threshold_lower", threshold_lower_);
     status.set_param(get_name() + "/threshold_upper", threshold_upper_);
     status.set_param(get_name() + "/image_frequency", image_frequency_);
-    status.set_param(get_name() + "/images_written", images_written_);
     status.set_param(get_name() + "/reset_image", reset_image_);
   }
 
@@ -167,6 +163,16 @@ namespace FrameProcessor
   {
     // Nowt to reset..?
     return true;
+  }
+
+  /** Process an EndOfAcquisition Frame.
+  *
+  * Push Summed Data set on end of acquisition
+  */
+  void HexitecSummedImagePlugin::process_end_of_acquisition()
+  {
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "End of acquisition frame received, pushing dataset");
+    pushSummedDataset();
   }
 
   /**
@@ -186,7 +192,7 @@ namespace FrameProcessor
     long long frame_number = incoming_frame_meta.get_frame_number();
 
     // Push dataset
-    LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << dataset << " dataset, frame number: "
       << frame_number);
     this->push(frame);
 
@@ -194,45 +200,24 @@ namespace FrameProcessor
     {
       try
       {
+        // Determine node index, i.e. 0 for first node, 1 = 2nd node, 2 = 3rd, etc
+        if (frame_number < node_index_)
+        {
+          node_index_ = frame_number;
+        }
+
+        // Define pointer to the input image data
+        void* input_ptr = static_cast<void *>(
+          static_cast<char *>(const_cast<void *>(data_ptr)));
+
+        // Apply algorithm
+        apply_summed_image_algorithm(static_cast<float *>(input_ptr));
+
+
+        // How often to write accumulated data to disk?
         if ((frame_number % image_frequency_) == 0)
         {
-          // Create summed_image dataset
-
-          FrameMetaData summed_image_meta;
-          dimensions_t dims(2);
-          dims[0] = image_height_;
-          dims[1] = image_width_;
-          summed_image_meta.set_dimensions(dims);
-          summed_image_meta.set_compression_type(no_compression);
-          summed_image_meta.set_data_type(raw_32bit);
-          summed_image_meta.set_frame_number(frame_number);
-          summed_image_meta.set_dataset_name("summed_images");
-
-          const std::size_t summed_image_size = image_width_ * image_height_ * sizeof(uint32_t);
-
-          boost::shared_ptr<Frame> summed_frame;
-          summed_frame = boost::shared_ptr<Frame>(new DataBlockFrame(summed_image_meta,
-            summed_image_size));
-
-          // Ensure frame is empty
-          float *summed = static_cast<float *>(summed_frame->get_data_ptr());
-          memset(summed, 0, image_pixels_ * sizeof(uint32_t));
-
-          // Define pointer to the input image data
-          void* input_ptr = static_cast<void *>(
-            static_cast<char *>(const_cast<void *>(data_ptr)));
-
-          void* output_ptr = summed_frame->get_data_ptr();
-
-          // Apply algorithm
-          apply_summed_image_algorithm(static_cast<float *>(input_ptr),
-                                      static_cast<uint32_t *>(output_ptr));
-
-          const std::string& dataset_name = summed_image_meta.get_dataset_name();
-          LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset_name << " dataset, frame number: "
-            << summed_image_meta.get_frame_number());
-          this->push(summed_frame);
-          images_written_++;
+          pushSummedDataset();
         }
       }
       catch (const std::exception& e)
@@ -251,7 +236,7 @@ namespace FrameProcessor
    *
    * \param[frame] frame - Pointer to a frame object.
    */
-  void HexitecSummedImagePlugin::apply_summed_image_algorithm(float *in, uint32_t *out)
+  void HexitecSummedImagePlugin::apply_summed_image_algorithm(float *in)
   {
     for (int i=0; i<image_pixels_; i++)
     {
@@ -259,9 +244,48 @@ namespace FrameProcessor
       {
         summed_image_[i] += 1;
       }
-      // Maintain history from previous frame(s)
+    }
+  }
+
+  /**
+   * Create and push summed data set
+   */
+  void HexitecSummedImagePlugin::pushSummedDataset()
+  {
+    // Create summed_image dataset
+
+    FrameMetaData summed_image_meta;
+    dimensions_t dims(2);
+    dims[0] = image_height_;
+    dims[1] = image_width_;
+    summed_image_meta.set_dimensions(dims);
+    summed_image_meta.set_compression_type(no_compression);
+    summed_image_meta.set_data_type(raw_32bit);
+    summed_image_meta.set_frame_number(node_index_);
+    summed_image_meta.set_dataset_name("summed_images");
+
+    const std::size_t summed_image_size = image_width_ * image_height_ * sizeof(uint32_t);
+
+    boost::shared_ptr<Frame> summed_frame;
+    summed_frame = boost::shared_ptr<Frame>(new DataBlockFrame(summed_image_meta,
+      summed_image_size));
+
+    // Ensure frame is empty
+    float *summed = static_cast<float *>(summed_frame->get_data_ptr());
+    memset(summed, 0, image_pixels_ * sizeof(uint32_t));
+
+    // void* output_ptr = summed_frame->get_data_ptr();
+
+    uint32_t *out = static_cast<uint32_t *>(summed_frame->get_data_ptr());
+    for (int i=0; i<image_pixels_; i++)
+    {
       out[i] = summed_image_[i];
     }
+
+    const std::string& dataset_name = summed_image_meta.get_dataset_name();
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << dataset_name << " dataset, frame number: "
+      << summed_image_meta.get_frame_number());
+    this->push(summed_frame);
   }
 
   /**

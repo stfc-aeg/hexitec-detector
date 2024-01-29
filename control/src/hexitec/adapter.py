@@ -549,6 +549,12 @@ class Hexitec():
         request.body = "{}".format(1)
         self.adapters["fp"].put(command, request)
 
+        # Issue reset to summed_image
+        command = "config/summed_image/reset_image"
+        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+        request.body = "{}".format(1)
+        self.adapters["fp"].put(command, request)
+
         self.daq_target = time.time()
         self.daq.prepare_daq(self.number_frames)
         # Acquisition starts here
@@ -586,7 +592,7 @@ class Hexitec():
 
         Busy either:
         -Initialising
-        -Waiting for data collection to complete, either single/multi run
+        -Waiting for data collection to complete
         """
         # print("\n adpt.monitor_fem_progress() called")
         if (self.fem.hardware_busy):
@@ -594,11 +600,6 @@ class Hexitec():
             IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
             return
         # print("\n adpt.monitor_fem_progress() fem done")
-        # Issue reset to summed_image
-        command = "config/summed_image/reset_image"
-        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-        request.body = "{}".format(1)
-        self.adapters["fp"].put(command, request)
 
         self.reset_state_variables()
 
