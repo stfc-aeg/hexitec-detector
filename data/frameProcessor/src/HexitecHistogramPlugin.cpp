@@ -286,7 +286,7 @@ namespace FrameProcessor
   */
   void HexitecHistogramPlugin::process_end_of_acquisition()
   {
-    LOG4CXX_DEBUG_LEVEL(3, logger_, "End of acquisition frame received, writing histograms to disk");
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "End of acquisition frame received, pushing histograms");
     writeHistogramsToDisk();
     histograms_written_ = frames_processed_;
     end_of_acquisition_processed_ = true;
