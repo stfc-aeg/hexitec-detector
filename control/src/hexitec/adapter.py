@@ -229,7 +229,7 @@ class Hexitec():
 
         # Watchdog variables
         self.fem_tx_timeout = 5000
-        self.daq_rx_timeout = 3
+        self.daq_rx_timeout = 4
 
         # Store initialisation time
         self.init_time = time.time()
@@ -354,10 +354,10 @@ class Hexitec():
                 self.shutdown_processing()
                 logging.warning("DAQ processing timed out; Saw %s expected %s frames" %
                                 (self.daq.frames_processed, self.daq.number_frames))
-                # self.fem._set_status_error("Processing timed out: {0:.2f} seconds \
-                #     (exceeded {1:.2f}); Expected {2} got {3} frames\
-                #         ".format(delta_time, self.daq_rx_timeout,
-                #                  self.daq.number_frames, self.daq.frames_processed))
+                self.fem._set_status_error("Processing timed out: {0:.2f} seconds \
+                    (exceeded {1:.2f}); Expected {2} got {3} frames\
+                        ".format(delta_time, self.daq_rx_timeout,
+                                 self.daq.number_frames, self.daq.frames_processed))
                 self.fem._set_status_message("Processed frames, some packet(s) loss")
 
     def shutdown_processing(self):
