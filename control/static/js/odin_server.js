@@ -121,7 +121,11 @@ function resetButtonClicked() {
 }
 
 function disconnectButtonClicked() {
-    disconnect_hardware();
+    // Disconnect automatically turns HV off, signal "off" to Software
+    hvOffButtonClicked();
+    setTimeout(function () {
+        disconnect_hardware();
+    }, 400);
 }
 
 function saveOdinClicked() {
