@@ -188,7 +188,7 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.read_temperatures_humidity_values = Mock()
             self.test_fem.fem.read_temperatures_humidity_values.side_effect = Exception()
             self.test_fem.fem.read_sensors()
-            time.sleep(0.5)
+            time.sleep(0.2)
             error = "Reading sensors failed"
             assert self.test_fem.fem._get_status_error() == error
 
@@ -200,7 +200,7 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.read_temperatures_humidity_values = Mock()
             self.test_fem.fem.read_temperatures_humidity_values.side_effect = HexitecFemError()
             self.test_fem.fem.read_sensors()
-            time.sleep(0.5)
+            time.sleep(0.2)
             error = "Failed to read sensors"
             assert self.test_fem.fem._get_status_error() == error
         assert self.test_fem.fem.parent.software_state == "Error"
@@ -626,12 +626,12 @@ class TestFem(unittest.TestCase):
 
     def test_acquire_data_handles_exception(self):
         """Test function handles exception."""
+        self.test_fem.fem.create_timestamp = Mock()
+        self.test_fem.fem.create_timestamp.side_effect = Exception()
         with patch("hexitec.HexitecFem.IOLoop"):
-            with patch("time.time") as mock_time:
-                mock_time.side_effect = Exception()
-                with pytest.raises(Exception) as exc_info:
-                    self.test_fem.fem.acquire_data()
-                assert exc_info.type is Exception
+            with pytest.raises(Exception) as exc_info:
+                self.test_fem.fem.acquire_data()
+            assert exc_info.type is Exception
 
     def test_check_acquire_finished_handles_cancel(self):
         """Test check_acquire_finished calls acquire_data_completed if acquire cancelled."""
@@ -737,7 +737,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.await_dc_captured = Mock()
         self.test_fem.fem.clr_dc_controls = Mock()
         self.test_fem.fem.collect_offsets()
-        time.sleep(0.3)
+        # time.sleep(0.3)
         assert self.test_fem.fem.hardware_busy is False
         assert self.test_fem.fem.parent.software_state == "Idle"
 
@@ -928,7 +928,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.x10g_rdma.udp_rdma_read = Mock()
         self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [255]
         self.test_fem.fem.initialise_system()
-        time.sleep(0.5)
+        time.sleep(0.3)
         assert self.test_fem.fem.parent.software_state == "Idle"
 
     # TODO: Passes but sabotages 3 x test_read_sensors unit tests (lines 167-209)
@@ -962,12 +962,12 @@ class TestFem(unittest.TestCase):
     #     self.test_fem.fem.x10g_rdma.read.return_value = [0xF0]
 
     #     self.test_fem.fem.initialise_system()
-    #     time.sleep(0.5)
+    #     time.sleep(0.2)
     #     self.test_fem.fem.x10g_rdma.write.assert_has_calls([
     #         call(0x00000020, 0x10, burst_len=1, comment="Enabling training"),
     #         call(0x00000020, 0x00, burst_len=1, comment="Disabling training")
     #     ])
-    #     time.sleep(0.5)
+    #     time.sleep(0.2)
     #     vsr_status_addr = 0x000003E8
     #     index = 0
     #     self.test_fem.fem.x10g_rdma.read.assert_has_calls([
@@ -984,7 +984,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.initialise_vsr = Mock()
         self.test_fem.fem.initialise_vsr.side_effect = HexitecFemError("E")
         self.test_fem.fem.initialise_system()
-        time.sleep(0.5)
+        time.sleep(0.3)
         assert self.test_fem.fem.status_error == "Failed to initialise camera: {}".format("E")
 
     def test_initialise_system_handles_Exception(self):
@@ -992,7 +992,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.initialise_vsr = Mock()
         self.test_fem.fem.initialise_vsr.side_effect = Exception("E")
         self.test_fem.fem.initialise_system()
-        time.sleep(0.5)
+        time.sleep(0.2)
         assert self.test_fem.fem.status_error == "Camera initialisation failed: {}".format("E")
 
     # # TODO: Prevent unrelated unit tests failing: ??
@@ -1011,7 +1011,7 @@ class TestFem(unittest.TestCase):
     #     fake_sleep.start()
     #     with patch('logging.error') as mock_log:
     #         self.test_fem.fem.initialise_system()
-    #         time.sleep(0.5)
+    #         time.sleep(0.2)
     #         # assert self.test_fem.fem.status_error == "Failed to initialise camera"
     #         mock_log.assert_called()
     #     fake_sleep.stop()
@@ -1028,7 +1028,7 @@ class TestFem(unittest.TestCase):
     #     fake_sleep.start()
     #     with patch('logging.error') as mock_log:
     #         self.test_fem.fem.initialise_system()
-    #         time.sleep(0.5)
+    #         time.sleep(0.2)
     #         # assert self.test_fem.fem.status_error == "Failed to initialise camera"
     #         mock_log.assert_called()
     #     fake_sleep.stop()

@@ -1,0 +1,23 @@
+{
+  "camera_ctrl_ip": "10.0.3.100",
+  "camera_ctrl_mac": "62:00:00:00:01:0A",
+  "camera_ctrl_port": "61648",
+  "server_ctrl_port": "61649",
+  "control_interface": "em1",
+  "control_lane": "1",
+  "data1_interface": "em2",
+  "data1_lane": "2",
+  "data2_interface": "em1",
+  "data2_lane": "3",
+  "farm_server_1_ip": "10.0.2.1",
+  "farm_server_1_mac": "9c:69:b4:60:b8:26",
+  "farm_camera_1_ip": "10.0.2.101",
+  "farm_camera_1_mac": "62:00:00:00:01:0B",
+  "farm_server_2_ip": "10.0.1.1",
+  "farm_server_2_mac": "9c:69:b4:60:b8:25",
+  "farm_camera_2_ip": "10.0.1.102",
+  "farm_camera_2_mac": "62:00:00:00:01:0C",
+  "farm_target_ip": "10.0.2.1",
+  "farm_target_mac": "9c:69:b4:60:b8:26",
+  "farm_target_port": "61651"
+}
