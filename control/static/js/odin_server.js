@@ -121,7 +121,7 @@ function resetButtonClicked() {
 }
 
 function disconnectButtonClicked() {
-    // Disconnect automatically turns HV off, signal "off" to Software
+    // Disconnect will automatically turn HV off, so signal "off" to Software
     hvOffButtonClicked();
     setTimeout(function () {
         disconnect_hardware();
@@ -371,12 +371,11 @@ function poll_fem() {
                     const frames_received = result["detector"]["daq"]["status"]["frames_received"];
                     const frames_processed = result["detector"]["daq"]["status"]["frames_processed"];
                     const processed_remaining = result["detector"]["daq"]["status"]["processed_remaining"];
-                    const received_remaining = result["detector"]["daq"]["status"]["received_remaining"];
                     const fraction_received = (frames_received / frames_expected).toFixed(2);
                     const fraction_processed = (frames_processed / frames_expected).toFixed(2);
                     document.querySelector('#total_frames_expected').innerHTML = frames_expected;
                     document.querySelector('#total_frames_processed').innerHTML = frames_processed;
-                    // console.log(" rxd: " + frames_received + " " + received_remaining + " (" + fraction_received + ")" +
+                    // console.log(" rxd: " + frames_received + " (" + fraction_received + ")" +
                     //         " proc'd: " + frames_processed + " " + processed_remaining + " (" + fraction_processed + ")" +
                     //         " tot: " + frames_expected);    /// DEBUGGING
                     var daq_progress = document.getElementById("daq-progress");
