@@ -1083,7 +1083,9 @@ function hexitec_config_changed() {
 
 function frames_changed() {
     ui_frames = document.querySelector('#frames-text');
-    hexitec_endpoint.put(Number(ui_frames.value), 'detector/acquisition/number_frames')
+    frames = 2 * Math.round(ui_frames.value / 2);
+    document.querySelector('#frames-text').value = frames;
+    hexitec_endpoint.put(frames, 'detector/acquisition/number_frames')
         .then(result => {
             ui_frames.classList.remove('alert-danger');
         })

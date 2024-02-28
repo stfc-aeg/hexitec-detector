@@ -582,6 +582,9 @@ class HexitecFem():
             self.calculate_frame_rate()
         self.duration = duration
         frames = self.duration * self.frame_rate
+        # Ensure even number of frames
+        if frames % 2:
+            frames = self.parent.round_to_even(frames)
         self.number_frames = int(round(frames))
 
     def get_health(self):
@@ -764,6 +767,7 @@ class HexitecFem():
             logging.info("Initiate Data Capture")
             self.acquire_time = 0
             self.acquire_start_time = self.create_timestamp()
+            self.acquire_stop_time = "0"
 
             logging.debug("Reset frame number")
             self.frame_reset_to_zero()

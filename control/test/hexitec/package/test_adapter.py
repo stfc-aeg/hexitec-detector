@@ -449,7 +449,7 @@ class TestDetector(unittest.TestCase):
 
     def test_set_number_frames(self):
         """Test function sets number of frames."""
-        frames = 13
+        frames = 12
         self.test_adapter.detector.set_number_frames(frames)
         assert self.test_adapter.detector.number_frames == frames
 
@@ -492,9 +492,9 @@ class TestDetector(unittest.TestCase):
 
     def test_detector_set_acq(self):
         """Test function can set number of frames."""
-        self.test_adapter.detector.set_number_frames(5)
-
-        assert self.test_adapter.detector.number_frames == 5
+        frames = 10
+        self.test_adapter.detector.set_number_frames(frames)
+        assert self.test_adapter.detector.number_frames == frames
 
     def test_detector_acquisition_clears_previous_daq_errors(self):
         """Test function clears any previous daq error."""

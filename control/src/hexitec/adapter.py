@@ -405,35 +405,35 @@ class Hexitec():
     def save_odin(self, msg):
         """Save Odin's settings to file."""
         config = {}
-        config["fem/hexitec_config"] = self.fem.hexitec_config
-        config["daq/file_name"] = self.daq.file_name
-        config["daq/file_dir"] = self.daq.file_dir
         config["daq/addition_enable"] = self.daq.addition_enable
-        config["daq/pixel_grid_size"] = self.daq.pixel_grid_size
-        config["daq/calibration_enable"] = self.daq.calibration_enable
-        config["daq/gradients_filename"] = self.daq.gradients_filename
-        config["daq/intercepts_filename"] = self.daq.intercepts_filename
-        config["daq/discrimination_enable"] = self.daq.discrimination_enable
         config["daq/bin_end"] = self.daq.bin_end
         config["daq/bin_start"] = self.daq.bin_start
         config["daq/bin_width"] = self.daq.bin_width
-        config["daq/max_frames_received"] = self.daq.max_frames_received
-        config["daq/pass_processed"] = self.daq.pass_processed
-        config["daq/pass_raw"] = self.daq.pass_raw
+        config["daq/calibration_enable"] = self.daq.calibration_enable
+        config["daq/discrimination_enable"] = self.daq.discrimination_enable
+        config["daq/file_dir"] = self.daq.file_dir
+        config["daq/file_name"] = self.daq.file_name
+        config["daq/gradients_filename"] = self.daq.gradients_filename
+        config["daq/image_frequency"] = self.daq.image_frequency
+        config["daq/intercepts_filename"] = self.daq.intercepts_filename
         config["daq/lvframes_dataset_name"] = self.daq.lvframes_dataset_name
         config["daq/lvframes_frequency"] = self.daq.lvframes_frequency
         config["daq/lvframes_per_second"] = self.daq.lvframes_per_second
         config["daq/lvspectra_frequency"] = self.daq.lvspectra_frequency
         config["daq/lvspectra_per_second"] = self.daq.lvspectra_per_second
-        config["daq/threshold_lower"] = self.daq.threshold_lower
-        config["daq/threshold_upper"] = self.daq.threshold_upper
-        config["daq/image_frequency"] = self.daq.image_frequency
+        config["daq/max_frames_received"] = self.daq.max_frames_received
+        config["daq/pass_processed"] = self.daq.pass_processed
+        config["daq/pass_raw"] = self.daq.pass_raw
+        config["daq/pixel_grid_size"] = self.daq.pixel_grid_size
         config["daq/threshold_filename"] = self.daq.threshold_filename
+        config["daq/threshold_lower"] = self.daq.threshold_lower
         config["daq/threshold_mode"] = self.daq.threshold_mode
+        config["daq/threshold_upper"] = self.daq.threshold_upper
         config["daq/threshold_value"] = self.daq.threshold_value
-        config["number_frames"] = self.number_frames
         config["duration"] = self.duration
         config["duration_enable"] = self.duration_enable
+        config["fem/hexitec_config"] = self.fem.hexitec_config
+        config["number_frames"] = self.number_frames
         try:
             with open(self.odin_config_file, "w") as f:
                 json.dump(config, f)
@@ -471,6 +471,7 @@ class Hexitec():
                 self.daq._set_threshold_filename(config["daq/threshold_filename"])
                 self.daq._set_threshold_mode(config["daq/threshold_mode"])
                 self.daq._set_threshold_value(config["daq/threshold_value"])
+                self.daq._set_compression_type(config["daq/compression_type"])
                 if config["duration_enable"]:
                     self.set_duration(config["duration"])
                     self.set_duration_enable(config["duration_enable"])
@@ -494,8 +495,15 @@ class Hexitec():
         else:
             self.set_number_frames(self.number_frames)
 
+    def round_to_even(self, n):
+        """Round (upwards) integer to even integer."""
+        return (2 * round(0.4+n/2))
+
     def set_number_frames(self, frames):
         """Set number of frames in DAQ, FEM."""
+        # Ensure even number of frames
+        if frames % 2:
+            frames = self.round_to_even(frames)
         if frames <= 0:
             raise ParameterTreeError("frames must be above 0!")
         self.number_frames = frames

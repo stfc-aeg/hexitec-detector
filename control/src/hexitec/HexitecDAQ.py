@@ -300,8 +300,8 @@ class HexitecDAQ():
         self.frames_received = 0
         # Count hdf's frames_processed across node(s)
         self.frame_start_acquisition = self.get_total_frames_processed('hdf')
-        self.frames_expected = self.number_frames
         self.number_frames = number_frames
+        self.frames_expected = self.number_frames
         logging.info("FRAME START ACQ: %d END ACQ: %d",
                      self.frame_start_acquisition,
                      self.frame_start_acquisition + number_frames)
@@ -314,6 +314,8 @@ class HexitecDAQ():
         self.set_file_writing(True)
         # Diagnostics:
         self.daq_start_time = '%s' % (datetime.datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
+        self.fem_not_busy = 0
+        self.daq_stop_time = 0
         # About to receive fem data, daq therefore now busy
         self.daq_ready = False
         # Wait while fem finish sending data
@@ -864,6 +866,8 @@ class HexitecDAQ():
     def set_number_frames(self, number_frames):
         """Set number of frames to be acquired."""
         self.number_frames = number_frames
+        self.frames_expected = number_frames
+        self.frames_processed = 0
         self.processed_remaining = self.number_frames - self.frames_processed
 
     def set_number_nodes(self, nodes):
