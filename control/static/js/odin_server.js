@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", function () {
     document.querySelector('#offsetsButton').disabled = true;
     document.querySelector('#hvOnButton').disabled = true;
     document.querySelector('#hvOffButton').disabled = true;
-    document.querySelector('#environsButton').disable = true;
+    document.querySelector('#environsButton').disabled = true;
     // Start polling after page loaded (800 ms)
     setTimeout(function () {
         if (polling_thread_running === false) {
@@ -364,6 +364,7 @@ function poll_fem() {
                     document.querySelector('#all_data_sent').innerHTML = fem["all_data_sent"];
                     const hardware_connected = fem["hardware_connected"];
                     const hardware_busy = fem["hardware_busy"];
+                    const system_initialised = fem["system_initialised"];
 
                     const daq_in_progress = result["detector"]["daq"]["status"]["in_progress"];
 
@@ -392,7 +393,18 @@ function poll_fem() {
                             toggle_ui_elements(true);   // Disable UI elements
                         }
                         else {
-                            toggle_ui_elements(false);  // Enable UI elements
+                            toggle_ui_elements(false);  // Enable UI elements..
+                            // ..but keep Offsets, Acquire buttons disabled until system initialised
+                            if (system_initialised === false) {
+                                document.querySelector('#acquireButton').disabled = true;
+                                document.querySelector('#offsetsButton').disabled = true;
+                            }
+                            else
+                            {
+                                document.querySelector('#acquireButton').disabled = false;
+                                document.querySelector('#offsetsButton').disabled = false;
+                            }
+
                             // Disable Environs button if collecting environmental data
                             if (fem["environs_in_progress"] === true)
                                 document.querySelector('#environsButton').disabled = true;

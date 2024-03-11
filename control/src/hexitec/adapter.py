@@ -304,7 +304,7 @@ class Hexitec():
         """Poll FEM for status.
 
         Check if acquisition completed (if initiated), for error(s) and
-        whether DAQ/FEM watchdogs timed out.
+        whether DAQ watchdogs timed out.
         """
         # Poll FEM acquisition & health status
         self.poll_fem()

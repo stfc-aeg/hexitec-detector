@@ -140,6 +140,7 @@ class HexitecFem():
         self.sync_list = [0, 0, 0, 0, 0, 0]
 
         self.hv_bias_enabled = False
+        self.system_initialised = False
 
         self.read_firmware_version = True
         self.firmware_date = "N/A"
@@ -164,7 +165,7 @@ class HexitecFem():
 
         self.environs_in_progress = False
 
-        # Did Hardware finish sending data
+        # Did Hardware finish sending data?
         self.all_data_sent = 0
 
         param_tree_dict = {
@@ -193,6 +194,7 @@ class HexitecFem():
             "environs_in_progress": (lambda: self.environs_in_progress, None),
             "hardware_connected": (lambda: self.hardware_connected, None),
             "hardware_busy": (lambda: self.hardware_busy, None),
+            "system_initialised": (lambda: self.system_initialised, None),
             "firmware_date": (lambda: self.firmware_date, None),
             "firmware_time": (lambda: self.firmware_time, None),
             "firmware_version": (lambda: self.firmware_version, None),
@@ -510,11 +512,6 @@ class HexitecFem():
                 fw_version = board_status.get_fpga_fw_version()
                 build_date = board_status.get_fpga_build_date()
                 build_time = board_status.get_fpga_build_time()
-                # build_date_and_time = build_date + " " + build_time
-                # print(f"version: {fw_version}")
-                # print(f"date: {build_date}")
-                # print(f"time: {build_time}")
-                # print(f"together: {build_date_and_time}")
                 self.firmware_date = build_date
                 self.firmware_time = build_time
                 self.firmware_version = fw_version
@@ -753,6 +750,7 @@ class HexitecFem():
             logging.debug("Modules Disabled")
             self.disconnect()
             logging.debug("Camera is Disconnected")
+            self.system_initialised = False
         except socket_error as e:
             self.flag_error("Unable to disconnect camera", str(e))
             raise HexitecFemError(e)
@@ -807,7 +805,7 @@ class HexitecFem():
                 # 0 during data transmission, 65536 when completed
                 self.all_data_sent = (status & 65536)
                 if self.all_data_sent == 0:
-                    # print(" *** Awaiting data.. ***")
+                    # print(f" *** Awaiting data.. (status = {status})***")
                     IOLoop.instance().call_later(0.1, self.check_acquire_finished)
                     return
                 else:
@@ -828,15 +826,16 @@ class HexitecFem():
 
         if self.stop_acquisition:
             logging.info("Cancelling Acquisition..")
-            # TODO Verify working okay: ?
             for vsr in self.vsr_list:
                 vsr.disable_vsr()
+            self.data_path_reset()
             logging.info("Acquisition cancelled")
             # Reset variables
             self.stop_acquisition = False
             self.hardware_busy = False
             self.acquisition_completed = True
             self._set_status_message("Acquire cancelled")
+            self.system_initialised = False
             return
 
         # Workout exact duration of fem data transmission:
@@ -1156,6 +1155,7 @@ class HexitecFem():
 
             self._set_status_message("Initialisation completed. VSRs configured.")
             self.parent.software_state = "Idle"
+            self.system_initialised = True
         except HexitecFemError as e:
             self.flag_error("Failed to initialise camera", str(e))
         except Exception as e:
@@ -1706,7 +1706,6 @@ class HexitecFem():
         self.set_bit(HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL, "ACQ_NOF_FRAMES_EN")
         self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER['addr'],
                                       data=number_frames, burst_len=1)
-        logging.debug("Number of frames set to 0x{0:X}".format(number_frames))
 
     def data_en(self, enable=True):
         if enable:
