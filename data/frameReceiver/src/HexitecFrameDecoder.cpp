@@ -831,3 +831,20 @@ void HexitecFrameDecoder::parse_sensors_layout_map(const std::string sensors_lay
     }
 }
 
+//! Reset the decoder statistics.
+//!
+//! This method resets the frame decoder statistics, including packets lost 
+//! and ignored.
+//!
+void HexitecFrameDecoder::reset_statistics(void)
+{
+  // Call the base class reset method
+  FrameDecoderUDP::reset_statistics();
+
+  LOG4CXX_DEBUG_LEVEL(1, logger_, "Resetting HexitecFrameDecoder statistics");
+
+  // Reset the scratched and lost packet counters
+  packets_ignored_ = 0;
+  packets_lost_ = 0 ;
+
+}

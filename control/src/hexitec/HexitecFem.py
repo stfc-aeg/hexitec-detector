@@ -675,10 +675,11 @@ class HexitecFem():
             self.initialise_system()
         except HexitecFemError as e:
             self.flag_error("Failed to initialise camera", str(e))
+            self.hardware_busy = False
         except Exception as e:
             error = "Camera initialisation failed"
             self.flag_error(error, str(e))
-        self.hardware_busy = False
+            self.hardware_busy = False
 
     def collect_data(self, msg=None):
         """Acquire data from camera."""
@@ -845,9 +846,9 @@ class HexitecFem():
         stop_ = datetime.strptime(self.acquire_stop_time, HexitecFem.DATE_FORMAT)
         self.acquire_time = (stop_ - start_).total_seconds()
 
-        logging.debug("Capturing {} frames took {} seconds".format(str(self.number_frames),
+        logging.debug("Sending {} frames took {} seconds".format(str(self.number_frames),
                                                                    self.acquire_time))
-        duration = "Requested {} frame(s), took {} seconds".format(self.number_frames,
+        duration = "Requested {} frames, sending took {} seconds".format(self.number_frames,
                                                                    self.acquire_time)
         self._set_status_message(duration)
         # Save duration to separate parameter tree entry:

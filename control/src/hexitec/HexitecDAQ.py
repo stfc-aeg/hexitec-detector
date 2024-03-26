@@ -428,6 +428,7 @@ class HexitecDAQ():
             # print(" DAQ Waiting, hdf_closing_loop()")
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
+            self.frames_received = self.get_total_frames_received()
             self.hdf_file_location = self.file_dir + self.file_name + '.h5'
             self.prepare_hdf_file()
 
@@ -758,7 +759,7 @@ class HexitecDAQ():
             received = fr_status.get("frames", None).get("received", None)
             if received > 0:
                 total_received = total_received + received
-        # print(" *** FR total received frames: {}".format(total_received))
+        # print(" {0} *** FR total received frames: {0}".format(total_received))
         return total_received
 
     def _is_od_connected(self, status=None, adapter=""):
@@ -868,6 +869,7 @@ class HexitecDAQ():
         self.number_frames = number_frames
         self.frames_expected = number_frames
         self.frames_processed = 0
+        self.frames_received = 0
         self.processed_remaining = self.number_frames - self.frames_processed
 
     def set_number_nodes(self, nodes):

@@ -10,7 +10,7 @@
 
     <link href="css/odin-server.css" rel="stylesheet">
     <!-- Required for displaying error history: -->
-    <link href="css/command-sequencer.css" rel="stylesheet">
+    <!-- <link href="css/command-sequencer.css" rel="stylesheet"> -->
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="js/bootstrap-5.1.1-dist/js/bootstrap.min.js"></script>
     <link href="js/bootstrap-5.1.1-dist/css/bootstrap.min.css" rel="stylesheet">
@@ -41,21 +41,6 @@
     }
     </style>
   <body>
-<!--
-    <div class="row">
-      <div class="column3" style="background-color:#aaa;">
-        <h2>Column 1</h2>
-        <p>Some text..</p>
-      </div>
-      <div class="column3" style="background-color:#bbb;">
-        <h2>Column 2</h2>
-        <p>Some text..</p>
-      </div>
-      <div class="column3" style="background-color:#aaa;">
-        <h2>Column 3</h2>
-        <p>Some text..</p>
-      </div>
-    </div> -->
 
     <div class="row">
       <div class="col-sm-12">
@@ -113,40 +98,6 @@
 
               <div class="row contflex">
                 <table class="overall-table">
-                  <tr>
-                    <td></td> <!--Intentionally left blank-->
-                  </tr>
-                  <tr>
-                    <td>
-                      <th>File Options&nbsp;</th>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      Path:&nbsp;
-                    </td>
-                    <td>
-                      <div class="text-columns">
-                        <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' maxlength="256" style="width: 100%">
-                      </div>
-                    </td>
-                    <td>
-                      &nbsp;<td><span id="hdf-file-path-warning">&nbsp;</span></td>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      Name:&nbsp;
-                    </td>
-                    <td>
-                      <div class="text-columns">
-                        <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' maxlength="256" style="width: 100%">
-                      </div>
-                    </td>
-                    <td>
-                      &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
-                    </td>
-                  </tr>
                   <!-- <tr>
                     <td>
                       Compression:&nbsp;
@@ -207,49 +158,11 @@
                     </td>
                   </tr>
                   <tr>
-                    <td>
-                      <th>Config File&nbsp;</th>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      Hexitec Config:&nbsp;
-                    </td>
-                    <td>
-                      <div class="text-columns">
-                        <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' maxlength="256" style="width: 100%">
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
                     <td></td>
                     <td>
                       <input type="button" onclick="applyButton2Clicked()" class="btn btn-primary double-width" id='applyButton2' data-size="small" value="Apply">
                     </td>
                   </tr>
-                  <tr>
-                    <td>
-                      <th>Trigger Status&nbsp;</th>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                    </td>
-                    <td>All Data Sent</td>
-                    <td><span id="all_data_sent" style="float:left">&nbsp;</span></td>
-                  </tr>
-                  <!-- <tr>
-                    <td>
-                      <th>FPGA Trigger Mode&nbsp;</th>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                    </td>
-                    <td>
-                      (placeholder)&nbsp;
-                    </td>
-                  </tr> -->
                 </table>
 
                 <table>
@@ -317,22 +230,16 @@
                     </td>
                   </tr>
                 </table>
-              </div>  <!-- class="row contflex">  -->
-
-            </div>  <!-- class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">  -->
-
-            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
-              <div class="row contflex">
-
                 <div class="col-sm-6">
                   <div id="4" class="main-container">
-                    <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Live View</p>
-                    <!-- Section nicked from LiveView UI.. -->
                     <div class="container-fluid">
                       <div class="row fluid-row">
                         <div class="col-sm-8">
                           <div class="sidebar-nav-fixed">
                             <table>
+                              <tr>
+                                <td></td>
+                                <th>Live View</th>
                               <tr>
                                 <td>
                                   <div class="row sidebar-row vertical-align">
@@ -397,11 +304,6 @@
                               <div class="column3">Range</div>
                               <div class="column3" id="clip_max">&nbsp;</div>
                             </div>
-                            <!-- <div class="row sidebar-row vertical-align row-bold">
-                              <div class="col-xs-4 text-left" id="clip_min">&nbsp;</div>
-                              <div class="col-xs-4 text-center">Range</div>
-                              <div class="col-xs-4 text-right" id="clip_max">&nbsp;</div>
-                            </div> -->
                             <div class="row sidebar-row sidebar-row-full">
                               <div class="col-xs12 range-col">
                                 <input id="clip_range"
@@ -411,6 +313,7 @@
                                 />
                               </div>
                             </div>
+<!--  -->
                             <div class="row sidebar-row vertical-align">
                               <div class="col-xs-5">
                                 <b>Auto&#8209;sizing:</b> 
@@ -437,15 +340,9 @@
                               <div class="column3">Size</div>
                               <div class="column3" id="clip_max">100%</div>
                             </div>
-                            <!-- <div class="row sidebar-row vertical-align row-bold">
-                              <div class="col-xs-4 text-left" id="clip_min">0%</div>
-                              <div class="col-xs-4 text-center">Size</div>
-                              <div class="col-xs-4 text-right" id="clip_max">100%</div>
-                            </div> -->
                             <table>
                               <tr>
                                 <td>
-                                <!-- <div class="row"> -->
                                   <div class="column3">
                                     <input id="size_range"
                                       type="text" data-slider-id="size-range"
@@ -455,9 +352,6 @@
                                   </div>
                                 </td>
                                 <td>
-                                  <!-- <div class="column3">&nbsp;&nbsp;&nbsp;</div> -->
-                                  <!-- </div>
-                                  <div class="row sidebar-row sidebar-row-full"> -->
                                   <div class="column3">
                                     <input id="size_rangeHis"
                                       type="text" data-slider-id="size-range"
@@ -466,9 +360,33 @@
                                     />
                                   </div>
                                 </td>
-                                <!-- </div> -->
                               </tr>
                             </table>
+
+                          </div> <!-- sidebar-nav-fixed -->
+                        </div> <!-- col-sm-8 -->
+
+                      </div> <!-- row fluid-row -->
+                    </div> <!-- container-fluid-->
+
+                  </div> <!-- "main-container" -->
+                </div> <!-- col-sm-6 -->
+
+              </div>  <!-- class="row contflex">  -->
+
+            </div>  <!-- class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">  -->
+
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
+              <div class="row contflex">
+
+                <div class="col-sm-6">
+                  <div id="4" class="main-container">
+                    <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Live View</p>
+                    <!-- Section nicked from LiveView UI.. -->
+                    <div class="container-fluid">
+                      <div class="row fluid-row">
+                        <div class="col-sm-8">
+                          <div class="sidebar-nav-fixed">
                             <table>
                               <tr>
                                 <td>
@@ -497,100 +415,6 @@
                                 </td>
                               </tr>
                             </table>
-                            <table>
-                              <tr>
-                                <td>
-                                  Frame Frequency:&nbsp;
-                                </td>
-                                <td>
-                                  <div class="text-columns">
-                                    <input type="text" id="lvframes-frame-frequency-text" onChange='lvframes_frame_frequency_changed()' size="3">
-                                  </div>
-                                </td>
-                              <!-- </tr>
-                              <tr> -->
-                                <td>
-                                  &nbsp;Per Second:&nbsp;
-                                </td>
-                                <td>
-                                  <div class="text-columns">
-                                    <input type="text" id="lvframes-per-second-text" onChange='lvframes_per_second_changed()' size="3">
-                                  </div>
-                                </td>
-                              </tr>
-                            </table>
-
-                            <table>
-                              <tr>
-                                <td>
-                                  <th>Spectra&nbsp;Viewer&nbsp;</th>
-                                </td>
-                              </tr>
-                            </table>
-                            <table>
-                              <tr>
-                                <td>
-                                  Frame Frequency:&nbsp;
-                                </td>
-                                <td>
-                                  <div class="text-columns">
-                                    <input type="text" id="lvspectra-frame-frequency-text" onChange='lvspectra_frame_frequency_changed()' size="3">
-                                  </div>
-                                </td>
-                              <!-- </tr>
-                              <tr> -->
-                                <td>
-                                  &nbsp;Per Second:&nbsp;
-                                </td>
-                                <td>
-                                  <div class="text-columns">
-                                    <input type="text" id="lvspectra-per-second-text" onChange='lvspectra_per_second_changed()' size="3">
-                                  </div>
-                                </td>
-                              </tr>
-                            </table>
-
-                            <table>
-                              <tr>
-                                <td>
-                                  <th>Summed&nbsp;Image&nbsp;</th>
-                                </td>
-                              </tr>
-                            </table>
-                            <table>
-                              <tr>
-                                <td>
-                                  Threshold Lower:&nbsp;
-                                </td>
-                                <td>
-                                  <div class="text-columns">
-                                    <input type="text" id="threshold-lower-text" onChange='threshold_lower_changed()' size="3">
-                                  </div>
-                                </td>
-                              <!-- </tr>
-                              <tr> -->
-                                <td>
-                                  Threshold Upper:&nbsp;
-                                </td>
-                                <td>
-                                  <div class="text-columns">
-                                    <input type="text" id="threshold-upper-text" onChange='threshold_upper_changed()' size="3">
-                                  </div>
-                                </td>
-                              <!-- </tr>
-                              <tr> -->
-                                <td>
-                                  Image Frequency:&nbsp;
-                                </td>
-                                <td>
-                                  <div class="text-columns">
-                                    <input type="text" id="image-frequency-text" onChange='image_frequency_changed()' size="3">
-                                  </div>
-                                </td>
-                              </tr>
-
-                            </table>
-
                           </div> <!-- sidebar-nav-fixed -->
                         </div> <!-- col-sm-8 -->
 
@@ -601,16 +425,11 @@
                 </div> <!-- col-sm-6 -->
 
               </div>  <!-- class="row contflex">  -->
-            </div>  <!-- class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">  -->
-
-            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
               <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Frames Viewer</p>
               <div id="liveview_container" class="odin-server live-image">
                 <img id='liveview_image' src='/api/0.1/live_view/image' data-src='/api/0.1/live_view/image' load="resizeImage()" width="480" height="160">
               </div>
-            </div>
 
-            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-11 card">
               <p style="text-align:center; font-weight:bold; ; font-size:1.1em;">Spectra Viewer</p>
               <div id="livehis_container" class="odin-server live-image">
                 <img id='livehis_image' src='/api/0.1/live_histogram/image' data-src='/api/0.1/live_histogram/image' load="resizeHis()">
@@ -629,6 +448,54 @@
         <div class="container-fluid">
           <div class="row contflex">
             <table class="overall-table">
+              <tr>
+                <th>File Options&nbsp;</th>
+              </tr>
+              <tr>
+                <td></td> <!--Intentionally left blank-->
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  Path:&nbsp;
+                </td>
+                <td>
+                  <div class="text-columns">
+                    <input type="text" id="hdf-file-path-text" onChange='hdf_file_path_changed()' maxlength="256" style="width: 100%">
+                  </div>
+                </td>
+                <td>
+                  &nbsp;<td><span id="hdf-file-path-warning">&nbsp;</span></td>
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  Name:&nbsp;
+                </td>
+                <td>
+                  <div class="text-columns">
+                    <input type="text" id="hdf-file-name-text" onChange='hdf_file_name_changed()' maxlength="256" style="width: 100%">
+                  </div>
+                </td>
+                <td>
+                  &nbsp;<td><span id="hdf-file-name-warning">&nbsp;</span></td>
+                </td>
+              </tr>
+              <tr>
+                <th>Config File&nbsp;</th>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  Hexitec Config:&nbsp;
+                </td>
+                <td>
+                  <div class="text-columns">
+                    <input type="text" id="hexitec-config-text" onChange='hexitec_config_changed()' maxlength="256" style="width: 100%">
+                  </div>
+                </td>
+              </tr>
               <tr>
                 <th>Save Datasets&nbsp;</th>
               </tr>

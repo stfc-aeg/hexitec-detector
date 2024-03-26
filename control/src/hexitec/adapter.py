@@ -377,6 +377,19 @@ class Hexitec():
         finally:
             return response
 
+    # def _get_fp_status(self):
+    #     """Get status from adapter."""
+    #     adapter = "fp"
+    #     try:
+    #         request = ApiAdapterRequest(None, content_type="application/json")
+    #         response = self.adapters[adapter].get("status/error/", request)
+    #         response = response.data["value"]
+    #     except KeyError:
+    #         logging.warning("%s Adapter Not Found" % adapter)
+    #         response = [{"Error": "Adapter {} not found".format(adapter)}]
+    #     finally:
+    #         return response
+
     def connect_hardware(self, msg):
         """Connect with hardware."""
         self.software_state = "Connecting"
@@ -562,6 +575,11 @@ class Hexitec():
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         request.body = "{}".format(1)
         self.adapters["fp"].put(command, request)
+
+        # # Reset FR(s) statistics
+        # command = "command/reset_statistics"
+        # request = ApiAdapterRequest("", content_type="application/json")
+        # self.adapters["fr"].put(command, request)
 
         self.daq_target = time.time()
         self.daq.prepare_daq(self.number_frames)
