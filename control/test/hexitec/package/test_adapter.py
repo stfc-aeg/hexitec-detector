@@ -51,6 +51,7 @@ class DetectorAdapterTestFixture(object):
                     body=5
                 )
         self.fake_fp = MagicMock()
+        self.fake_fr = MagicMock()
         self.fake_fi = MagicMock()
 
         # Once the odin_data adapter is refactored to use param tree,
@@ -94,16 +95,20 @@ class DetectorAdapterTestFixture(object):
             ]
         }
 
-        # set up fake adapter
+        # set up fake adapters
         fp_return = Mock()
         fp_return.configure_mock(data=self.fp_data)
         self.fake_fp.get = Mock(return_value=fp_return)
+        fr_return = Mock()
+        #fr_return.configure_mock(data=self.fr_data)
+        self.fake_fr.get = Mock(return_value=fr_return)
 
         fi_return = Mock()
         fi_return.configure_mock(data=self.fi_data)
 
         self.adapters = {
             "fp": self.fake_fp,
+            "fr": self.fake_fr,
             "file_interface": self.fake_fi
         }
 
@@ -483,6 +488,7 @@ class TestDetector(unittest.TestCase):
             "proxy": Mock(),
             "file_interface": Mock(),
             "fp": Mock(),
+            "fr": Mock(),
         }
 
         self.test_adapter.adapter.initialize(adapters)
@@ -544,6 +550,7 @@ class TestDetector(unittest.TestCase):
         )
         with patch("hexitec.adapter.IOLoop") as mock_loop:
             self.test_adapter.detector.daq.in_error = False
+            self.test_adapter.detector.daq.hdf_is_reset = False
             self.test_adapter.detector.await_daq_ready()
             instance = mock_loop.instance()
             instance.call_later.assert_called_with(0.5, self.test_adapter.detector.await_daq_ready)

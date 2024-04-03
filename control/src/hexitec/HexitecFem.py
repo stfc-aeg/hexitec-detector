@@ -780,6 +780,8 @@ class HexitecFem():
             logging.debug("Enable data")
             self.data_en(enable=True)
             time.sleep(0.2)
+            # data_triggered_timestamp = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
+            # print(f"  fem.data_triggered_timestamp: {data_triggered_timestamp} [X ")
 
             # Stop data flow (free acquisition mode), reset setting if number of frames mode
             logging.debug("Disable data")
@@ -1613,14 +1615,14 @@ class HexitecFem():
     def hv_on(self):
         """Switch HV on."""
         logging.debug("Going to set HV bias to -{} volts".format(self.bias_level))
-        self._set_status_message(f"HV bias set to -{self.bias_level} V")
         hv_msb, hv_lsb = self.convert_bias_to_dac_values(self.bias_level)
-        print(f" HV Bias (-{self.bias_level}) : {hv_msb[0]:X} {hv_msb[1]:X}",
-              f" | {hv_lsb[0]:X} {hv_lsb[1]:X}")
+        # print(f" HV Bias (-{self.bias_level}) : {hv_msb[0]:X} {hv_msb[1]:X}",
+        #       f" | {hv_lsb[0]:X} {hv_lsb[1]:X}")
 
         # Can call hv_on function on any VSR object
         self.vsr_list[0].hv_on(hv_msb, hv_lsb)
         self.hv_bias_enabled = True
+        self._set_status_message(f"HV bias set to -{self.bias_level} V")
         logging.debug("HV now ON")
 
     def hv_off(self):

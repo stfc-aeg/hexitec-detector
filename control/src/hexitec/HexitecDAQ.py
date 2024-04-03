@@ -14,7 +14,6 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from hexitec.GenerateConfigFiles import GenerateConfigFiles
 
 import h5py
-from datetime import datetime
 from ast import literal_eval
 import collections.abc
 import numpy as np
@@ -137,6 +136,7 @@ class HexitecDAQ():
         self.frames_received = 0
         self.processed_remaining = self.number_frames - self.frames_processed
         self.received_remaining = self.number_frames - self.frames_received
+        self.hdf_is_reset = False
 
         # Diagnostics
         self.daq_start_time = 0
@@ -306,10 +306,6 @@ class HexitecDAQ():
                      self.frame_start_acquisition,
                      self.frame_start_acquisition + number_frames)
         self.in_progress = True
-        # Reset timeout watchdog
-        self.processed_timestamp = time.time()
-        # Allow watchdog(s) to interrupt processing
-        self.processing_interruptable = True
         logging.debug("Starting File Writer")
         self.set_file_writing(True)
         # Diagnostics:
@@ -324,16 +320,19 @@ class HexitecDAQ():
     def acquisition_check_loop(self):
         """Wait for acquisition to complete without blocking current thread."""
         bBusy = self.parent.fem.hardware_busy
+        # Reset DAQ watchdog timeout or may fire prematurely
+        self.processed_timestamp = time.time()
         if bBusy:
-            # Reset timeout watchdog - Otherwise triggers if acquisition > few seconds
-            self.processed_timestamp = time.time()
             self.frames_received = self.get_total_frames_received()
             self.frames_processed = self.get_total_frames_processed(self.plugin)
             self.processed_remaining = self.number_frames - self.frames_processed
-            # print("[E \n0\t rxd {} proc'd {} left: {}\n".format(
-            #     self.frames_received, self.frames_processed, self.processed_remaining))
+            # print("  {} -> acq_chk_lp\t rxd {} procd {} left: {} processed_t'stamp:{} [X".format(
+            #       self.debug_timestamp(), self.frames_received, self.frames_processed,
+            #       self.processed_remaining, self.processed_timestamp))
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
+            # Allow watchdog to interrupt processing if timed out
+            self.processing_interruptable = True
             self.fem_not_busy = '%s' % (datetime.datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
             IOLoop.instance().call_later(0.5, self.processing_check_loop)
 
@@ -342,9 +341,9 @@ class HexitecDAQ():
         # Check HDF/histogram processing progress
         total_frames_processed = self.get_total_frames_processed(self.plugin)
         self.frames_received = self.get_total_frames_received()
-        # print("[E \nX\t rxd {} proc'd {} left: {}\n (Number_frames: {} total_frames_processed: {})".format(
-        #     self.frames_received, self.frames_processed,
-        #     self.processed_remaining, self.number_frames, total_frames_processed))
+        # print("  {} -> proc_chk_lp\t rxd {} procd {} left: {} Frms: {} total procd: {} [X".format(
+        #       self.debug_timestamp(), self.frames_received, self.frames_processed,
+        #       self.processed_remaining, self.number_frames, total_frames_processed))
         if total_frames_processed == self.number_frames:
             IOLoop.instance().add_callback(self.flush_data)
             logging.debug("Acquisition Complete")
@@ -352,8 +351,9 @@ class HexitecDAQ():
             #   selected, wait for hdf file to close
             IOLoop.instance().call_later(0.1, self.hdf_closing_loop)
         else:
-            # print("[E ? tot_frms_proc'd ({}) == s.frames_proc'd ({} = unreliable?!). shutdown_proc'g? {}".format(
-            #     total_frames_processed, self.frames_processed, self.shutdown_processing))
+            # print("  {} -> tot_frms_procd ({}) == s.frames_procd ({}). shutdown? {}\n [X".format(
+            #       self.debug_timestamp(), total_frames_processed,
+            #       self.frames_processed, self.shutdown_processing))
             # Not all frames processed yet; Check data still in flow
             if total_frames_processed == self.frames_processed:
                 # No frames processed in at least 0.5 sec, did processing time out?
@@ -371,7 +371,7 @@ class HexitecDAQ():
                 self.processed_timestamp = time.time()
                 self.frames_processed = total_frames_processed
                 self.processed_remaining = self.number_frames - self.frames_processed
-                # print("[E \n1\t rxd {} proc'd {} left: {}\n".format(
+                # print(" \n1\t rxd {} proc'd {} left: {}\n [X".format(
                 #     self.frames_received, self.frames_processed,
                 #     self.processed_remaining))
             # Wait 0.5 seconds and check again
@@ -453,11 +453,11 @@ class HexitecDAQ():
             self.parent.fem.flag_error("Error reopening HDF file: %s" % e)
             return
 
-        # print(datetime.datetime.now(), "[E calling build_virtual_datasets(hdf_file) !!!!!")
+        # print(datetime.datetime.now(), "[X calling build_virtual_datasets(hdf_file)")
 
         # self.build_virtual_dataset(hdf_file)
 
-        # print(datetime.datetime.now(), "[E returning from build_virtual_datasets(hdf_file) !!!!!")
+        # print(datetime.datetime.now(), "[X returning from build_virtual_datasets(hdf_file)")
 
         error_code = 0
         # Create metadata group, add dataset to it and pass to write function
@@ -509,18 +509,18 @@ class HexitecDAQ():
 
         # Open first file to check how many datasets
         with h5py.File(source_files[0]) as file:
-            number_of_datasets = len(file.keys())
-            # print(datetime.datetime.now(), "[E number_of_datasets: ", number_of_datasets)
+            number_datasets = len(file.keys())
+            # print(datetime.datetime.now(), "[X number_datasets: ", number_datasets)
             for dataset in file:  # Each dataset in current file
-                # print(datetime.datetime.now(), "   [E dataset: ", dataset)
+                # print(datetime.datetime.now(), "   [X dataset: ", dataset)
                 dataset_names.append(dataset)
         # print(datetime.datetime.now(), f"first file contains: {dataset_names} dataset_names")
 
         vsources = []
 
-        num_frames = [0 for idx in range(number_of_datasets)]
-        dtype = [0 for idx in range(number_of_datasets)]
-        inshape = [0 for idx in range(number_of_datasets)]
+        num_frames = [0 for idx in range(number_datasets)]
+        dtype = [0 for idx in range(number_datasets)]
+        inshape = [0 for idx in range(number_datasets)]
         # print(datetime.datetime.now(), f"Number of files: {num_sources}")
         # print(f"source files: {source_files}")
 
@@ -529,8 +529,8 @@ class HexitecDAQ():
             # Go through all .h5 files
             with h5py.File(source) as file:
                 # Go through each file
-                if number_of_datasets != len(file.keys()):
-                    e = f"Expected {number_of_datasets} not {len(file.keys())} datasets in {source} !"
+                if number_datasets != len(file.keys()):
+                    e = f"Expected {number_datasets} not {len(file.keys())} datasets in {source} !"
                     logging.error("VDS Error: {}".format(e))
                     self.parent.fem.flag_error("VDS: {}".format(str(e)))
                     return
@@ -558,7 +558,7 @@ class HexitecDAQ():
 
         layout = []
 
-        dataset_index = [0 for idx in range(number_of_datasets)]
+        dataset_index = [0 for idx in range(number_datasets)]
         index = -1
 
         for dataset in dataset_names:  # Iterate through all datasets
@@ -573,7 +573,8 @@ class HexitecDAQ():
             # print(datetime.datetime.now(), f" '{dataset}' Shape: {inshape[index]}")
             if dataset == "spectra_bins":
                 outshape = (inshape[index][1-n], inshape[index][2-n])
-                # print(datetime.datetime.now(), f" outshape = ({inshape[index][1-n]}, {inshape[index][2-n]})")
+                # dt = datetime.datetime.now()
+                # print(dt, f" outshape = ({inshape[index][1-n]}, {inshape[index][2-n]})")
             else:
                 outshape = (num_frames[index], inshape[index][1-n], inshape[index][2-n])
                 # print(datetime.datetime.now(), f" outshape = ({num_frames[index]}, {inshape[index][1-n]}, {inshape[index][2-n]})")
@@ -581,7 +582,7 @@ class HexitecDAQ():
             layout = h5py.VirtualLayout(shape=outshape, dtype=dtype[index])
 
             for (idx, vsource) in enumerate(vsources):
-                current_index = idx % number_of_datasets
+                current_index = idx % number_datasets
                 if current_index == index:
                     temp_idx = dataset_index[current_index]
 
@@ -589,7 +590,8 @@ class HexitecDAQ():
                         # print(datetime.datetime.now(), f"layout[, ] = layout[, ]")
                         layout[:, :] = vsource
                     else:
-                        # print(datetime.datetime.now(), f"layout[temp_idx:num_frames[index]:num_sources, ] = \
+                        # dt = datetime.datetime.now()
+                        # print(dt, f"layout[temp_idx:num_frames[index]:num_sources, ] = \
                         #     layout[{temp_idx}:{num_frames[index]}:{num_sources}, ]")
                         layout[temp_idx:num_frames[index]:num_sources, :, :] = vsource
 
@@ -910,21 +912,18 @@ class HexitecDAQ():
         # Finally, update own file_writing so FEM(s) know the status
         self.file_writing = writing
 
-        # TODO: Implement if each node should accumulate summed images data as a single image
-        # # Determine each node(s)' rank, Tell which node's
-        # # summed images plugin what frame number it should use
-        # fp_statuses = self.get_adapter_status("fp")
-        # rank = []
-        # node = 0
-        # for status in fp_statuses:
-        #     current_rank = status.get('hdf', None).get('rank')
-        #     # print("Rank: ", current_rank, " hdf writing: ", writing)
-        #     rank.append(current_rank)
-        #     command = "config/summed_image/" + str(node)
-        #     # request = ApiAdapterRequest(current_rank, content_type="application/json")
-        #     request.body = "{}".format(current_rank)
-        #     self.adapters["fp"].put(command, request)
-        # print(" Node(s) rank: {}".format(rank))
+        # If enabling writing, check that hdf plugin has reset
+        if writing:
+            IOLoop.instance().call_later(0.1, self.check_hdf_reset)
+        else:
+            self.hdf_is_reset = False
+
+    def check_hdf_reset(self):
+        """Wait for hdf plugin to reset."""
+        if self.get_total_frames_processed('hdf'):
+            IOLoop.instance().call_later(0.1, self.check_hdf_reset)
+        else:
+            self.hdf_is_reset = True
 
     def update_rows_columns_pixels(self):
         """Update rows, columns and pixels from selected sensors_layout value.
@@ -1221,7 +1220,6 @@ class HexitecDAQ():
         else:
             self.plugin = "histogram"
 
-        # # Temporary fix: hard code Extended packet headers OFF
-        # command = "config/decoder_config/extended_packet_header"
-        # request = ApiAdapterRequest("0", content_type="application/json")
-        # self.adapters["fr"].put(command, request)
+    def debug_timestamp(self):
+        """Debug function returning current timestamp in sub second resolution."""
+        return '%s' % (datetime.datetime.now().strftime('%H%M%S.%f'))

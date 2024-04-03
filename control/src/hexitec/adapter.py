@@ -304,7 +304,7 @@ class Hexitec():
         """Poll FEM for status.
 
         Check if acquisition completed (if initiated), for error(s) and
-        whether DAQ watchdogs timed out.
+        whether DAQ watchdog timed out.
         """
         # Poll FEM acquisition & health status
         self.poll_fem()
@@ -347,6 +347,7 @@ class Hexitec():
         Failure to do so indicate missing/dropped packet(s), stop processing if stalled.
         """
         if self.daq.in_progress:
+            # print("  {} -> check_daq_watchdog() checking..".format(self.daq.debug_timestamp()))
             processed_timestamp = self.daq.processed_timestamp
             delta_time = time.time() - processed_timestamp
             if (delta_time > self.daq_rx_timeout):
@@ -576,12 +577,11 @@ class Hexitec():
         request.body = "{}".format(1)
         self.adapters["fp"].put(command, request)
 
-        # # Reset FR(s) statistics
-        # command = "command/reset_statistics"
-        # request = ApiAdapterRequest("", content_type="application/json")
-        # self.adapters["fr"].put(command, request)
+        # Reset FR(s) statistics
+        command = "command/reset_statistics"
+        request = ApiAdapterRequest("", content_type="application/json")
+        self.adapters["fr"].put(command, request)
 
-        self.daq_target = time.time()
         self.daq.prepare_daq(self.number_frames)
         # Acquisition starts here
         self.acquisition_in_progress = True
@@ -591,10 +591,9 @@ class Hexitec():
     def await_daq_ready(self):
         """Wait until DAQ has configured, enabled file writer."""
         if (self.daq.in_error):
-            # print(" \n daq is in error")
             # Reset state variables
             self.reset_state_variables()
-        elif (self.daq.file_writing is False):
+        elif (self.daq.hdf_is_reset is False):
             # print(" \n DAC acquisition file writing still false")
             # IOLoop.instance().call_later(0.05, self.await_daq_ready)
             IOLoop.instance().call_later(0.5, self.await_daq_ready)
@@ -667,7 +666,10 @@ class Hexitec():
 
     def hv_on(self, msg):
         """Switch HV on."""
-        self.fem.hv_on()
+        try:
+            self.fem.hv_on()
+        except Exception as e:
+            self.fem.flag_error(str(e))
 
     def hv_off(self, msg):
         """Switch HV off."""
