@@ -123,7 +123,6 @@ class HexitecFem():
         self.debug = False
         # Diagnostics:
         self.exception_triggered = False
-        self.successful_reads = 0
         self.acquisition_duration = ""
 
         self.status_message = ""
@@ -170,7 +169,6 @@ class HexitecFem():
 
         param_tree_dict = {
             "diagnostics": {
-                "successful_reads": (lambda: self.successful_reads, None),
                 "acquire_start_time": (lambda: self.acquire_start_time, None),
                 "acquire_stop_time": (lambda: self.acquire_stop_time, None),
                 "acquire_time": (lambda: self.acquire_time, None),
@@ -865,7 +863,6 @@ class HexitecFem():
 
         # Acquisition completed, note completion
         self.acquisition_completed = True
-        self.parent.software_state = "Idle"
         self.all_data_sent = 0
 
     @run_on_executor(executor='thread_executor')

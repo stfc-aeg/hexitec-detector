@@ -102,7 +102,7 @@ class HexitecDAQ():
         self.master_dataset = "spectra_bins"
         self.extra_datasets = []
         # Processing timeout variables, support adapter's watchdog
-        self.processed_timestamp = 0
+        self.processing_timestamp = 0
         self.frames_processed = 0
         self.shutdown_processing = False
         self.processing_interruptable = False
@@ -298,13 +298,11 @@ class HexitecDAQ():
         """Turn on File Writing."""
         self.frames_processed = 0
         self.frames_received = 0
-        # Count hdf's frames_processed across node(s)
-        self.frame_start_acquisition = self.get_total_frames_processed('hdf')
+        self.frame_start_acquisition = 0
         self.number_frames = number_frames
         self.frames_expected = self.number_frames
         logging.info("FRAME START ACQ: %d END ACQ: %d",
-                     self.frame_start_acquisition,
-                     self.frame_start_acquisition + number_frames)
+                     self.frame_start_acquisition, number_frames)
         self.in_progress = True
         logging.debug("Starting File Writer")
         self.set_file_writing(True)
@@ -321,14 +319,14 @@ class HexitecDAQ():
         """Wait for acquisition to complete without blocking current thread."""
         bBusy = self.parent.fem.hardware_busy
         # Reset DAQ watchdog timeout or may fire prematurely
-        self.processed_timestamp = time.time()
+        self.processing_timestamp = time.time()
         if bBusy:
             self.frames_received = self.get_total_frames_received()
             self.frames_processed = self.get_total_frames_processed(self.plugin)
             self.processed_remaining = self.number_frames - self.frames_processed
             # print("  {} -> acq_chk_lp\t rxd {} procd {} left: {} processed_t'stamp:{} [X".format(
             #       self.debug_timestamp(), self.frames_received, self.frames_processed,
-            #       self.processed_remaining, self.processed_timestamp))
+            #       self.processed_remaining, self.processing_timestamp))
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
             # Allow watchdog to interrupt processing if timed out
@@ -362,20 +360,19 @@ class HexitecDAQ():
                     self.processing_interruptable = False
                     IOLoop.instance().add_callback(self.flush_data)
                     logging.debug("Acquisition Completing gracefully (packet losses)")
-                    # All required frames acquired; if either of frames based datasets
-                    #   selected, wait for hdf file to close
+                    # Wait for hdf file(s) to close
                     IOLoop.instance().call_later(1, self.hdf_closing_loop)
                     return
             else:
                 # Data still bein' processed
-                self.processed_timestamp = time.time()
+                self.processing_timestamp = time.time()
                 self.frames_processed = total_frames_processed
                 self.processed_remaining = self.number_frames - self.frames_processed
-                # print(" \n1\t rxd {} proc'd {} left: {}\n [X".format(
-                #     self.frames_received, self.frames_processed,
-                #     self.processed_remaining))
+                # print("  {} -> Data procg, rxd {} procd {} left: {} s.procg_ts: {}\n [X".format(
+                #     self.debug_timestamp(), self.frames_received, self.frames_processed,
+                #     self.processed_remaining, self.processing_timestamp))
             # Wait 0.5 seconds and check again
-            IOLoop.instance().call_later(.5, self.processing_check_loop)
+            IOLoop.instance().call_later(.25, self.processing_check_loop)
 
     def flush_data(self):
         """Flush out histograms, ensure complete datasets included."""
@@ -451,6 +448,7 @@ class HexitecDAQ():
             self.in_progress = False
             self.daq_ready = True
             self.parent.fem.flag_error("Error reopening HDF file: %s" % e)
+            self.parent.software_state = "Error"
             return
 
         # print(datetime.datetime.now(), "[X calling build_virtual_datasets(hdf_file)")
@@ -478,6 +476,8 @@ class HexitecDAQ():
             self.parent.fem.flag_error("Meta data writer unable to access file(s)!")
 
         hdf_file.close()
+        self.parent.software_state = "Idle"
+        # print("  {} -> DAQ._hdf_file() SW_date = Idle".format(self.debug_timestamp()))
         self.processing_interruptable = False
         self.in_progress = False
         self.daq_ready = True

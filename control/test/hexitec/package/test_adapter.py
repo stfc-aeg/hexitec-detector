@@ -303,8 +303,8 @@ class TestDetector(unittest.TestCase):
         """Test daq watchdog works."""
         self.test_adapter.detector.daq.in_progress = True
         # Ensure time difference is three seconds while timeout artificially at 0 seconds
-        self.test_adapter.detector.daq.processed_timestamp = time.time() - 3
-        self.test_adapter.detector.daq_rx_timeout = 0
+        self.test_adapter.detector.daq.processing_timestamp = time.time() - 3
+        self.test_adapter.detector.daq_idle_timeout = 0
 
         self.test_adapter.detector.check_daq_watchdog()
         # Ensure shutdown_processing() was called [it changes the following two bools]
@@ -563,6 +563,7 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.acquisition_in_progress = True
         self.test_adapter.detector.await_daq_ready()
         assert self.test_adapter.detector.acquisition_in_progress is False
+        assert self.test_adapter.detector.software_state == "Idle"
 
     def test_await_daq_ready_triggers_fem(self):
         """Test adapter's await_daq_ready triggers FEM(s) when ready."""
@@ -620,7 +621,6 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.acquisition_in_progress = True
         self.test_adapter.detector.reset_state_variables()
         assert self.test_adapter.detector.acquisition_in_progress is False
-        assert self.test_adapter.detector.software_state == "Idle"
 
     def test_cancel_acquisition(self):
         """Test function can cancel (in software) ongoing acquisition."""

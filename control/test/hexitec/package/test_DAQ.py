@@ -147,7 +147,7 @@ class DAQTestFixture(object):
              'server_uptime': 48.4, 'detector':
              {'fem':
               {'diagnostics':
-               {'successful_reads': 116, 'acquire_start_time': '', 'acquire_stop_time': '',
+               {'acquire_start_time': '', 'acquire_stop_time': '',
                 'acquire_time': 1.303241}, 'debug': False, 'frame_rate': 7154.0,
                'health': True, 'status_message': '', 'status_error': '', 'number_frames': 10,
                'duration': 1, 'hexitec_config': '~/path/to/config_file', 'read_sensors': None,
@@ -537,7 +537,7 @@ class TestDAQ(unittest.TestCase):
             self.test_daq.daq.frames_processed = 5
             self.test_daq.daq.plugin = "hdf"
             self.test_daq.daq.processing_check_loop()
-            assert pytest.approx(self.test_daq.daq.processed_timestamp) == time.time()
+            assert pytest.approx(self.test_daq.daq.processing_timestamp) == time.time()
 
     def test_flush_data(self):
         """Test function flushes out histogram data, calls stop_acquisition."""

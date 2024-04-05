@@ -462,13 +462,12 @@ function poll_fem() {
                     }
 
                     var fem_diagnostics = fem["diagnostics"];
-                    var num_reads = fem_diagnostics["successful_reads"];
                     var frame_rate = fem["frame_rate"];
                     document.querySelector('#frame_rate').innerHTML = frame_rate.toFixed(2);
 
                     // console.log(hardware_busy + " " + daq_in_progress + 
                     //             " <= hw_busy, daq_in_prog " + "   %_compl: "
-                    //             + " reads: " + num_reads + " msg: " + adapter_status["status_message"]);
+                    //             + " msg: " + adapter_status["status_message"]);
 
                     var acquire_start = fem_diagnostics["acquire_start_time"];
                     var acquire_stop = fem_diagnostics["acquire_stop_time"];

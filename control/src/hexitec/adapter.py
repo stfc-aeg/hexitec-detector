@@ -228,8 +228,7 @@ class Hexitec():
         self.acquisition_in_progress = False
 
         # Watchdog variables
-        self.fem_tx_timeout = 5000
-        self.daq_rx_timeout = 4
+        self.daq_idle_timeout = 6
 
         # Store initialisation time
         self.init_time = time.time()
@@ -347,17 +346,17 @@ class Hexitec():
         Failure to do so indicate missing/dropped packet(s), stop processing if stalled.
         """
         if self.daq.in_progress:
-            # print("  {} -> check_daq_watchdog() checking..".format(self.daq.debug_timestamp()))
-            processed_timestamp = self.daq.processed_timestamp
-            delta_time = time.time() - processed_timestamp
-            if (delta_time > self.daq_rx_timeout):
+            idle_time = time.time() - self.daq.processing_timestamp
+            # print("  {} -> check_daq_watchdog() checking.. delta: {}".format(
+            #      self.daq.debug_timestamp(), idle_time))
+            if (idle_time > self.daq_idle_timeout):
                 # DAQ: Timed out waiting for next frame to process
                 self.shutdown_processing()
                 logging.warning("DAQ processing timed out; Saw %s expected %s frames" %
                                 (self.daq.frames_processed, self.daq.number_frames))
                 self.fem._set_status_error("Processing timed out: {0:.2f} seconds \
                     (exceeded {1:.2f}); Expected {2} got {3} frames\
-                        ".format(delta_time, self.daq_rx_timeout,
+                        ".format(idle_time, self.daq_idle_timeout,
                                  self.daq.number_frames, self.daq.frames_processed))
                 self.fem._set_status_message("Processed frames, some packet(s) loss")
 
@@ -593,6 +592,7 @@ class Hexitec():
         if (self.daq.in_error):
             # Reset state variables
             self.reset_state_variables()
+            self.software_state = "Idle"
         elif (self.daq.hdf_is_reset is False):
             # print(" \n DAC acquisition file writing still false")
             # IOLoop.instance().call_later(0.05, self.await_daq_ready)
@@ -634,7 +634,6 @@ class Hexitec():
         Utilised by await_daq_ready(), monitor_fem_progress()
         """
         self.acquisition_in_progress = False
-        self.software_state = "Idle"
 
     def cancel_acquisition(self, put_data=None):
         """Cancel ongoing acquisition in Software.
@@ -648,6 +647,7 @@ class Hexitec():
         self.adapters["fp"].put(command, request)
         self.shutdown_processing()
         self.software_state = "Idle"
+        # print("  {} -> adp.cancel_acq() SW_date = Idle".format(self.daq.debug_timestamp()))
 
     def _collect_offsets(self, msg):
         """Instruct FEM to collect offsets."""
