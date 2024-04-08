@@ -723,9 +723,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.acquire_data_completed()
         assert self.test_fem.fem.hardware_busy is False
         assert self.test_fem.fem.acquisition_completed is True
-        assert self.test_fem.fem.parent.software_state == "Idle"
-        # TODO: usually takes ~2.6e-05s, better way to test this?
-        # assert pytest.approx(self.test_fem.fem.acquire_time) == 0.01
+        assert self.test_fem.fem.all_data_sent == 0
 
     def test_collect_offsets(self):
         """Test function working okay."""

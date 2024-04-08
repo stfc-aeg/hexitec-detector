@@ -51,6 +51,7 @@ class DetectorAdapterTestFixture(object):
                     body=5
                 )
         self.fake_fp = MagicMock()
+        self.fake_fr = MagicMock()
         self.fake_fi = MagicMock()
 
         # Once the odin_data adapter is refactored to use param tree,
@@ -94,16 +95,20 @@ class DetectorAdapterTestFixture(object):
             ]
         }
 
-        # set up fake adapter
+        # set up fake adapters
         fp_return = Mock()
         fp_return.configure_mock(data=self.fp_data)
         self.fake_fp.get = Mock(return_value=fp_return)
+        fr_return = Mock()
+        #fr_return.configure_mock(data=self.fr_data)
+        self.fake_fr.get = Mock(return_value=fr_return)
 
         fi_return = Mock()
         fi_return.configure_mock(data=self.fi_data)
 
         self.adapters = {
             "fp": self.fake_fp,
+            "fr": self.fake_fr,
             "file_interface": self.fake_fi
         }
 
@@ -298,8 +303,8 @@ class TestDetector(unittest.TestCase):
         """Test daq watchdog works."""
         self.test_adapter.detector.daq.in_progress = True
         # Ensure time difference is three seconds while timeout artificially at 0 seconds
-        self.test_adapter.detector.daq.processed_timestamp = time.time() - 3
-        self.test_adapter.detector.daq_rx_timeout = 0
+        self.test_adapter.detector.daq.processing_timestamp = time.time() - 3
+        self.test_adapter.detector.daq_idle_timeout = 0
 
         self.test_adapter.detector.check_daq_watchdog()
         # Ensure shutdown_processing() was called [it changes the following two bools]
@@ -449,7 +454,7 @@ class TestDetector(unittest.TestCase):
 
     def test_set_number_frames(self):
         """Test function sets number of frames."""
-        frames = 13
+        frames = 12
         self.test_adapter.detector.set_number_frames(frames)
         assert self.test_adapter.detector.number_frames == frames
 
@@ -483,6 +488,7 @@ class TestDetector(unittest.TestCase):
             "proxy": Mock(),
             "file_interface": Mock(),
             "fp": Mock(),
+            "fr": Mock(),
         }
 
         self.test_adapter.adapter.initialize(adapters)
@@ -492,9 +498,9 @@ class TestDetector(unittest.TestCase):
 
     def test_detector_set_acq(self):
         """Test function can set number of frames."""
-        self.test_adapter.detector.set_number_frames(5)
-
-        assert self.test_adapter.detector.number_frames == 5
+        frames = 10
+        self.test_adapter.detector.set_number_frames(frames)
+        assert self.test_adapter.detector.number_frames == frames
 
     def test_detector_acquisition_clears_previous_daq_errors(self):
         """Test function clears any previous daq error."""
@@ -544,6 +550,7 @@ class TestDetector(unittest.TestCase):
         )
         with patch("hexitec.adapter.IOLoop") as mock_loop:
             self.test_adapter.detector.daq.in_error = False
+            self.test_adapter.detector.daq.hdf_is_reset = False
             self.test_adapter.detector.await_daq_ready()
             instance = mock_loop.instance()
             instance.call_later.assert_called_with(0.5, self.test_adapter.detector.await_daq_ready)
@@ -556,6 +563,7 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.acquisition_in_progress = True
         self.test_adapter.detector.await_daq_ready()
         assert self.test_adapter.detector.acquisition_in_progress is False
+        assert self.test_adapter.detector.software_state == "Idle"
 
     def test_await_daq_ready_triggers_fem(self):
         """Test adapter's await_daq_ready triggers FEM(s) when ready."""
@@ -613,7 +621,6 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.acquisition_in_progress = True
         self.test_adapter.detector.reset_state_variables()
         assert self.test_adapter.detector.acquisition_in_progress is False
-        assert self.test_adapter.detector.software_state == "Idle"
 
     def test_cancel_acquisition(self):
         """Test function can cancel (in software) ongoing acquisition."""

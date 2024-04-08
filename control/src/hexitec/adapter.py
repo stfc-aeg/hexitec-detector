@@ -228,8 +228,7 @@ class Hexitec():
         self.acquisition_in_progress = False
 
         # Watchdog variables
-        self.fem_tx_timeout = 5000
-        self.daq_rx_timeout = 4
+        self.daq_idle_timeout = 6
 
         # Store initialisation time
         self.init_time = time.time()
@@ -304,7 +303,7 @@ class Hexitec():
         """Poll FEM for status.
 
         Check if acquisition completed (if initiated), for error(s) and
-        whether DAQ/FEM watchdogs timed out.
+        whether DAQ watchdog timed out.
         """
         # Poll FEM acquisition & health status
         self.poll_fem()
@@ -347,16 +346,17 @@ class Hexitec():
         Failure to do so indicate missing/dropped packet(s), stop processing if stalled.
         """
         if self.daq.in_progress:
-            processed_timestamp = self.daq.processed_timestamp
-            delta_time = time.time() - processed_timestamp
-            if (delta_time > self.daq_rx_timeout):
+            idle_time = time.time() - self.daq.processing_timestamp
+            # print("  {} -> check_daq_watchdog() checking.. delta: {}".format(
+            #      self.daq.debug_timestamp(), idle_time))
+            if (idle_time > self.daq_idle_timeout):
                 # DAQ: Timed out waiting for next frame to process
                 self.shutdown_processing()
                 logging.warning("DAQ processing timed out; Saw %s expected %s frames" %
                                 (self.daq.frames_processed, self.daq.number_frames))
                 self.fem._set_status_error("Processing timed out: {0:.2f} seconds \
                     (exceeded {1:.2f}); Expected {2} got {3} frames\
-                        ".format(delta_time, self.daq_rx_timeout,
+                        ".format(idle_time, self.daq_idle_timeout,
                                  self.daq.number_frames, self.daq.frames_processed))
                 self.fem._set_status_message("Processed frames, some packet(s) loss")
 
@@ -376,6 +376,19 @@ class Hexitec():
             response = [{"Error": "Adapter {} not found".format(adapter)}]
         finally:
             return response
+
+    # def _get_fp_status(self):
+    #     """Get status from adapter."""
+    #     adapter = "fp"
+    #     try:
+    #         request = ApiAdapterRequest(None, content_type="application/json")
+    #         response = self.adapters[adapter].get("status/error/", request)
+    #         response = response.data["value"]
+    #     except KeyError:
+    #         logging.warning("%s Adapter Not Found" % adapter)
+    #         response = [{"Error": "Adapter {} not found".format(adapter)}]
+    #     finally:
+    #         return response
 
     def connect_hardware(self, msg):
         """Connect with hardware."""
@@ -405,35 +418,35 @@ class Hexitec():
     def save_odin(self, msg):
         """Save Odin's settings to file."""
         config = {}
-        config["fem/hexitec_config"] = self.fem.hexitec_config
-        config["daq/file_name"] = self.daq.file_name
-        config["daq/file_dir"] = self.daq.file_dir
         config["daq/addition_enable"] = self.daq.addition_enable
-        config["daq/pixel_grid_size"] = self.daq.pixel_grid_size
-        config["daq/calibration_enable"] = self.daq.calibration_enable
-        config["daq/gradients_filename"] = self.daq.gradients_filename
-        config["daq/intercepts_filename"] = self.daq.intercepts_filename
-        config["daq/discrimination_enable"] = self.daq.discrimination_enable
         config["daq/bin_end"] = self.daq.bin_end
         config["daq/bin_start"] = self.daq.bin_start
         config["daq/bin_width"] = self.daq.bin_width
-        config["daq/max_frames_received"] = self.daq.max_frames_received
-        config["daq/pass_processed"] = self.daq.pass_processed
-        config["daq/pass_raw"] = self.daq.pass_raw
+        config["daq/calibration_enable"] = self.daq.calibration_enable
+        config["daq/discrimination_enable"] = self.daq.discrimination_enable
+        config["daq/file_dir"] = self.daq.file_dir
+        config["daq/file_name"] = self.daq.file_name
+        config["daq/gradients_filename"] = self.daq.gradients_filename
+        config["daq/image_frequency"] = self.daq.image_frequency
+        config["daq/intercepts_filename"] = self.daq.intercepts_filename
         config["daq/lvframes_dataset_name"] = self.daq.lvframes_dataset_name
         config["daq/lvframes_frequency"] = self.daq.lvframes_frequency
         config["daq/lvframes_per_second"] = self.daq.lvframes_per_second
         config["daq/lvspectra_frequency"] = self.daq.lvspectra_frequency
         config["daq/lvspectra_per_second"] = self.daq.lvspectra_per_second
-        config["daq/threshold_lower"] = self.daq.threshold_lower
-        config["daq/threshold_upper"] = self.daq.threshold_upper
-        config["daq/image_frequency"] = self.daq.image_frequency
+        config["daq/max_frames_received"] = self.daq.max_frames_received
+        config["daq/pass_processed"] = self.daq.pass_processed
+        config["daq/pass_raw"] = self.daq.pass_raw
+        config["daq/pixel_grid_size"] = self.daq.pixel_grid_size
         config["daq/threshold_filename"] = self.daq.threshold_filename
+        config["daq/threshold_lower"] = self.daq.threshold_lower
         config["daq/threshold_mode"] = self.daq.threshold_mode
+        config["daq/threshold_upper"] = self.daq.threshold_upper
         config["daq/threshold_value"] = self.daq.threshold_value
-        config["number_frames"] = self.number_frames
         config["duration"] = self.duration
         config["duration_enable"] = self.duration_enable
+        config["fem/hexitec_config"] = self.fem.hexitec_config
+        config["number_frames"] = self.number_frames
         try:
             with open(self.odin_config_file, "w") as f:
                 json.dump(config, f)
@@ -471,6 +484,7 @@ class Hexitec():
                 self.daq._set_threshold_filename(config["daq/threshold_filename"])
                 self.daq._set_threshold_mode(config["daq/threshold_mode"])
                 self.daq._set_threshold_value(config["daq/threshold_value"])
+                self.daq._set_compression_type(config["daq/compression_type"])
                 if config["duration_enable"]:
                     self.set_duration(config["duration"])
                     self.set_duration_enable(config["duration_enable"])
@@ -494,8 +508,15 @@ class Hexitec():
         else:
             self.set_number_frames(self.number_frames)
 
+    def round_to_even(self, n):
+        """Round (upwards) integer to even integer."""
+        return (2 * round(0.4+n/2))
+
     def set_number_frames(self, frames):
         """Set number of frames in DAQ, FEM."""
+        # Ensure even number of frames
+        if frames % 2:
+            frames = self.round_to_even(frames)
         if frames <= 0:
             raise ParameterTreeError("frames must be above 0!")
         self.number_frames = frames
@@ -555,7 +576,11 @@ class Hexitec():
         request.body = "{}".format(1)
         self.adapters["fp"].put(command, request)
 
-        self.daq_target = time.time()
+        # Reset FR(s) statistics
+        command = "command/reset_statistics"
+        request = ApiAdapterRequest("", content_type="application/json")
+        self.adapters["fr"].put(command, request)
+
         self.daq.prepare_daq(self.number_frames)
         # Acquisition starts here
         self.acquisition_in_progress = True
@@ -565,10 +590,10 @@ class Hexitec():
     def await_daq_ready(self):
         """Wait until DAQ has configured, enabled file writer."""
         if (self.daq.in_error):
-            # print(" \n daq is in error")
             # Reset state variables
             self.reset_state_variables()
-        elif (self.daq.file_writing is False):
+            self.software_state = "Idle"
+        elif (self.daq.hdf_is_reset is False):
             # print(" \n DAC acquisition file writing still false")
             # IOLoop.instance().call_later(0.05, self.await_daq_ready)
             IOLoop.instance().call_later(0.5, self.await_daq_ready)
@@ -609,7 +634,6 @@ class Hexitec():
         Utilised by await_daq_ready(), monitor_fem_progress()
         """
         self.acquisition_in_progress = False
-        self.software_state = "Idle"
 
     def cancel_acquisition(self, put_data=None):
         """Cancel ongoing acquisition in Software.
@@ -623,6 +647,7 @@ class Hexitec():
         self.adapters["fp"].put(command, request)
         self.shutdown_processing()
         self.software_state = "Idle"
+        # print("  {} -> adp.cancel_acq() SW_date = Idle".format(self.daq.debug_timestamp()))
 
     def _collect_offsets(self, msg):
         """Instruct FEM to collect offsets."""
@@ -641,7 +666,10 @@ class Hexitec():
 
     def hv_on(self, msg):
         """Switch HV on."""
-        self.fem.hv_on()
+        try:
+            self.fem.hv_on()
+        except Exception as e:
+            self.fem.flag_error(str(e))
 
     def hv_off(self, msg):
         """Switch HV off."""

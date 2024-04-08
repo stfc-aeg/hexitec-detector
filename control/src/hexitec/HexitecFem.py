@@ -123,7 +123,6 @@ class HexitecFem():
         self.debug = False
         # Diagnostics:
         self.exception_triggered = False
-        self.successful_reads = 0
         self.acquisition_duration = ""
 
         self.status_message = ""
@@ -140,6 +139,7 @@ class HexitecFem():
         self.sync_list = [0, 0, 0, 0, 0, 0]
 
         self.hv_bias_enabled = False
+        self.system_initialised = False
 
         self.read_firmware_version = True
         self.firmware_date = "N/A"
@@ -164,12 +164,11 @@ class HexitecFem():
 
         self.environs_in_progress = False
 
-        # Did Hardware finish sending data
+        # Did Hardware finish sending data?
         self.all_data_sent = 0
 
         param_tree_dict = {
             "diagnostics": {
-                "successful_reads": (lambda: self.successful_reads, None),
                 "acquire_start_time": (lambda: self.acquire_start_time, None),
                 "acquire_stop_time": (lambda: self.acquire_stop_time, None),
                 "acquire_time": (lambda: self.acquire_time, None),
@@ -193,6 +192,7 @@ class HexitecFem():
             "environs_in_progress": (lambda: self.environs_in_progress, None),
             "hardware_connected": (lambda: self.hardware_connected, None),
             "hardware_busy": (lambda: self.hardware_busy, None),
+            "system_initialised": (lambda: self.system_initialised, None),
             "firmware_date": (lambda: self.firmware_date, None),
             "firmware_time": (lambda: self.firmware_time, None),
             "firmware_version": (lambda: self.firmware_version, None),
@@ -510,11 +510,6 @@ class HexitecFem():
                 fw_version = board_status.get_fpga_fw_version()
                 build_date = board_status.get_fpga_build_date()
                 build_time = board_status.get_fpga_build_time()
-                # build_date_and_time = build_date + " " + build_time
-                # print(f"version: {fw_version}")
-                # print(f"date: {build_date}")
-                # print(f"time: {build_time}")
-                # print(f"together: {build_date_and_time}")
                 self.firmware_date = build_date
                 self.firmware_time = build_time
                 self.firmware_version = fw_version
@@ -582,6 +577,9 @@ class HexitecFem():
             self.calculate_frame_rate()
         self.duration = duration
         frames = self.duration * self.frame_rate
+        # Ensure even number of frames
+        if frames % 2:
+            frames = self.parent.round_to_even(frames)
         self.number_frames = int(round(frames))
 
     def get_health(self):
@@ -675,10 +673,11 @@ class HexitecFem():
             self.initialise_system()
         except HexitecFemError as e:
             self.flag_error("Failed to initialise camera", str(e))
+            self.hardware_busy = False
         except Exception as e:
             error = "Camera initialisation failed"
             self.flag_error(error, str(e))
-        self.hardware_busy = False
+            self.hardware_busy = False
 
     def collect_data(self, msg=None):
         """Acquire data from camera."""
@@ -750,6 +749,7 @@ class HexitecFem():
             logging.debug("Modules Disabled")
             self.disconnect()
             logging.debug("Camera is Disconnected")
+            self.system_initialised = False
         except socket_error as e:
             self.flag_error("Unable to disconnect camera", str(e))
             raise HexitecFemError(e)
@@ -764,6 +764,7 @@ class HexitecFem():
             logging.info("Initiate Data Capture")
             self.acquire_time = 0
             self.acquire_start_time = self.create_timestamp()
+            self.acquire_stop_time = "0"
 
             logging.debug("Reset frame number")
             self.frame_reset_to_zero()
@@ -777,6 +778,8 @@ class HexitecFem():
             logging.debug("Enable data")
             self.data_en(enable=True)
             time.sleep(0.2)
+            # data_triggered_timestamp = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
+            # print(f"  fem.data_triggered_timestamp: {data_triggered_timestamp} [X ")
 
             # Stop data flow (free acquisition mode), reset setting if number of frames mode
             logging.debug("Disable data")
@@ -803,7 +806,7 @@ class HexitecFem():
                 # 0 during data transmission, 65536 when completed
                 self.all_data_sent = (status & 65536)
                 if self.all_data_sent == 0:
-                    # print(" *** Awaiting data.. ***")
+                    # print(f" *** Awaiting data.. (status = {status})***")
                     IOLoop.instance().call_later(0.1, self.check_acquire_finished)
                     return
                 else:
@@ -824,15 +827,16 @@ class HexitecFem():
 
         if self.stop_acquisition:
             logging.info("Cancelling Acquisition..")
-            # TODO Verify working okay: ?
             for vsr in self.vsr_list:
                 vsr.disable_vsr()
+            self.data_path_reset()
             logging.info("Acquisition cancelled")
             # Reset variables
             self.stop_acquisition = False
             self.hardware_busy = False
             self.acquisition_completed = True
             self._set_status_message("Acquire cancelled")
+            self.system_initialised = False
             return
 
         # Workout exact duration of fem data transmission:
@@ -842,9 +846,9 @@ class HexitecFem():
         stop_ = datetime.strptime(self.acquire_stop_time, HexitecFem.DATE_FORMAT)
         self.acquire_time = (stop_ - start_).total_seconds()
 
-        logging.debug("Capturing {} frames took {} seconds".format(str(self.number_frames),
+        logging.debug("Sending {} frames took {} seconds".format(str(self.number_frames),
                                                                    self.acquire_time))
-        duration = "Requested {} frame(s), took {} seconds".format(self.number_frames,
+        duration = "Requested {} frames, sending took {} seconds".format(self.number_frames,
                                                                    self.acquire_time)
         self._set_status_message(duration)
         # Save duration to separate parameter tree entry:
@@ -859,7 +863,6 @@ class HexitecFem():
 
         # Acquisition completed, note completion
         self.acquisition_completed = True
-        self.parent.software_state = "Idle"
         self.all_data_sent = 0
 
     @run_on_executor(executor='thread_executor')
@@ -1152,6 +1155,7 @@ class HexitecFem():
 
             self._set_status_message("Initialisation completed. VSRs configured.")
             self.parent.software_state = "Idle"
+            self.system_initialised = True
         except HexitecFemError as e:
             self.flag_error("Failed to initialise camera", str(e))
         except Exception as e:
@@ -1608,14 +1612,14 @@ class HexitecFem():
     def hv_on(self):
         """Switch HV on."""
         logging.debug("Going to set HV bias to -{} volts".format(self.bias_level))
-        self._set_status_message(f"HV bias set to -{self.bias_level} V")
         hv_msb, hv_lsb = self.convert_bias_to_dac_values(self.bias_level)
-        print(f" HV Bias (-{self.bias_level}) : {hv_msb[0]:X} {hv_msb[1]:X}",
-              f" | {hv_lsb[0]:X} {hv_lsb[1]:X}")
+        # print(f" HV Bias (-{self.bias_level}) : {hv_msb[0]:X} {hv_msb[1]:X}",
+        #       f" | {hv_lsb[0]:X} {hv_lsb[1]:X}")
 
         # Can call hv_on function on any VSR object
         self.vsr_list[0].hv_on(hv_msb, hv_lsb)
         self.hv_bias_enabled = True
+        self._set_status_message(f"HV bias set to -{self.bias_level} V")
         logging.debug("HV now ON")
 
     def hv_off(self):
@@ -1702,7 +1706,6 @@ class HexitecFem():
         self.set_bit(HEX_REGISTERS.HEXITEC_2X6_HEADER_CTRL, "ACQ_NOF_FRAMES_EN")
         self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_ACQ_NOF_FRAMES_LOWER['addr'],
                                       data=number_frames, burst_len=1)
-        logging.debug("Number of frames set to 0x{0:X}".format(number_frames))
 
     def data_en(self, enable=True):
         if enable:
