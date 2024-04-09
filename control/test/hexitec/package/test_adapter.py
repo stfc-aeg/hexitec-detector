@@ -553,7 +553,7 @@ class TestDetector(unittest.TestCase):
             self.test_adapter.detector.daq.hdf_is_reset = False
             self.test_adapter.detector.await_daq_ready()
             instance = mock_loop.instance()
-            instance.call_later.assert_called_with(0.5, self.test_adapter.detector.await_daq_ready)
+            instance.call_later.assert_called_with(0.03, self.test_adapter.detector.await_daq_ready)
 
     def test_await_daq_ready_handles_daq_error_gracefully(self):
         """Test adapter's await_daq_ready will reset variables, exit function."""
@@ -563,7 +563,6 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.acquisition_in_progress = True
         self.test_adapter.detector.await_daq_ready()
         assert self.test_adapter.detector.acquisition_in_progress is False
-        assert self.test_adapter.detector.software_state == "Idle"
 
     def test_await_daq_ready_triggers_fem(self):
         """Test adapter's await_daq_ready triggers FEM(s) when ready."""

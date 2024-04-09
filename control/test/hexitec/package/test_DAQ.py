@@ -766,6 +766,7 @@ class TestDAQ(unittest.TestCase):
             assert self.test_daq.daq.hdf_retry == 0
             assert self.test_daq.daq.in_progress is False
             assert self.test_daq.daq.parent.fem.status_message == "Meta data added to "
+            assert self.test_daq.daq.parent.software_state == "Ready"
 
     def test_prepare_hdf_file_fails_inaccessible_config_files(self):
         """Test that function flags if a config file is inaccessible to write_metadata."""

@@ -476,7 +476,7 @@ class HexitecDAQ():
             self.parent.fem.flag_error("Meta data writer unable to access file(s)!")
 
         hdf_file.close()
-        self.parent.software_state = "Idle"
+        self.parent.software_state = "Ready"
         # print("  {} -> DAQ._hdf_file() SW_date = Idle".format(self.debug_timestamp()))
         self.processing_interruptable = False
         self.in_progress = False

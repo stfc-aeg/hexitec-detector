@@ -166,15 +166,13 @@ class TestFem(unittest.TestCase):
     def test_read_sensors_working_ok(self):
         """Test the read_sensors function works."""
         with patch('hexitec.HexitecFem.RdmaUDP'):
-            self.test_fem.fem.parent.software_state == "F"
             self.test_fem.fem.read_firmware_version = False
             self.test_fem.fem.read_temperatures_humidity_values = Mock()
             self.test_fem.fem.read_pwr_voltages = Mock()
             self.test_fem.fem.read_sensors()
             time.sleep(0.2)
-            # assert self.test_fem.fem.vsr_addr == 144
             assert self.test_fem.fem.environs_in_progress is False
-            assert self.test_fem.fem.parent.software_state == "Idle"
+            assert self.test_fem.fem.parent.software_state == "Cold"
             # assert self.test_fem.fem.firmware_date == firmware_date
             # assert self.test_fem.fem.firmware_time == firmware_time
             # assert self.test_fem.fem.read_firmware_version is False
@@ -660,8 +658,6 @@ class TestFem(unittest.TestCase):
     def test_check_acquire_finished_handles_data_transmission_complete(self):
         """Test check_acquire_finished handles data transmited."""
         self.test_fem.fem.stop_acquisition = False
-        # TODO: Faking all_data_sent = 1 (done) until firmware can readout data..
-        self.test_fem.fem.all_data_sent = 1
         self.test_fem.fem.acquire_data_completed = Mock()
         self.test_fem.fem.check_acquire_finished()
         self.test_fem.fem.acquire_data_completed.assert_called()
@@ -669,8 +665,6 @@ class TestFem(unittest.TestCase):
     def test_check_acquire_finished_handles_data_transmission_ongoing(self):
         """Test check_acquire_finished handles data transmission ongoing."""
         self.test_fem.fem.stop_acquisition = False
-        # TODO: Faking all_data_sent = 1 (done) until firmware can readout data..
-        # self.test_fem.fem.all_data_sent = 1
         self.test_fem.fem.x10g_rdma.udp_rdma_read = Mock()
         self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [0]
         self.test_fem.fem.acquire_data_completed = Mock()
@@ -720,6 +714,7 @@ class TestFem(unittest.TestCase):
         """Test function handles normal end of acquisition."""
         DATE_FORMAT = self.test_fem.fem.DATE_FORMAT
         self.test_fem.fem.acquire_start_time = '%s' % (datetime.now().strftime(DATE_FORMAT))
+        self.test_fem.fem.parent.software_state = "Cold"
         self.test_fem.fem.acquire_data_completed()
         assert self.test_fem.fem.hardware_busy is False
         assert self.test_fem.fem.acquisition_completed is True
@@ -728,15 +723,15 @@ class TestFem(unittest.TestCase):
     def test_collect_offsets(self):
         """Test function working okay."""
         self.test_fem.fem.hardware_connected = True
-        self.test_fem.fem.parent.software_state = ""
+        self.test_fem.fem.parent.software_state = "Idle"
         self.test_fem.fem.stop_sm = Mock()
         self.test_fem.fem.set_dc_controls = Mock()
         self.test_fem.fem.start_sm = Mock()
         self.test_fem.fem.await_dc_captured = Mock()
         self.test_fem.fem.clr_dc_controls = Mock()
         self.test_fem.fem.collect_offsets()
-        # time.sleep(0.3)
         assert self.test_fem.fem.hardware_busy is False
+        # State should revert back to previous state on completion
         assert self.test_fem.fem.parent.software_state == "Idle"
 
     # @pytest.mark.slow
@@ -927,7 +922,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [255]
         self.test_fem.fem.initialise_system()
         time.sleep(0.3)
-        assert self.test_fem.fem.parent.software_state == "Idle"
+        assert self.test_fem.fem.parent.software_state == "Ready"
 
     # TODO: Passes but sabotages 3 x test_read_sensors unit tests (lines 167-209)
     # @patch('hexitec_vsr.VsrModule')
@@ -984,6 +979,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.initialise_system()
         time.sleep(0.3)
         assert self.test_fem.fem.status_error == "Failed to initialise camera: {}".format("E")
+        assert self.test_fem.fem.parent.software_state == "Error"
 
     def test_initialise_system_handles_Exception(self):
         """Test function handles Exception."""
@@ -992,6 +988,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.initialise_system()
         time.sleep(0.2)
         assert self.test_fem.fem.status_error == "Camera initialisation failed: {}".format("E")
+        assert self.test_fem.fem.parent.software_state == "Error"
 
     # # TODO: Prevent unrelated unit tests failing: ??
     # # test_read_sensors_Exception - AssertionError: assert '' == 'Uncaught Exc...sors failed: '

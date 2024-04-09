@@ -239,7 +239,8 @@ class Hexitec():
         self.elog = ""
         self.number_nodes = 1
         # Software states:
-        #   Cold, Environs, Initialising, Offsets, Disconnected, Idle, Acquiring, Error, Cleared
+        #   Cold, Environs, Initialising, Offsets, Disconnected,
+        #   Idle, Ready, Acquiring, Error, Cleared
         self.software_state = "Cold"
         self.cold_initialisation = True
 
@@ -584,6 +585,7 @@ class Hexitec():
         self.daq.prepare_daq(self.number_frames)
         # Acquisition starts here
         self.acquisition_in_progress = True
+        self.software_state = "Acquiring"
         # Wait for DAQ (i.e. file writer) to be enabled before FEM told to collect data
         IOLoop.instance().add_callback(self.await_daq_ready)
 
@@ -592,13 +594,9 @@ class Hexitec():
         if (self.daq.in_error):
             # Reset state variables
             self.reset_state_variables()
-            self.software_state = "Idle"
         elif (self.daq.hdf_is_reset is False):
-            # print(" \n DAC acquisition file writing still false")
-            # IOLoop.instance().call_later(0.05, self.await_daq_ready)
-            IOLoop.instance().call_later(0.5, self.await_daq_ready)
+            IOLoop.instance().call_later(0.03, self.await_daq_ready)
         else:
-            # self.software_state = "Acquiring"
             # Add additional 8 ms delay to ensure file writer's file open before first frame arrives
             IOLoop.instance().call_later(0.08, self.trigger_fem_acquisition)
 
