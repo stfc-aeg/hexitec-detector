@@ -49,20 +49,15 @@
             <tr>
               <td>
                 <input type="button" onclick="connectButtonClicked()" accesskey="c" class="btn btn-primary" id='connectButton' data-size="small" value="Connect">
-                <!--  -->
                 <input type="button" onclick="hvOnButtonClicked()" class="btn btn-primary" id='hvOnButton' data-size="small" value="HV On">
                 <input type="button" onclick="hvOffButtonClicked()" class="btn btn-primary" id='hvOffButton' data-size="small" value="HV Off">
-                <!--  -->
                 <input type="button" onclick="environsButtonClicked()" accesskey="r" class="btn btn-primary" id='environsButton' data-size="small" value="Environs" disabled="true">
-                <!-- -->
                 <input type="button" onclick="initialiseButtonClicked()" accesskey="n" class="btn btn-primary" id='initialiseButton' data-size="small" value="Initialise">
                 <input type="button" onclick="offsetsButtonClicked()" accesskey="l" class="btn btn-primary" id='offsetsButton' data-size="small" value="Collect Offsets">
                 <input type="button" onclick="acquireButtonClicked()" accesskey="q" class="btn btn-primary" id='acquireButton' data-size="small" value="Acquire">
                 <input type="button" onclick="cancelButtonClicked()" accesskey="a" class="btn btn-primary" id='cancelButton' data-size="small" value="Cancel">
                 <input type="button" onclick="resetButtonClicked()" accesskey="x" class="btn btn-primary" id='resetButton' data-size="small" value="Reset">
-                <!-- -->
                 <input type="button" onclick="disconnectButtonClicked()" accesskey="i" class="btn btn-primary" id='disconnectButton' data-size="small" value="Disconnect">
-                <!-- Save/Load Odin configuration -->
                 <input type="button" onclick="saveOdinClicked()" class="btn btn-primary" id='saveOdinButton' data-size="small" value="Save">
                 <input type="button" onclick="loadOdinClicked()" class="btn btn-primary" id='loadOdinButton' data-size="small" value="Load">
               </td>
@@ -313,13 +308,11 @@
                                 />
                               </div>
                             </div>
-<!--  -->
                             <div class="row sidebar-row vertical-align">
                               <div class="col-xs-5">
                                 <b>Auto&#8209;sizing:</b> 
                               </div>
                               <div class="col-xs-7">
-                                <!-- <input type="checkbox" name="autosize_enable" data-size="small":"> -->
                                 <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
                                   <input type="radio" class="btn-check" name="autosize_radio" id="autosize_radio1" autocomplete="off" onclick="changeAutosizeEnable()">
                                   <label class="btn btn-outline-primary" for="autosize_radio1">On</label>
@@ -360,6 +353,18 @@
                                     />
                                   </div>
                                 </td>
+                              </tr>
+                              <tr>
+                                <td>Total Frames Expected</td>
+                                <td><span id="total_frames_expected" style="float:right">&nbsp;</span></td>
+                              </tr>
+                              <tr>
+                                <td>Total Frames Processed</td>
+                                <td><span id="total_frames_processed" style="float:right">&nbsp;</span></td>
+                              </tr>
+                              <tr>
+                                <td>Collection Time Remaining</td>
+                                <td><span id="collection_time_remaining" style="float:right">&nbsp;</span></td>
                               </tr>
                             </table>
 
@@ -587,7 +592,6 @@
                 <td>
                   <div class="row sidebar-row vertical-align">
                     <div class="col-xs-7">
-                      <!-- <input type="checkbox" name="calibration_enable" data-size="small"> -->
                       <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
                         <input type="radio" class="btn-check" name="calibration_radio" id="calibration_radio1" autocomplete="off" onclick="changeCalibrationEnable()">
                         <label class="btn btn-outline-primary" for="calibration_radio1">On</label>
@@ -628,7 +632,6 @@
                 <td>
                   Mode:&nbsp;
                 </td>
-                <!-- <td></td> -->
                 <td>
                   <!-- Set Charged Sharing algorithm -->
                   <input type="button" class="btn btn-primary fixed-width" id='noneButton' name="b1" data-size="small" value="None" onclick="setCS(event)" style="background-color:#0000FF">
@@ -1102,14 +1105,10 @@
                         <td>Total Frames Processed</td>
                         <td><span id="total_frames_processed" style="float:right">&nbsp;</span></td>
                       </tr>
-                      <!-- <tr>
-                        <td>Node1.Received</td>
-                        <td><span id="frames_received1" style="float:right">&nbsp;</span></td>
-                      </tr>
                       <tr>
-                        <td>Node1.Released</td>
-                        <td><span id="frames_released1" style="float:right">&nbsp;</span></td>
-                      </tr> -->
+                        <td>Collection Time Remaining</td>
+                        <td><span id="collection_time_remaining" style="float:right">&nbsp;</span></td>
+                      </tr>
                       <tr>
                         <td>Node1.Dropped</td>
                         <td><span id="frames_dropped1" style="float:right">&nbsp;</span></td>
@@ -1146,38 +1145,14 @@
                         <td>Node1.Timed out</td>
                         <td><span id="frames_timedout1" style="float:right">&nbsp;</span></td>
                       </tr>
-                      <!-- <tr>
-                        <td>Node2.Received</td>
-                        <td><span id="frames_received2" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node2.Released</td>
-                        <td><span id="frames_released2" style="float:right">&nbsp;</span></td>
-                      </tr> -->
                       <tr>
                         <td>Node2.Timed out</td>
                         <td><span id="frames_timedout2" style="float:right">&nbsp;</span></td>
                       </tr>
-                      <!-- <tr>
-                        <td>Node3.Received</td>
-                        <td><span id="frames_received3" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node3.Released</td>
-                        <td><span id="frames_released3" style="float:right">&nbsp;</span></td>
-                      </tr> -->
                       <tr>
                         <td>Node3.Timed out</td>
                         <td><span id="frames_timedout3" style="float:right">&nbsp;</span></td>
                       </tr>
-                      <!-- <tr>
-                        <td>Node4.Received</td>
-                        <td><span id="frames_received4" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node4.Released</td>
-                        <td><span id="frames_released4" style="float:right">&nbsp;</span></td>
-                      </tr> -->
                       <tr>
                         <td>Node4.Timed out</td>
                         <td><span id="frames_timedout4" style="float:right">&nbsp;</span></td>
@@ -1242,55 +1217,8 @@
                         <td>Offsets TS</td>
                         <td><span id="offsets_ts" style="float:right">&nbsp;</span></td>
                       </tr>
-                      <!-- <tr>
-                        <td>vsr1_sync</td>
-                        <td><span id="vsr1_sync" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>vsr2_sync</td>
-                        <td><span id="vsr2_sync" style="float:right">&nbsp;</span></td>
-                      </tr> -->
                     </tbody>
                   </table>
-
-                  <!-- <table class="overall-table">
-                    <tr>
-                      <td>
-                        <th>(Orphaned)&nbsp;</th>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Sensors Layout:&nbsp;
-                      </td>
-                      <td>
-                        <select class="double-width" onchange="sensorsLayoutChange(this.value)">
-                          <option value="1x1">1x1 (80x80)</option>
-                          <option value="2x2">2x2 (160x160)</option>
-                          <option selected="selected" value="2x6">2x6 (160x480)</option>
-                        </select>
-                      </td>
-                      <td>
-                        &nbsp;<td><span id="sensors-layout-warning">&nbsp;</span></td>
-                      </td>
-                    </tr> -->
-                    <!-- <tr>
-                      <td>
-                        Number Nodes:&nbsp;
-                      </td>
-                      <td>
-                        <select class="double-width" onchange="numberNodesChange(this.value)">
-                          <option value="1">1</option>
-                          <option selected="selected" value="2">2</option>
-                          <option value="3">3</option>
-                          <option value="4">4</option>
-                        </select>
-                      </td>
-                      <td>
-                        &nbsp;<td><span id="number-nodes-warning">&nbsp;</span></td>
-                      </td>
-                    </tr> -->
-                  <!-- </table> -->
 
                   <table class="table table-striped" style="width=100%">
                     <thead>
@@ -1364,26 +1292,6 @@
                         <td>Node8.FP Errors</td>
                         <td><span id="fp_errors8" style="float:right">&nbsp;</span></td>
                       </tr>
-                      <!-- <tr>
-                        <td>daq stop</td>
-                        <td><span id="daq_stop" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>fem not busy</td>
-                        <td><span id="fem_not_busy" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Offsets TS</td>
-                        <td><span id="offsets_ts" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>vsr1_sync</td>
-                        <td><span id="vsr1_sync" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>vsr2_sync</td>
-                        <td><span id="vsr2_sync" style="float:right">&nbsp;</span></td>
-                      </tr> -->
                     </tbody>
                   </table>
 
@@ -1470,7 +1378,6 @@
 
       <!-- <div class="tab-pane fade show active" id="logging" role="tabpanel"> -->
       <div class="tab-pane fade" id="logging" role="tabpanel">
-
         <div class="container">
           <div class="row">
             <div class="col-md-1"></div>

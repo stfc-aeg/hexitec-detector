@@ -52,8 +52,6 @@ class HexitecFem():
     # Define timestamp format
     DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
 
-    UART_MAX_RETRIES = 15001
-
     def __init__(self, parent, config):
         """
         Initialize the HexitecFem object.

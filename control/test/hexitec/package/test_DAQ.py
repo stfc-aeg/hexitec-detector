@@ -338,8 +338,8 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq.set_file_name("new_file_name.hdf")
         assert self.test_daq.daq.file_name == "new_file_name.hdf"
 
-    def test_set_writing(self):
-        """Test set file writing."""
+    def test_set_file_writing_to_true(self):
+        """Test set file writing to True."""
         self.test_daq.daq.set_file_writing(True)
 
         self.test_daq.fake_fp.put.assert_has_calls([
@@ -351,6 +351,27 @@ class TestDAQ(unittest.TestCase):
             call("config/histogram/max_frames_received", ANY)
         ])
         assert self.test_daq.daq.file_writing is True
+
+    def test_set_file_writing_to_false(self):
+        """Test set file writing to False."""
+        self.test_daq.daq.set_file_writing(False)
+        assert self.test_daq.daq.file_writing is False
+        assert self.test_daq.daq.hdf_is_reset is False
+
+    def test_check_hdf_reset_calls_itself(self):
+        """Test function calls itself if total frames processed non-zero."""
+        self.test_daq.daq.get_total_frames_processed = Mock(return_value=1)
+        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
+            self.test_daq.daq.check_hdf_reset()
+            instance = mock_loop.instance()
+            instance.call_later.assert_called_with(0.1, self.test_daq.daq.check_hdf_reset)
+
+    def test_check_hdf_reset_works(self):
+        """Test function flags hdf reset correctly."""
+        self.test_daq.daq.get_total_frames_processed = Mock(return_value=0)
+        self.test_daq.daq.hdf_is_reset = False
+        self.test_daq.daq.check_hdf_reset()
+        assert self.test_daq.daq.hdf_is_reset is True
 
     def test_start_acquisition(self):
         """Test function works."""
@@ -506,6 +527,18 @@ class TestDAQ(unittest.TestCase):
             self.test_daq.daq.acquisition_check_loop()
             instance = mock_loop.instance()
             instance.call_later.assert_called_with(.5, self.test_daq.daq.processing_check_loop)
+
+    def test_calculate_remaining_collection_time(self):
+        """Test the function calculate remaining collection time from fem."""
+        now_timestamp = self.test_daq.daq.parent.fem.create_timestamp()
+        self.test_daq.daq.parent.fem.acquire_start_time = now_timestamp
+        duration = 60
+        delay = 2.0
+        self.test_daq.daq.parent.fem.duration = duration
+        time.sleep(delay)
+        time_remaining = self.test_daq.daq.calculate_remaining_collection_time()
+        # Check calculated remaining collection time + delay ~= duration
+        assert pytest.approx(time_remaining+delay, 0.001) == duration
 
     def test_processing_check_loop_polls_file_status_after_processing_complete(self):
         """Test processing check loop polls for processed file closed once processing done."""
@@ -1247,11 +1280,3 @@ class TestDAQ(unittest.TestCase):
                 # TODO: REPLACE ANY WITH ApiAdapterRequest
                 call("config/discrimination/pixel_grid_size", ANY)
             ])
-
-# GFC will turn parameter tree into:
-#   OrderedDict([('threshold', {'threshold_value': 99,
-# 'threshold_filename': '', 'threshold_mode': 'none'}),
-# ('calibration', {'enable': False, 'intercepts_filename': '', 'gradients_filename': ''}),
-# ('addition', {'enable': False, 'pixel_grid_size': 3}), ('discrimination', {'enable': False,
-# 'pixel_grid_size': 5}), ('histogram', {'max_frames_received': 10, 'bin_end': 8000,
-# 'bin_width': 10.0, 'bin_start': 0})]) <class 'collections.OrderedDict'>

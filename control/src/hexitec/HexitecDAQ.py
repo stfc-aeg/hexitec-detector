@@ -136,6 +136,7 @@ class HexitecDAQ():
         self.frames_received = 0
         self.processed_remaining = self.number_frames - self.frames_processed
         self.received_remaining = self.number_frames - self.frames_received
+        self.collection_time_remaining = 0
         self.hdf_is_reset = False
 
         # Diagnostics
@@ -170,7 +171,9 @@ class HexitecDAQ():
                 "frames_expected": (lambda: self.frames_expected, None),
                 "frames_received": (lambda: self.frames_received, None),
                 "frames_processed": (lambda: self.frames_processed, None),
-                "processed_remaining": (lambda: self.processed_remaining, None)
+                "processed_remaining": (lambda: self.processed_remaining, None),
+                "received_remaining": (lambda: self.received_remaining, None),
+                "collection_time_remaining": (lambda: self.collection_time_remaining, None)
             },
             "config": {
                 "addition": {
@@ -301,6 +304,7 @@ class HexitecDAQ():
         self.frame_start_acquisition = 0
         self.number_frames = number_frames
         self.frames_expected = self.number_frames
+        self.received_remaining = self.number_frames - self.frames_received
         logging.info("FRAME START ACQ: %d END ACQ: %d",
                      self.frame_start_acquisition, number_frames)
         self.in_progress = True
@@ -315,6 +319,16 @@ class HexitecDAQ():
         # Wait while fem finish sending data
         IOLoop.instance().call_later(1.3, self.acquisition_check_loop)
 
+    def calculate_remaining_collection_time(self):
+        """Calculate time remaining of current collection."""
+        remaining_time = self.parent.fem.duration
+        if len(self.parent.fem.acquire_start_time) > 0:
+            acquire_start = self.parent.fem.acquire_start_time
+            ts = datetime.datetime.strptime(acquire_start, HexitecDAQ.DATE_FORMAT).timestamp()
+            current_time = time.time()
+            remaining_time = self.parent.fem.duration - (current_time - ts)
+        return remaining_time
+
     def acquisition_check_loop(self):
         """Wait for acquisition to complete without blocking current thread."""
         bBusy = self.parent.fem.hardware_busy
@@ -323,7 +337,9 @@ class HexitecDAQ():
         if bBusy:
             self.frames_received = self.get_total_frames_received()
             self.frames_processed = self.get_total_frames_processed(self.plugin)
+            self.received_remaining = self.number_frames - self.frames_received
             self.processed_remaining = self.number_frames - self.frames_processed
+            self.collection_time_remaining = self.calculate_remaining_collection_time()
             # print("  {} -> acq_chk_lp\t rxd {} procd {} left: {} processed_t'stamp:{} [X".format(
             #       self.debug_timestamp(), self.frames_received, self.frames_processed,
             #       self.processed_remaining, self.processing_timestamp))
@@ -339,6 +355,9 @@ class HexitecDAQ():
         # Check HDF/histogram processing progress
         total_frames_processed = self.get_total_frames_processed(self.plugin)
         self.frames_received = self.get_total_frames_received()
+        self.received_remaining = self.number_frames - self.frames_received
+        if self.collection_time_remaining < 0.9:
+            self.collection_time_remaining = 0
         # print("  {} -> proc_chk_lp\t rxd {} procd {} left: {} Frms: {} total procd: {} [X".format(
         #       self.debug_timestamp(), self.frames_received, self.frames_processed,
         #       self.processed_remaining, self.number_frames, total_frames_processed))
@@ -426,6 +445,7 @@ class HexitecDAQ():
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
             self.frames_received = self.get_total_frames_received()
+            self.received_remaining = self.number_frames - self.frames_received
             self.hdf_file_location = self.file_dir + self.file_name + '.h5'
             self.prepare_hdf_file()
 
@@ -873,6 +893,7 @@ class HexitecDAQ():
         self.frames_processed = 0
         self.frames_received = 0
         self.processed_remaining = self.number_frames - self.frames_processed
+        self.received_remaining = self.number_frames - self.frames_received
 
     def set_number_nodes(self, nodes):
         """Set number of nodes."""
@@ -1220,6 +1241,6 @@ class HexitecDAQ():
         else:
             self.plugin = "histogram"
 
-    def debug_timestamp(self):
+    def debug_timestamp(self):  # pragma: no cover
         """Debug function returning current timestamp in sub second resolution."""
         return '%s' % (datetime.datetime.now().strftime('%H%M%S.%f'))
