@@ -378,19 +378,6 @@ class Hexitec():
         finally:
             return response
 
-    # def _get_fp_status(self):
-    #     """Get status from adapter."""
-    #     adapter = "fp"
-    #     try:
-    #         request = ApiAdapterRequest(None, content_type="application/json")
-    #         response = self.adapters[adapter].get("status/error/", request)
-    #         response = response.data["value"]
-    #     except KeyError:
-    #         logging.warning("%s Adapter Not Found" % adapter)
-    #         response = [{"Error": "Adapter {} not found".format(adapter)}]
-    #     finally:
-    #         return response
-
     def connect_hardware(self, msg):
         """Connect with hardware."""
         self.software_state = "Connecting"
@@ -416,6 +403,16 @@ class Hexitec():
             # Nothing in progress, disconnect hardware
             self.fem.disconnect_hardware(msg)
 
+    def strip_base_path(self, path, keyword):
+        """Remove base path from path.
+
+        Removes everything up to but not including 'keyword' from path.
+        i.e. if keyword="data" and path='/hxt_sw/src/hexitec-detector/data/config/m_2x6.txt'
+        then function returns 'data/config/m_2x6.txt'
+        """
+        index = path.rfind(keyword)
+        return path[index:]
+
     def save_odin(self, msg):
         """Save Odin's settings to file."""
         config = {}
@@ -424,12 +421,14 @@ class Hexitec():
         config["daq/bin_start"] = self.daq.bin_start
         config["daq/bin_width"] = self.daq.bin_width
         config["daq/calibration_enable"] = self.daq.calibration_enable
+        config["daq/compression_type"] = self.daq.compression_type
         config["daq/discrimination_enable"] = self.daq.discrimination_enable
         config["daq/file_dir"] = self.daq.file_dir
         config["daq/file_name"] = self.daq.file_name
-        config["daq/gradients_filename"] = self.daq.gradients_filename
+        config["daq/gradients_filename"] = self.strip_base_path(self.daq.gradients_filename, "data")
         config["daq/image_frequency"] = self.daq.image_frequency
-        config["daq/intercepts_filename"] = self.daq.intercepts_filename
+        config["daq/intercepts_filename"] = self.strip_base_path(self.daq.intercepts_filename,
+                                                                 "data")
         config["daq/lvframes_dataset_name"] = self.daq.lvframes_dataset_name
         config["daq/lvframes_frequency"] = self.daq.lvframes_frequency
         config["daq/lvframes_per_second"] = self.daq.lvframes_per_second
@@ -439,14 +438,14 @@ class Hexitec():
         config["daq/pass_processed"] = self.daq.pass_processed
         config["daq/pass_raw"] = self.daq.pass_raw
         config["daq/pixel_grid_size"] = self.daq.pixel_grid_size
-        config["daq/threshold_filename"] = self.daq.threshold_filename
+        config["daq/threshold_filename"] = self.strip_base_path(self.daq.threshold_filename, "data")
         config["daq/threshold_lower"] = self.daq.threshold_lower
         config["daq/threshold_mode"] = self.daq.threshold_mode
         config["daq/threshold_upper"] = self.daq.threshold_upper
         config["daq/threshold_value"] = self.daq.threshold_value
         config["duration"] = self.duration
         config["duration_enable"] = self.duration_enable
-        config["fem/hexitec_config"] = self.fem.hexitec_config
+        config["fem/hexitec_config"] = self.strip_base_path(self.fem.hexitec_config, "control")
         config["number_frames"] = self.number_frames
         try:
             with open(self.odin_config_file, "w") as f:

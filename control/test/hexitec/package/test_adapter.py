@@ -100,7 +100,7 @@ class DetectorAdapterTestFixture(object):
         fp_return.configure_mock(data=self.fp_data)
         self.fake_fp.get = Mock(return_value=fp_return)
         fr_return = Mock()
-        #fr_return.configure_mock(data=self.fr_data)
+        # fr_return.configure_mock(data=self.fr_data)
         self.fake_fr.get = Mock(return_value=fr_return)
 
         fi_return = Mock()
@@ -394,6 +394,14 @@ class TestDetector(unittest.TestCase):
             self.test_adapter.detector.shutdown_processing.assert_called_with()
             i = mock.instance()
             i.call_later.assert_called_with(0.2, self.test_adapter.detector.fem.disconnect_hardware)
+
+    def test_trip_base_path(self):
+        """Test function correctly strips out base path."""
+        keyword = "data"
+        path = '/hxt_sw/src/hexitec-detector/data/config/m_2x6.txt'
+        stripped_path = "data/config/m_2x6.txt"
+        returned_string = self.test_adapter.detector.strip_base_path(path, keyword)
+        assert returned_string == stripped_path
 
     def test_save_odin(self):
         """Test function works ok."""

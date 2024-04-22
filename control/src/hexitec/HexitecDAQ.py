@@ -597,7 +597,8 @@ class HexitecDAQ():
                 # print(dt, f" outshape = ({inshape[index][1-n]}, {inshape[index][2-n]})")
             else:
                 outshape = (num_frames[index], inshape[index][1-n], inshape[index][2-n])
-                # print(datetime.datetime.now(), f" outshape = ({num_frames[index]}, {inshape[index][1-n]}, {inshape[index][2-n]})")
+                # print(datetime.datetime.now(), f" outshape = \
+                #   ({num_frames[index]}, {inshape[index][1-n]}, {inshape[index][2-n]})")
 
             layout = h5py.VirtualLayout(shape=outshape, dtype=dtype[index])
 

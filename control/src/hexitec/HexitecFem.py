@@ -1006,12 +1006,11 @@ class HexitecFem():
         # # self.load_enables_settings(vsr, 0x41, 0x45, asic2_col_power_enable, enables_defaults)
 
         logging.debug("Column Calibration Enable")
-
         # Column Calibrate Enable ASIC1 (Reg 0x57) - checked 3
         asic1_col_cal_enable = self._extract_80_bits("ColumnCal", vsr_num, 1, "Channel")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        if asic1_col_cal_enable[0] > 0:
+        if asic1_col_cal_enable[0] > -1:
             # vsr.debug = True
             vsr.set_column_calibration_mask(asic1_col_cal_enable, asic=1)
         else:
@@ -1021,7 +1020,7 @@ class HexitecFem():
         asic2_col_cal_enable = self._extract_80_bits("ColumnCal", vsr_num, 2, "Channel")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        if asic2_col_cal_enable[0] > 0:
+        if asic2_col_cal_enable[0] > -1:
             vsr.set_column_calibration_mask(asic2_col_cal_enable, asic=2)
         else:
             vsr.set_column_calibration_mask(enables_defaults, asic=2)
@@ -1060,7 +1059,7 @@ class HexitecFem():
         asic1_row_cal_enable = self._extract_80_bits("RowCal", vsr_num, 1, "Block")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        if asic1_row_cal_enable[0] > 0:
+        if asic1_row_cal_enable[0] > -1:
             vsr.set_row_calibration_mask(asic1_row_cal_enable, asic=1)
         else:
             vsr.set_row_calibration_mask(enables_defaults, asic=1)
@@ -1069,7 +1068,7 @@ class HexitecFem():
         asic2_row_cal_enable = self._extract_80_bits("RowCal", vsr_num, 2, "Block")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        if asic2_row_cal_enable[0] > 0:
+        if asic2_row_cal_enable[0] > -1:
             vsr.set_row_calibration_mask(asic2_row_cal_enable, asic=2)
         else:
             vsr.set_row_calibration_mask(enables_defaults, asic=2)
