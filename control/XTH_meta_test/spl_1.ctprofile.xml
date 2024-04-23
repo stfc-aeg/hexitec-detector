@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CTProfile xmlns:xsi="none">
+  <ManipulatorPosition Version="2">
+    <AxisPosition>0</AxisPosition>
+    <AxisPosition>450.433</AxisPosition>
+    <AxisPosition>15.287</AxisPosition>
+    <AxisPosition>271.487</AxisPosition>
+    <AxisPosition>0</AxisPosition>
+    <AxisPosition>-397.092</AxisPosition>
+  </ManipulatorPosition>
+  <CTAxisOffset>0</CTAxisOffset>
+  <XraySettings>
+    <kV>140</kV>
+    <uA>70</uA>
+    <FocusMode>autoDefocus</FocusMode>
+  </XraySettings>
+  <requiresPreprocessing>false</requiresPreprocessing>
+  <preprocessingType>-1</preprocessingType>
+  <XrayHead>Reflection 225</XrayHead>
+  <XrayHeadNumber>0</XrayHeadNumber>
+  <ShadingCorrectionProfile>
+    <StandardCorrection>false</StandardCorrection>
+    <Frames>60</Frames>
+    <PanelScan>false</PanelScan>
+    <PanelScanNumberImages>1</PanelScanNumberImages>
+    <ImagingConditions exposure="354" accumulation="0" binning="1" gain="1" brightness="0" digitalGain="0" WhiteToBlackLatency="16000" BlackToWhiteLatency="0" WhiteToWhiteLatency="3000" lines="1">
+      <transform>1</transform>
+      <imageOffsetX>24</imageOffsetX>
+      <imageOffsetY>24</imageOffsetY>
+      <imageSizeX>4048</imageSizeX>
+      <imageSizeY>4048</imageSizeY>
+    </ImagingConditions>
+    <IntensifierField>0</IntensifierField>
+    <GreyLevelTargets>
+      <Target>
+        <kV>0</kV>
+        <uA>0</uA>
+        <XrayFilterMaterial />
+        <XrayFilterThickness>0</XrayFilterThickness>
+        <GreyLevel>165</GreyLevel>
+        <PercentageWhiteLevel>0</PercentageWhiteLevel>
+      </Target>
+      <Target>
+        <kV>140</kV>
+        <uA>70</uA>
+        <XrayFilterMaterial>Copper</XrayFilterMaterial>
+        <XrayFilterThickness>0.1</XrayFilterThickness>
+        <GreyLevel>627</GreyLevel>
+        <PercentageWhiteLevel>100</PercentageWhiteLevel>
+      </Target>
+    </GreyLevelTargets>
+    <WhiteTargetLevel>60000</WhiteTargetLevel>
+    <UsesMultipleXrayFilters>false</UsesMultipleXrayFilters>
+    <Mode>CT3D</Mode>
+    <TiltDegrees>0</TiltDegrees>
+  </ShadingCorrectionProfile>
+
+</CTProfile>
