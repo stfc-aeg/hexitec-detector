@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Information xmlns:xsi="none">
+  <JobGuid>392c51f4-48c1-49ae-a1a6-2998093e7bc1</JobGuid>
+  <Identifier>spl_1</Identifier>
+  <Elements>
+    <Element>
+      <tag>Dataset name</tag>
+      <value>spl_1</value>
+    </Element>
+  </Elements>
+</Information>

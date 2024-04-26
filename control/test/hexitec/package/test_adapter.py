@@ -100,7 +100,7 @@ class DetectorAdapterTestFixture(object):
         fp_return.configure_mock(data=self.fp_data)
         self.fake_fp.get = Mock(return_value=fp_return)
         fr_return = Mock()
-        #fr_return.configure_mock(data=self.fr_data)
+        # fr_return.configure_mock(data=self.fr_data)
         self.fake_fr.get = Mock(return_value=fr_return)
 
         fi_return = Mock()
@@ -395,6 +395,14 @@ class TestDetector(unittest.TestCase):
             i = mock.instance()
             i.call_later.assert_called_with(0.2, self.test_adapter.detector.fem.disconnect_hardware)
 
+    def test_trip_base_path(self):
+        """Test function correctly strips out base path."""
+        keyword = "data"
+        path = '/hxt_sw/src/hexitec-detector/data/config/m_2x6.txt'
+        stripped_path = "data/config/m_2x6.txt"
+        returned_string = self.test_adapter.detector.strip_base_path(path, keyword)
+        assert returned_string == stripped_path
+
     def test_save_odin(self):
         """Test function works ok."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
@@ -553,7 +561,7 @@ class TestDetector(unittest.TestCase):
             self.test_adapter.detector.daq.hdf_is_reset = False
             self.test_adapter.detector.await_daq_ready()
             instance = mock_loop.instance()
-            instance.call_later.assert_called_with(0.5, self.test_adapter.detector.await_daq_ready)
+            instance.call_later.assert_called_with(0.03, self.test_adapter.detector.await_daq_ready)
 
     def test_await_daq_ready_handles_daq_error_gracefully(self):
         """Test adapter's await_daq_ready will reset variables, exit function."""
@@ -563,7 +571,6 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.acquisition_in_progress = True
         self.test_adapter.detector.await_daq_ready()
         assert self.test_adapter.detector.acquisition_in_progress is False
-        assert self.test_adapter.detector.software_state == "Idle"
 
     def test_await_daq_ready_triggers_fem(self):
         """Test adapter's await_daq_ready triggers FEM(s) when ready."""

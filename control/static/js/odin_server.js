@@ -379,6 +379,8 @@ function poll_fem() {
                     const frames_received = result["detector"]["daq"]["status"]["frames_received"];
                     const frames_processed = result["detector"]["daq"]["status"]["frames_processed"];
                     const processed_remaining = result["detector"]["daq"]["status"]["processed_remaining"];
+                    const collection_time_remaining = result["detector"]["daq"]["status"]["collection_time_remaining"];
+                    document.querySelector('#collection_time_remaining').innerHTML = collection_time_remaining.toFixed(1);
                     const fraction_received = (frames_received / frames_expected).toFixed(2);
                     const fraction_processed = (frames_processed / frames_expected).toFixed(2);
                     document.querySelector('#total_frames_expected').innerHTML = frames_expected;

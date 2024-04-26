@@ -52,8 +52,6 @@ class HexitecFem():
     # Define timestamp format
     DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
 
-    UART_MAX_RETRIES = 15001
-
     def __init__(self, parent, config):
         """
         Initialize the HexitecFem object.
@@ -502,6 +500,9 @@ class HexitecFem():
         """Read environmental sensors and updates parameter tree with results."""
         try:
             self.hardware_busy = True
+            self.environs_in_progress = True
+            current_state = self.parent.software_state
+            self.parent.software_state = "Environs"
             # Note once, when firmware was built
             if self.read_firmware_version:  # pragma: no cover
                 board_status = BoardCfgStatus(self.x10g_rdma,
@@ -514,8 +515,6 @@ class HexitecFem():
                 self.firmware_time = build_time
                 self.firmware_version = fw_version
                 self.read_firmware_version = False
-            self.environs_in_progress = True
-            self.parent.software_state = "Environs"
             for vsr in self.vsr_list:
                 self.read_temperatures_humidity_values(vsr)
                 self.read_pwr_voltages(vsr)  # pragma: no cover
@@ -525,7 +524,7 @@ class HexitecFem():
             self.flag_error("Reading sensors failed", str(e))
         else:
             self.environs_in_progress = False
-            self.parent.software_state = "Idle"
+            self.parent.software_state = current_state
             self._set_status_message("VSRs sensors read")
         self.hardware_busy = False
 
@@ -692,7 +691,7 @@ class HexitecFem():
             if self.ignore_busy:
                 self.ignore_busy = False
             self.hardware_busy = True
-            self.parent.software_state = "Acquiring"
+            # self.parent.software_state = "Acquiring"
             self._set_status_message("Acquiring data..")
             self.acquire_data()
         except HexitecFemError as e:
@@ -759,7 +758,7 @@ class HexitecFem():
             raise HexitecFemError("%s; %s" % (e, "No active connection"))
 
     def acquire_data(self):
-        """Acquire data, poll fem for completion and read out fem monitors."""
+        """Acquire data, poll fem for completion."""
         try:
             logging.info("Initiate Data Capture")
             self.acquire_time = 0
@@ -847,9 +846,9 @@ class HexitecFem():
         self.acquire_time = (stop_ - start_).total_seconds()
 
         logging.debug("Sending {} frames took {} seconds".format(str(self.number_frames),
-                                                                   self.acquire_time))
+                                                                 self.acquire_time))
         duration = "Requested {} frames, sending took {} seconds".format(self.number_frames,
-                                                                   self.acquire_time)
+                                                                         self.acquire_time)
         self._set_status_message(duration)
         # Save duration to separate parameter tree entry:
         self.acquisition_duration = duration
@@ -881,6 +880,7 @@ class HexitecFem():
             else:
                 self._set_status_error("")
             self.hardware_busy = True
+            current_state = self.parent.software_state
             self.parent.software_state = "Offsets"
 
             # 2. Stop the state machine
@@ -900,7 +900,7 @@ class HexitecFem():
             self.clr_dc_controls(False, False)
 
             self._set_status_message("Offsets collections operation completed.")
-            self.parent.software_state = "Idle"
+            self.parent.software_state = current_state
             # Timestamp when offsets collected
             self.offsets_timestamp = self.create_timestamp()
             # # String format can be turned into millisecond format:
@@ -1006,12 +1006,11 @@ class HexitecFem():
         # # self.load_enables_settings(vsr, 0x41, 0x45, asic2_col_power_enable, enables_defaults)
 
         logging.debug("Column Calibration Enable")
-
         # Column Calibrate Enable ASIC1 (Reg 0x57) - checked 3
         asic1_col_cal_enable = self._extract_80_bits("ColumnCal", vsr_num, 1, "Channel")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        if asic1_col_cal_enable[0] > 0:
+        if asic1_col_cal_enable[0] > -1:
             # vsr.debug = True
             vsr.set_column_calibration_mask(asic1_col_cal_enable, asic=1)
         else:
@@ -1021,7 +1020,7 @@ class HexitecFem():
         asic2_col_cal_enable = self._extract_80_bits("ColumnCal", vsr_num, 2, "Channel")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        if asic2_col_cal_enable[0] > 0:
+        if asic2_col_cal_enable[0] > -1:
             vsr.set_column_calibration_mask(asic2_col_cal_enable, asic=2)
         else:
             vsr.set_column_calibration_mask(enables_defaults, asic=2)
@@ -1060,7 +1059,7 @@ class HexitecFem():
         asic1_row_cal_enable = self._extract_80_bits("RowCal", vsr_num, 1, "Block")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        if asic1_row_cal_enable[0] > 0:
+        if asic1_row_cal_enable[0] > -1:
             vsr.set_row_calibration_mask(asic1_row_cal_enable, asic=1)
         else:
             vsr.set_row_calibration_mask(enables_defaults, asic=1)
@@ -1069,7 +1068,7 @@ class HexitecFem():
         asic2_row_cal_enable = self._extract_80_bits("RowCal", vsr_num, 2, "Block")
         enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
-        if asic2_row_cal_enable[0] > 0:
+        if asic2_row_cal_enable[0] > -1:
             vsr.set_row_calibration_mask(asic2_row_cal_enable, asic=2)
         else:
             vsr.set_row_calibration_mask(enables_defaults, asic=2)
@@ -1154,7 +1153,7 @@ class HexitecFem():
             logging.debug("fpga state machine enabled")
 
             self._set_status_message("Initialisation completed. VSRs configured.")
-            self.parent.software_state = "Idle"
+            self.parent.software_state = "Ready"
             self.system_initialised = True
         except HexitecFemError as e:
             self.flag_error("Failed to initialise camera", str(e))
