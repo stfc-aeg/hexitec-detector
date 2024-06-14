@@ -30,10 +30,10 @@ class AdapterTestFixture(object):
         base_path = cwd[:base_path_index]
         self.odin_control_path = base_path + "hexitec-detector/control/"
         self.odin_data_path = base_path + "hexitec-detector/data/"
-
+        self.odin_data_path = self.odin_data_path + "config/"
         self.options = {
             "directories":
-                "odin_data = data/config/"
+                "odin_data = {}".format(self.odin_data_path)
         }
 
         self.adapter = FileInterfaceAdapter(**self.options)
@@ -83,16 +83,12 @@ class TestAdapter(unittest.TestCase):
 
     def test_init_bad_path(self):
         """Initialise object."""
-        # Construct paths relative to current working directory
-        cwd = os.getcwd()
-        base_path_index = cwd.rfind("hexitec-detector")
-        base_path = cwd[:base_path_index]
-        odin_data_path = base_path + "hexitec-detector/data/"
+        odin_data_path = self.test_adapter.odin_data_path
 
         # Provoke KeyError
         options = {
             "directories":
-                "odin_data  {}config/".format(odin_data_path)
+                "odin_data   {}/".format(odin_data_path)
         }
 
         with self.assertRaises(KeyError):
@@ -103,17 +99,17 @@ class TestAdapter(unittest.TestCase):
         self.test_adapter = AdapterTestFixture()
 
     # TODO Resolve Odin_control 1.4.0 & Python venv
-    # def test_adapter_get(self):
-    #     """Test the adapter GET method returns the correct response."""
-    #     expected_response = {
-    #         'odin_version': '1.3.0'
-    #     }
-    #     response = self.test_adapter.adapter.get(self.test_adapter.path, self.test_adapter.request)
-    #     print(response.data, type(response.data))
-    #     print(response.data['odin_version'][:5])
-    #     # assert response.data == expected_response
-    #     assert response.data['odin_version'][:5] == expected_response['odin_version']
-    #     assert response.status_code == 200
+    def test_adapter_get(self):
+        """Test the adapter GET method returns the correct response."""
+        expected_response = {
+            'odin_version': '1.5.0'
+        }
+        response = self.test_adapter.adapter.get(self.test_adapter.path, self.test_adapter.request)
+        print(response.data, type(response.data))
+        print(response.data['odin_version'][:5])
+        # assert response.data == expected_response
+        assert response.data['odin_version'][:5] == expected_response['odin_version']
+        assert response.status_code == 200
 
     def test_adapter_get_error(self):
         """Test adapter handles invalid GET."""
@@ -192,12 +188,9 @@ class TestAdapter(unittest.TestCase):
     def test_adapter_init(self):
         """Test function initialises adapter OK."""
         # Construct paths relative to current working directory
-        cwd = os.getcwd()
-        base_path_index = cwd.rfind("hexitec-detector")
-        base_path = cwd[:base_path_index]
-        odin_data_path = base_path + "hexitec-detector/data/"
+        odin_data_path = self.test_adapter.odin_data_path
 
-        config_dir = "{}config/".format(odin_data_path)
+        config_dir = "{}".format(odin_data_path)
         assert self.test_adapter.adp.odin_data_config_dir == config_dir
 
     def test_get_server_uptime(self):

@@ -4,7 +4,7 @@
     "frame_ready_endpoint": "tcp://127.0.0.1:5101",
     "frame_release_endpoint": "tcp://127.0.0.1:5102",
     "shared_buffer_name": "HexitecFrameBuffer0",
-    "rx_address": "10.0.2.1",
+    "rx_address": "192.168.0.27",
     "rx_ports": "61649",
     "max_buffer_mem": 5000000000,
     "decoder_path": "lib/",

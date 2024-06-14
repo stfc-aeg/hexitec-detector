@@ -2,6 +2,7 @@ file(GLOB CONFIG_FILES
   *.config
   *.xml
   *.json
+  *.txt
   sample.bin
   )
   

@@ -12,6 +12,7 @@ import unittest
 import pytest
 import time
 import sys
+import os
 
 if sys.version_info[0] == 3:  # pragma: no cover
     from unittest.mock import Mock, MagicMock, patch, mock_open
@@ -24,7 +25,14 @@ class DetectorAdapterTestFixture(object):
 
     def __init__(self):
         """Initialise object."""
+        cwd = os.getcwd()
+        base_path_index = cwd.rfind("control")  # i.e. /path/to/hexitec-detector
+        repo_path = cwd[:base_path_index - 1]
+        data_config_path = repo_path + "/data/config/"
+        control_config_path = cwd + "/config/"
         self.options = {
+            "control_config": f"{control_config_path}",
+            "data_config": f"{data_config_path}",
             "fem":
                 """
                 camera_ctrl_ip = 127.0.0.1,
@@ -398,7 +406,7 @@ class TestDetector(unittest.TestCase):
     def test_trip_base_path(self):
         """Test function correctly strips out base path."""
         keyword = "data"
-        path = '/hxt_sw/src/hexitec-detector/data/config/m_2x6.txt'
+        path = self.test_adapter.detector.data_config_path + 'm_2x6.txt'
         stripped_path = "data/config/m_2x6.txt"
         returned_string = self.test_adapter.detector.strip_base_path(path, keyword)
         assert returned_string == stripped_path

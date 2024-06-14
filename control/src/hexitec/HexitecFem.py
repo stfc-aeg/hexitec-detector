@@ -27,6 +27,7 @@ import hexitec.ALL_RDMA_REGISTERS as HEX_REGISTERS
 from socket import error as socket_error
 from odin.adapters.parameter_tree import ParameterTree
 
+
 from tornado.ioloop import IOLoop
 from tornado.concurrent import run_on_executor
 from concurrent import futures
@@ -60,14 +61,12 @@ class HexitecFem():
         :param parent: Reference to adapter object
         :param config: dictionary of configuration settings
         """
-        # Construct path to hexitec source code
-        cwd = os.getcwd()
-        index = cwd.rfind("control")
-        self.base_path = cwd[:index]
-
         # Give access to parent class (Hexitec)
         self.parent = parent
         self.x10g_rdma = None
+
+        # Construct path to hexitec installed config files
+        self.control_config_path = self.parent.control_config_path
 
         # 10G RDMA IP addresses
         self.server_ctrl_ip = None
@@ -78,9 +77,7 @@ class HexitecFem():
         self.camera_ctrl_port = 61648
 
         self.farm_mode_prepared = False
-        self.farm_mode_file = config.get("farm_mode", None)
-
-        self.farm_mode_file = self.base_path + self.farm_mode_file
+        self.farm_mode_file = self.control_config_path + config.get("farm_mode", None)
 
         self.number_frames = 10
 
@@ -145,7 +142,7 @@ class HexitecFem():
         self.firmware_version = "N/A"
 
         # Variables supporting handling of ini-style hexitec config file
-        self.hexitec_config = self.base_path + "control/config/hexitec_unified_CSD__performance.ini"
+        self.hexitec_config = self.control_config_path + "hexitec_unified_CSD__performance.ini"
         self.hexitec_parameters = {}
 
         self.acquire_start_time = ""
@@ -598,9 +595,10 @@ class HexitecFem():
             self.hardware_busy = True
             self.hardware_connected = True
             # Configure control, data lines unless already configured
+            # - Insist Control interface configured on every connect
             if self.cold_start:
                 self.configure_camera_interfaces()
-                self.cold_start = False
+                self.cold_start = True
             else:
                 self.connect()
                 # Power up the VSRs
@@ -1224,7 +1222,6 @@ class HexitecFem():
         if self.vcal2_vcal1 > -1:
             vsr.set_sm_vcal_clock(self.vcal2_vcal1)
 
-        # # TODO Uncomment whenever hardware available to test against:
         logging.debug("Writing config to VSR..")
         vsr.initialise()
 
@@ -1290,7 +1287,7 @@ class HexitecFem():
 
     def set_hexitec_config(self, filename):
         """Check whether file exists, load parameters from file."""
-        filename = self.base_path + filename
+        filename = self.control_config_path + filename
         try:
             with open(filename, 'r') as f:  # noqa: F841
                 pass
