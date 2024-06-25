@@ -159,7 +159,8 @@ class HexitecSender(object):
                                                                       streamPosn + bytesToSend))
 
                 # Transmit packet
-                bytesSent += sock.sendto(packet, (self.host[frame % nodes], self.port[0]))
+                bytesSent += sock.sendto(packet, (self.host[frame % nodes], self.port[frame % nodes]))
+                # print(" frame: ", frame, " nodes: " , nodes, " frms %: ", frame % nodes, " port: ", self.port, " %: ", frame % nodes)
 
                 bytesRemaining -= bytesToSend
                 packetCounter += 1

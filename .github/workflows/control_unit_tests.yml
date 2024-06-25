@@ -24,6 +24,21 @@ jobs:
         run: |
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Create directories required by Deploy script
+        run: |
+          ls -la
+          pwd
+          cd ../../
+          mkdir install && cd install
+          pwd
+          mkdir config && cd config
+          pwd
+          mkdir control
+          mkdir data
+          ls -la
+      - name: Deploy Control Config Script
+        run: |
+          python control/src/hexitec/utilities/deploy_control_script.py
       - name: Run Tox
         run: |
           cd control/

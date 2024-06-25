@@ -26,7 +26,14 @@ class DAQTestFixture(object):
 
     def __init__(self):
         """Initialise object."""
+        cwd = os.getcwd()
+        base_path_index = cwd.rfind("control")  # i.e. /path/to/hexitec-detector
+        repo_path = cwd[:base_path_index - 1]
+        self.data_config_path = repo_path + "/data/config/"
+        self.control_config_path = cwd + "/config/"
         self.options = {
+            "control_config": f"{self.control_config_path}",
+            "data_config": f"{self.data_config_path}",
             "fem":
                 """
                 farm_mode = /some/config.json
@@ -131,15 +138,8 @@ class DAQTestFixture(object):
             "file_interface": self.fake_fi
         }
 
-        # Construct paths relative to current working directory
-        cwd = os.getcwd()
-        base_path_index = cwd.rfind("hexitec-detector")
-        base_path = cwd[:base_path_index]
-        self.odin_control_path = base_path + "hexitec-detector/control/"
-        self.odin_data_path = base_path + "hexitec-detector/data/"
-
-        gradients_filename = self.odin_data_path + "config/m_2018_01_001_400V_20C.txt"
-        intercepts_filename = self.odin_data_path + "config/c_2018_01_001_400V_20C.txt"
+        gradients_filename = self.data_config_path + "m_2018_01_001_400V_20C.txt"
+        intercepts_filename = self.data_config_path + "c_2018_01_001_400V_20C.txt"
 
         # Fake parameter tree
         self.parameter_dict = \
@@ -199,7 +199,8 @@ class TestDAQ(unittest.TestCase):
     def test_init(self):
         """Test initialisation (part 1)."""
         with patch("hexitec.HexitecDAQ.ParameterTree"):
-            daq = HexitecDAQ(parent=None, save_file_dir="/fake/directory/",
+            pa = self.test_daq.adapter.hexitec
+            daq = HexitecDAQ(parent=pa, save_file_dir="/fake/directory/",
                              save_file_name="fake_file.txt")
         assert daq.file_dir == self.test_daq.file_dir
         assert daq.file_name == self.test_daq.file_name
@@ -239,7 +240,8 @@ class TestDAQ(unittest.TestCase):
     def test_get_od_status_not_init(self):
         """Test status before adapter initialised."""
         with patch("hexitec.HexitecDAQ.ParameterTree"):
-            daq = HexitecDAQ(self.test_daq.file_dir, self.test_daq.file_name)
+            daq = HexitecDAQ(self.test_daq.adapter.hexitec, self.test_daq.file_dir,
+                             self.test_daq.file_name)
         status = daq.get_od_status("fp")
         assert status == {"Error": "Adapter not initialised with references yet"}
 
@@ -324,7 +326,8 @@ class TestDAQ(unittest.TestCase):
     def test_get_config_pre_init(self):
         """Test function works."""
         with patch("hexitec.HexitecDAQ.ParameterTree"):
-            daq = HexitecDAQ(self.test_daq.file_dir, self.test_daq.file_name)
+            daq = HexitecDAQ(self.test_daq.adapter.hexitec, self.test_daq.file_dir,
+                             self.test_daq.file_name)
         value = daq.get_config_file("fr")
         assert value == []
 
@@ -987,13 +990,12 @@ class TestDAQ(unittest.TestCase):
 
     def test_set_gradients_filename_correct(self):
         """Test setting gradients file."""
-        gradients_filename = "data/config/m_2018_01_001_400V_20C.txt"
+        gradients_filename = "m_2018_01_001_400V_20C.txt"
         self.test_daq.daq._set_gradients_filename(gradients_filename)
 
         # Verify relative paths match:
         gradients_file = self.test_daq.daq.gradients_filename
-        index = gradients_file.rfind("data")
-        verified_filename = gradients_file[index:]
+        verified_filename = os.path.basename(gradients_file)
         assert gradients_filename == verified_filename
 
     def test_set_gradients_filename_handles_invalid_file(self):
@@ -1003,12 +1005,11 @@ class TestDAQ(unittest.TestCase):
 
     def test_set_intercepts_filename_correct(self):
         """Test setting intercepts filename."""
-        intercepts_filename = "data/config/c_2018_01_001_400V_20C.txt"
+        intercepts_filename = "c_2018_01_001_400V_20C.txt"
         self.test_daq.daq._set_intercepts_filename(intercepts_filename)
         # Verify relative paths match:
         intercepts_file = self.test_daq.daq.intercepts_filename
-        index = intercepts_file.rfind("data")
-        verified_filename = intercepts_file[index:]
+        verified_filename = os.path.basename(intercepts_file)
         assert intercepts_filename == verified_filename
 
     def test_set_intercepts_filename_handles_invalid_file(self):
@@ -1018,12 +1019,11 @@ class TestDAQ(unittest.TestCase):
 
     def test_set_threshold_filename_correct(self):
         """Test setting threshold file name."""
-        threshold_filename = "data/config/thresh_2018_01_001_400V_20C.txt"
+        threshold_filename = "thresh_2018_01_001_400V_20C.txt"
         self.test_daq.daq._set_threshold_filename(threshold_filename)
         # Verify relative paths match:
         threshold_file = self.test_daq.daq.threshold_filename
-        index = threshold_file.rfind("data")
-        verified_filename = threshold_file[index:]
+        verified_filename = os.path.basename(threshold_file)
         assert threshold_filename == verified_filename
 
     def test_set_threshold_filename_handles_invalid_file(self):

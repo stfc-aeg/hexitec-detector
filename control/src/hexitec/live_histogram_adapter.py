@@ -19,8 +19,8 @@ import matplotlib.pyplot as plt
 import io
 from datetime import datetime
 
-from odin_data.ipc_tornado_channel import IpcTornadoChannel
-from odin_data.ipc_channel import IpcChannelException
+from odin_data.control.ipc_tornado_channel import IpcTornadoChannel
+from odin_data.control.ipc_channel import IpcChannelException
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, response_types
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from odin.util import convert_unicode_to_string

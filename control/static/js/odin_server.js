@@ -1203,20 +1203,19 @@ function update_ui_with_odin_settings() {
 
             // Update Threshold
             const threshold_mode = daq_config.threshold.threshold_mode;
-            // Reduce absolute path: /abs/path/to/hexitec/hexitec-detector/data/config/t_threshold_file.txt
-            // to the relative path: data/config/t_threshold_file.txt
             const abs_path = daq_config.threshold.threshold_filename;
-            const threshold_filename = abs_path.substring(abs_path.search("data/"));
+            // Obtain filename from absolute path using last '/' in filename
+            const threshold_filename = abs_path.substring( abs_path.lastIndexOf('/')+1);
             const threshold_value = daq_config.threshold.threshold_value;
             document.querySelector('#threshold-mode-text').value = threshold_mode;
             document.querySelector('#threshold-filename-text').value = threshold_filename;
             document.querySelector('#threshold-value-text').value = threshold_value;
 
-            // Updated Gradients, Intercepts files
+            // Update Gradients, Intercepts files
             const abs_gradients = daq_config.calibration.gradients_filename;
-            const gradients_filename = abs_gradients.substring(abs_gradients.search("data/"));
+            const gradients_filename = abs_gradients.substring(abs_gradients.lastIndexOf('/')+1);
             const abs_intercepts = daq_config.calibration.intercepts_filename;
-            const intercepts_filename = abs_intercepts.substring(abs_intercepts.search("data/"));
+            const intercepts_filename = abs_intercepts.substring(abs_intercepts.lastIndexOf('/')+1);
             document.querySelector('#gradients-filename-text').value = gradients_filename;
             document.querySelector('#intercepts-filename-text').value = intercepts_filename;
 
@@ -1276,7 +1275,7 @@ function update_ui_with_odin_settings() {
             document.querySelector('#hdf-file-name-text').value = file_info.file_name;
 
             const config_path = result["detector"]["fem"].hexitec_config;
-            const hexitec_config = config_path.substring(config_path.search("control/"))
+            const hexitec_config = config_path.substring(config_path.lastIndexOf('/')+1);
             document.querySelector('#hexitec-config-text').value = hexitec_config;
 
             const elog = result["detector"]["status"].elog;

@@ -68,10 +68,8 @@ class HexitecDAQ():
         self.hdf_file_location = ""
         self.hdf_retry = 0
 
-        # Construct path to hexitec source code
-        cwd = os.getcwd()
-        index = cwd.rfind("control")
-        self.base_path = cwd[:index]
+        # Construct path to hexitec data config files folder
+        self.data_config_path = self.parent.data_config_path
 
         # ParameterTree variables
 
@@ -86,8 +84,17 @@ class HexitecDAQ():
         self.calibration_enable = False
 
         self.pixel_grid_size = 3
-        self.gradients_filename = self.base_path + "data/config/m_2x6.txt"
-        self.intercepts_filename = self.base_path + "data/config/c_2x6.txt"
+        self.gradients_filename = self.data_config_path + "m_2x6.txt"
+        self.intercepts_filename = self.data_config_path + "c_2x6.txt"
+        # Determine parent folder of install/ from data_config_path
+        # i.e. /hxt_sw/install/config/data/ -> /hxt_sw/
+        # Required by GenerateConfigFile to produce json config files
+        parent_dir = os.path.split(self.data_config_path)[0]
+        parent_dir = os.path.split(parent_dir)[0]
+        parent_dir = os.path.split(parent_dir)[0]
+        parent_dir = os.path.split(parent_dir)[0]
+        self.odin_path = parent_dir + '/'
+
         self.bin_end = 8000
         self.bin_start = 0
         self.bin_width = 10.0
@@ -108,12 +115,12 @@ class HexitecDAQ():
         self.processing_interruptable = False
 
         self.lvframes_dataset_name = "raw_frames"
-        self.lvframes_socket_addr = "tcp://192.168.0.52:5020"
+        self.lvframes_socket_addr = "tcp://127.0.0.1:5020"
         self.lvframes_frequency = 0
         self.lvframes_per_second = 2
 
         self.lvspectra_dataset_name = "summed_spectra"
-        self.lvspectra_socket_addr = "tcp://192.168.0.52:5021"
+        self.lvspectra_socket_addr = "tcp://127.0.0.1:5021"
         self.lvspectra_frequency = 0
         self.lvspectra_per_second = 1
 
@@ -121,7 +128,7 @@ class HexitecDAQ():
         self.threshold_upper = 4400
         self.image_frequency = 100000
 
-        self.threshold_filename = self.base_path + "data/config/thresh_2x6.txt"
+        self.threshold_filename = self.data_config_path + "thresh_2x6.txt"
         self.threshold_mode = "value"
         self.threshold_value = 120
 
@@ -1005,13 +1012,13 @@ class HexitecDAQ():
             raise ParameterTreeError("Must be either 3 or 5")
 
     def _set_gradients_filename(self, gradients_filename):
-        gradients_filename = self.base_path + gradients_filename
+        gradients_filename = self.data_config_path + gradients_filename
         if (os.path.isfile(gradients_filename) is False):
             raise ParameterTreeError("Gradients file doesn't exist")
         self.gradients_filename = gradients_filename
 
     def _set_intercepts_filename(self, intercepts_filename):
-        intercepts_filename = self.base_path + intercepts_filename
+        intercepts_filename = self.data_config_path + intercepts_filename
         if (os.path.isfile(intercepts_filename) is False):
             raise ParameterTreeError("Intercepts file doesn't exist")
         self.intercepts_filename = intercepts_filename
@@ -1079,7 +1086,7 @@ class HexitecDAQ():
         self.pass_raw = pass_raw
 
     def _set_threshold_filename(self, threshold_filename):
-        threshold_filename = self.base_path + threshold_filename
+        threshold_filename = self.data_config_path + threshold_filename
         if (os.path.isfile(threshold_filename) is False):
             raise ParameterTreeError("Threshold file doesn't exist")
         self.threshold_filename = threshold_filename
@@ -1190,7 +1197,8 @@ class HexitecDAQ():
                                            master_dataset=self.master_dataset,
                                            extra_datasets=self.extra_datasets,
                                            selected_os="CentOS",
-                                           live_view_selected=live_view_selected)
+                                           live_view_selected=live_view_selected,
+                                           odin_path=self.odin_path)
             store_config, execute_config, store_string, execute_string = \
                 self.gcf.generate_config_files(index)
             live_view_selected = False

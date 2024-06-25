@@ -14,7 +14,7 @@ class GenerateConfigFiles():
 
     def __init__(self, param_tree, number_histograms, compression_type="none",
                  master_dataset="processed_frames", extra_datasets=[], selected_os="CentOS",
-                 live_view_selected=True):
+                 live_view_selected=True, odin_path=None):
         """
         Initialize the GenerateConfigFiles object.
 
@@ -24,6 +24,8 @@ class GenerateConfigFiles():
         :param master_dataset: set master dataset
         :param extra_datasets: include optional dataset(s)
         :param selected_os: which OS (ie path) to generate config for
+        :param live_view_selected: should live view be configured
+        :param odin_path: path to configuration files
         """
         self.param_tree = param_tree
         self.number_histograms = number_histograms
@@ -34,6 +36,7 @@ class GenerateConfigFiles():
         # Each OS needs its own install, build paths
         self.selected_os = selected_os
         self.live_view_selected = live_view_selected
+        self.odin_path = odin_path
 
     def boolean_to_string(self, bBool):
         """Convert bool to string."""
@@ -223,11 +226,6 @@ class GenerateConfigFiles():
             plugin_chain.append("blosc")
         plugin_chain += ["hdf"]
 
-        # Construct path relative to current working directory
-        cwd = os.getcwd()
-        base_path_index = cwd.rfind("hexitec-detector")
-        odin_path = cwd[:base_path_index - 1]
-
         store_plugin_paths = ""
         # Ubuntu and CentOS require different paths, builds, json files
         os_path = ""
@@ -257,7 +255,7 @@ class GenerateConfigFiles():
                 }''' % (comma_or_blank,
                         hexitec_plugins[plugin][0],
                         hexitec_plugins[plugin][1],
-                        odin_path,
+                        self.odin_path,
                         os_path,
                         hexitec_plugins[plugin][2])
                 comma_or_blank = ","
@@ -278,7 +276,7 @@ class GenerateConfigFiles():
                     }
                 }''' % (odin_plugins[plugin][0],
                         odin_plugins[plugin][1],
-                        odin_path,
+                        self.odin_path,
                         os_path,
                         odin_plugins[plugin][2])
 
@@ -449,7 +447,7 @@ class GenerateConfigFiles():
                     {
                         "file":
                         {
-                            "path": "/data/hexitec/"
+                            "path": "/tmp/"
                         }
                     }
                 }
@@ -543,9 +541,14 @@ if __name__ == '__main__':  # pragma: no cover
     extra_datasets = [master_dataset, "processed_frames"]
     # extra_datasets = [master_dataset]
     selected_os = "CentOS"
+    # Construct path relative to current working directory
+    # -- Must execute from source code directory if run outside of Odin!
+    cwd = os.getcwd()
+    base_path_index = cwd.rfind("hexitec-detector")
+    odin_path = cwd[:base_path_index - 1]
     gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="none",
                               master_dataset=master_dataset, extra_datasets=extra_datasets,
-                              selected_os=selected_os)
+                              selected_os=selected_os, odin_path=odin_path)
     s, e, ss, se = gcf.generate_config_files(0)
     # print(type(s), type(e), type(ss), type(se))
     print("GFC (os:%s) returned config files\n Store:   %s\n Execute: %s\n" % (selected_os, s, e))

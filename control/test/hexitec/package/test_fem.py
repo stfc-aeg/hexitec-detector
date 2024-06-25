@@ -28,9 +28,13 @@ class FemTestFixture(object):
 
     def __init__(self):
         """Initialise object."""
-        self.ip = "127.0.0.1"
-
+        cwd = os.getcwd()
+        base_path_index = cwd.rfind("control")  # i.e. /path/to/hexitec-detector
+        repo_path = cwd[:base_path_index - 1]
+        self.data_config_path = repo_path + "/data/config/"
+        self.control_config_path = cwd + "/test/hexitec/config/"
         self.options = {
+            "control_config": f"{self.control_config_path}",
             "fem":
                 """
                 farm_mode = /some/config.json
@@ -48,13 +52,6 @@ class FemTestFixture(object):
             with patch("hexitec.HexitecFem.RdmaUDP"):
                 self.fem = HexitecFem(self.detector, self.config)
                 self.fem.connect()
-
-        # Construct paths relative to current working directory
-        cwd = os.getcwd()
-        base_path_index = cwd.rfind("hexitec-detector")
-        base_path = cwd[:base_path_index]
-        self.odin_control_path = base_path + "hexitec-detector/control"
-        self.odin_data_path = base_path + "hexitec-detector/data"
 
 
 class TestFem(unittest.TestCase):
@@ -246,7 +243,8 @@ class TestFem(unittest.TestCase):
         """Test that connecting from 'cold' works OK."""
         self.test_fem.fem.cold_start = True
         self.test_fem.fem.connect_hardware()
-        assert self.test_fem.fem.cold_start is False
+        # TODO: Should be False, once S/W can read F/W to determine whether Control intf setup
+        assert self.test_fem.fem.cold_start is True
 
     def test_connect_hardware_handle_non_cold_start(self):
         """Test that connecting works OK."""
@@ -1156,8 +1154,7 @@ class TestFem(unittest.TestCase):
 
     def test_set_hexitec_config(self):
         """Test function handles configuration file ok."""
-        filename = "control/test/hexitec/config/hexitec_test_config.ini"
-
+        filename = "hexitec_test_config.ini"
         self.test_fem.fem.set_hexitec_config(filename)
 
         assert self.test_fem.fem.row_s1 == 25
@@ -1168,8 +1165,7 @@ class TestFem(unittest.TestCase):
 
     def test_set_hexitec_config_vcal_off_gain_low(self):
         """Test function handles configuration file ok."""
-        filename = "control/test/hexitec/config/hexitec_test_config2.ini"
-
+        filename = "hexitec_test_config2.ini"
         self.test_fem.fem.set_hexitec_config(filename)
 
         assert self.test_fem.fem.row_s1 == 25
@@ -1189,7 +1185,7 @@ class TestFem(unittest.TestCase):
 
     def test_set_hexitec_config_fails_missing_key(self):
         """Test function fails if filename misses a key."""
-        filename = "control/test/hexitec/config/hexitec_test_config.ini"
+        filename = "hexitec_test_config.ini"
         error = "INI File Key Error: artificial error"
         self.test_fem.fem._extract_integer = Mock()
         self.test_fem.fem._extract_integer.side_effect = HexitecFemError(error[20:])

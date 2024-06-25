@@ -175,6 +175,11 @@ class Hexitec():
     # Thread executor used for background tasks
     thread_executor = futures.ThreadPoolExecutor(max_workers=3)
 
+    CONTROL_DIR_NAME = 'control_config'
+    DEFAULT_CONTROL_DIR = '/hxt_sw/install/config/control/'
+    DATA_DIR_NAME = 'data_config'
+    DEFAULT_DATA_DIR = '/hxt_sw/install/config/data/'
+
     def __init__(self, options):
         """Initialise the Hexitec object.
 
@@ -193,6 +198,18 @@ class Hexitec():
         self.duration = 1
         self.duration_enable = False
 
+        if options.get(self.CONTROL_DIR_NAME, False):
+            self.control_config_path = options.get(self.CONTROL_DIR_NAME, "")
+        else:
+            logging.debug("Setting default control directory: '%s'", self.DEFAULT_CONTROL_DIR)
+            self.control_config_path = self.DEFAULT_CONTROL_DIR
+
+        if options.get(self.DATA_DIR_NAME, False):
+            self.data_config_path = options.get(self.DATA_DIR_NAME, "")
+        else:
+            logging.debug("Setting default data directory: '%s'", self.DEFAULT_DATA_DIR)
+            self.data_config_path = self.DEFAULT_DATA_DIR
+
         self.daq = HexitecDAQ(self, self.file_dir, self.file_name)
 
         self.adapters = {}
@@ -200,9 +217,7 @@ class Hexitec():
         self.fem = None
         for key, value in options.items():
             if "fem" in key:
-                # print(f"* value = {value}")
                 fem_info = value.split(',')
-                # print(f" ** ({type(fem_info)}) fem_info: {fem_info}")
                 fem_info = [(i.split('=')[0], i.split('=')[1])
                             for i in fem_info]
                 fem_dict = {fem_key.strip(): fem_value.strip()
@@ -222,7 +237,6 @@ class Hexitec():
                 parent=self,
                 config=fem_dict
             )
-
         self.fem_health = True
 
         self.acquisition_in_progress = False
@@ -289,7 +303,7 @@ class Hexitec():
             "detector": detector
         })
 
-        self.odin_config_file = "odin_config.json"
+        self.odin_config_file = self.control_config_path + "odin_config.json"
 
         self._start_polling()
 
