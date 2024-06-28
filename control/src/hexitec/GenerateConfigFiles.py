@@ -441,20 +441,21 @@ class GenerateConfigFiles():
                     }
                 }'''
 
+        file_path = self.param_tree["file_info"]["file_dir"]
         store_plugin_config += ''',
                 {
                     "hdf":
                     {
                         "file":
                         {
-                            "path": "/tmp/"
+                            "path": "%s"
                         }
                     }
                 }
             ]
         }
     }
-]'''
+]''' % file_path
 
         # Put together the store sequence file
         try:

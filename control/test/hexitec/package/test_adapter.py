@@ -674,6 +674,14 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.hv_on("")
         self.test_adapter.detector.fem.hv_on.assert_called()
 
+    def test_hv_on_handles_exception(self):
+        """Test function handles exception."""
+        e = "Error"
+        self.test_adapter.detector.fem.hv_on = Mock()
+        self.test_adapter.detector.fem.hv_on.side_effect = Exception(e)
+        self.test_adapter.detector.hv_on("")
+        self.test_adapter.detector.fem.flag_error.assert_called_with(e)
+
     def test_hv_off(self):
         """Test function switches HV off."""
         self.test_adapter.detector.hv_off("")

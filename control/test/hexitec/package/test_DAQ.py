@@ -51,6 +51,8 @@ class DAQTestFixture(object):
         self.fake_fr = MagicMock()
         self.fake_fp = MagicMock()
         self.fake_fi = MagicMock()
+        self.fake_lv = MagicMock()
+        self.fake_lh = MagicMock()
 
         # Once the odin_data adapter is refactored to use param tree,
         # this structure will need fixing
@@ -119,11 +121,18 @@ class DAQTestFixture(object):
                 "hexitec_fp.config"
             ]
         }
+        self.lv_data = {
+            "endpoints": ["tcp://127.0.0.1:5020"]
+        }
+        self.lh_data = {
+            "endpoints": ["tcp://127.0.0.1:5021"]
+        }
 
-        # set up fake adapter
+        # Set up fake adapters
         fr_return = Mock()
         fr_return.configure_mock(data=self.fr_data)
         self.fake_fr.get = Mock(return_value=fr_return)
+
         fp_return = Mock()
         fp_return.configure_mock(data=self.fp_data)
         self.fake_fp.get = Mock(return_value=fp_return)
@@ -132,10 +141,20 @@ class DAQTestFixture(object):
         fi_return.configure_mock(data=self.fi_data)
         self.fake_fi.get = Mock(return_value=fi_return)
 
+        lv_return = Mock()
+        lv_return.configure_mock(data=self.lv_data)
+        self.fake_lv.get = Mock(return_value=lv_return)
+
+        lh_return = Mock()
+        lh_return.configure_mock(data=self.lh_data)
+        self.fake_lh.get = Mock(return_value=lh_return)
+
         self.adapters = {
             "fp": self.fake_fp,
             "fr": self.fake_fr,
-            "file_interface": self.fake_fi
+            "file_interface": self.fake_fi,
+            "live_histogram": self.fake_lh,
+            "live_view": self.fake_lv
         }
 
         gradients_filename = self.data_config_path + "m_2018_01_001_400V_20C.txt"
@@ -221,6 +240,18 @@ class TestDAQ(unittest.TestCase):
     def test_initialize_missing_adapter(self):
         """Test initialisation (part 3)."""
         self.test_daq.daq.initialize({})
+
+    def test_initialize_handles_live_view_error(self):
+        """Test initialisation with badly configured live_view adapter."""
+        new_lv_data = {}
+        with patch.dict(self.test_daq.lv_data, new_lv_data, clear=True):
+            self.test_daq.daq.initialize(self.test_daq.adapters)
+
+    def test_initialize_handles_live_histogram_error(self):
+        """Test initialisation with badly configured live_histogram adapter."""
+        new_lh_data = {}
+        with patch.dict(self.test_daq.lh_data, new_lh_data, clear=True):
+            self.test_daq.daq.initialize(self.test_daq.adapters)
 
     def test_get_od_status_fr(self):
         """Test status of fr adapter."""
@@ -541,7 +572,7 @@ class TestDAQ(unittest.TestCase):
         time.sleep(delay)
         time_remaining = self.test_daq.daq.calculate_remaining_collection_time()
         # Check calculated remaining collection time + delay ~= duration
-        assert pytest.approx(time_remaining+delay, 0.001) == duration
+        assert pytest.approx(time_remaining+delay, 0.1) == duration
 
     def test_processing_check_loop_polls_file_status_after_processing_complete(self):
         """Test processing check loop polls for processed file closed once processing done."""

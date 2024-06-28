@@ -115,12 +115,12 @@ class HexitecDAQ():
         self.processing_interruptable = False
 
         self.lvframes_dataset_name = "raw_frames"
-        self.lvframes_socket_addr = "tcp://127.0.0.1:5020"
+        self.lvframes_socket_addr = ""
         self.lvframes_frequency = 0
         self.lvframes_per_second = 2
 
         self.lvspectra_dataset_name = "summed_spectra"
-        self.lvspectra_socket_addr = "tcp://127.0.0.1:5021"
+        self.lvspectra_socket_addr = ""
         self.lvspectra_frequency = 0
         self.lvspectra_per_second = 1
 
@@ -255,10 +255,27 @@ class HexitecDAQ():
             self.adapters["fp"] = adapters['fp']
             self.adapters["fr"] = adapters['fr']
             self.adapters["file_interface"] = adapters['file_interface']
+            self.adapters["live_histogram"] = adapters['live_histogram']
+            self.adapters["live_view"] = adapters['live_view']
         except KeyError as e:
             logging.error("The odin_server config file missing %s entry" % e)
         self.get_config_file("fp")
         self.get_config_file("fr")
+
+        request = ApiAdapterRequest(None, content_type="application/json")
+        try:
+            histo_response = self.adapters["live_histogram"].get("", request)
+            histo_response = histo_response.data["endpoints"][0]
+            self.lvspectra_socket_addr = histo_response
+        except KeyError as e:
+            logging.error("Histogram Viewer config error: %s" % e)
+
+        try:
+            view_response = self.adapters["live_view"].get("", request)
+            view_response = view_response.data["endpoints"][0]
+            self.lvframes_socket_addr = view_response
+        except KeyError as e:
+            logging.error("Live Viewer config error: %s" % e)
         self.is_initialised = True
 
     def prepare_odin(self):
