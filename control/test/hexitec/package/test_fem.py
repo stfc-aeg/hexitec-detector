@@ -239,14 +239,15 @@ class TestFem(unittest.TestCase):
     #         i = mock_loop.instance()
     #         i.call_later.assert_called_with(3.0, self.test_fem.fem.poll_sensors)
 
-    def test_connect_hardware_handle_cold_start(self):
+    def test_connect_hardware_handles_cold_start(self):
         """Test that connecting from 'cold' works OK."""
         self.test_fem.fem.cold_start = True
+        self.test_fem.fem.parent.daq.commit_configuration = Mock()
         self.test_fem.fem.connect_hardware()
         # TODO: Should be False, once S/W can read F/W to determine whether Control intf setup
         assert self.test_fem.fem.cold_start is True
 
-    def test_connect_hardware_handle_non_cold_start(self):
+    def test_connect_hardware_handles_non_cold_start(self):
         """Test that connecting works OK."""
         self.test_fem.fem.cold_start = False
         self.test_fem.fem.connect = Mock()
@@ -264,6 +265,7 @@ class TestFem(unittest.TestCase):
 
     def test_connect_hardware_handles_Exception(self):
         """Test that connecting with hardware handles failure."""
+        self.test_fem.fem.parent.daq.commit_configuration = Mock()
         self.test_fem.fem.configure_camera_interfaces = Mock(side_effect=HexitecFemError(""))
         self.test_fem.fem.connect_hardware()
         assert self.test_fem.fem._get_status_error() == "Connection Error"
@@ -272,6 +274,7 @@ class TestFem(unittest.TestCase):
 
     def test_connect_hardware_handles_socket_error(self):
         """Test that connecting with hardware handles socket error."""
+        self.test_fem.fem.parent.daq.commit_configuration = Mock()
         self.test_fem.fem.configure_camera_interfaces = Mock(side_effect=socket.error(""))
         self.test_fem.fem.connect_hardware()
         assert self.test_fem.fem._get_status_error() == "Connection Socket Error"

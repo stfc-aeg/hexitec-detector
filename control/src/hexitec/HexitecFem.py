@@ -597,6 +597,9 @@ class HexitecFem():
             # Configure control, data lines unless already configured
             # - Insist Control interface configured on every connect
             if self.cold_start:
+                # Commit configuration (again) otherwise FP(s) shutdown prematurely
+                self.parent.daq.commit_configuration()
+                # Configure Control, Camera interfaces
                 self.configure_camera_interfaces()
                 self.cold_start = True
             else:
