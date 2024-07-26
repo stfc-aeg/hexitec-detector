@@ -564,15 +564,17 @@ class TestDAQ(unittest.TestCase):
 
     def test_calculate_remaining_collection_time(self):
         """Test the function calculate remaining collection time from fem."""
-        now_timestamp = self.test_daq.daq.parent.fem.create_timestamp()
+        now_timestamp = "20240725_112646.951029"
         self.test_daq.daq.parent.fem.acquire_start_time = now_timestamp
         duration = 60
         delay = 2.0
         self.test_daq.daq.parent.fem.duration = duration
-        time.sleep(delay)
-        time_remaining = self.test_daq.daq.calculate_remaining_collection_time()
-        # Check calculated remaining collection time + delay ~= duration
-        assert pytest.approx(time_remaining+delay, 0.1) == duration
+        with patch("time.time") as mock_time, patch("datetime.datetime") as mock_dt:
+            mock_time.return_value = 1721903208.958006
+            mock_dt.strptime.return_value.timestamp = Mock(return_value=1721903206.951029)
+            time_remaining = self.test_daq.daq.calculate_remaining_collection_time()
+            # Check calculated remaining collection time + delay ~= duration
+            assert pytest.approx(time_remaining+delay, 0.1) == duration
 
     def test_processing_check_loop_polls_file_status_after_processing_complete(self):
         """Test processing check loop polls for processed file closed once processing done."""

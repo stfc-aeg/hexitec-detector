@@ -501,7 +501,7 @@ class HexitecFem():
             current_state = self.parent.software_state
             self.parent.software_state = "Environs"
             # Note once, when firmware was built
-            if self.read_firmware_version:  # pragma: no cover
+            if self.read_firmware_version:
                 board_status = BoardCfgStatus(self.x10g_rdma,
                                               rdma_offset=rdma.get_id_offset(HEX_REGISTERS.IC_OFFSETS,
                                                                              'BOARD_BUILD_INFO_ID'))

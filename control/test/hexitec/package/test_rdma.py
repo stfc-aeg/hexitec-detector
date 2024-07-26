@@ -68,7 +68,7 @@ class TestRdmaUDP():
 
     def test_connect_socket_fails(self, test_rdma):
         """Test unavailable IP will throw socket error."""
-        with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
+        with patch("hexitec.HexitecFem.RdmaUDP") as rdma_mock:
             rdma_mock.side_effect = socket_error()
             udptimeout = 5
             with pytest.raises(socket_error) as exc_info:

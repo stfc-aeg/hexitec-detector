@@ -93,7 +93,7 @@ class HexitecDAQ():
         parent_dir = os.path.split(parent_dir)[0]
         parent_dir = os.path.split(parent_dir)[0]
         parent_dir = os.path.split(parent_dir)[0]
-        self.odin_path = parent_dir + '/'
+        self.odin_path = parent_dir
 
         self.bin_end = 8000
         self.bin_start = 0
@@ -533,16 +533,16 @@ class HexitecDAQ():
         prefix = self.file_name
         source_files = []
         idx = 0
-        source_files.append(f'{file_path}{2}/{prefix}_{idx:06d}.h5')
+        source_files.append(f'{file_path}{1}/{prefix}_{idx:06d}.h5')
         if self.number_nodes > 1:
             idx += 1
-            source_files.append(f'{file_path}{3}/{prefix}_{idx:06d}.h5')
+            source_files.append(f'{file_path}{2}/{prefix}_{idx:06d}.h5')
         if self.number_nodes > 2:
             idx += 1
-            source_files.append(f'{file_path}{4}/{prefix}_{idx:06d}.h5')
+            source_files.append(f'{file_path}{3}/{prefix}_{idx:06d}.h5')
         if self.number_nodes > 3:
             idx += 1
-            source_files.append(f'{file_path}{1}/{prefix}_{idx:06d}.h5')
+            source_files.append(f'{file_path}{4}/{prefix}_{idx:06d}.h5')
         num_sources = len(source_files)
 
         self.parent.fem._set_status_message("Preparing virtual datasets..")
@@ -608,7 +608,8 @@ class HexitecDAQ():
         for dataset in dataset_names:  # Iterate through all datasets
             index += 1
 
-            # print(datetime.datetime.now(), f"dataset '{dataset}' index: {index} in {num_frames} shape: {len(inshape[index])}")
+            # s = f"dataset '{dataset}' index: {index} in {num_frames} shape: {len(inshape[index])}"
+            # print(datetime.datetime.now(), s)
 
             if len(inshape[index]) == 2:
                 n = 1

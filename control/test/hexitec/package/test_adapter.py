@@ -39,10 +39,8 @@ class DetectorAdapterTestFixture(object):
                 camera_data_ip = 127.0.0.1
                 """
         }
-        # TODO: Below "hack" prevents polling randomly failing tests relying on add_callback
-        # assertion; Needs reworking once watchdog(s) ready to be unit tested
-        with patch('hexitec.adapter.HexitecFem'), patch('hexitec.adapter.HexitecDAQ'):
-            with patch('hexitec.adapter.Hexitec._start_polling'):  # TODO: To be amended
+        with patch("hexitec.adapter.HexitecFem"), patch("hexitec.adapter.HexitecDAQ"):
+            with patch("hexitec.adapter.Hexitec._start_polling"):
 
                 self.adapter = HexitecAdapter(**self.options)
                 self.detector = self.adapter.hexitec  # shortcut, makes assert lines shorter
@@ -119,6 +117,19 @@ class DetectorAdapterTestFixture(object):
             "fr": self.fake_fr,
             "file_interface": self.fake_fi
         }
+        self.config = \
+            {'daq/addition_enable': False, 'daq/bin_end': 8000, 'daq/bin_start': 0,
+             'daq/bin_width': 10.0, 'daq/calibration_enable': False, 'daq/compression_type': 'none',
+             'daq/discrimination_enable': False, 'daq/file_dir': '/tmp/', 'daq/file_name': 'a',
+             'daq/gradients_filename': 'm_2x6.txt', 'daq/image_frequency': 1000000,
+             'daq/intercepts_filename': 'c_2x6.txt', 'daq/lvframes_dataset_name': 'raw_frames',
+             'daq/lvframes_frequency': 0, 'daq/lvframes_per_second': 2,
+             'daq/lvspectra_frequency': 0, 'daq/lvspectra_per_second': 1,
+             'daq/max_frames_received': 1000000, 'daq/pass_processed': True, 'daq/pass_raw': True,
+             'daq/pixel_grid_size': 5, 'daq/threshold_filename': 'thresh_2x6.txt',
+             'daq/threshold_lower': 0, 'daq/threshold_mode': 'filename',
+             'daq/threshold_upper': 4400, 'daq/threshold_value': 120, 'duration': 60,
+             'duration_enable': True, 'fem/hexitec_config': 'hexitec_2x6.ini', 'number_frames': 8}
 
 
 class TestAdapter(unittest.TestCase):
@@ -179,7 +190,7 @@ class TestAdapter(unittest.TestCase):
         }
 
         # Mock logging to provoke ParameterTree exception
-        with patch('logging.debug') as mock_log:
+        with patch("logging.debug") as mock_log:
             mock_log.side_effect = ParameterTreeError()
             response = self.test_adapter.adapter.get(
                 path,
@@ -270,7 +281,7 @@ class TestDetector(unittest.TestCase):
         """Test that the detector correctly sets up the default fem if none provided."""
         defaults = HexitecDetectorDefaults()
 
-        with patch('hexitec.adapter.HexitecFem') as mock_fem, patch('hexitec.adapter.HexitecDAQ'):
+        with patch("hexitec.adapter.HexitecFem") as mock_fem, patch("hexitec.adapter.HexitecDAQ"):
 
             detector = Hexitec({})
 
@@ -415,7 +426,7 @@ class TestDetector(unittest.TestCase):
         """Test function works ok."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         with patch("builtins.open", mock_open(read_data="data")):
-            with patch('json.dump'):
+            with patch("json.dump"):
                 self.test_adapter.detector.save_odin("")
 
     def test_save_odin_handles_exception(self):
@@ -423,24 +434,40 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         odin_config_file = self.test_adapter.detector.odin_config_file
         with patch("builtins.open", mock_open(read_data="data")) as mock_file:
-            with patch('json.dump') as mock_dump:
+            with patch("json.dump") as mock_dump:
                 mock_dump.side_effect = Exception()
                 self.test_adapter.detector.save_odin("")
                 m = "Saving Odin config"
                 self.test_adapter.detector.fem.flag_error.assert_called_with(m, "")
                 mock_file.assert_called_with(odin_config_file, "w")
 
-    def test_load_odin(self):
+    def test_load_odin_duration_enable(self):
         """Test function works ok."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
-        with patch("builtins.open", mock_open(read_data="data")):
-            with patch('json.load'):
+        config = self.test_adapter.config
+        self.test_adapter.detector.set_duration = Mock()
+        with patch("builtins.open", mock_open(read_data="read_data")):
+            with patch("json.load") as mockery:
+                mockery.return_value = config
                 self.test_adapter.detector.load_odin("")
+        self.test_adapter.detector.set_duration.assert_called()
+
+    def test_load_odin_duration_disabled(self):
+        """Test function works ok with duration disabled."""
+        config = self.test_adapter.config
+        config['duration_enable'] = False
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.set_duration_enable = Mock()
+        with patch("builtins.open", mock_open(read_data="read_data")):
+            with patch("json.load") as mockery:
+                mockery.return_value = config
+                self.test_adapter.detector.load_odin("")
+        self.test_adapter.detector.set_duration_enable.assert_called()
 
     def test_load_odin_handles_file_not_found_error(self):
         """Test function handles FileNotFoundError."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
-        with patch('json.load') as mock_load:
+        with patch("json.load") as mock_load:
             mock_load.side_effect = FileNotFoundError()
             self.test_adapter.detector.load_odin("")
             m = "Loading Odin config - file missing"
@@ -449,7 +476,7 @@ class TestDetector(unittest.TestCase):
     def test_load_odin_handles_json_decode_error(self):
         """Test function handles JSONDecodeError."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
-        with patch('json.load') as mock_load:
+        with patch("json.load") as mock_load:
             doc = """{"plugin":{"disc": "all"}},{"exec":{"index": "fake.json"}}]"""
             e_msg = "Fake Exception"
             mock_load.side_effect = JSONDecodeError(e_msg, doc, 0)
@@ -457,6 +484,15 @@ class TestDetector(unittest.TestCase):
             m = "Loading Odin config - Bad json?"
             e = "Fake Exception: line 1 column 1 (char 0)"
             self.test_adapter.detector.fem.flag_error.assert_called_with(m, e)
+
+    def test_load_odin_handles_exception(self):
+        """Test function handles exception."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        with patch("json.load") as mock_load:
+            mock_load.side_effect = Exception()
+            self.test_adapter.detector.load_odin("")
+            m = "Loading default Odin values"
+            self.test_adapter.detector.fem.flag_error.assert_called_with(m, "")
 
     def test_set_duration_enable_true(self):
         """Test function can update duration enable to True."""

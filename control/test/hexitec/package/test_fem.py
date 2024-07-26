@@ -4,23 +4,35 @@ Test Cases for the Hexitec Fem in hexitec.
 Christian Angelsen, STFC Detector Systems Software Group
 """
 
+import asyncio
 import unittest
 import pytest
-import time
 import sys
 import os
 
 from hexitec.HexitecFem import HexitecFem, HexitecFemError
 from hexitec.adapter import HexitecAdapter
 
+from json.decoder import JSONDecodeError
 from socket import error as socket_error
 from datetime import datetime
 import socket
 
 if sys.version_info[0] == 3:  # pragma: no cover
-    from unittest.mock import Mock, call, patch, mock_open
+    from unittest.mock import Mock, patch, mock_open
 else:                         # pragma: no cover
-    from mock import Mock, call, patch
+    from mock import Mock, patch
+
+
+# Custom decorator to support testing of asynchronous functions
+def async_test(coro):
+    def wrapper(*args, **kwargs):
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(coro(*args, **kwargs))
+        finally:
+            loop.close()
+    return wrapper
 
 
 class FemTestFixture(object):
@@ -84,7 +96,7 @@ class TestFem(unittest.TestCase):
             "farm_target_port": "61649 61649"
             }
         self.test_fem.fem.verify_parameters = False
-        with patch('json.load') as mock_load:
+        with patch("json.load") as mock_load:
             with patch("builtins.open", mock_open(read_data="data")):
                 # self.test_fem.fem.verify_farm_mode_parameters = Mock()
                 mock_load.return_value = farm_mode_json
@@ -106,7 +118,7 @@ class TestFem(unittest.TestCase):
 
     def test_connect_fails(self):
         """Assert the connect method Exception handling works."""
-        with patch('hexitec.HexitecFem.RdmaUDP') as rdma_mock:
+        with patch("hexitec.HexitecFem.RdmaUDP") as rdma_mock:
             rdma_mock.side_effect = socket_error()
             with pytest.raises(socket_error) as exc_info:
                 self.test_fem.fem.connect()
@@ -132,70 +144,42 @@ class TestFem(unittest.TestCase):
         assert self.test_fem.fem.log_messages[0][:-4] == log_messages[0][:-4]
         assert self.test_fem.fem.log_messages[0][1] == log_messages[0][1]
 
-    # """
-    # version: v0.17.0
-    # date: 2023-11-23
-    # time: 11:33:26
-    # together: 2023-11-23 11:33:26
-    # """
-    # # TODO How to Mock rdma (object?) for BoardCfgStatus?
-    # @patch('boardcfgstatus.BoardCfgStatus')
-    # def test_read_sensors_including_firmware_info(self, cfg_status):
-    #     """Test the read_sensors function reads firmware info."""
-    #     with patch('hexitec.HexitecFem.RdmaUDP'):
-    #         self.test_fem.fem.read_firmware_version = True
-    #         cfg_status.get_fpga_fw_version.side_effect = "v0.17.0"
-    #         cfg_status.get_fpga_fw_version.side_effect = "2023-11-23"
-    #         cfg_status.get_fpga_fw_version.side_effect = "11:33:26"
-    #         self.test_fem.fem.x10g_rdma = Mock()
-    #         self.test_fem.fem.read_temperatures_humidity_values = Mock()
-    #         self.test_fem.fem.read_pwr_voltages = Mock()
-    #         self.test_fem.fem.read_sensors()
-    #         time.sleep(0.2)
-    #         # assert self.test_fem.fem.vsr_addr == 144
-    #         assert self.test_fem.fem.environs_in_progress is False
-    #         # assert self.test_fem.fem.parent.software_state == "Idle"
-    #         # assert self.test_fem.fem.firmware_date == firmware_date
-    #         # assert self.test_fem.fem.firmware_time == firmware_time
-    #         assert self.test_fem.fem.read_firmware_version is False
-    #         # assert self.test_fem.fem.firmware_date == ""
-
-    def test_read_sensors_working_ok(self):
-        """Test the read_sensors function works."""
-        with patch('hexitec.HexitecFem.RdmaUDP'):
-            self.test_fem.fem.read_firmware_version = False
+    @patch('hexitec.HexitecFem.BoardCfgStatus')
+    @async_test
+    async def test_read_sensors_including_firmware_info(self, board_status):
+        """Test the read_sensors function reads firmware info."""
+        with patch("hexitec.HexitecFem.RdmaUDP"):
+            self.test_fem.fem.read_firmware_version = True
+            state = "this"
+            self.test_fem.fem.parent.software_state = state
+            self.test_fem.fem.parent.software_state == "Idle"
+            self.test_fem.fem.x10g_rdma = Mock()
             self.test_fem.fem.read_temperatures_humidity_values = Mock()
             self.test_fem.fem.read_pwr_voltages = Mock()
-            self.test_fem.fem.read_sensors()
-            time.sleep(0.2)
+            await self.test_fem.fem.read_sensors()
             assert self.test_fem.fem.environs_in_progress is False
-            assert self.test_fem.fem.parent.software_state == "Cold"
-            # assert self.test_fem.fem.firmware_date == firmware_date
-            # assert self.test_fem.fem.firmware_time == firmware_time
-            # assert self.test_fem.fem.read_firmware_version is False
-            # assert self.test_fem.fem.firmware_date == ""
+            assert self.test_fem.fem.parent.software_state == state
+            assert self.test_fem.fem.read_firmware_version is False
 
-    # @pytest.mark.slow
-    def test_read_sensors_Exception(self):
+    @async_test
+    async def test_read_sensors_Exception(self):
         """Test the read_sensors handles Exception."""
-        with patch('hexitec.HexitecFem.RdmaUDP'):
+        with patch("hexitec.HexitecFem.RdmaUDP"):
             self.test_fem.fem.read_firmware_version = False
             self.test_fem.fem.read_temperatures_humidity_values = Mock()
             self.test_fem.fem.read_temperatures_humidity_values.side_effect = Exception()
-            self.test_fem.fem.read_sensors()
-            time.sleep(0.2)
+            await self.test_fem.fem.read_sensors()
             error = "Reading sensors failed"
             assert self.test_fem.fem._get_status_error() == error
 
-    # @pytest.mark.slow
-    def test_read_sensors_HexitecFemError(self):
+    @async_test
+    async def test_read_sensors_HexitecFemError(self):
         """Test the read_sensors handles HexitecFemError."""
-        with patch('hexitec.HexitecFem.RdmaUDP'):
+        with patch("hexitec.HexitecFem.RdmaUDP"):
             self.test_fem.fem.read_firmware_version = False
             self.test_fem.fem.read_temperatures_humidity_values = Mock()
             self.test_fem.fem.read_temperatures_humidity_values.side_effect = HexitecFemError()
-            self.test_fem.fem.read_sensors()
-            time.sleep(0.2)
+            await self.test_fem.fem.read_sensors()
             error = "Failed to read sensors"
             assert self.test_fem.fem._get_status_error() == error
         assert self.test_fem.fem.parent.software_state == "Error"
@@ -231,13 +215,6 @@ class TestFem(unittest.TestCase):
         health = False
         self.test_fem.fem.health = health
         assert self.test_fem.fem.get_health() is health
-
-    # def test_poll_sensors_calls_self(self):
-    #     """Test poll_sensors() calls itself."""
-    #     with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
-    #         self.test_fem.fem.poll_sensors()
-    #         i = mock_loop.instance()
-    #         i.call_later.assert_called_with(3.0, self.test_fem.fem.poll_sensors)
 
     def test_connect_hardware_handles_cold_start(self):
         """Test that connecting from 'cold' works OK."""
@@ -305,14 +282,15 @@ class TestFem(unittest.TestCase):
 
     def test_load_farm_mode_json_parameters_handles_file_not_found(self):
         """Test that function handles file not found Exception."""
-        self.test_fem.fem.farm_mode_file = "/no/such/file.txt"
+        self.test_fem.fem.farm_mode_file = None
         with pytest.raises(HexitecFemError) as exc_info:
             self.test_fem.fem.load_farm_mode_json_parameters()
         assert exc_info.type is HexitecFemError
 
-    def test_load_farm_mode_json_parameters_handles_json_decode_exception(self):
-        """Test that function handles JSON Decode Exception."""
-        self.test_fem.fem.farm_mode_file = "odin_config.json"   # Contains invalid json
+    def test_load_farm_mode_json_parameters_handles_TypeError(self):
+        """Test that function handles TypeError."""
+        self.test_fem.fem.farm_mode_file = Mock()
+        self.test_fem.fem.farm_mode_file.side_effect = TypeError
         with pytest.raises(HexitecFemError) as exc_info:
             self.test_fem.fem.load_farm_mode_json_parameters()
         assert exc_info.type is HexitecFemError
@@ -364,16 +342,17 @@ class TestFem(unittest.TestCase):
             success = self.test_fem.fem.prepare_hardware()
             assert success is False
 
-    # TODO Refuses to improve coverage
+    # # TODO the 2 mocked_ objects should/shouldn't be MagicMock (actual versus expected)
     # @patch('udpcore.UdpCore')
     # @patch('RdmaUdp.RdmaUdp')
-    # def test_hv_on(self, mocked_core, mocked_rdma):
+    # def test_configure_camera_interfaces(self, mocked_core, mocked_rdma):
     #     """Test function fails when no connection established."""
     #     with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+    #         self.test_fem.fem._set_status_message = Mock()
     #         mocked_core.rdma_ip = "127.0.0.1"
     #         mocked_rdma.rdma_ip = "127.0.0.1"
     #         self.test_fem.fem.configure_camera_interfaces()
-    #         self.test_fem.fem._set_status_message.assert_called_with("Set Control Params..")
+    #         self.test_fem.fem._set_status_message.assert_called_with("Set Control params..")
     #         i = mock_loop.instance()
     #         i.call_later.assert_called_with(2,
     #                                         self.test_fem.fem.configure_control_with_multicast,
@@ -545,7 +524,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.disconnect_hardware()
         assert self.test_fem.fem.stop_acquisition is True
 
-    def test_disconnect_hardware_handle_exception(self):
+    def test_disconnect_hardware_handles_exception(self):
         """Test function can handle Exception thrown."""
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.hardware_busy = False
@@ -616,7 +595,7 @@ class TestFem(unittest.TestCase):
         """Test function handles normal configuration."""
         DATE_FORMAT = self.test_fem.fem.DATE_FORMAT
         acquire_start_time = '%s' % (datetime.now().strftime(DATE_FORMAT))
-        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+        with patch("time.sleep"), patch("hexitec.HexitecFem.IOLoop") as mock_loop:
             self.test_fem.fem.acquire_data()
             i = mock_loop.instance()
             i.call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
@@ -627,7 +606,7 @@ class TestFem(unittest.TestCase):
         """Test function handles exception."""
         self.test_fem.fem.create_timestamp = Mock()
         self.test_fem.fem.create_timestamp.side_effect = Exception()
-        with patch("hexitec.HexitecFem.IOLoop"):
+        with patch("time.sleep"), patch("hexitec.HexitecFem.IOLoop"):
             with pytest.raises(Exception) as exc_info:
                 self.test_fem.fem.acquire_data()
             assert exc_info.type is Exception
@@ -721,7 +700,8 @@ class TestFem(unittest.TestCase):
         assert self.test_fem.fem.acquisition_completed is True
         assert self.test_fem.fem.all_data_sent == 0
 
-    def test_collect_offsets(self):
+    @async_test
+    async def test_collect_offsets(self):
         """Test function working okay."""
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.parent.software_state = "Idle"
@@ -730,51 +710,48 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.start_sm = Mock()
         self.test_fem.fem.await_dc_captured = Mock()
         self.test_fem.fem.clr_dc_controls = Mock()
-        self.test_fem.fem.collect_offsets()
+        await self.test_fem.fem.collect_offsets()
         assert self.test_fem.fem.hardware_busy is False
         # State should revert back to previous state on completion
         assert self.test_fem.fem.parent.software_state == "Idle"
 
-    # @pytest.mark.slow
-    def test_collect_offsets_handles_hardware_disconnected(self):
-        """Test function handles hardware disconnected."""
+    @async_test
+    async def test_collect_offsets_handles_hardware_disconnected(self):
         self.test_fem.fem.hardware_connected = False
-        self.test_fem.fem.collect_offsets()
-        time.sleep(0.1)
+        await self.test_fem.fem.collect_offsets()
         error = \
             "Offsets: Can't collect offsets while disconnected"
         assert self.test_fem.fem._get_status_error() == error
 
-    # @pytest.mark.slow
-    def test_collect_offsets_handles_hardware_busy(self):
+    @async_test
+    async def test_collect_offsets_handles_hardware_busy(self):
         """Test function handles hardware busy."""
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.hardware_busy = True
-        self.test_fem.fem.collect_offsets()
-        time.sleep(0.1)
+        await self.test_fem.fem.collect_offsets()
         error = "Offsets: Can't collect offsets, Hardware busy"
         assert self.test_fem.fem._get_status_error() == error
 
-    def test_collect_offsets_handles_exception(self):
+    @async_test
+    async def test_collect_offsets_handles_exception(self):
         """Test function handles exception."""
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.hardware_busy = False
         self.test_fem.fem.stop_sm = Mock()
         self.test_fem.fem.stop_sm.side_effect = AttributeError()
-        self.test_fem.fem.collect_offsets()
-        time.sleep(0.1)
+        await self.test_fem.fem.collect_offsets()
         error = "Failed to collect offsets"
         assert self.test_fem.fem.status_error == error
 
-    def test_collect_offsets_handles_hexitecfemerror(self):
+    @async_test
+    async def test_collect_offsets_handles_HexitecFemError(self):
         """Test function handles HexitecFemError."""
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.hardware_busy = False
         self.test_fem.fem.stop_sm = Mock()
         e = "Error"
         self.test_fem.fem.stop_sm.side_effect = HexitecFemError(e)
-        self.test_fem.fem.collect_offsets()
-        time.sleep(0.1)
+        await self.test_fem.fem.collect_offsets()
         error = f"Offsets: {e}"
         assert self.test_fem.fem.status_error == error
 
@@ -831,10 +808,12 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.check_dc_statuses.return_value = dc_statuses
 
         e = "Dark images timed out. R.89: {}".format(dc_statuses)
-        with pytest.raises(HexitecFemError) as exc_info:
-            self.test_fem.fem.await_dc_captured()
-        assert exc_info.type is HexitecFemError
-        assert exc_info.value.args[0] == "%s" % e
+        with patch("time.time") as mock_time:
+            mock_time.side_effect = [0, 3]
+            with pytest.raises(HexitecFemError) as exc_info:
+                self.test_fem.fem.await_dc_captured()
+            assert exc_info.type is HexitecFemError
+            assert exc_info.value.args[0] == "%s" % e
 
     @patch('hexitec_vsr.VsrModule')
     def test_check_dc_statuses(self, mocked_vsr_module):
@@ -908,7 +887,8 @@ class TestFem(unittest.TestCase):
         assert self.test_fem.fem.status_error == error
 
     @patch('hexitec_vsr.VsrModule')
-    def test_initialise_system(self, mocked_vsr_module):
+    @async_test
+    async def test_initialise_system(self, mocked_vsr_module):
         """Test function initialises the system ok."""
         self.test_fem.fem.initialise_vsr = Mock()
         mocked_vsr_module.read_pll_status.return_value = 7
@@ -921,113 +901,66 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.x10g_rdma.udp_rdma_write = Mock()
         self.test_fem.fem.x10g_rdma.udp_rdma_read = Mock()
         self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [255]
-        self.test_fem.fem.initialise_system()
-        time.sleep(0.3)
+        await self.test_fem.fem.initialise_system()
         assert self.test_fem.fem.parent.software_state == "Ready"
 
-    # TODO: Passes but sabotages 3 x test_read_sensors unit tests (lines 167-209)
-    # @patch('hexitec_vsr.VsrModule')
-    # def test_initialise_system_handles_pll_timeout(self, mocked_vsr_module):
-    #     """Test function handles if PLL doesn't lock."""
-    #     self.test_fem.fem.initialise_vsr = Mock()
-    #     mocked_vsr_module.read_pll_status.return_value = 6
-    #     mocked_vsr_module.enable_vcal = Mock()
-    #     mocked_vsr_module.addr = 0x90
-    #     mocked_vsr_module.slot = 1
-    #     vsr_list = [mocked_vsr_module]
-    #     self.test_fem.fem.vsr_list = vsr_list
+    @patch('hexitec_vsr.VsrModule')
+    @async_test
+    async def test_initialise_system_handles_pll_timeout(self, mocked_vsr_module):
+        """Test function handles if PLL doesn't lock."""
+        self.test_fem.fem.initialise_vsr = Mock()
+        mocked_vsr_module.read_pll_status.return_value = 6
+        mocked_vsr_module.enable_vcal = Mock()
+        mocked_vsr_module.addr = 0x90
+        mocked_vsr_module.slot = 1
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
 
-    #     self.test_fem.fem.x10g_rdma.udp_rdma_write = Mock()
-    #     self.test_fem.fem.x10g_rdma.udp_rdma_read = Mock()
-    #     self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [255]
-    #     with patch('logging.error') as mock_log:
-    #         self.test_fem.fem.initialise_system()
-    #         time.sleep(2.5)
-    #         mock_log.assert_called()
+        self.test_fem.fem.x10g_rdma.udp_rdma_write = Mock()
+        self.test_fem.fem.x10g_rdma.udp_rdma_read = Mock()
+        self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [255]
+        with patch("time.time") as mock_time:
+            mock_time.side_effect = [0, 3]
+            with patch("logging.error") as mock_log:
+                await self.test_fem.fem.initialise_system()
+                mock_log.assert_called()
 
-    # def test_initialise_system_flags_unsynced_vsr(self):
-    #     """Test function handles an unsynced vsr."""
-    #     self.test_fem.fem.initialise_vsr = Mock()
-    #     self.test_fem.fem.read_register89 = Mock()
-    #     self.test_fem.fem.debugging_function = Mock()
-    #     self.test_fem.fem.read_register89.return_value = [[6, 6, 6, 6, 6, 6], "666666"]
-    #     self.test_fem.fem.x10g_rdma.write = Mock()
-    #     self.test_fem.fem.x10g_rdma.read = Mock()
-    #     self.test_fem.fem.x10g_rdma.read.return_value = [0xF0]
+    @patch('hexitec_vsr.VsrModule')
+    @async_test
+    async def test_initialise_system_flags_unsynced_vsr(self, mocked_vsr_module):
+        """Test function handles an unsynced vsr."""
+        self.test_fem.fem.initialise_vsr = Mock()
+        mocked_vsr_module.read_pll_status.return_value = 7
+        mocked_vsr_module.enable_vcal = Mock()
+        mocked_vsr_module.addr = 0x90
+        mocked_vsr_module.slot = 1
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
+        self.test_fem.fem.x10g_rdma.write = Mock()
+        self.test_fem.fem.x10g_rdma.udp_rdma_read = Mock()
+        self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [0xF0]
 
-    #     self.test_fem.fem.initialise_system()
-    #     time.sleep(0.2)
-    #     self.test_fem.fem.x10g_rdma.write.assert_has_calls([
-    #         call(0x00000020, 0x10, burst_len=1, comment="Enabling training"),
-    #         call(0x00000020, 0x00, burst_len=1, comment="Disabling training")
-    #     ])
-    #     time.sleep(0.2)
-    #     vsr_status_addr = 0x000003E8
-    #     index = 0
-    #     self.test_fem.fem.x10g_rdma.read.assert_has_calls([
-    #         call(vsr_status_addr, burst_len=1, comment="Read vsr{}_status".format(index)),
-    #         call(vsr_status_addr+4, burst_len=1, comment="Read vsr{}_status".format(index+1)),
-    #         call(vsr_status_addr+8, burst_len=1, comment="Read vsr{}_status".format(index+2)),
-    #         call(vsr_status_addr+12, burst_len=1, comment="Read vsr{}_status".format(index+3)),
-    #         call(vsr_status_addr+16, burst_len=1, comment="Read vsr{}_status".format(index+4)),
-    #         call(vsr_status_addr+20, burst_len=1, comment="Read vsr{}_status".format(index+5)),
-    #     ])
+        with patch("logging.error") as mock_log:
+            await self.test_fem.fem.initialise_system()
+            mock_log.assert_called_with('VSR1 Error: Incomplete lock (0xF0)')
 
-    def test_initialise_system_handles_HexitecFemError(self):
+    @async_test
+    async def test_initialise_system_handles_HexitecFemError(self):
         """Test function handles HexitecFemError."""
         self.test_fem.fem.initialise_vsr = Mock()
         self.test_fem.fem.initialise_vsr.side_effect = HexitecFemError("E")
-        self.test_fem.fem.initialise_system()
-        time.sleep(0.3)
+        await self.test_fem.fem.initialise_system()
         assert self.test_fem.fem.status_error == "Failed to initialise camera: {}".format("E")
         assert self.test_fem.fem.parent.software_state == "Error"
 
-    def test_initialise_system_handles_Exception(self):
+    @async_test
+    async def test_initialise_system_handles_Exception(self):
         """Test function handles Exception."""
         self.test_fem.fem.initialise_vsr = Mock()
         self.test_fem.fem.initialise_vsr.side_effect = Exception("E")
-        self.test_fem.fem.initialise_system()
-        time.sleep(0.2)
+        await self.test_fem.fem.initialise_system()
         assert self.test_fem.fem.status_error == "Camera initialisation failed: {}".format("E")
         assert self.test_fem.fem.parent.software_state == "Error"
-
-    # # TODO: Prevent unrelated unit tests failing: ??
-    # # test_read_sensors_Exception - AssertionError: assert '' == 'Uncaught Exc...sors failed: '
-    # # test_read_sensors_HexitecFemError - AssertionError: assert '' == 'Failed to read sensors: '
-    # # @pytest.mark.skip
-    # def test_initialise_system_fails_if_unsynced(self):
-    #     """Test function handles unsuccessful LVDS sync."""
-    #     self.test_fem.fem.initialise_vsr = Mock()
-    #     self.test_fem.fem.read_register89 = Mock()
-    #     # self.test_fem.fem.debugging_function = Mock()
-    #     self.test_fem.fem.read_register89.return_value = [[6, 6, 6, 6, 6, 6], "111111"]
-    #     # with patch('time.sleep') as fake_sleep:
-    #     #     fake_sleep.side_effect = None
-    #     fake_sleep = patch('time.sleep')
-    #     fake_sleep.start()
-    #     with patch('logging.error') as mock_log:
-    #         self.test_fem.fem.initialise_system()
-    #         time.sleep(0.2)
-    #         # assert self.test_fem.fem.status_error == "Failed to initialise camera"
-    #         mock_log.assert_called()
-    #     fake_sleep.stop()
-
-    # def test_initialise_system_fails_if_unsynced(self):
-    #     """Test function handles unsuccessful LVDS sync."""
-    #     self.test_fem.fem.VSR_ADDRESS = []
-    #     self.test_fem.fem.x10g_rdma.write = Mock()
-    #     # self.test_fem.fem.debugging_function = Mock()
-    #     # self.test_fem.fem.read_register89.return_value = [[6, 6, 6, 6, 6, 6], "111111"]
-    #     # with patch('time.sleep') as fake_sleep:
-    #     #     fake_sleep.side_effect = None
-    #     fake_sleep = patch('time.sleep')
-    #     fake_sleep.start()
-    #     with patch('logging.error') as mock_log:
-    #         self.test_fem.fem.initialise_system()
-    #         time.sleep(0.2)
-    #         # assert self.test_fem.fem.status_error == "Failed to initialise camera"
-    #         mock_log.assert_called()
-    #     fake_sleep.stop()
 
     def test_calculate_frame_rate(self):
         """Test calculate_frame_rate works."""
@@ -1044,62 +977,6 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.set_duration(duration)
         assert self.test_fem.fem.frame_rate == 7154.079227920547
         assert self.test_fem.fem.number_frames == 14308
-
-    # def test_read_pwr_voltages_vsr1(self):
-    #     """Test function handles power voltages ok."""
-    #     self.test_fem.fem.send_cmd = Mock()
-    #     response = [42, 144, 48, 50, 69, 53, 48, 53, 68, 48, 48, 56, 67, 66, 48, 48, 48, 52, 48,
-    #                 67, 49, 49, 48, 70, 69, 56, 48, 55, 69, 50, 48, 56, 56, 66, 49, 50, 48, 67,
-    #                 49, 65, 49, 65, 48, 48, 48, 50, 48, 48, 48, 48, 13]
-    #     vsr_addr = HexitecFem.VSR_ADDRESS[0]
-    #     self.test_fem.fem.vsr_addr = vsr_addr
-    #     self.test_fem.fem.debug = True
-    #     self.test_fem.fem.read_pwr_voltages()
-    #     # Note current setting, change Register 143 (0x8F) -> 1, confirm changed
-    #     power_command = [vsr_addr, HexitecFem.READ_PWR_VOLT]
-    #     self.test_fem.fem.send_cmd.assert_has_calls([call(power_command)])
-    #     assert self.test_fem.fem.hv_list[0] == -6.832187142856924
-
-    # def test_read_pwr_voltages_bad_vsr(self):
-    #     """Test function handles unexpected vsr."""
-    #     vsr_addr = 151
-    #     self.test_fem.fem.vsr_addr = vsr_addr
-    #     self.test_fem.fem.debug = True
-    #     with pytest.raises(HexitecFemError) as exc_info:
-    #         self.test_fem.fem.read_pwr_voltages()
-    #     assert exc_info.type is HexitecFemError
-    #     assert exc_info.value.args[0] == "HV: Invalid VSR address(0x{0:02X})".format(vsr_addr)
-
-    # def test_read_pwr_voltages_handles_incomplete_data(self):
-    #     """Test function handles incomplete data received."""
-    #     self.test_fem.fem.send_cmd = Mock()
-    #     vsr_addr = HexitecFem.VSR_ADDRESS[0]
-    #     response = [42, vsr_addr, 48, 50, 69, 54, 48, 53, 67, 13]
-    #     self.test_fem.fem.vsr_addr = vsr_addr
-    #     self.test_fem.fem.debug = True
-    #     returned_value = self.test_fem.fem.read_pwr_voltages()
-    #     assert returned_value is None
-
-    # # TODO: Shortly redundant:
-    # def test_read_temperatures_humidity_values_vsr1(self):
-    #     """Test function handle sensor values ok."""
-    #     self.test_fem.fem.send_cmd = Mock()
-    #     vsr_addr = HexitecFem.VSR_ADDRESS[0]
-    #     self.test_fem.fem.vsr_addr = vsr_addr
-    #     self.test_fem.fem.debug = True
-    #     self.test_fem.fem.read_temperatures_humidity_values()
-    #     command = [vsr_addr, 0x52]
-    #     vsr1_ambient = 22.7658837890625
-    #     vsr1_humidity = 39.12855725947967
-    #     vsr1_asic1 = 160.0
-    #     vsr1_asic2 = 160.0
-    #     vsr1_adc = 24.6875
-    #     self.test_fem.fem.send_cmd.assert_has_calls([call(command)])
-    #     assert self.test_fem.fem.ambient_list[0] == vsr1_ambient
-    #     assert self.test_fem.fem.humidity_list[0] == vsr1_humidity
-    #     assert self.test_fem.fem.asic1_list[0] == vsr1_asic1
-    #     assert self.test_fem.fem.asic2_list[0] == vsr1_asic2
-    #     assert self.test_fem.fem.adc_list[0] == vsr1_adc
 
     # TODO: Mock vsr.get_power_sensors() returning values
     @patch('hexitec_vsr.VsrModule')
@@ -1142,18 +1019,6 @@ class TestFem(unittest.TestCase):
     read_temperatures_humidity_values(148) (4) value:
         ('32.344', '30.185', '27.5', '28.5', '35.38')
     """
-
-    # def test_read_temperature_humidity_values_handle_wrong_value(self):
-    #     """Test function handles bad sensor values."""
-    #     self.test_fem.fem.send_cmd = Mock()
-    #     return_value = self.test_fem.fem.read_temperatures_humidity_values()
-    #     assert return_value is None
-
-    # def test_read_temperature_humidity_values_handle_bad_vsr(self):
-    #     """Test function handles bad sensor values."""
-    #     self.test_fem.fem.send_cmd = Mock()
-    #     return_value = self.test_fem.fem.read_temperatures_humidity_values()
-    #     assert return_value is None
 
     def test_set_hexitec_config(self):
         """Test function handles configuration file ok."""

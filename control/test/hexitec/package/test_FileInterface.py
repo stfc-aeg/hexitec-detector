@@ -130,7 +130,7 @@ class TestAdapter(unittest.TestCase):
             'error': "Invalid path: {}".format(path)
         }
         # Mock logging to provoke ParameterTree exception
-        with patch('logging.debug') as mock_log:
+        with patch("logging.debug") as mock_log:
             mock_log.side_effect = ParameterTreeError()
             response = self.test_adapter.adapter.get(
                 path,
@@ -198,3 +198,11 @@ class TestAdapter(unittest.TestCase):
         start_time = self.test_adapter.adp.init_time
         up_time = self.test_adapter.adp.get_server_uptime()
         assert pytest.approx(up_time, rel=1) == time.time() - start_time
+
+    def test_get_fr_config_files(self):
+        """Test function returns fr config files."""
+        self.test_adapter.adp.txt_files = ['fr_hexitec_config_0.json', 'fp_hexitec_config_0.json']
+        self.test_adapter.adp.get_config_files = Mock()
+        txt_files = ['fr_hexitec_config_0.json']
+        rc = self.test_adapter.adp.get_fr_config_files()
+        assert rc == txt_files
