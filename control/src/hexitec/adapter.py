@@ -421,11 +421,10 @@ class Hexitec():
         """Remove base path from path.
 
         Removes everything up to but not including 'keyword' from path.
-        i.e. if keyword="data" and path='/hxt_sw/src/hexitec-detector/data/config/m_2x6.txt'
-        then function returns 'data/config/m_2x6.txt'
+        i.e. if keyword="data/" and path='/hxt_sw/install/config/data/m_2x6.txt'
+        then function returns 'm_2x6.txt'
         """
-        index = path.rfind(keyword)
-        return path[index:]
+        return path.split(keyword)[-1]
 
     def save_odin(self, msg):
         """Save Odin's settings to file."""
@@ -439,10 +438,10 @@ class Hexitec():
         config["daq/discrimination_enable"] = self.daq.discrimination_enable
         config["daq/file_dir"] = self.daq.file_dir
         config["daq/file_name"] = self.daq.file_name
-        config["daq/gradients_filename"] = self.strip_base_path(self.daq.gradients_filename, "data")
+        config["daq/gradients_filename"] = self.strip_base_path(self.daq.gradients_filename, "data/")
         config["daq/image_frequency"] = self.daq.image_frequency
         config["daq/intercepts_filename"] = self.strip_base_path(self.daq.intercepts_filename,
-                                                                 "data")
+                                                                 "data/")
         config["daq/lvframes_dataset_name"] = self.daq.lvframes_dataset_name
         config["daq/lvframes_frequency"] = self.daq.lvframes_frequency
         config["daq/lvframes_per_second"] = self.daq.lvframes_per_second
@@ -452,18 +451,18 @@ class Hexitec():
         config["daq/pass_processed"] = self.daq.pass_processed
         config["daq/pass_raw"] = self.daq.pass_raw
         config["daq/pixel_grid_size"] = self.daq.pixel_grid_size
-        config["daq/threshold_filename"] = self.strip_base_path(self.daq.threshold_filename, "data")
+        config["daq/threshold_filename"] = self.strip_base_path(self.daq.threshold_filename, "data/")
         config["daq/threshold_lower"] = self.daq.threshold_lower
         config["daq/threshold_mode"] = self.daq.threshold_mode
         config["daq/threshold_upper"] = self.daq.threshold_upper
         config["daq/threshold_value"] = self.daq.threshold_value
         config["duration"] = self.duration
         config["duration_enable"] = self.duration_enable
-        config["fem/hexitec_config"] = self.strip_base_path(self.fem.hexitec_config, "control")
+        config["fem/hexitec_config"] = self.strip_base_path(self.fem.hexitec_config, "control/")
         config["number_frames"] = self.number_frames
         try:
             with open(self.odin_config_file, "w") as f:
-                json.dump(config, f)
+                json.dump(config, f, indent=2, separators=(",", ": "))
         except Exception as e:
             self.fem.flag_error("Saving Odin config", str(e))
 

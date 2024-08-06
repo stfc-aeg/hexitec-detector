@@ -157,8 +157,8 @@ class DAQTestFixture(object):
             "live_view": self.fake_lv
         }
 
-        gradients_filename = self.data_config_path + "m_2018_01_001_400V_20C.txt"
-        intercepts_filename = self.data_config_path + "c_2018_01_001_400V_20C.txt"
+        gradients_filename = self.data_config_path + "m.txt"
+        intercepts_filename = self.data_config_path + "c.txt"
 
         # Fake parameter tree
         self.parameter_dict = \
@@ -1023,7 +1023,7 @@ class TestDAQ(unittest.TestCase):
 
     def test_set_gradients_filename_correct(self):
         """Test setting gradients file."""
-        gradients_filename = "m_2018_01_001_400V_20C.txt"
+        gradients_filename = "m.txt"
         self.test_daq.daq._set_gradients_filename(gradients_filename)
 
         # Verify relative paths match:
@@ -1038,7 +1038,7 @@ class TestDAQ(unittest.TestCase):
 
     def test_set_intercepts_filename_correct(self):
         """Test setting intercepts filename."""
-        intercepts_filename = "c_2018_01_001_400V_20C.txt"
+        intercepts_filename = "c.txt"
         self.test_daq.daq._set_intercepts_filename(intercepts_filename)
         # Verify relative paths match:
         intercepts_file = self.test_daq.daq.intercepts_filename
@@ -1052,7 +1052,7 @@ class TestDAQ(unittest.TestCase):
 
     def test_set_threshold_filename_correct(self):
         """Test setting threshold file name."""
-        threshold_filename = "thresh_2018_01_001_400V_20C.txt"
+        threshold_filename = "threshold1.txt"
         self.test_daq.daq._set_threshold_filename(threshold_filename)
         # Verify relative paths match:
         threshold_file = self.test_daq.daq.threshold_filename

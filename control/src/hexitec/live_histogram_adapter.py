@@ -181,6 +181,7 @@ class LiveViewer(object):
         self.bin_width = 10.0
         self.recalculate_bins()
         self.img_data = np.arange(0, self.number_bins, 1)
+        self.calibration_enable = False
         # Assuming one-dimensional data, may change
         self.image_dims = 1
 
@@ -198,6 +199,7 @@ class LiveViewer(object):
             "bin_start": (lambda: self.bin_start, self.set_bin_start),
             "bin_end": (lambda: self.bin_end, self.set_bin_end),
             "bin_width": (lambda: self.bin_width, self.set_bin_width),
+            "calibration_enable": (lambda: self.calibration_enable, self.set_calibration_enable),
             "number_bins": (lambda: self.number_bins, None)
         })
 
@@ -298,7 +300,10 @@ class LiveViewer(object):
             xpoints = np.array(range(0, self.number_bins))
             fig, ax = plt.subplots()
             plt.plot(xpoints, self.img_data)
-            ax.set_xlabel('Number of bins')
+            if self.calibration_enable:
+                ax.set_xlabel('Energy')
+            else:
+                ax.set_xlabel('Number of bins')
             ax.set_ylabel('Hits')
             timestamp = '%s' % (datetime.now().strftime('%Y%m%d_%H%M%S.%f'))
             ax.set_title(r'Summed_spectra ({})'.format(timestamp))
@@ -436,6 +441,12 @@ class LiveViewer(object):
             endpoints.append(channel.endpoint)
 
         return endpoints
+
+    def set_calibration_enable(self, calibration_enable):
+        """Set calibration enable.
+
+        Will determine histogram X axis label."""
+        self.calibration_enable = calibration_enable
 
     def get_channel_counts(self):
         """

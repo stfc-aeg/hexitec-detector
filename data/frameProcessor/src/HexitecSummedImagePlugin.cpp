@@ -15,12 +15,14 @@ namespace FrameProcessor
   const std::string HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER  = "threshold_lower";
   const std::string HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER  = "threshold_upper";
   const std::string HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY  = "image_frequency";
+  const std::string HexitecSummedImagePlugin::CONFIG_FRAMES_PROCESSED = "frames_processed";
   const std::string HexitecSummedImagePlugin::CONFIG_RESET_IMAGE      = "reset_image";
 
   /**
    * The constructor sets up logging used within the class.
    */
-  HexitecSummedImagePlugin::HexitecSummedImagePlugin()
+  HexitecSummedImagePlugin::HexitecSummedImagePlugin() :
+      frames_processed_(0)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecSummedImagePlugin");
@@ -124,6 +126,7 @@ namespace FrameProcessor
       {
         // Clear all pixels to be 0
         memset(summed_image_, 0, image_pixels_ * sizeof(uint32_t));
+        frames_processed_ = 0;
         reset_image_ = 0;
       }
     }
@@ -137,6 +140,7 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER, threshold_lower_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_THRESHOLD_UPPER, threshold_upper_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_IMAGE_FREQUENCY, image_frequency_);
+    reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_FRAMES_PROCESSED, frames_processed_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_RESET_IMAGE, reset_image_);
   }
 
@@ -153,6 +157,7 @@ namespace FrameProcessor
     status.set_param(get_name() + "/threshold_lower", threshold_lower_);
     status.set_param(get_name() + "/threshold_upper", threshold_upper_);
     status.set_param(get_name() + "/image_frequency", image_frequency_);
+    status.set_param(get_name() + "/frames_processed", frames_processed_);
     status.set_param(get_name() + "/reset_image", reset_image_);
   }
 
@@ -215,10 +220,13 @@ namespace FrameProcessor
 
 
         // How often to write accumulated data to disk?
-        if ((frame_number % image_frequency_) == 0)
+        if ( (image_frequency_ != 0) &&
+          (((frames_processed_+1) % image_frequency_) == 0)
+          )
         {
           pushSummedDataset();
         }
+        frames_processed_++;
       }
       catch (const std::exception& e)
       {

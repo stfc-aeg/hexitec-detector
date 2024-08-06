@@ -414,11 +414,11 @@ class TestDetector(unittest.TestCase):
             i = mock.instance()
             i.call_later.assert_called_with(0.2, self.test_adapter.detector.fem.disconnect_hardware)
 
-    def test_trip_base_path(self):
+    def test_strip_base_path(self):
         """Test function correctly strips out base path."""
-        keyword = "data"
+        keyword = "data/"
         path = self.test_adapter.detector.data_config_path + 'm_2x6.txt'
-        stripped_path = "data/config/m_2x6.txt"
+        stripped_path = "config/m_2x6.txt"
         returned_string = self.test_adapter.detector.strip_base_path(path, keyword)
         assert returned_string == stripped_path
 

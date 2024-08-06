@@ -100,7 +100,7 @@ class HexitecDAQ():
         self.bin_width = 10.0
         self.number_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
 
-        self.max_frames_received = 100000
+        self.max_frames_received = 0
         self.pass_processed = False
         self.pass_raw = False
 
@@ -126,7 +126,7 @@ class HexitecDAQ():
 
         self.threshold_lower = 0
         self.threshold_upper = 4400
-        self.image_frequency = 100000
+        self.image_frequency = 0
 
         self.threshold_filename = self.data_config_path + "thresh_2x6.txt"
         self.threshold_mode = "value"
@@ -1250,7 +1250,7 @@ class HexitecDAQ():
             for param_key in self.param_tree.tree['config'].get(plugin):
 
                 # print("  DEBUG            config/%s/%s" % (plugin, param_key), " -> ",
-                #     self.param_tree.tree['config'][plugin][param_key].get(""))
+                #     self.param_tree.tree['config'][plugin][param_key].get())
 
                 # Don't send histogram's pass_raw, pass_processed,
                 #   since Odin Control do not support bool
@@ -1267,6 +1267,11 @@ class HexitecDAQ():
             self.plugin = "hdf"
         else:
             self.plugin = "histogram"
+
+        # Update live histogram labelling according to calibration enabled (or not)
+        payload = ('{"calibration_enable": %s}' % self.calibration_enable).lower()
+        request = ApiAdapterRequest(payload, content_type="application/json")
+        self.adapters["live_histogram"].put(command, request)
 
     def debug_timestamp(self):  # pragma: no cover
         """Debug function returning current timestamp in sub second resolution."""

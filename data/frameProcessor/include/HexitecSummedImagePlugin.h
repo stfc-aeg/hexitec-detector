@@ -56,7 +56,7 @@ namespace FrameProcessor
       static const std::string CONFIG_THRESHOLD_LOWER;
       static const std::string CONFIG_THRESHOLD_UPPER;
       static const std::string CONFIG_IMAGE_FREQUENCY;
-      static const std::string CONFIG_IMAGES_WRITTEN;
+      static const std::string CONFIG_FRAMES_PROCESSED;
       static const std::string CONFIG_RESET_IMAGE;
 
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
@@ -76,6 +76,8 @@ namespace FrameProcessor
       int image_height_;
       /** Image pixel count **/
       int image_pixels_;
+      /** Count number of frames processed **/
+      int frames_processed_;
 
       uint32_t *summed_image_;
       int threshold_lower_;

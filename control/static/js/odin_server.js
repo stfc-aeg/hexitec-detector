@@ -289,14 +289,11 @@ function poll_fem() {
             software_state = result["detector"]["software_state"];
             odin_cold_initialisation = result["detector"]["cold_initialisation"];
 
-            // If detector software not yet initialised, load defaults from odin_config.json file
-            if (odin_cold_initialisation === true)
-            {
-                load_odin();
-            }
             // If gui not populated (i.e. not initialised, populate it with Odin Control's settings
             if (js_not_initialised)
             {
+                // Load settings from configuration file, then update to UI
+                load_odin();
                 update_ui_with_odin_settings();
                 js_not_initialised = false;
             }

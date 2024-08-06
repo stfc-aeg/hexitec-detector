@@ -12,11 +12,16 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+from os.path import exists
 
 
 if __name__ == "__main__":
 
     hdf_file_location = "/u/ckd27546/tmp/100_xtek_000001.h5"
+    if not exists(hdf_file_location):
+        print(f"Cannot find: '{hdf_file_location}'")
+        import sys
+        sys.exit(-1)
     hdf_file = h5py.File(hdf_file_location, 'r')
     # hdf_file 
     #<HDF5 file "13June1122_000001.h5" (mode r)>
@@ -45,13 +50,6 @@ if __name__ == "__main__":
     max = summed_spectra[0].max()
     ymax = max + round(max * 0.1)
     plt.ylim(ymin, ymax)
-    # b = io.BytesIO()
-    # plt.savefig(b, format='png')
-    # plt.close()
-
-    # b.seek(0)
-    # with open("frommem.png", "wb") as f:
-    #   f.write(b.read())
 
     plt.show()
 

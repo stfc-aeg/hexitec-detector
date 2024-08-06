@@ -345,7 +345,9 @@ namespace FrameProcessor
         add_frame_data_to_histogram_with_sum(static_cast<float *>(input_ptr));
 
         // Write histograms to disc periodically
-        if ( ((frames_processed_+1) % max_frames_received_) == 0)
+        if ( (max_frames_received_ != 0) &&
+          (((frames_processed_+1) % max_frames_received_) == 0)
+          )
         {
           /// Time to push current histogram data to file
           writeHistogramsToDisk();
