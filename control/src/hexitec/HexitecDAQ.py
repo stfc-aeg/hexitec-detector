@@ -1269,6 +1269,7 @@ class HexitecDAQ():
             self.plugin = "histogram"
 
         # Update live histogram labelling according to calibration enabled (or not)
+        command = ""
         payload = ('{"calibration_enable": %s}' % self.calibration_enable).lower()
         request = ApiAdapterRequest(payload, content_type="application/json")
         self.adapters["live_histogram"].put(command, request)
