@@ -2,12 +2,12 @@
 """
 Created on Fri Feb 11 15:29:46 2022
 
-@author: mbbxfnw2
+@author: mbbxfnw2, ckd27546
 """
 
 import numpy as np
 from ast import literal_eval
-from unittest.mock import patch
+from requests.exceptions import ConnectionError
 
 import os
 import json
@@ -21,12 +21,13 @@ def _arg_parser(doc=True):
     """
     parser = argparse.ArgumentParser(prog='xtek.py')
     parser.add_argument('folder', help='Nikon output data folder')
+    parser.add_argument('target', help='IP address of Odin server')
     return parser.parse_args()
 
 
 def xml_to_dict(file):
-    # convert .xml file to Python dictionary
-
+    """ Convert .xml file to Python dictionary.
+    """
     import xmltodict
     with open(file, 'r') as myfile:
         obj = xmltodict.parse(myfile.read())
@@ -34,8 +35,8 @@ def xml_to_dict(file):
 
 
 def xtekct_to_dict(file):
-    # convert .xtekct file to Python dictionary
-
+    """ Convert .xtekct file to Python dictionary
+    """
     mydict = {}
     with open(file, 'r') as myfile:
         for line in myfile:
@@ -51,8 +52,8 @@ def xtekct_to_dict(file):
 
 
 def ang_to_dict(file):
-    # convert angles to a dictionary entry
-
+    """ Convert angles to a dictionary entry.
+    """
     mydict = {'rotation_angle': []}
     with open(file, 'r') as myfile:
         # skip header line
@@ -64,8 +65,8 @@ def ang_to_dict(file):
 
 
 def _convert_values(value):
-    # convert values to correct Python types
-
+    """ Convert values to correct Python types
+    """
     if isinstance(value, list):
         value = [_convert_values(v) for v in value]
     elif isinstance(value, dict):
@@ -73,18 +74,17 @@ def _convert_values(value):
             value[key] = _convert_values(entry)
     try:
         val = literal_eval(value)
-    except:
+    except Exception:
         val = value
     return str(val) if isinstance(val, type(None)) else val
 
 
 def get_files(path):
-    # find all files in a folder and subfolder of .xml, .xtekct or .ang format
-
+    """ Find all files in (sub)folder(s) of .xml, .xtekct or .ang format
+    """
     xml = []
     xtekct = []
     ang = []
-
     for root, dirs, files in os.walk(path):
         for file in files:
             if (file.endswith(".xml")):
@@ -97,7 +97,8 @@ def get_files(path):
 
 
 def get_meta_data(path):
-    # return the complete meta data dictionary
+    """ Return the complete meta data dictionary
+    """
     meta_data = {}
     xml, xtekct, ang = get_files(path)
 
@@ -120,42 +121,34 @@ def save_dict_to_hdf5(mydict, path):
         save_dict_contents_to_group(h5file, '/', mydict)
 
 
-def put_data(data):
-    # print("data: {}\n      {}".format(data['CTProfile']['XraySettings'], data['CTProfile']['ManipulatorPosition']))
-    hexitec_url = "http://localhost:8888/api/0.1/hexitec/xtek_meta"
-    headers = {'Content-type': 'application/json'}
-    resp = requests.put(hexitec_url, headers=headers, data=json.dumps(data))
-    if resp.status_code != 200:
-        print("PUT Error, returned: {}".format(resp.status_code))
-    else:
-        print("Success")
+def put_data(target, data):
+    try:
+        url = f"http://{target}:8888/api/0.1/hexitec/xtek_meta"
+        headers = {'Content-type': 'application/json'}
+        resp = requests.put(url, headers=headers, data=json.dumps(data))
+        if resp.status_code != 200:
+            print("PUT Error, returned: {}".format(resp.status_code))
+        else:
+            print("Success")
+    except ConnectionError as e:
+        print(f"PUT Exception: {e}")
 
 
 def save_dict_contents_to_group(h5file, path, dic):
-    # debugged_key = 'CTProfile'
-    # print(" ~~~~~~~~~~~~~~~~~~~ dictionary:\n {}".format(dic))
     for key, item in dic.items():
-        # print(" {} is list of dict(s)".format(item[0]))
         item = _convert_values(item)
-
         if isinstance(item, list):
             if isinstance(item[0], dict):
-                # print("\n 1.1: list of dict(s); item[0]: {}".format(item[0]))
                 newdict = {}
                 for i in range(len(item)):
                     newdict[key + str(i)] = item[i]
-                # print("\n 1.2: newdict's contents: {}".format(newdict))
                 item = newdict
                 save_dict_contents_to_group(h5file, path, {})
             else:
-                # print("\n 1.3: just a list, turning it into an numpy array; item: {}".format(item))
                 item = np.array(item)
         if isinstance(item, dict):
-            # print("\n 1.4: a dict, calling ourselves recursively; item: {}".format(item))
             save_dict_contents_to_group(h5file, path + key + '/', item)
         else:
-            # print(" ELSE: h5file[{} + {}] = {}".format(path, key, item))
-            # if "ManipulatorPosition" in key: print("ManipulatorPosition!")
             if "AxisPosition" in key:
                 print("AccessPosition!")
             else:
@@ -165,15 +158,8 @@ def save_dict_contents_to_group(h5file, path, dic):
 if __name__ == "__main__":
     args = _arg_parser()
     path = raw_string = r"{}".format(args.folder)
+    target = r"{}".format(args.target)
     if os.path.isdir(path) is False:
         raise Exception("The folder path %s is invalid." % path)
     meta_data = get_meta_data(path)
-    put_data(meta_data)
-    # # print("dic: {}".format(meta_data))
-    # path = ""
-    # save_dict_to_hdf5(meta_data, path)
-    # # h5file = h5py.File("/tmp/xt_full_tests2.h5", 'w')
-    # # save_dict_contents_to_group(h5file, path, meta_data)
-    # # h5file.close()
-
-    # print("Conversion complete :-)")
+    put_data(target, meta_data)
