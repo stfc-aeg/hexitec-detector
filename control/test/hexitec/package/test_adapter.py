@@ -723,6 +723,14 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.hv_off("")
         self.test_adapter.detector.fem.hv_off.assert_called()
 
+    def test_hv_off_handles_exception(self):
+        """Test function handles exception."""
+        e = "Error"
+        self.test_adapter.detector.fem.hv_off = Mock()
+        self.test_adapter.detector.fem.hv_off.side_effect = Exception(e)
+        self.test_adapter.detector.hv_off("")
+        self.test_adapter.detector.fem.flag_error.assert_called_with(e)
+
     def test_environs(self):
         """Test function calls readout environmental data."""
         self.test_adapter.detector.environs("")

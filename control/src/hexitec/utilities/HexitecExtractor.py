@@ -51,7 +51,7 @@ class HexitecExtractor(object):
         if os.access(self.filename, os.R_OK):
             self.file_contents = self.decode_pcap()
             dshape = self.file_contents.shape
-            assert dshape[1] == self.NROWS * self.NCOLS  # requested rows*columns must match PCAPNG' dims
+            assert dshape[1] == self.NROWS * self.NCOLS  # rows*columns must match PCAPNG' dims
             self.write_data_to_disc()
         else:
             print("Unable to open: {}. Does it exist?".format(self.filename))
@@ -69,9 +69,9 @@ class HexitecExtractor(object):
         index = 0
         if self.extended_headers:
             index = 1
-        # print(f"  SoF - header[index]: {header[1]:X} & SOF: {self.SOF:X}")
         if int(header[index]) & self.SOF:
             sof_detected = True
+        # print(f"  SoF - header[index]: {header[1]:X} & SOF: {self.SOF:X} rets: {sof_detected}")
         return sof_detected
 
     def eof_detected(self, header):
@@ -80,9 +80,9 @@ class HexitecExtractor(object):
         index = 0
         if self.extended_headers:
             index = 1
-        # print(f"  EoF - header[index]: {header[1]:X} & EOF: {self.EOF:X}")
         if int(header[index]) & self.EOF:
             eof_detected = True
+        # print(f"  EoF - header[index]: {header[1]:X} & EOF: {self.EOF:X} rets: {eof_detected}")
         return eof_detected
 
     def extract_packet_number(self, header):
@@ -130,9 +130,6 @@ class HexitecExtractor(object):
                     sys.exit(-1)
                 print(" *** Packet Loss! Last packet number: 0x{0:02X} Current: 0x{1:02X}. Frame: 0x{2:X}".format(
                     previous_packet_number, current_packet_number, header[0]))
-                # print("   header: {}".format(' '.join("0x{0:016X}".format(x) for x in header)))
-                # print(f"  Payload is of size: {len(payload[self.HEADER_SIZE:])}")
-                # import sys;sys.exit(1)
                 packet_size = len(payload[self.HEADER_SIZE:])
                 packet_loss = True
                 break
@@ -145,13 +142,9 @@ class HexitecExtractor(object):
             # Append frame payload to frame data, without header
             frame_data += payload[self.HEADER_SIZE:]
 
-            # If this is an end of frame packet, convert frame data to numpy array and append to frame list
+            # If end of frame packet, convert frame to numpy array and append to frame list
             if self.eof_detected(header):
                 frame = np.frombuffer(frame_data, dtype=np.uint16)
-                # # DEBUGGING: Trying to intentionally set few first pixel values to a known range of values
-                # if (num_packets < 23):
-                #     # frame[:10] = range(0, 10) # ValueError: assignment destination is read-only
-                #     print(" frame[:10] = {} ({})".format(frame[:10], len(frame)))
                 frames.append(frame)
                 num_frames += 1
             num_packets += 1
@@ -171,9 +164,12 @@ class HexitecExtractor(object):
         except ValueError as e:
             print("Cannot convert data into numpy array - Missing packet(s)?")
             print(f"Python Exception: {e}")
+            import sys
             sys.exit(1)
 
-        print("Decoded {} frames from {} packets in PCAP file {}".format(num_frames, num_packets, self.filename))
+        print("Decoded {} frames from {} packets in PCAP file {}".format(num_frames,
+                                                                         num_packets,
+                                                                         self.filename))
 
         return frames
 
@@ -186,7 +182,8 @@ class HexitecExtractor(object):
             return
         dshape = self.file_contents.shape
         try:
-            hdf_file.create_dataset("raw_frames", shape=(dshape[0], self.NROWS, self.NCOLS), data=self.file_contents, dtype=np.uint16)
+            hdf_file.create_dataset("raw_frames", shape=(dshape[0], self.NROWS, self.NCOLS),
+                                    data=self.file_contents, dtype=np.uint16)
             print("Finished writing {}".format(self.filename_h5))
         except ValueError as e:
             print(" *** Error: Writing dataset to disk: {}".format(e))

@@ -683,7 +683,10 @@ class Hexitec():
 
     def hv_off(self, msg):
         """Switch HV off."""
-        self.fem.hv_off()
+        try:
+            self.fem.hv_off()
+        except Exception as e:
+            self.fem.flag_error(str(e))
 
     def environs(self, msg):
         """Readout environmental data."""
