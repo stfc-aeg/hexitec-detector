@@ -1,8 +1,0 @@
-[
-  {
-    "fr_setup": {
-      "fr_ready_cnxn": "tcp://127.0.0.1:5111",
-      "fr_release_cnxn": "tcp://127.0.0.1:5112"
-    }
-  }
-]

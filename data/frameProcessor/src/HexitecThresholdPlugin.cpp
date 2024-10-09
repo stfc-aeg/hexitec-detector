@@ -138,7 +138,7 @@ namespace FrameProcessor
         }
         else
         {
-          LOG4CXX_ERROR(logger_, "Failed to read thresholds from file")
+          LOG4CXX_ERROR(logger_, "Failed to read thresholds from file");
         }
       }
     }

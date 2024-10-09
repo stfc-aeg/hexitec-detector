@@ -610,16 +610,18 @@ class TestFem(unittest.TestCase):
             with pytest.raises(Exception) as exc_info:
                 self.test_fem.fem.acquire_data()
             assert exc_info.type is Exception
+            assert self.test_fem.fem.hardware_busy is False
 
     def test_check_acquire_finished_handles_cancel(self):
         """Test check_acquire_finished calls acquire_data_completed if acquire cancelled."""
         with patch("hexitec.HexitecFem.IOLoop"):
-            self.test_fem.fem.stop_acquisition = True
-            self.test_fem.fem.acquire_data_completed = Mock()
+            with patch("logging.debug") as mock_log:
+                self.test_fem.fem.stop_acquisition = True
+                self.test_fem.fem.acquire_data_completed = Mock()
 
-            self.test_fem.fem.check_acquire_finished()
-            self.test_fem.fem.acquire_data_completed.assert_called()
-            # assert self.test_fem.fem.acquisition_completed is True
+                self.test_fem.fem.check_acquire_finished()
+                self.test_fem.fem.acquire_data_completed.assert_called()
+                mock_log.assert_called_with("Acquire cancellation initiated")
 
     # TODO Modify/remove?
     # def test_check_acquire_finished_handles_data_being_sent(self):
