@@ -14,7 +14,7 @@ import json
 class ObjectTestFixture(object):
     """Test fixture class."""
 
-    def __init__(self, selected_os="CentOS", live_view_selected=True):
+    def __init__(self, live_view_selected=True):
         """Initialise object."""
         param_tree = {'file_info':
                       {'file_name': 'default_file', 'enabled': False, 'file_dir': '/tmp/'},
@@ -53,7 +53,6 @@ class ObjectTestFixture(object):
         self.adapter = GenerateConfigFiles(param_tree, number_histograms, compression_type="blosc",
                                            master_dataset=master_dataset,
                                            extra_datasets=extra_datasets,
-                                           selected_os=selected_os,
                                            live_view_selected=live_view_selected)
 
 
@@ -247,11 +246,11 @@ class TestObject(unittest.TestCase):
 
 
 class TestObject2(unittest.TestCase):
-    """Unit tests for bad config, Ubuntu, live view disabled tests."""
+    """Unit tests for bad config, live view disabled tests."""
 
     def setUp(self):
         """Set up test fixture for each unit test."""
-        self.test_detector_badadapter = ObjectTestFixture("Ubuntu", live_view_selected=False)
+        self.test_detector_badadapter = ObjectTestFixture(live_view_selected=False)
 
     def test_generate_config_files_fails_missing_enable_key(self):
         """Test function fail on missing enable key."""

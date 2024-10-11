@@ -13,7 +13,7 @@ class GenerateConfigFiles():
     """Accepts Parameter tree from hexitecDAQ's "/config" branch to generate json file."""
 
     def __init__(self, param_tree, number_histograms, compression_type="none",
-                 master_dataset="processed_frames", extra_datasets=[], selected_os="CentOS",
+                 master_dataset="processed_frames", extra_datasets=[],
                  live_view_selected=True, odin_path=None):
         """
         Initialize the GenerateConfigFiles object.
@@ -23,7 +23,6 @@ class GenerateConfigFiles():
         :param number_histograms: number of histogram bins
         :param master_dataset: set master dataset
         :param extra_datasets: include optional dataset(s)
-        :param selected_os: which OS (ie path) to generate config for
         :param live_view_selected: should live view be configured
         :param odin_path: path to configuration files
         """
@@ -33,10 +32,14 @@ class GenerateConfigFiles():
         self.compression_type = compression_type
         self.master_dataset = master_dataset
         self.extra_datasets = extra_datasets
-        # Each OS needs its own install, build paths
-        self.selected_os = selected_os
         self.live_view_selected = live_view_selected
         self.odin_path = odin_path
+        # Work out number of rows and columns
+        self.sensors_layout = self.param_tree['sensors_layout']
+        rows_of_sensors, columns_of_sensors = \
+            int(self.sensors_layout[0]), int(self.sensors_layout[2])
+        self.rows = rows_of_sensors * 80
+        self.columns = columns_of_sensors * 80
 
     def boolean_to_string(self, bBool):
         """Convert bool to string."""
@@ -129,6 +132,13 @@ class GenerateConfigFiles():
             raise KeyError("Couldn't locate live_view setting(s)!")
         return live_view_config
 
+    def generate_pixel_spectra_params(self):
+        """Generate dataset 'pixel_spectra' dims and chunks parameters."""
+        ps_params = '''"dims": [%s, %s, %s], "chunks": [1, %s, %s, %s]''' % \
+            (self.rows, self.columns, self.number_histograms,
+             self.rows, self.columns, self.number_histograms)
+        return ps_params
+
     def generate_config_files(self, id=""):  # noqa: C901
         """Generate the two configuration files, and configuration strings.
 
@@ -180,13 +190,6 @@ class GenerateConfigFiles():
         odin_plugins['hdf'] = ["hdf", "FileWriter", "Hdf5"]
         odin_plugins['blosc'] = ["blosc", "Blosc", "Blosc"]
 
-        # Work out pixel dimensions
-        sensors_layout = self.param_tree['sensors_layout']
-        rows_of_sensors, columns_of_sensors = int(sensors_layout[0]), int(sensors_layout[2])
-        rows = rows_of_sensors * 80
-        columns = columns_of_sensors * 80
-        pixels = rows * columns
-
         # Extract configuration from HexitecDAQ config
         d = self.param_tree['config']
 
@@ -227,12 +230,6 @@ class GenerateConfigFiles():
         plugin_chain += ["hdf"]
 
         store_plugin_paths = ""
-        # Ubuntu and CentOS require different paths, builds, json files
-        os_path = ""
-        if self.selected_os == "CentOS":
-            os_path = ""
-        elif self.selected_os == "Ubuntu":
-            os_path = "_ubuntu"
 
         comma_or_blank = ""
         # DEBUGGING:
@@ -249,14 +246,13 @@ class GenerateConfigFiles():
                         "load": {
                             "index": "%s",
                             "name": "Hexitec%sPlugin",
-                            "library": "%s/install%s/lib/libHexitec%sPlugin.so"
+                            "library": "%s/install/lib/libHexitec%sPlugin.so"
                         }
                     }
                 }''' % (comma_or_blank,
                         hexitec_plugins[plugin][0],
                         hexitec_plugins[plugin][1],
                         self.odin_path,
-                        os_path,
                         hexitec_plugins[plugin][2])
                 comma_or_blank = ","
 
@@ -271,13 +267,12 @@ class GenerateConfigFiles():
                         "load": {
                             "index": "%s",
                             "name": "%sPlugin",
-                            "library": "%s/install%s/lib/lib%sPlugin.so"
+                            "library": "%s/install/lib/lib%sPlugin.so"
                         }
                     }
                 }''' % (odin_plugins[plugin][0],
                         odin_plugins[plugin][1],
                         self.odin_path,
-                        os_path,
                         odin_plugins[plugin][2])
 
         if self.live_view_selected:
@@ -356,7 +351,7 @@ class GenerateConfigFiles():
                     "%s": {%s
                         "sensors_layout": "%s"
                     }
-                }''' % (plugin, unique_setting, sensors_layout)
+                }''' % (plugin, unique_setting, self.sensors_layout)
                 unique_setting = ""
         # Live view, hdf have different settings (e.g. no sensors_layout)
 
@@ -405,16 +400,16 @@ class GenerateConfigFiles():
                             "%s":''' % dataset + '''
                             {
                                 "datatype": "%s",''' % (datatype) + '''
-                                "dims": [%s, %s],''' % (rows, columns) + '''
-                                "chunks": [1, %s, %s],%s''' % (rows, columns, blosc_settings) + '''
+                                "dims": [%s, %s],''' % (self.rows, self.columns) + '''
+                                "chunks": [1, %s, %s],%s''' % (self.rows, self.columns, blosc_settings) + '''
                             },'''
-
+        ps_params = self.generate_pixel_spectra_params()
         store_plugin_config += '''
                             "summed_images":
                             {
                                 "datatype": "uint32",
-                                "dims": [%s, %s],''' % (rows, columns) + '''
-                                "chunks": [1, %s, %s],%s''' % (rows, columns, blosc_settings) + '''
+                                "dims": [%s, %s],''' % (self.rows, self.columns) + '''
+                                "chunks": [1, %s, %s],%s''' % (self.rows, self.columns, blosc_settings) + '''
                             },
                             "spectra_bins":
                             {
@@ -426,9 +421,7 @@ class GenerateConfigFiles():
                             "pixel_spectra":
                             {
                                 "datatype": "float",
-                                "dims": [%s, %s],''' % (pixels, self.number_histograms) + '''
-                                "chunks": [1, %s, %s],%s''' % (pixels, self.number_histograms,
-                                                               blosc_settings) + '''
+                                %s,%s''' % (ps_params, blosc_settings) + '''
                             },
                             "summed_spectra":
                             {
@@ -541,7 +534,6 @@ if __name__ == '__main__':  # pragma: no cover
     master_dataset = "raw_frames"
     extra_datasets = [master_dataset, "processed_frames"]
     # extra_datasets = [master_dataset]
-    selected_os = "CentOS"
     # Construct path relative to current working directory
     # -- Must execute from source code directory if run outside of Odin!
     cwd = os.getcwd()
@@ -549,7 +541,7 @@ if __name__ == '__main__':  # pragma: no cover
     odin_path = cwd[:base_path_index - 1]
     gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="none",
                               master_dataset=master_dataset, extra_datasets=extra_datasets,
-                              selected_os=selected_os, odin_path=odin_path)
+                              odin_path=odin_path)
     s, e, ss, se = gcf.generate_config_files(0)
     # print(type(s), type(e), type(ss), type(se))
-    print("GFC (os:%s) returned config files\n Store:   %s\n Execute: %s\n" % (selected_os, s, e))
+    print("GFC returned config files\n Store:   %s\n Execute: %s\n" % (s, e))

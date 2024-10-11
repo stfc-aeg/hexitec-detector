@@ -81,11 +81,11 @@ class HexitecDAQ():
         #   loading select(ed) plugins
         self.addition_enable = False
         self.discrimination_enable = False
-        self.calibration_enable = False
+        self.calibration_enable = True
 
         self.pixel_grid_size = 3
-        self.gradients_filename = self.data_config_path + "m_2x6.txt"
-        self.intercepts_filename = self.data_config_path + "c_2x6.txt"
+        self.gradients_filename = self.data_config_path + "m.txt"
+        self.intercepts_filename = self.data_config_path + "c.txt"
         # Determine parent folder of install/ from data_config_path
         # i.e. /hxt_sw/install/config/data/ -> /hxt_sw/
         # Required by GenerateConfigFile to produce json config files
@@ -128,8 +128,8 @@ class HexitecDAQ():
         self.threshold_upper = 4400
         self.image_frequency = 0
 
-        self.threshold_filename = self.data_config_path + "thresh_2x6.txt"
-        self.threshold_mode = "value"
+        self.threshold_filename = self.data_config_path + "threshold1.txt"
+        self.threshold_mode = "filename"
         self.threshold_value = 120
 
         self.rows, self.columns = 160, 160
@@ -1073,6 +1073,12 @@ class HexitecDAQ():
     def update_histogram_dimensions(self):
         """Update histograms' dimensions in the relevant datasets."""
         self.number_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
+        self.gcf = GenerateConfigFiles(self.param_tree.get(''), self.number_histograms,
+                                       compression_type=self.compression_type,
+                                       master_dataset=self.master_dataset,
+                                       extra_datasets=self.extra_datasets,
+                                       live_view_selected=False,
+                                       odin_path=self.odin_path)
         # spectra_bins dataset
         payload = '{"dims": [%s], "chunks": [1, %s]}' % \
             (self.number_histograms, self.number_histograms)
@@ -1081,8 +1087,8 @@ class HexitecDAQ():
         self.adapters["fp"].put(command, request)
 
         # pixel_spectra dataset
-        payload = '{"dims": [%s, %s], "chunks": [1, %s, %s]}' % \
-            (self.pixels, self.number_histograms, self.pixels, self.number_histograms)
+        ps_params = self.gcf.generate_pixel_spectra_params()
+        payload = '{%s}' % (ps_params)
         command = "config/hdf/dataset/" + "pixel_spectra"
         request = ApiAdapterRequest(str(payload), content_type="application/json")
         self.adapters["fp"].put(command, request)
@@ -1093,6 +1099,8 @@ class HexitecDAQ():
         command = "config/hdf/dataset/" + "summed_spectra"
         request = ApiAdapterRequest(str(payload), content_type="application/json")
         self.adapters["fp"].put(command, request)
+        del self.gcf
+        self.gcf = None
 
     def _set_max_frames_received(self, max_frames_received):
         self.max_frames_received = max_frames_received
@@ -1214,7 +1222,6 @@ class HexitecDAQ():
                                            compression_type=self.compression_type,
                                            master_dataset=self.master_dataset,
                                            extra_datasets=self.extra_datasets,
-                                           selected_os="CentOS",
                                            live_view_selected=live_view_selected,
                                            odin_path=self.odin_path)
             store_config, execute_config, store_string, execute_string = \
@@ -1238,6 +1245,9 @@ class HexitecDAQ():
             if (status_code != 200):
                 error = "Error {} loading plugins config in fp adapter".format(status_code)
                 self.parent.fem.flag_error(error)
+            # Delete GCF object before next iteration
+            del self.gcf
+            self.gcf = None
 
         # Allow FP time to process above PUT requests before configuring plugin settings
         IOLoop.instance().call_later(0.4, self.submit_configuration)

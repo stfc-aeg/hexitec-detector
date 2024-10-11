@@ -124,9 +124,10 @@ namespace FrameProcessor
     // Setup the pixel spectra
 
     // Setup the dimensions pixel_spectra
-    dimensions_t pixel_dims(2);
-    pixel_dims[0] = image_pixels_;
-    pixel_dims[1] = number_bins_;
+    dimensions_t pixel_dims(3);
+    pixel_dims[0] = image_height_;
+    pixel_dims[1] = image_width_;
+    pixel_dims[2] = number_bins_;
 
     FrameMetaData pixel_meta;
 
