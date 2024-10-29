@@ -4,6 +4,7 @@ Test Cases for the Hexitec DAQ in hexitec.HexitecDAQ.
 Christian Angelsen, STFC Detector Systems Software Group
 """
 
+import statistics
 import unittest
 import os.path
 import pytest
@@ -252,6 +253,36 @@ class TestDAQ(unittest.TestCase):
         new_lh_data = {}
         with patch.dict(self.test_daq.lh_data, new_lh_data, clear=True):
             self.test_daq.daq.initialize(self.test_daq.adapters)
+
+    def test_calculate_average_occupancy(self):
+        """Test function works OK."""
+        rc_dict = [{'threshold': {'average_frame_occupancy': 0.01958333335}},
+                   {'threshold': {'average_frame_occupancy': 0.01911458334}}]
+
+        self.test_daq.daq.get_adapter_status = Mock(return_value=rc_dict)
+        occupancy = self.test_daq.daq.calculate_average_occupancy()
+        o_list = []
+        o_list.append(rc_dict[0].get('threshold', None).get("average_frame_occupancy", None))
+        o_list.append(rc_dict[1].get('threshold', None).get("average_frame_occupancy", None))
+        calculated_occupancy = statistics.fmean(o_list)
+
+        assert occupancy == calculated_occupancy
+
+    def test_calculate_average_occupancy_handles_TypeError(self):
+        """Test function handles TypeError."""
+        self.test_daq.daq.get_adapter_status = Mock
+        self.test_daq.daq.get_adapter_status.side_effect = TypeError
+        occupancy = self.test_daq.daq.calculate_average_occupancy()
+        expected_return_value = []  # 0.0
+        assert occupancy == expected_return_value
+
+    def test_calculate_average_occupancy_handles_AttributeError(self):
+        """Test function handles AttributeError."""
+        self.test_daq.daq.get_adapter_status = Mock
+        self.test_daq.daq.get_adapter_status.side_effect = AttributeError
+        occupancy = self.test_daq.daq.calculate_average_occupancy()
+        expected_return_value = []  # 0.0
+        assert occupancy == expected_return_value
 
     def test_get_od_status_fr(self):
         """Test status of fr adapter."""

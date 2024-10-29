@@ -438,7 +438,8 @@ class Hexitec():
         config["daq/discrimination_enable"] = self.daq.discrimination_enable
         config["daq/file_dir"] = self.daq.file_dir
         config["daq/file_name"] = self.daq.file_name
-        config["daq/gradients_filename"] = self.strip_base_path(self.daq.gradients_filename, "data/")
+        config["daq/gradients_filename"] = self.strip_base_path(self.daq.gradients_filename,
+                                                                "data/")
         config["daq/image_frequency"] = self.daq.image_frequency
         config["daq/intercepts_filename"] = self.strip_base_path(self.daq.intercepts_filename,
                                                                  "data/")
@@ -451,7 +452,8 @@ class Hexitec():
         config["daq/pass_processed"] = self.daq.pass_processed
         config["daq/pass_raw"] = self.daq.pass_raw
         config["daq/pixel_grid_size"] = self.daq.pixel_grid_size
-        config["daq/threshold_filename"] = self.strip_base_path(self.daq.threshold_filename, "data/")
+        config["daq/threshold_filename"] = self.strip_base_path(self.daq.threshold_filename,
+                                                                "data/")
         config["daq/threshold_lower"] = self.daq.threshold_lower
         config["daq/threshold_mode"] = self.daq.threshold_mode
         config["daq/threshold_upper"] = self.daq.threshold_upper
@@ -585,6 +587,12 @@ class Hexitec():
 
         # Issue reset to summed_image
         command = "config/summed_image/reset_image"
+        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+        request.body = "{}".format(1)
+        self.adapters["fp"].put(command, request)
+
+        # Issue reset to threshold plugin, to clear occupancy data
+        command = "config/threshold/reset_occupancy"
         request = ApiAdapterRequest(self.file_dir, content_type="application/json")
         request.body = "{}".format(1)
         self.adapters["fp"].put(command, request)

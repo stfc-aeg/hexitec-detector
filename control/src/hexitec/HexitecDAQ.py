@@ -17,6 +17,7 @@ import h5py
 from ast import literal_eval
 import collections.abc
 import numpy as np
+import statistics
 import datetime
 import time
 import os
@@ -173,6 +174,7 @@ class HexitecDAQ():
                 "file_dir": (lambda: self.file_dir, self.set_data_dir)
             },
             "status": {
+                "average_occupancy": (self.calculate_average_occupancy, None),
                 "in_progress": (lambda: self.in_progress, None),
                 "daq_ready": (lambda: self.daq_ready, None),
                 "frames_expected": (lambda: self.frames_expected, None),
@@ -277,6 +279,25 @@ class HexitecDAQ():
         except KeyError as e:
             logging.error("Live Viewer config error: %s" % e)
         self.is_initialised = True
+
+    def calculate_average_occupancy(self):
+        """Get frame occupancy across fp(s) and work out average."""
+        try:
+            return_value = []
+            fp_statuses = self.get_adapter_status("fp")
+            for status in fp_statuses:
+                occupancy = status.get('threshold', None).get("average_frame_occupancy", None)
+                return_value.append(occupancy)
+            # Calculate average
+            return_value = statistics.fmean(return_value)
+        except KeyError:
+            logging.warning("fp Adapter Not Found")
+            return_value = [{"Error": "Adapter fp not found"}]
+        except AttributeError:
+            # If FP plugin chains not yet setup, AttributeError thrown
+            return_value = 0.0
+        finally:
+            return return_value
 
     def prepare_odin(self):
         """Ensure the odin data FP and FR are configured."""

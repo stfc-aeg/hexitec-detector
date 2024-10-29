@@ -63,6 +63,10 @@ namespace FrameProcessor
       static const std::string CONFIG_THRESHOLD_FILE;
       /** Configuration constant for Hardware sensors **/
       static const std::string CONFIG_SENSORS_LAYOUT;
+      /** Configuration constant for Occupancy calculations */
+      static const std::string CONFIG_EVENTS_IN_FRAMES;
+      static const std::string CONFIG_RESET_OCCUPANCY;
+      static const std::string CONFIG_FRAME_OCCUPANCY;
 
       void process_frame(boost::shared_ptr<Frame> frame);
       std::size_t thresholded_image_size();
@@ -80,6 +84,7 @@ namespace FrameProcessor
       /** Image pixel count **/
       int image_pixels_;
 
+      void process_threshold_none(float *in);
       void process_threshold_value(float *in);
       void process_threshold_file(float *in);
       bool get_data(const char *filename, uint16_t default_value);
@@ -94,6 +99,11 @@ namespace FrameProcessor
       bool thresholds_status_;
       ThresholdMode threshold_mode_;
       std::string threshold_filename_;
+      uint64_t buffer_events_;
+      unsigned long events_in_frames_;
+      unsigned long frames_processed_;
+      double average_frame_occupancy_;
+      unsigned int reset_occupancy_;
   };
 
   /**

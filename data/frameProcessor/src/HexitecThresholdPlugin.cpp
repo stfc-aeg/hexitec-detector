@@ -15,6 +15,9 @@ namespace FrameProcessor
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE  = "threshold_value";
   const std::string HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE   = "threshold_filename";
   const std::string HexitecThresholdPlugin::CONFIG_SENSORS_LAYOUT   = "sensors_layout";
+  const std::string HexitecThresholdPlugin::CONFIG_EVENTS_IN_FRAMES = "events_in_frames";
+  const std::string HexitecThresholdPlugin::CONFIG_RESET_OCCUPANCY  = "reset_occupancy";
+  const std::string HexitecThresholdPlugin::CONFIG_FRAME_OCCUPANCY  = "average_frame_occupancy";
 
   /**
    * The constructor sets up logging used within the class.
@@ -34,6 +37,10 @@ namespace FrameProcessor
     threshold_per_pixel_  = (uint16_t *) calloc(image_pixels_, sizeof(uint16_t));
     /// Set threshold mode to none (initially; 0=none, 1=value, 2=file)
     threshold_mode_ = (ThresholdMode)0;
+    // Initialise Occupancy calculation variables:
+    average_frame_occupancy_= 0.0;
+    events_in_frames_ = 0;
+    frames_processed_ = 0;
   }
 
   /**
@@ -76,10 +83,11 @@ namespace FrameProcessor
    * to configure the plugin, and any response can be added to the reply IpcMessage.  This
    * plugin supports the following configuration parameters:
    * 
-   * - sensors_layout_str_    <=> sensors_layout
-   * - threshold_mode_        <=> threshold_mode
-   * - threshold_value_       <=> threshold_value
-   * - threshold_filename_    <=> threshold_file
+   * - sensors_layout_str_ <=> sensors_layout
+   * - threshold_mode_     <=> threshold_mode
+   * - threshold_value_    <=> threshold_value
+   * - threshold_filename_ <=> threshold_file
+   * - reset_occupancy_    <=> reset_occupancy
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -143,6 +151,18 @@ namespace FrameProcessor
       }
     }
 
+    if (config.has_param(HexitecThresholdPlugin::CONFIG_RESET_OCCUPANCY))
+    {
+      reset_occupancy_ =
+        config.get_param<unsigned int>(HexitecThresholdPlugin::CONFIG_RESET_OCCUPANCY);
+
+      if (reset_occupancy_ == 1)
+      {
+        frames_processed_ = 0;
+        events_in_frames_ = 0;
+        reset_occupancy_ = 0;
+      }
+    }
   }
 
   void HexitecThresholdPlugin::requestConfiguration(OdinData::IpcMessage& reply)
@@ -155,6 +175,8 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_MODE, mode_str);
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE, threshold_value_);
     reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE, threshold_filename_);
+    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_EVENTS_IN_FRAMES, events_in_frames_);
+    reply.set_param(base_str + HexitecThresholdPlugin::CONFIG_FRAME_OCCUPANCY, average_frame_occupancy_);
   }
 
   /**
@@ -166,6 +188,9 @@ namespace FrameProcessor
   {
     // Record the plugin's status items
     LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecThresholdPlugin");
+    status.set_param(get_name() + "/average_frame_occupancy", average_frame_occupancy_);
+    status.set_param(get_name() + "/events_in_frames", events_in_frames_);
+    status.set_param(get_name() + "/frames_processed", frames_processed_);
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     int mode = int(threshold_mode_);
     std::string mode_str = determineThresholdMode(mode);
@@ -227,6 +252,7 @@ namespace FrameProcessor
     }
     else if (dataset.compare(std::string("processed_frames")) == 0)
     {
+      // Check whether this is the start of a new acquisition
       try
       {
         // Define pointer to the input image data
@@ -238,6 +264,8 @@ namespace FrameProcessor
         {
           case 0:
             // No threshold processing
+            process_threshold_none(static_cast<float *>(input_ptr));
+            LOG4CXX_DEBUG_LEVEL(3, logger_, "Applying no threshold to frame.");
             break;
           case 1:
             process_threshold_value(static_cast<float *>(input_ptr));
@@ -251,6 +279,13 @@ namespace FrameProcessor
         LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset <<
                       " dataset, frame number: " << frame->get_frame_number());
         this->push(frame);
+        frames_processed_++;
+        unsigned long average_events_per_frame = events_in_frames_ / frames_processed_;
+        average_frame_occupancy_ = static_cast<double>(average_events_per_frame) / image_pixels_;
+
+        LOG4CXX_DEBUG_LEVEL(3, logger_, "frames_processed: " << frames_processed_ <<
+          " events_in_frame: " << events_in_frames_ << " occupancy: " << average_events_per_frame <<
+          " (" << average_frame_occupancy_ << "%)");
       }
       catch (const std::exception& e)
       {
@@ -264,7 +299,23 @@ namespace FrameProcessor
   }
 
   /**
-   * Zero all pixels below threshold_value_.
+   * Count all frame events.
+   *
+   * \param[in] in - Pointer to the image data.
+   *
+   */
+  void HexitecThresholdPlugin::process_threshold_none(float *in)
+  {
+    for (int i=0; i < image_pixels_; i++)
+    {
+      // Frame Occupancy calculation
+      if (in[i] > 0)
+        events_in_frames_++;
+    }
+  }
+
+  /**
+   * Zero all pixels below threshold_value_, count all frame events.
    *
    * \param[in] in - Pointer to the image data.
    *
@@ -278,11 +329,15 @@ namespace FrameProcessor
       {
         in[i] = 0;
       }
+      // Frame Occupancy calculation
+      if (in[i] > 0)
+        events_in_frames_++;
     }
   }
 
   /**
-   * Zero each pixel not meeting its corresponding pixel threshold.
+   * Zero each pixel not meeting its corresponding pixel threshold,
+   * count all frame events.
    *
    * \param[in] in - Pointer to the image data.
    *
@@ -296,11 +351,15 @@ namespace FrameProcessor
       {
         in[i] = 0;
       }
+      // Frame Occupancy calculation
+      if (in[i] > 0)
+        events_in_frames_++;
     }
   }
 
   /**
-   * Set each pixel threshold from the values by the provided file.
+   * Set each pixel threshold from the values by the provided file,
+   * count all frame events.
    *
    * \param[in] threshold_filename - the filename containing threshold values.
    *

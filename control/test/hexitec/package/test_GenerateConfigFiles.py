@@ -262,6 +262,6 @@ class TestObject2(unittest.TestCase):
         assert exc_info.type is Exception
         assert exc_info.value.args[0] == "Plugin %s missing 'enable' setting!" % 'addition'
 
-    def testing_ubuntu_config(self):
+    def testing_bad_config(self):
         """Test function."""
         self.test_detector_badadapter.adapter.generate_config_files()
