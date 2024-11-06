@@ -151,7 +151,7 @@ class Archiver():
         # Get package version information
         version_info = get_versions()
 
-        self.files_to_archive = []
+        self.files_to_archive = {}
 
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
@@ -163,10 +163,17 @@ class Archiver():
             # 'background_task': bg_task 
         })
 
-    def set_files_to_archive(self, files):
-        """hdf5 files to archive."""
-        self.files_to_archive.append(files)
-        print(" files_to_archive:    ", self.files_to_archive)
+    def set_files_to_archive(self, full_path):
+        """Syntax of 'server:/path/to.h5' describing server and file to be archived."""
+        server, file = full_path.split(":")
+        logging.debug(f"Received server {server} file {file} to be archived")
+        if server in self.files_to_archive:
+            # PC already listed with file(s)
+            self.files_to_archive[server].append(file)
+        else:
+            # PC not listed, add
+            self.files_to_archive[server] = [file]
+        print(f" self.files_to_archive: {self.files_to_archive}")
 
     def get_files_to_archive(self):
         """."""
@@ -174,28 +181,22 @@ class Archiver():
 
     def archive_files(self, msg):
         """."""
-        # files = "/u/ckd27546/tmp/10-10-004_000000.h5"
-
-        # remote_dir = "/tmp"
-        # sysrsync.run(source=files, destination=remote_dir, destination_ssh=remote_server, options=['-a'])
         logging.debug("Pulling selected file(s)..")
-        remote_source = "/u/ckd27546/tmp/10-10-004.h5"
         local_dir = "/tmp/"
         number_files_archived = 0
-        for remote_source in self.files_to_archive:
-            remote_server = "te7hexidaq"
-            # Construct rsync command with arguments
-            r_cmd = sysrsync.get_rsync_command(source=remote_source,
-                                            destination=local_dir,
-                                            source_ssh=remote_server,
-                                            options=['-a'],
-                                            sync_source_contents=False)
-            s=subprocess.run(r_cmd)
-            if s.returncode == 0:
-                logging.debug(f"Successfully copied {remote_server}:{remote_source} to {local_dir}")
-                number_files_archived += 1
-            else:
-                logging.error(f"Failed to copy {remote_server}:{remote_source}. Error code: {s.returncode}")
+        for remote_server in self.files_to_archive:
+            for remote_source in self.files_to_archive[remote_server]:
+                r_cmd = sysrsync.get_rsync_command(source=remote_source,
+                                                destination=local_dir,
+                                                source_ssh=remote_server,
+                                                options=['-a'],
+                                                sync_source_contents=False)
+                s=subprocess.run(r_cmd)
+                if s.returncode == 0:
+                    logging.debug(f"Successfully copied {remote_server}:{remote_source} to {local_dir}")
+                    number_files_archived += 1
+                else:
+                    logging.error(f"Failed to copy {remote_server}:{remote_source}. Error code: {s.returncode}")
         logging.debug(f"Archiving completed, {number_files_archived} archived.")
 
     def get_server_uptime(self):
@@ -235,4 +236,4 @@ class Archiver():
         correctly.
         """
         pass
- 
+
