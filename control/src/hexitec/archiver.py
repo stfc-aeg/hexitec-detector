@@ -1,0 +1,238 @@
+"""Adapter for ODIN control archiver
+
+This class implements an adapter used for archiving Odin-data HDF5 files
+
+Christian Angelsen, STFC Application Engineering
+"""
+import logging
+import tornado
+import time
+import sys
+from concurrent import futures
+import subprocess
+import sysrsync
+
+from tornado.ioloop import IOLoop, PeriodicCallback
+from tornado.concurrent import run_on_executor
+from tornado.escape import json_decode
+
+from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
+from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin._version import get_versions
+
+
+class ArchiverAdapter(ApiAdapter):
+    """System info adapter class for the ODIN server.
+
+    This adapter provides ODIN clients with information about the server and the system that it is
+    running on.
+    """
+
+    def __init__(self, **kwargs):
+        """Initialize the ArchiverAdapter object.
+
+        This constructor initializes the ArchiverAdapter object.
+
+        :param kwargs: keyword arguments specifying options
+        """
+        # Intialise superclass
+        super(ArchiverAdapter, self).__init__(**kwargs)
+
+        # Parse options
+        background_task_enable = bool(self.options.get('background_task_enable', False))
+        background_task_interval = float(self.options.get('background_task_interval', 1.0))
+
+        self.archiver = Archiver(background_task_enable, background_task_interval)
+
+        logging.debug('ArchiverAdapter loaded')
+
+    @response_types('application/json', default='application/json')
+    def get(self, path, request):
+        """Handle an HTTP GET request.
+
+        This method handles an HTTP GET request, returning a JSON response.
+
+        :param path: URI path of request
+        :param request: HTTP request object
+        :return: an ApiAdapterResponse object containing the appropriate response
+        """
+        try:
+            response = self.archiver.get(path)
+            status_code = 200
+        except ParameterTreeError as e:
+            response = {'error': str(e)}
+            status_code = 400
+
+        content_type = 'application/json'
+
+        return ApiAdapterResponse(response, content_type=content_type,
+                                  status_code=status_code)
+
+    @request_types('application/json')
+    @response_types('application/json', default='application/json')
+    def put(self, path, request):
+        """Handle an HTTP PUT request.
+
+        This method handles an HTTP PUT request, returning a JSON response.
+
+        :param path: URI path of request
+        :param request: HTTP request object
+        :return: an ApiAdapterResponse object containing the appropriate response
+        """
+
+        content_type = 'application/json'
+
+        try:
+            data = json_decode(request.body)
+            self.archiver.set(path, data)
+            response = self.archiver.get(path)
+            status_code = 200
+        except ArchiverError as e:
+            response = {'error': str(e)}
+            status_code = 400
+        except (TypeError, ValueError) as e:
+            response = {'error': 'Failed to decode PUT request body: {}'.format(str(e))}
+            status_code = 400
+
+        logging.debug(response)
+
+        return ApiAdapterResponse(response, content_type=content_type,
+                                  status_code=status_code)
+
+    def delete(self, path, request):
+        """Handle an HTTP DELETE request.
+
+        This method handles an HTTP DELETE request, returning a JSON response.
+
+        :param path: URI path of request
+        :param request: HTTP request object
+        :return: an ApiAdapterResponse object containing the appropriate response
+        """
+        response = 'ArchiverAdapter: DELETE on path {}'.format(path)
+        status_code = 200
+
+        logging.debug(response)
+
+        return ApiAdapterResponse(response, status_code=status_code)
+
+    def cleanup(self):
+        """Clean up adapter state at shutdown.
+
+        This method cleans up the adapter state when called by the server at e.g. shutdown.
+        It simplied calls the cleanup function of the archiver instance.
+        """
+        self.archiver.cleanup()
+
+class ArchiverError(Exception):
+    """Simple exception class to wrap lower-level exceptions."""
+
+    pass
+
+
+class Archiver():
+    """Archiver - class that extracts and stores information about system-level parameters."""
+
+    # Thread executor used for background tasks
+    executor = futures.ThreadPoolExecutor(max_workers=1)
+
+    def __init__(self, background_task_enable, background_task_interval):
+        """Initialise the Archiver object.
+
+        This constructor initlialises the Archiver object, building a parameter tree and
+        launching a background task if enabled
+        """
+        # Save arguments
+        self.background_task_enable = background_task_enable
+        self.background_task_interval = background_task_interval
+
+        # Store initialisation time
+        self.init_time = time.time()
+
+        # Get package version information
+        version_info = get_versions()
+
+        self.files_to_archive = []
+
+        # Store all information in a parameter tree
+        self.param_tree = ParameterTree({
+            'odin_version': version_info['version'],
+            'tornado_version': tornado.version,
+            'server_uptime': (self.get_server_uptime, None),
+            'files_to_archive': (self.get_files_to_archive, self.set_files_to_archive),
+            'archive_files': (None, self.archive_files)
+            # 'background_task': bg_task 
+        })
+
+    def set_files_to_archive(self, files):
+        """hdf5 files to archive."""
+        self.files_to_archive.append(files)
+        print(" files_to_archive:    ", self.files_to_archive)
+
+    def get_files_to_archive(self):
+        """."""
+        return str(self.files_to_archive)
+
+    def archive_files(self, msg):
+        """."""
+        # files = "/u/ckd27546/tmp/10-10-004_000000.h5"
+
+        # remote_dir = "/tmp"
+        # sysrsync.run(source=files, destination=remote_dir, destination_ssh=remote_server, options=['-a'])
+        logging.debug("Pulling selected file(s)..")
+        remote_source = "/u/ckd27546/tmp/10-10-004.h5"
+        local_dir = "/tmp/"
+        number_files_archived = 0
+        for remote_source in self.files_to_archive:
+            remote_server = "te7hexidaq"
+            # Construct rsync command with arguments
+            r_cmd = sysrsync.get_rsync_command(source=remote_source,
+                                            destination=local_dir,
+                                            source_ssh=remote_server,
+                                            options=['-a'],
+                                            sync_source_contents=False)
+            s=subprocess.run(r_cmd)
+            if s.returncode == 0:
+                logging.debug(f"Successfully copied {remote_server}:{remote_source} to {local_dir}")
+                number_files_archived += 1
+            else:
+                logging.error(f"Failed to copy {remote_server}:{remote_source}. Error code: {s.returncode}")
+        logging.debug(f"Archiving completed, {number_files_archived} archived.")
+
+    def get_server_uptime(self):
+        """Get the uptime for the ODIN server.
+
+        This method returns the current uptime for the ODIN server.
+        """
+        return time.time() - self.init_time
+
+    def get(self, path):
+        """Get the parameter tree.
+
+        This method returns the parameter tree for use by clients via the Archiver adapter.
+
+        :param path: path to retrieve from tree
+        """
+        return self.param_tree.get(path)
+
+    def set(self, path, data):
+        """Set parameters in the parameter tree.
+
+        This method simply wraps underlying ParameterTree method so that an exceptions can be
+        re-raised with an appropriate ArchiverError.
+
+        :param path: path of parameter tree to set values for
+        :param data: dictionary of new data values to set in the parameter tree
+        """
+        try:
+            self.param_tree.set(path, data)
+        except ParameterTreeError as e:
+            raise ArchiverError(e)
+
+    def cleanup(self):
+        """Clean up the Archiver instance.
+
+        This method stops the background tasks, allowing the adapter state to be cleaned up
+        correctly.
+        """
+        pass
+ 
