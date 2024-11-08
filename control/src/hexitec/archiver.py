@@ -39,10 +39,9 @@ class ArchiverAdapter(ApiAdapter):
         super(ArchiverAdapter, self).__init__(**kwargs)
 
         # Parse options
-        background_task_enable = bool(self.options.get('background_task_enable', False))
-        background_task_interval = float(self.options.get('background_task_interval', 1.0))
+        local_dir = self.options.get('local_dir', "/")
 
-        self.archiver = Archiver(background_task_enable, background_task_interval)
+        self.archiver = Archiver(local_dir)
 
         logging.debug('ArchiverAdapter loaded')
 
@@ -135,15 +134,14 @@ class Archiver():
     # Thread executor used for background tasks
     executor = futures.ThreadPoolExecutor(max_workers=1)
 
-    def __init__(self, background_task_enable, background_task_interval):
+    def __init__(self, local_dir):
         """Initialise the Archiver object.
 
         This constructor initlialises the Archiver object, building a parameter tree and
         launching a background task if enabled
         """
         # Save arguments
-        self.background_task_enable = background_task_enable
-        self.background_task_interval = background_task_interval
+        self.local_dir = local_dir
 
         # Store initialisation time
         self.init_time = time.time()
@@ -152,6 +150,8 @@ class Archiver():
         version_info = get_versions()
 
         self.files_to_archive = {}
+        self.number_files_archived = 0
+        self.number_files_failed = 0
 
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
@@ -159,9 +159,14 @@ class Archiver():
             'tornado_version': tornado.version,
             'server_uptime': (self.get_server_uptime, None),
             'files_to_archive': (self.get_files_to_archive, self.set_files_to_archive),
+            'local_dir': (lambda: self.local_dir, self.set_local_dir),
             'archive_files': (None, self.archive_files)
-            # 'background_task': bg_task 
         })
+
+
+    def set_local_dir(self, dir):
+        """Set directory to receive HDF5 files."""
+        self.local_dir = dir
 
     def set_files_to_archive(self, full_path):
         """Syntax of 'server:/path/to.h5' describing server and file to be archived."""
@@ -173,17 +178,18 @@ class Archiver():
         else:
             # PC not listed, add
             self.files_to_archive[server] = [file]
-        print(f" self.files_to_archive: {self.files_to_archive}")
 
     def get_files_to_archive(self):
-        """."""
+        """Return number of files to be archived."""
         return str(self.files_to_archive)
 
+    @run_on_executor(executor='executor')
     def archive_files(self, msg):
-        """."""
+        """Execute archiving of files onto local dir."""
         logging.debug("Pulling selected file(s)..")
-        local_dir = "/tmp/"
-        number_files_archived = 0
+        local_dir = self.local_dir
+        files_failed_this_time = 0
+        files_archived_this_time = 0
         for remote_server in self.files_to_archive:
             for remote_source in self.files_to_archive[remote_server]:
                 r_cmd = sysrsync.get_rsync_command(source=remote_source,
@@ -191,13 +197,20 @@ class Archiver():
                                                 source_ssh=remote_server,
                                                 options=['-a'],
                                                 sync_source_contents=False)
-                s=subprocess.run(r_cmd)
+                s=subprocess.run(r_cmd, capture_output=True, text=True)
                 if s.returncode == 0:
                     logging.debug(f"Successfully copied {remote_server}:{remote_source} to {local_dir}")
-                    number_files_archived += 1
+                    files_archived_this_time += 1
                 else:
-                    logging.error(f"Failed to copy {remote_server}:{remote_source}. Error code: {s.returncode}")
-        logging.debug(f"Archiving completed, {number_files_archived} archived.")
+                    logging.error(f"Failed to copy {remote_server}:{remote_source}")
+                    logging.error(f"Error Message: {s.stderr}")
+                    files_failed_this_time += 1
+        logging.debug(f"Archiving completed, {files_archived_this_time} file(s) archived.")
+        if files_failed_this_time:
+            logging.warning(f"{files_failed_this_time} file(s) failed to be archived.")
+        # Total up number of successes, failures over multiple transfers:
+        self.number_files_failed += files_failed_this_time
+        self.number_files_archived += files_archived_this_time
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.
