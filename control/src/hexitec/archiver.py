@@ -7,12 +7,11 @@ Christian Angelsen, STFC Application Engineering
 import logging
 import tornado
 import time
-import sys
 from concurrent import futures
+from datetime import datetime
 import subprocess
 import sysrsync
 
-from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.concurrent import run_on_executor
 from tornado.escape import json_decode
 
@@ -122,6 +121,7 @@ class ArchiverAdapter(ApiAdapter):
         """
         self.archiver.cleanup()
 
+
 class ArchiverError(Exception):
     """Simple exception class to wrap lower-level exceptions."""
 
@@ -153,6 +153,12 @@ class Archiver():
         self.number_files_archived = 0
         self.number_files_failed = 0
 
+        # Track history of errors
+        self.errors_history = []
+        timestamp = self.create_timestamp()
+        self.last_message_timestamp = ''
+        self.log_messages = [timestamp, "initialised OK"]
+
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
             'odin_version': version_info['version'],
@@ -160,9 +166,11 @@ class Archiver():
             'server_uptime': (self.get_server_uptime, None),
             'files_to_archive': (self.get_files_to_archive, self.set_files_to_archive),
             'local_dir': (lambda: self.local_dir, self.set_local_dir),
-            'archive_files': (None, self.archive_files)
+            'archive_files': (None, self.archive_files),
+            "errors_history": (lambda: self.errors_history, None),
+            'log_messages': (lambda: self.log_messages, None),
+            'last_message_timestamp': (lambda: self.last_message_timestamp, self.get_log_messages)
         })
-
 
     def set_local_dir(self, dir):
         """Set directory to receive HDF5 files."""
@@ -186,6 +194,9 @@ class Archiver():
     @run_on_executor(executor='executor')
     def archive_files(self, msg):
         """Execute archiving of files onto local dir."""
+        if len(self.files_to_archive) == 0:
+            logging.warning("No files in queue, archiving skipped")
+            return 0
         logging.debug("Pulling selected file(s)..")
         local_dir = self.local_dir
         files_failed_this_time = 0
@@ -193,24 +204,65 @@ class Archiver():
         for remote_server in self.files_to_archive:
             for remote_source in self.files_to_archive[remote_server]:
                 r_cmd = sysrsync.get_rsync_command(source=remote_source,
-                                                destination=local_dir,
-                                                source_ssh=remote_server,
-                                                options=['-a'],
-                                                sync_source_contents=False)
-                s=subprocess.run(r_cmd, capture_output=True, text=True)
-                if s.returncode == 0:
-                    logging.debug(f"Successfully copied {remote_server}:{remote_source} to {local_dir}")
+                                                   destination=local_dir,
+                                                   source_ssh=remote_server,
+                                                   options=['-a'],
+                                                   sync_source_contents=False)
+                sp = subprocess.run(r_cmd, capture_output=True, text=True)
+                if sp.returncode == 0:
+                    self.flag_ok(f"Copied {remote_server}:{remote_source} to {local_dir}")
                     files_archived_this_time += 1
                 else:
-                    logging.error(f"Failed to copy {remote_server}:{remote_source}")
-                    logging.error(f"Error Message: {s.stderr}")
+                    self.flag_error(f"Failed to copy {remote_server}:{remote_source}", sp.stderr)
                     files_failed_this_time += 1
         logging.debug(f"Archiving completed, {files_archived_this_time} file(s) archived.")
+        self.files_to_archive = {}
         if files_failed_this_time:
             logging.warning(f"{files_failed_this_time} file(s) failed to be archived.")
         # Total up number of successes, failures over multiple transfers:
         self.number_files_failed += files_failed_this_time
         self.number_files_archived += files_archived_this_time
+
+    def flag_error(self, message, e=None):
+        """Log error message to parameter tree."""
+        error_message = "{}".format(message)
+        if e:
+            error_message += ": {}".format(e)
+        logging.error(error_message)
+        timestamp = self.create_timestamp()
+        # Append to errors_history list, nested list of timestamp, error message
+        self.errors_history.append([timestamp, error_message])
+
+    def flag_ok(self, message):
+        """Log message to parameter tree."""
+        ok_message = "{}".format(message)
+        logging.debug(ok_message)
+        timestamp = self.create_timestamp()
+        # Append to log_messages list, nested list of timestamp, log message
+        self.log_messages.append([timestamp, ok_message])
+
+    def create_timestamp(self):
+        """Returns timestamp of now."""
+        return '{}'.format(datetime.now().strftime('%Y%m%d_%H%M%S.%f'))
+
+    def get_log_messages(self, last_message_timestamp):
+        """This method gets the log messages that are appended to the log message deque by the
+        log function, and adds them to the log_messages variable. If a last message timestamp is
+        provided, it will only get the subsequent log messages if there are any, otherwise it will
+        get all of the messages from the deque.
+        """
+        logs = []
+        if self.last_message_timestamp != "":
+            # Display any new message
+            for index, (timestamp, log_message) in enumerate(self.errors_history):
+                if timestamp > last_message_timestamp:
+                    logs = self.errors_history[index:]
+                    break
+        else:
+            logs = self.errors_history
+            self.last_message_timestamp = self.create_timestamp()
+
+        self.log_messages = [(str(timestamp), log_message) for timestamp, log_message in logs]
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.
@@ -249,4 +301,3 @@ class Archiver():
         correctly.
         """
         pass
-
