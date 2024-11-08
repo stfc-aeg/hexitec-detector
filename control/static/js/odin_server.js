@@ -390,6 +390,9 @@ function poll_fem() {
                     const fraction_processed = (frames_processed / frames_expected).toFixed(2);
                     document.querySelector('#total_frames_expected').innerHTML = frames_expected;
                     document.querySelector('#total_frames_processed').innerHTML = frames_processed;
+
+                    const average_occupancy = result["detector"]["daq"]["status"]["average_occupancy"];
+                    document.querySelector('#average_occupancy').innerHTML = average_occupancy.toFixed(4);
                     // // Update Visualisation tab too
                     // document.querySelector('#total_frames_expected_main').innerHTML = frames_expected;
                     // document.querySelector('#total_frames_processed_main').innerHTML = frames_processed;
