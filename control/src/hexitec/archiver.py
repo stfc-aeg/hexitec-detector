@@ -7,10 +7,11 @@ Christian Angelsen, STFC Application Engineering
 import logging
 import tornado
 import time
+from persistqueue import Queue
 from concurrent import futures
 from datetime import datetime
 import subprocess
-import sysrsync
+import os
 
 from tornado.concurrent import run_on_executor
 from tornado.escape import json_decode
@@ -21,10 +22,10 @@ from odin._version import get_versions
 
 
 class ArchiverAdapter(ApiAdapter):
-    """System info adapter class for the ODIN server.
+    """Archiver adapter class for the ODIN server.
 
-    This adapter provides ODIN clients with information about the server and the system that it is
-    running on.
+    This adapter provides the functionality to archive data files from
+    remote PCs into a local directory.
     """
 
     def __init__(self, **kwargs):
@@ -43,6 +44,8 @@ class ArchiverAdapter(ApiAdapter):
         self.archiver = Archiver(local_dir)
 
         logging.debug('ArchiverAdapter loaded')
+
+        self.archiver.check_queue_not_empty()
 
     @response_types('application/json', default='application/json')
     def get(self, path, request):
@@ -129,7 +132,7 @@ class ArchiverError(Exception):
 
 
 class Archiver():
-    """Archiver - class that extracts and stores information about system-level parameters."""
+    """Archiver - class that archives data files from remote servers to local directory."""
 
     # Thread executor used for background tasks
     executor = futures.ThreadPoolExecutor(max_workers=1)
@@ -138,7 +141,7 @@ class Archiver():
         """Initialise the Archiver object.
 
         This constructor initlialises the Archiver object, building a parameter tree and
-        launching a background task if enabled
+        resumes archiving data file(s) if previously interrupted
         """
         # Save arguments
         self.local_dir = local_dir
@@ -152,12 +155,17 @@ class Archiver():
         self.files_to_archive = {}
         self.number_files_archived = 0
         self.number_files_failed = 0
+        self.persistent_file_path = "/tmp/"
 
-        # Track history of errors
+        # Track history of errors, messages
         self.errors_history = []
         timestamp = self.create_timestamp()
         self.last_message_timestamp = ''
         self.log_messages = [timestamp, "initialised OK"]
+        # File transfer information
+        self.transfer_status = ""
+        self.filename_transferring = ""
+        self.transfer_progress = ""
 
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
@@ -169,52 +177,76 @@ class Archiver():
             'archive_files': (None, self.archive_files),
             "errors_history": (lambda: self.errors_history, None),
             'log_messages': (lambda: self.log_messages, None),
+            'transfer_status': (lambda: self.transfer_status, None),
+            'filename_transferring': (lambda: self.filename_transferring, None),
+            'transfer_progress': (lambda: self.transfer_progress, None),
             'last_message_timestamp': (lambda: self.last_message_timestamp, self.get_log_messages)
         })
+
+    def __del__(self):
+        print("\n *** DTOR ***\n")
+
+    def check_queue_not_empty(self):
+        """ Check whether persistent queue already have file(s) to transfer."""
+        q = Queue(self.persistent_file_path)
+        q_size = q.info['size']
+        print(f" *** {q_size} file(s) on start-up ***")
+        if q_size > 0:
+            logging.debug(f"Queue contain {q_size} file(s), resuming..")
+            self.archive_files()
+        else:
+            logging.debug("Queue empty")
+        del q
 
     def set_local_dir(self, dir):
         """Set directory to receive HDF5 files."""
         self.local_dir = dir
 
     def set_files_to_archive(self, full_path):
-        """Syntax of 'server:/path/to.h5' describing server and file to be archived."""
-        server, file = full_path.split(":")
-        logging.debug(f"Received server {server} file {file} to be archived")
-        if server in self.files_to_archive:
-            # PC already listed with file(s)
-            self.files_to_archive[server].append(file)
-        else:
-            # PC not listed, add
-            self.files_to_archive[server] = [file]
+        """Syntax of 'server:/path/to.h5' describing server and file to be queued."""
+        try:
+            server, file = full_path.split(":")
+            q = Queue(self.persistent_file_path)
+            q.put(full_path)
+            q_size = q.info['size']
+            logging.debug(f"Received server {server} file {file} joining queue of {q_size} file(s)")
+            del q
+        except ValueError:
+            error = f"Cannot parse '{full_path}', syntax should be 'server:/path/to.h5'"
+            logging.error(error)
+            raise ValueError(error)
 
     def get_files_to_archive(self):
         """Return number of files to be archived."""
         return str(self.files_to_archive)
 
     @run_on_executor(executor='executor')
-    def archive_files(self, msg):
+    def archive_files(self, msg=None):
         """Execute archiving of files onto local dir."""
-        if len(self.files_to_archive) == 0:
+        q = Queue(self.persistent_file_path)
+        if q.info['size'] == 0:
             logging.warning("No files in queue, archiving skipped")
+            del q
             return 0
         logging.debug("Pulling selected file(s)..")
         local_dir = self.local_dir
         files_failed_this_time = 0
         files_archived_this_time = 0
-        for remote_server in self.files_to_archive:
-            for remote_source in self.files_to_archive[remote_server]:
-                r_cmd = sysrsync.get_rsync_command(source=remote_source,
-                                                   destination=local_dir,
-                                                   source_ssh=remote_server,
-                                                   options=['-a'],
-                                                   sync_source_contents=False)
-                sp = subprocess.run(r_cmd, capture_output=True, text=True)
-                if sp.returncode == 0:
-                    self.flag_ok(f"Copied {remote_server}:{remote_source} to {local_dir}")
-                    files_archived_this_time += 1
-                else:
-                    self.flag_error(f"Failed to copy {remote_server}:{remote_source}", sp.stderr)
-                    files_failed_this_time += 1
+        options = '-aP'
+        while not q.empty():
+            full_path = q.get()
+            server, file = full_path.split(":")
+            r_cmd = ['rsync', options, f'{server}:{file}', local_dir]
+            print(f"2. r_cmd: {r_cmd}. ")
+            bOK, errors = self.execute_rsync_command(r_cmd)
+            if bOK:
+                self.flag_ok(f"Copied {server}:{file} to {local_dir}")
+                files_archived_this_time += 1
+            else:
+                self.flag_error(f"Failed to copy {server}:{file}", errors)
+                files_failed_this_time += 1
+            # Once rsync transfer completed, persist the change in the queue (item dequeued):
+            q.task_done()
         logging.debug(f"Archiving completed, {files_archived_this_time} file(s) archived.")
         self.files_to_archive = {}
         if files_failed_this_time:
@@ -222,6 +254,74 @@ class Archiver():
         # Total up number of successes, failures over multiple transfers:
         self.number_files_failed += files_failed_this_time
         self.number_files_archived += files_archived_this_time
+
+    def execute_rsync_command(self, cmd):
+        """Execute rsync command through subprocess."""
+        errors = []
+        bOK = True
+        try:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            os.set_blocking(p.stdout.fileno(), False)
+            os.set_blocking(p.stderr.fileno(), False)
+            while p.poll() is None:
+                error_line = p.stderr.readline()
+                if len(error_line) > 0:
+                    bOK = False
+                    errors.append(self.parse_error_bytes(error_line))
+                    # print(f" Error? {error_line}")
+                output_line = p.stdout.readline()
+                if len(output_line) > 0:
+                    # print("poll: ", p.poll(), " length? ", len(output_line), "ln: ", output_line)
+                    self.parse_rsync_output(output_line)
+        except Exception as e:
+            print(f"Error return call: {e.returncode}")
+        return bOK, errors
+
+    def parse_error_bytes(self, bytes_object):
+        """Parse bytes object into string."""
+        string_object = bytes_object.decode("utf-8")
+        return string_object.strip()
+
+    def parse_rsync_output(self, bytes_object):
+        """Parse output from rsync command execution.
+
+        Typically output may look like this:
+        sending incremental file list
+        08-11-002_000000.h5
+                32,768   0%    0.00kB/s    0:00:00
+            108,592,900  44%  103.35MB/s    0:00:01
+            246,080,238 100%  112.76MB/s    0:00:02 (xfr#1, to-chk=0/1)
+        """
+        bytes_stripped = bytes_object.strip()
+        string_object = bytes_stripped.decode("utf-8")
+        if string_object.endswith(".h5"):
+            self.filename_transferring = string_object
+            self.transfer_status = "Transferring file.."
+            return
+        # logging.debug(f" DEBUG transfer: {string_object}")
+        # Check string contains '%' otherwise no transfer data in string
+        if "%" not in string_object:
+            return
+        if "chk" in string_object:
+            self.transfer_status = "File transferred"
+            self.transfer_progress = 100
+            return
+        size_and_percentage, datarate_remaining = string_object.split("%")
+        # print("1. size_and_percentage, datarate_remaining = ",
+        #       size_and_percentage, datarate_remaining)
+        size_and_percentage = size_and_percentage.split(" ")
+        size = size_and_percentage[0]
+        percentage = size_and_percentage[-1]
+        self.transfer_progress = percentage
+        # print("2. size, percentage = ", size_and_percentage[0], size_and_percentage[-1])
+        datarate_remaining = datarate_remaining.strip()
+        # print("3. datarate_remaining = ", datarate_remaining)
+        # print("4. datarate_blank_remaining = ", datarate_remaining.split(" "))
+        datarate_blank_remaining = datarate_remaining.split(" ")
+        datarate, remaining = datarate_blank_remaining[0], datarate_blank_remaining[-1]
+        # print("5. datarate, remaining = ", datarate, remaining)
+        # print(f" -> size= {size}, percent= {percentage}, rate= {datarate}, remain= {remaining}")
+        return size, percentage, datarate, remaining
 
     def flag_error(self, message, e=None):
         """Log error message to parameter tree."""
