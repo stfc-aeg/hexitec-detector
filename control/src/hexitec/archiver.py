@@ -166,6 +166,8 @@ class Archiver():
         self.transfer_status = ""
         self.filename_transferring = ""
         self.transfer_progress = ""
+        # Persistent Queue
+        self.q = Queue(self.persistent_file_path)
 
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
@@ -188,15 +190,13 @@ class Archiver():
 
     def check_queue_not_empty(self):
         """ Check whether persistent queue already have file(s) to transfer."""
-        q = Queue(self.persistent_file_path)
-        q_size = q.info['size']
+        q_size = self.q.qsize()
         print(f" *** {q_size} file(s) on start-up ***")
         if q_size > 0:
             logging.debug(f"Queue contain {q_size} file(s), resuming..")
             self.archive_files()
         else:
             logging.debug("Queue empty")
-        del q
 
     def set_local_dir(self, dir):
         """Set directory to receive HDF5 files."""
@@ -206,11 +206,9 @@ class Archiver():
         """Syntax of 'server:/path/to.h5' describing server and file to be queued."""
         try:
             server, file = full_path.split(":")
-            q = Queue(self.persistent_file_path)
-            q.put(full_path)
-            q_size = q.info['size']
+            self.q.put(full_path)
+            q_size = self.q.qsize()
             logging.debug(f"Received server {server} file {file} joining queue of {q_size} file(s)")
-            del q
         except ValueError:
             error = f"Cannot parse '{full_path}', syntax should be 'server:/path/to.h5'"
             logging.error(error)
@@ -223,31 +221,33 @@ class Archiver():
     @run_on_executor(executor='executor')
     def archive_files(self, msg=None):
         """Execute archiving of files onto local dir."""
-        q = Queue(self.persistent_file_path)
-        if q.info['size'] == 0:
+        if self.q.qsize() == 0:
             logging.warning("No files in queue, archiving skipped")
-            del q
             return 0
         logging.debug("Pulling selected file(s)..")
         local_dir = self.local_dir
         files_failed_this_time = 0
         files_archived_this_time = 0
         options = '-aP'
-        while not q.empty():
-            full_path = q.get()
-            server, file = full_path.split(":")
-            r_cmd = ['rsync', options, f'{server}:{file}', local_dir]
-            print(f"2. r_cmd: {r_cmd}. ")
-            bOK, errors = self.execute_rsync_command(r_cmd)
-            if bOK:
-                self.flag_ok(f"Copied {server}:{file} to {local_dir}")
-                files_archived_this_time += 1
-            else:
-                self.flag_error(f"Failed to copy {server}:{file}", errors)
-                files_failed_this_time += 1
-            # Once rsync transfer completed, persist the change in the queue (item dequeued):
-            q.task_done()
+        while not self.q.empty():
+            full_path = self.q.get()
+            try:
+                server, file = full_path.split(":")
+                r_cmd = ['rsync', options, f'{server}:{file}', local_dir]
+                # print(f"2. r_cmd: {r_cmd}. ")
+                logging.debug(f"Transfering from {server} file {file}")
+                bOK, errors = self.execute_rsync_command(r_cmd)
+                if bOK:
+                    self.flag_ok(f"Copied {server}:{file} to {local_dir}")
+                    files_archived_this_time += 1
+                else:
+                    self.flag_error(f"Failed to copy {server}:{file}", errors)
+                    files_failed_this_time += 1
+                # Once rsync transfer completed, persist the change in the queue (item dequeued):
+            except AttributeError as e:
+                logging.error(f"Unexpected Queue item: {full_path}")
         logging.debug(f"Archiving completed, {files_archived_this_time} file(s) archived.")
+        self.q.task_done()
         self.files_to_archive = {}
         if files_failed_this_time:
             logging.warning(f"{files_failed_this_time} file(s) failed to be archived.")
