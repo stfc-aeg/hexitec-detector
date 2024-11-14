@@ -131,7 +131,7 @@ class Archiver():
     """Archiver - class that archives data files from remote servers to local directory."""
 
     # Thread executor used for background tasks
-    executor = futures.ThreadPoolExecutor(max_workers=1)
+    executor = futures.ThreadPoolExecutor(max_workers=2)
 
     def __init__(self, options):
         """Initialise the Archiver object.
@@ -162,6 +162,7 @@ class Archiver():
         self.transfer_status = "Initialised"
         self.filename_transferring = ""
         self.transfer_progress = ""
+        self.archiving_in_progress = False
         # Persistent Queue
         self.queue = Queue(self.persistent_file_path)
         self.qsize = self.queue.qsize
@@ -211,9 +212,13 @@ class Archiver():
     @run_on_executor(executor='executor')
     def archive_files(self, msg=None):
         """Execute archiving of files onto local dir."""
+        if self.archiving_in_progress:
+            logging.warning("Archiving already in progress")
+            return
         if self.queue.qsize() == 0:
             logging.warning("No files in queue, archiving skipped")
             return 0
+        self.archiving_in_progress = True
         logging.debug("Pulling selected file(s)..")
         local_dir = self.local_dir
         files_failed_this_time = 0
@@ -246,6 +251,8 @@ class Archiver():
         # Total up number of successes, failures over multiple transfers:
         self.number_files_failed += files_failed_this_time
         self.number_files_archived += files_archived_this_time
+        self.archiving_in_progress = False
+        self.transfer_status = "Idle"
 
     def execute_rsync_command(self, cmd):
         """Execute rsync command through subprocess."""
