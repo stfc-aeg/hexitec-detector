@@ -5,7 +5,6 @@ This class implements an adapter used for archiving Odin-data HDF5 files
 Christian Angelsen, STFC Application Engineering
 """
 import logging
-import tornado
 import time
 from persistqueue import Queue
 from concurrent import futures
@@ -38,10 +37,7 @@ class ArchiverAdapter(ApiAdapter):
         # Intialise superclass
         super(ArchiverAdapter, self).__init__(**kwargs)
 
-        # Parse options
-        local_dir = self.options.get('local_dir', "/")
-
-        self.archiver = Archiver(local_dir)
+        self.archiver = Archiver(self.options)
 
         logging.debug('ArchiverAdapter loaded')
 
@@ -137,14 +133,15 @@ class Archiver():
     # Thread executor used for background tasks
     executor = futures.ThreadPoolExecutor(max_workers=1)
 
-    def __init__(self, local_dir):
+    def __init__(self, options):
         """Initialise the Archiver object.
 
         This constructor initlialises the Archiver object, building a parameter tree and
         resumes archiving data file(s) if previously interrupted
         """
-        # Save arguments
-        self.local_dir = local_dir
+        # Parse options
+        self.local_dir = options.get('local_dir', "/")
+        self.bandwidth_limit = options.get('bandwidth_limit', None)
 
         # Store initialisation time
         self.init_time = time.time()
@@ -152,7 +149,6 @@ class Archiver():
         # Get package version information
         version_info = get_versions()
 
-        self.files_to_archive = {}
         self.number_files_archived = 0
         self.number_files_failed = 0
         self.persistent_file_path = "/tmp/"
@@ -163,37 +159,35 @@ class Archiver():
         self.last_message_timestamp = ''
         self.log_messages = [timestamp, "initialised OK"]
         # File transfer information
-        self.transfer_status = ""
+        self.transfer_status = "Initialised"
         self.filename_transferring = ""
         self.transfer_progress = ""
         # Persistent Queue
-        self.q = Queue(self.persistent_file_path)
+        self.queue = Queue(self.persistent_file_path)
+        self.qsize = self.queue.qsize
 
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
-            'odin_version': version_info['version'],
-            'tornado_version': tornado.version,
-            'server_uptime': (self.get_server_uptime, None),
-            'files_to_archive': (self.get_files_to_archive, self.set_files_to_archive),
-            'local_dir': (lambda: self.local_dir, self.set_local_dir),
             'archive_files': (None, self.archive_files),
-            "errors_history": (lambda: self.errors_history, None),
-            'log_messages': (lambda: self.log_messages, None),
-            'transfer_status': (lambda: self.transfer_status, None),
+            'bandwidth_limit': (lambda: self.bandwidth_limit, None),
+            'errors_history': (lambda: self.errors_history, None),
             'filename_transferring': (lambda: self.filename_transferring, None),
+            'files_to_archive': (None, self.set_files_to_archive),
+            'last_message_timestamp': (lambda: self.last_message_timestamp, self.get_log_messages),
+            'local_dir': (lambda: self.local_dir, self.set_local_dir),
+            'log_messages': (lambda: self.log_messages, None),
+            'odin_version': version_info['version'],
+            'server_uptime': (self.get_server_uptime, None),
             'transfer_progress': (lambda: self.transfer_progress, None),
-            'last_message_timestamp': (lambda: self.last_message_timestamp, self.get_log_messages)
+            'transfer_status': (lambda: self.transfer_status, None),
+            'queue_length': (self.queue.qsize, None)
         })
-
-    def __del__(self):
-        print("\n *** DTOR ***\n")
 
     def check_queue_not_empty(self):
         """ Check whether persistent queue already have file(s) to transfer."""
-        q_size = self.q.qsize()
-        print(f" *** {q_size} file(s) on start-up ***")
-        if q_size > 0:
-            logging.debug(f"Queue contain {q_size} file(s), resuming..")
+        self.q_size = self.queue.qsize()
+        if self.q_size > 0:
+            logging.debug(f"Queue contain {self.q_size} file(s), resuming..")
             self.archive_files()
         else:
             logging.debug("Queue empty")
@@ -206,22 +200,18 @@ class Archiver():
         """Syntax of 'server:/path/to.h5' describing server and file to be queued."""
         try:
             server, file = full_path.split(":")
-            self.q.put(full_path)
-            q_size = self.q.qsize()
-            logging.debug(f"Received server {server} file {file} joining queue of {q_size} file(s)")
+            self.queue.put(full_path)
+            self.q_size = self.queue.qsize()
+            logging.debug(f"Received server {server} file {file}. Queue is {self.q_size} file(s)")
         except ValueError:
             error = f"Cannot parse '{full_path}', syntax should be 'server:/path/to.h5'"
             logging.error(error)
             raise ValueError(error)
 
-    def get_files_to_archive(self):
-        """Return number of files to be archived."""
-        return str(self.files_to_archive)
-
     @run_on_executor(executor='executor')
     def archive_files(self, msg=None):
         """Execute archiving of files onto local dir."""
-        if self.q.qsize() == 0:
+        if self.queue.qsize() == 0:
             logging.warning("No files in queue, archiving skipped")
             return 0
         logging.debug("Pulling selected file(s)..")
@@ -229,12 +219,15 @@ class Archiver():
         files_failed_this_time = 0
         files_archived_this_time = 0
         options = '-aP'
-        while not self.q.empty():
-            full_path = self.q.get()
+        while not self.queue.empty():
+            full_path = self.queue.get()
             try:
                 server, file = full_path.split(":")
                 r_cmd = ['rsync', options, f'{server}:{file}', local_dir]
-                # print(f"2. r_cmd: {r_cmd}. ")
+                if self.bandwidth_limit:
+                    bwlimit = f"--bwlimit={self.bandwidth_limit}"
+                    r_cmd.append(bwlimit)
+                # logging.debug(f" DEBUG Built rsync r_cmd: {r_cmd}. ")
                 logging.debug(f"Transfering from {server} file {file}")
                 bOK, errors = self.execute_rsync_command(r_cmd)
                 if bOK:
@@ -244,11 +237,10 @@ class Archiver():
                     self.flag_error(f"Failed to copy {server}:{file}", errors)
                     files_failed_this_time += 1
                 # Once rsync transfer completed, persist the change in the queue (item dequeued):
-            except AttributeError as e:
+            except AttributeError:
                 logging.error(f"Unexpected Queue item: {full_path}")
         logging.debug(f"Archiving completed, {files_archived_this_time} file(s) archived.")
-        self.q.task_done()
-        self.files_to_archive = {}
+        self.queue.task_done()
         if files_failed_this_time:
             logging.warning(f"{files_failed_this_time} file(s) failed to be archived.")
         # Total up number of successes, failures over multiple transfers:
