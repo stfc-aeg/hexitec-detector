@@ -1,11 +1,21 @@
 import h5py
+import glob
 import sys
 
-prefix = "/tmp/08-11-001" #'25-08-005'
-source_files = [f'{prefix}_{idx:06d}.h5' for idx in range(2)]   # range(4)]
+print(f"sys.argv: ", sys.argv)
+prefix = sys.argv[1]
+print(f"1.prefix: {prefix}")
+files_found = glob.glob(f"/tmp/{prefix}_*.h5")
+source_files = (sorted(files_found))
+# prefix = "/tmp/08-11-001" #'25-08-005'
+# print(f"2.prefix: {prefix}")
+print(f"1.source_files: {source_files}")
+# source_files2 = [f'{prefix}_{idx:06d}.h5' for idx in range(2)]   # range(4)]
+# print(f"2.source_files: {source_files2}")
 num_sources = len(source_files)
-dest_file = f'{prefix}_parent.h5'
-
+print(f"1.num_sources: {num_sources}")
+dest_file = f'{prefix}.h5'
+# sys.exit()
 dataset_names = []
 dtype = None
 inshape = None
@@ -61,9 +71,9 @@ index = -1
 print("--- Iterate through all datasets")
 for dataset in dataset_names:  # Iterate through all datasets
     index += 1
-    # # if dataset == "pixel_spectra":
-    # #     print("skip'g ", dataset)
-    # #     continue
+    # if dataset == "pixel_spectra":
+    #     print("skip'g ", dataset)
+    #     continue
     # if dataset != "pixel_spectra":
     #     print("skip'g ", dataset)
     #     continue
@@ -75,24 +85,17 @@ for dataset in dataset_names:  # Iterate through all datasets
         n = 1;print("adjusting dimensions..")
     else:
         n = 0
-    print(f"*** dataset: '{dataset}' Shape: {inshape[index]}")
+    print(f"*** dataset: '{dataset}' Shape: {inshape[index]} n: {n}")
     if dataset == "spectra_bins":
         outshape = (inshape[index][1-n], inshape[index][2-n])
-        # print(f" outshape = ({inshape[index][1-n]}, {inshape[index][2-n]})")
     elif dataset == "pixel_spectra":
-        print(f" pixel_spectra's shaping up..")
-        # outshape = (num_frames[index], inshape[index][1-n], inshape[index][2-n])
-        # print(f" outshape? = ({num_frames[index]}, {inshape[index][0]}, {inshape[index][1]}, {inshape[index][2]}, {inshape[index][3]})")
-        outshape = (num_frames[index], inshape[index][0], inshape[index][1],
+        outshape = (num_frames[index], inshape[index][1],
                     inshape[index][2], inshape[index][3])
-        print(f" outshape = {outshape}")
     else:
         outshape = (num_frames[index], inshape[index][1-n], inshape[index][2-n])
-        print(f" outshape = ({num_frames[index]}, {inshape[index][1-n]}, {inshape[index][2-n]})")
-        print(f" outshape = {outshape}")
-        print(f" num_frames: {num_frames} index: {index}")
-        print(f" n: {n}")
-        print(f" inshape: {inshape}")
+        # print(f" num_frames: {num_frames} index: {index}")
+        # print(f" inshape: {inshape}")
+    print(f" outshape = {outshape}")
 
     layout = h5py.VirtualLayout(shape=outshape, dtype=dtype[index])
 
@@ -105,16 +108,10 @@ for dataset in dataset_names:  # Iterate through all datasets
                 print(f" spectra_bins, layout[, ] = layout[, ]")
                 layout[:, :] = vsource
             elif dataset == "pixel_spectra":
-                # print(f" ps_layout = [{temp_idx}:{num_frames[index]}:{num_sources} ]  ")
-                print(f" pixel_spectra; layout: [{temp_idx}:{num_frames[index]}:{num_sources}, :, :, :, :]")
-                layout[temp_idx:num_frames[index]:num_sources, :, :, :, :] = vsource
-                # print(f"num_sources:                {num_sources}")
-                # print(f"")
-                # layout[temp_idx:num_frames[index]:num_sources, :, :] = vsource
+                print(f" pixel_spectra; layout: [{temp_idx}:{num_frames[index]}:{num_sources}, :, :, :]")
+                layout[temp_idx:num_frames[index]:num_sources, :, :, :] = vsource
             else:
                 print(f" all other dsets, layout: [{temp_idx}:{num_frames[index]}:{num_sources}, :, :]")
-                # print(f"num_sources:                {num_sources}")
-                # print(f"")
                 layout[temp_idx:num_frames[index]:num_sources, :, :] = vsource
                 
 
