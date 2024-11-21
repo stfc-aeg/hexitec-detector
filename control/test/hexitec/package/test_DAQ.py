@@ -54,6 +54,7 @@ class DAQTestFixture(object):
         self.fake_fi = MagicMock()
         self.fake_lv = MagicMock()
         self.fake_lh = MagicMock()
+        self.fake_archiver = MagicMock()
 
         # Once the odin_data adapter is refactored to use param tree,
         # this structure will need fixing
@@ -90,6 +91,7 @@ class DAQTestFixture(object):
                         ]
                     },
                     "hdf": {
+                        "file_name": "test.h5",
                         "frames_written": 0,
                         "frames_processed": 0,
                         "writing": True
@@ -128,6 +130,9 @@ class DAQTestFixture(object):
         self.lh_data = {
             "endpoints": ["tcp://127.0.0.1:5021"]
         }
+        self.archiver_data = {
+            "files_to_archive": "[]"
+        }
 
         # Set up fake adapters
         fr_return = Mock()
@@ -150,12 +155,17 @@ class DAQTestFixture(object):
         lh_return.configure_mock(data=self.lh_data)
         self.fake_lh.get = Mock(return_value=lh_return)
 
+        archiver_return = Mock()
+        archiver_return.configure_mock(data=self.archiver_data)
+        self.fake_archiver.get = Mock(return_value=archiver_return)
+
         self.adapters = {
             "fp": self.fake_fp,
             "fr": self.fake_fr,
             "file_interface": self.fake_fi,
             "live_histogram": self.fake_lh,
-            "live_view": self.fake_lv
+            "live_view": self.fake_lv,
+            "archiver": self.fake_archiver
         }
 
         gradients_filename = self.data_config_path + "m.txt"
@@ -240,7 +250,9 @@ class TestDAQ(unittest.TestCase):
 
     def test_initialize_missing_adapter(self):
         """Test initialisation (part 3)."""
-        self.test_daq.daq.initialize({})
+        mocked_dictionary = Mock()
+        mocked_dictionary.items.side_effect=KeyError("whoops")
+        self.test_daq.daq.initialize(mocked_dictionary)
 
     def test_initialize_handles_live_view_error(self):
         """Test initialisation with badly configured live_view adapter."""
@@ -268,53 +280,25 @@ class TestDAQ(unittest.TestCase):
 
         assert occupancy == calculated_occupancy
 
-    def test_calculate_average_occupancy_handles_TypeError(self):
-        """Test function handles TypeError."""
-        self.test_daq.daq.get_adapter_status = Mock
-        self.test_daq.daq.get_adapter_status.side_effect = TypeError
-        occupancy = self.test_daq.daq.calculate_average_occupancy()
-        expected_return_value = []  # 0.0
-        assert occupancy == expected_return_value
+    def test_calculate_average_occupancy_handles_KeyError(self):
+        """Test function handles KeyError."""
+        rc_dict = [{'threshold': {'average_frame_occupancy': 0.01958333335}},
+                   {'threshold': {'average_frame_occupancy': 0.01911458334}}]
+
+        self.test_daq.daq.get_adapter_status = Mock(return_value=rc_dict)
+        with patch("statistics.fmean") as stats:
+            stats.side_effect = KeyError
+            occupancy = self.test_daq.daq.calculate_average_occupancy()
+            expected_return_value = [{"Error": "Adapter fp not found"}]
+            assert occupancy == expected_return_value
 
     def test_calculate_average_occupancy_handles_AttributeError(self):
         """Test function handles AttributeError."""
-        self.test_daq.daq.get_adapter_status = Mock
-        self.test_daq.daq.get_adapter_status.side_effect = AttributeError
-        occupancy = self.test_daq.daq.calculate_average_occupancy()
-        expected_return_value = []  # 0.0
-        assert occupancy == expected_return_value
-
-    def test_get_od_status_fr(self):
-        """Test status of fr adapter."""
-        status = self.test_daq.daq.get_od_status("fr")
-        assert status == self.test_daq.fr_data['value'][0]
-
-    def test_get_od_status_fp(self):
-        """Test status of fp adapter."""
-        status = self.test_daq.daq.get_od_status("fp")
-        assert status == self.test_daq.fp_data['value'][0]
-
-    def test_get_od_status_incorrect(self):
-        """Test odin status of 'wrong' adapter."""
-        status = self.test_daq.daq.get_od_status("fake")
-        assert status == {"Error": "Adapter fake not found"}
-
-    def test_get_od_status_not_init(self):
-        """Test status before adapter initialised."""
-        with patch("hexitec.HexitecDAQ.ParameterTree"):
-            daq = HexitecDAQ(self.test_daq.adapter.hexitec, self.test_daq.file_dir,
-                             self.test_daq.file_name)
-        status = daq.get_od_status("fp")
-        assert status == {"Error": "Adapter not initialised with references yet"}
-
-    def test_get_od_status_no_dict(self):
-        """Test status before adapter loaded."""
-        new_fr_data = {}
-
-        with patch.dict(self.test_daq.fr_data, new_fr_data, clear=True):
-
-            status = self.test_daq.daq.get_od_status("fr")
-            assert status == {"Error": "Adapter fr not found"}
+        with patch("statistics.fmean") as stats:
+            stats.side_effect = AttributeError
+            occupancy = self.test_daq.daq.calculate_average_occupancy()
+            expected_return_value = 0.0
+            assert occupancy == expected_return_value
 
     def test_is_fr_connected_with_status(self):
         """Test function works."""

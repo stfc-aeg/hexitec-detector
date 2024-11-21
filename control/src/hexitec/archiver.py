@@ -312,17 +312,20 @@ class Archiver():
             self.transfer_status = "File transferred"
             self.transfer_progress = 100
             return
-        size_and_percentage, datarate_remaining = string_object.split("%")
-        size_and_percentage = size_and_percentage.split(" ")
-        # size = size_and_percentage[0]
-        percentage = size_and_percentage[-1]
-        self.transfer_progress = percentage
-        # # For future development, useful for UI?
-        # datarate_remaining = datarate_remaining.strip()
-        # datarate_blank_remaining = datarate_remaining.split(" ")
-        # datarate, remaining = datarate_blank_remaining[0], datarate_blank_remaining[-1]
-        # print(f" -> size= {size}, percent= {percentage}, rate= {datarate}, remain= {remaining}")
-        # return size, percentage, datarate, remaining
+        try:
+            size_and_percentage, datarate_remaining = string_object.split("%")
+            size_and_percentage = size_and_percentage.split(" ")
+            # size = size_and_percentage[0]
+            percentage = size_and_percentage[-1]
+            self.transfer_progress = percentage
+            # # For future development, useful for UI?
+            # datarate_remaining = datarate_remaining.strip()
+            # datarate_blank_remaining = datarate_remaining.split(" ")
+            # datarate, remaining = datarate_blank_remaining[0], datarate_blank_remaining[-1]
+            # print(f" -> size= {size}, percent= {percentage}, rate= {datarate}, remain= {remaining}")
+            # return size, percentage, datarate, remaining
+        except ValueError as e:
+            logging.error(f"Error parsing {string_object}: {e}")
 
     def execute_rsync_command(self, cmd):
         """Execute rsync command through subprocess."""

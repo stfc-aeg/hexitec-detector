@@ -179,6 +179,8 @@ class Hexitec():
     DEFAULT_CONTROL_DIR = '/hxt_sw/install/config/control/'
     DATA_DIR_NAME = 'data_config'
     DEFAULT_DATA_DIR = '/hxt_sw/install/config/data/'
+    PROCESSING_NODES = 'processing_nodes'
+    ODIN_CONTROL_NODE = "odin_control_node"
 
     def __init__(self, options):
         """Initialise the Hexitec object.
@@ -189,6 +191,10 @@ class Hexitec():
         defaults = HexitecDetectorDefaults()
         self.file_dir = options.get("save_dir", defaults.save_dir)
         self.file_name = options.get("save_file", defaults.save_file)
+        processing_nodes = options.get(self.PROCESSING_NODES, "")
+        self.processing_nodes = processing_nodes.replace(" ", "").split(",")
+        self.odin_control_node = options.get(self.ODIN_CONTROL_NODE, "")
+
         self.number_frames = options.get("acquisition_num_frames", defaults.number_frames)
         self.number_frames_to_request = self.number_frames
         self.total_delay = 0.0
@@ -197,7 +203,6 @@ class Hexitec():
 
         self.duration = 1
         self.duration_enable = False
-
         if options.get(self.CONTROL_DIR_NAME, False):
             self.control_config_path = options.get(self.CONTROL_DIR_NAME, "")
         else:

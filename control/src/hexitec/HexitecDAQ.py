@@ -254,11 +254,7 @@ class HexitecDAQ():
     def initialize(self, adapters):
         """Initialise adapters and related parameter tree entries."""
         try:
-            self.adapters["fp"] = adapters['fp']
-            self.adapters["fr"] = adapters['fr']
-            self.adapters["file_interface"] = adapters['file_interface']
-            self.adapters["live_histogram"] = adapters['live_histogram']
-            self.adapters["live_view"] = adapters['live_view']
+            self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
         except KeyError as e:
             logging.error("The odin_server config file missing %s entry" % e)
         self.get_config_file("fp")
@@ -516,12 +512,6 @@ class HexitecDAQ():
             self.parent.software_state = "Error"
             return
 
-        # print(datetime.datetime.now(), "[X calling build_virtual_datasets(hdf_file)")
-
-        # self.build_virtual_dataset(hdf_file)
-
-        # print(datetime.datetime.now(), "[X returning from build_virtual_datasets(hdf_file)")
-
         error_code = 0
         # Create metadata group, add dataset to it and pass to write function
         parent_metadata_group = hdf_file.create_group("hexitec")
@@ -546,126 +536,37 @@ class HexitecDAQ():
         self.processing_interruptable = False
         self.in_progress = False
         self.daq_ready = True
+        self.signal_archiver()
 
-    def build_virtual_dataset(self, hdf_file):  # pragma: no cover
-        """Map all node(s) H5 file(s) into meta's h5 file."""
-        # Dirty hack for now..
-        file_path = '/data/hxtdaq/node'
-        prefix = self.file_name
-        source_files = []
-        idx = 0
-        source_files.append(f'{file_path}{1}/{prefix}_{idx:06d}.h5')
-        if self.number_nodes > 1:
-            idx += 1
-            source_files.append(f'{file_path}{2}/{prefix}_{idx:06d}.h5')
-        if self.number_nodes > 2:
-            idx += 1
-            source_files.append(f'{file_path}{3}/{prefix}_{idx:06d}.h5')
-        if self.number_nodes > 3:
-            idx += 1
-            source_files.append(f'{file_path}{4}/{prefix}_{idx:06d}.h5')
-        num_sources = len(source_files)
+    def signal_archiver(self):  # pragma: no cover
+        """Signal data files to archive."""
+        try:
+            command = ""
+            # Extract filename(s) from FP(s); #fp/status/hdf/file_name
+            status = self.get_adapter_status("fp")
+            file_names = []
+            for file in status:
+                file_names.append(file['hdf']['file_name'])
 
-        self.parent.fem._set_status_message("Preparing virtual datasets..")
-
-        dataset_names = []
-        dtype = None
-        inshape = None
-
-        # Open first file to check how many datasets
-        with h5py.File(source_files[0]) as file:
-            number_datasets = len(file.keys())
-            # print(datetime.datetime.now(), "[X number_datasets: ", number_datasets)
-            for dataset in file:  # Each dataset in current file
-                # print(datetime.datetime.now(), "   [X dataset: ", dataset)
-                dataset_names.append(dataset)
-        # print(datetime.datetime.now(), f"first file contains: {dataset_names} dataset_names")
-
-        vsources = []
-
-        num_frames = [0 for idx in range(number_datasets)]
-        dtype = [0 for idx in range(number_datasets)]
-        inshape = [0 for idx in range(number_datasets)]
-        # print(datetime.datetime.now(), f"Number of files: {num_sources}")
-        # print(f"source files: {source_files}")
-
-        # Loop over all source files, datasets
-        for source in source_files:
-            # Go through all .h5 files
-            with h5py.File(source) as file:
-                # Go through each file
-                if number_datasets != len(file.keys()):
-                    e = f"Expected {number_datasets} not {len(file.keys())} datasets in {source} !"
-                    logging.error("VDS Error: {}".format(e))
-                    self.parent.fem.flag_error("VDS: {}".format(str(e)))
-                    return
-
-                index = 0
-                for dataset in file:  # Each dataset in current file
-                    dset = file[dataset]
-
-                    # 'spectra_bins' identical across files, need only one instance
-                    if dataset == "spectra_bins":
-                        num_frames[index] = 1
-                    else:
-                        num_frames[index] += dset.shape[0]
-
-                    if not inshape[index]:
-                        inshape[index] = dset.shape
-                    if not dtype[index]:
-                        dtype[index] = dset.dtype
-                    else:
-                        assert dset.dtype == dtype[index]
-
-                    # print(datetime.datetime.now(), f" {dataset}, shape={dset.shape}")
-                    vsources.append(h5py.VirtualSource(source, dataset, shape=dset.shape))
-                    index += 1
-
-        layout = []
-
-        dataset_index = [0 for idx in range(number_datasets)]
-        index = -1
-
-        for dataset in dataset_names:  # Iterate through all datasets
-            index += 1
-
-            # s = f"dataset '{dataset}' index: {index} in {num_frames} shape: {len(inshape[index])}"
-            # print(datetime.datetime.now(), s)
-
-            if len(inshape[index]) == 2:
-                n = 1
-            else:
-                n = 0
-            # print(datetime.datetime.now(), f" '{dataset}' Shape: {inshape[index]}")
-            if dataset == "spectra_bins":
-                outshape = (inshape[index][1-n], inshape[index][2-n])
-                # dt = datetime.datetime.now()
-                # print(dt, f" outshape = ({inshape[index][1-n]}, {inshape[index][2-n]})")
-            else:
-                outshape = (num_frames[index], inshape[index][1-n], inshape[index][2-n])
-                # print(datetime.datetime.now(), f" outshape = \
-                #   ({num_frames[index]}, {inshape[index][1-n]}, {inshape[index][2-n]})")
-
-            layout = h5py.VirtualLayout(shape=outshape, dtype=dtype[index])
-
-            for (idx, vsource) in enumerate(vsources):
-                current_index = idx % number_datasets
-                if current_index == index:
-                    temp_idx = dataset_index[current_index]
-
-                    if dataset == "spectra_bins":
-                        # print(datetime.datetime.now(), f"layout[, ] = layout[, ]")
-                        layout[:, :] = vsource
-                    else:
-                        # dt = datetime.datetime.now()
-                        # print(dt, f"layout[temp_idx:num_frames[index]:num_sources, ] = \
-                        #     layout[{temp_idx}:{num_frames[index]}:{num_sources}, ]")
-                        layout[temp_idx:num_frames[index]:num_sources, :, :] = vsource
-
-                    dataset_index[current_index] += 1
-
-            with h5py.File(self.hdf_file_location, 'a', libver='latest') as outfile:
-                outfile.create_virtual_dataset(dataset_names[index], layout)
+            # Construct <pc>:/path/file.h5
+            number_nodes = len(self.parent.processing_nodes)
+            files = len(file_names)
+            for index in range(files):
+                pc_name = self.parent.processing_nodes[index % number_nodes]
+                path = self.file_dir
+                file = file_names[index]
+                pc_and_path = f"{pc_name}:{path}{file}"
+                payload = '{"files_to_archive": "%s"}' % pc_and_path
+                request = ApiAdapterRequest(payload, content_type="application/json")
+                self.adapters["archiver"].put(command, request)
+            # Meta data file
+            pc_name = self.parent.odin_control_node
+            meta_h5 = f"{pc_name}:{self.hdf_file_location}"
+            payload = '{"files_to_archive": "%s"}' % meta_h5
+            request = ApiAdapterRequest(payload, content_type="application/json")
+            self.adapters["archiver"].put(command, request)
+        except Exception as e:
+            self.parent.fem.flag_error(f"Error signalling archiver: {e}")
 
     def save_dict_contents_to_file(self, hdf_file, path, param_tree_dict):
         """Traverse dictionary, write each key as native type to h5file."""
@@ -800,7 +701,6 @@ class HexitecDAQ():
     def get_total_frames_processed(self, plugin):
         """Count frames_processed across all of 'plugin' process(es)."""
         fp_statuses = self.get_adapter_status("fp")
-        # print("get_adapter_status", self.get_adapter_status("fp"))
         frames_processed = 0
         for fp_status in fp_statuses:
             fw_status = fp_status.get(plugin, None).get('frames_processed')
@@ -879,10 +779,7 @@ class HexitecDAQ():
         return configured
 
     def get_adapter_status(self, adapter):
-        """Get status from adapter.
-
-        To replace get_od_status()?
-        """
+        """Get status from adapter."""
         if not self.is_initialised:
             return [{"Error": "Adapter {} not initialised with references yet".format(adapter)}]
         try:
