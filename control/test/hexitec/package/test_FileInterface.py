@@ -102,7 +102,7 @@ class TestAdapter(unittest.TestCase):
     def test_adapter_get(self):
         """Test the adapter GET method returns the correct response."""
         expected_response = {
-            'odin_version': '1.5.0'
+            'odin_version': '1.6.0'
         }
         response = self.test_adapter.adapter.get(self.test_adapter.path, self.test_adapter.request)
         print(response.data, type(response.data))

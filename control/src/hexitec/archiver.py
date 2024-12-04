@@ -15,8 +15,6 @@ import glob
 import os
 
 from threading import Thread
-# from tornado.ioloop import IOLoop
-# from tornado.concurrent import run_on_executor
 from tornado.escape import json_decode
 
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
@@ -161,7 +159,7 @@ class Archiver():
         self.last_message_timestamp = ''
         self.log_messages = [timestamp, "initialised OK"]
         # File transfer information
-        self.transfer_status = "Initialised"
+        self.status = "Initialised"
         self.filename_transferring = ""
         self.transfer_progress = ""
         self.archiving_in_progress = False
@@ -181,11 +179,12 @@ class Archiver():
             'odin_version': version_info['version'],
             'server_uptime': (self.get_server_uptime, None),
             'transfer_progress': (lambda: self.transfer_progress, None),
-            'transfer_status': (lambda: self.transfer_status, None),
+            'files_archived': (lambda: self.number_files_archived, None),
+            'transfers_failed': (lambda: self.number_files_failed, None),
+            'status': (lambda: self.status, None),
             'queue_length': (self.queue.qsize, None)
         })
 
-        # self.ioloop = None
         self.proc = None
         self.background_task_enable = True
         self.start_background_tasks()
@@ -197,39 +196,31 @@ class Archiver():
         self.background_task_enable = True
 
         # Implementation using threading.Thread class
-        self.background_ioloop_task = Thread(target=self.background_worker, args=(None,))
-        self.background_ioloop_task.start()
-
-        # Using tornado ioloop
-        # self.background_worker()
+        self.background_task = Thread(target=self.background_worker, args=(None,))
+        self.background_task.start()
 
     def stop_background_tasks(self):
         """Stop the background tasks."""
         self.background_task_enable = False
         if self.proc is not None:
             self.proc.kill()
-            # self.ioloop.stop()
-            # self.proc.join()
-            # self.proc.stop()
         else:
-            logging.debug("Work thread idle")
+            logging.debug("Worker thread idle")
 
-    # @run_on_executor
     def background_worker(self, msg=None):
         """Run the adapter worker thread.
 
         This simply wait until the queue has any file(s) to transfer. It will shutdown gracefully
         when the cleanup function boggles the background_task_enable to False.
         """
-        # self.ioloop = IOLoop.current(instance=True)
         # This is the worker running in its own thread
         while self.background_task_enable:
             if self.queue.qsize() == 0:
                 time.sleep(0.1)
             else:
-                # logging.debug(f" DEBUG: File(s) in Q = ({self.queue.qsize()})")
+                # logging.debug(f"DEBUG: File(s) in Q = ({self.queue.qsize()})")
                 self.archive_files()
-        logging.debug(" DEBUG: Worker thread stopping")
+        self.status = "Halted"
 
     def archive_files(self, msg=None):
         """Execute archiving of files onto local dir."""
@@ -239,7 +230,7 @@ class Archiver():
         # rsync error: <No description>  (code -9)
 
         self.archiving_in_progress = True
-        logging.debug("Pulling selected file(s)..")
+        logging.debug("Transferring selected file(s)..")
         local_dir = self.local_dir
         files_failed_this_time = 0
         files_archived_this_time = 0
@@ -254,16 +245,24 @@ class Archiver():
                 self.queue.task_done()
                 continue
 
+            if self.is_server_accessible(server):
+                self.flag_error(f"Node {server} unreachable, skipped file {file}")
+                files_failed_this_time += 1
+                self.queue.task_done()
+                continue
+
             r_cmd = ['rsync', options, resume, f'{server}:{file}', local_dir]
             if self.bandwidth_limit:
                 bwlimit = f"--bwlimit={self.bandwidth_limit}"
                 r_cmd.append(bwlimit)
-            # logging.debug(f" DEBUG: (task_enable) {self.background_task_enable} Built rsync r_cmd: {r_cmd}. ")
-            logging.debug(f"Transferring from {server} file {file} [self.proc: {self.proc}]")
+            # logging.debug(f"DEBUG: Built rsync r_cmd: {r_cmd}. ")
+            logging.debug(f"Transferring from {server} file {file}")
             bOK, errors, rc = self.execute_rsync_command(r_cmd)
             # logging.debug(f" DEBUG rsync completed; bOK: {bOK} errors: {errors} rc: {rc}")
+            # Was process shutdown or killed?
             if (rc == 255) or (rc == -9) or (rc == 20):
-                # logging.debug(f" DEBUG after archive_file() (task_enable={self.background_task_enable})")
+                # Put current entry back into the queue to prevent partial transfer
+                self.queue.put(full_path)
                 self.background_task_enable = False
                 self.archiving_in_progress = False
                 return
@@ -286,7 +285,20 @@ class Archiver():
         self.number_files_failed += files_failed_this_time
         self.number_files_archived += files_archived_this_time
         self.archiving_in_progress = False
-        self.transfer_status = "Idle"
+        self.status = "Idle"
+
+    def is_server_accessible(self, server):
+        """Ping server to determine if it exists.
+
+        Returns 0 if successful, 1 if unreachable.
+        """
+        cmd = ['ping', server, '-c', '1', '-W', '2']
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p.wait()
+        # waiting = p.wait()
+        polling = p.poll()
+        # logging.debug(f"DEBUG waiting: {waiting} polling: {polling}")
+        return polling
 
     def parse_rsync_output(self, bytes_object):
         """Parse output from rsync command execution.
@@ -302,15 +314,15 @@ class Archiver():
         string_object = bytes_stripped.decode("utf-8")
         if string_object.endswith(".h5"):
             self.filename_transferring = string_object
-            self.transfer_status = "Transferring file.."
+            self.status = "Transferring file.."
             return
-        # logging.debug(f" DEBUG (enable: {self.background_task_enable}) transfer: {string_object}")
         # Check string contains '%' otherwise no transfer data in string
         if "%" not in string_object:
             return
         if "chk" in string_object:
-            self.transfer_status = "File transferred"
+            self.status = "File transferred"
             self.transfer_progress = 100
+            self.filename_transferring = ""
             return
         try:
             size_and_percentage, datarate_remaining = string_object.split("%")
@@ -322,13 +334,14 @@ class Archiver():
             # datarate_remaining = datarate_remaining.strip()
             # datarate_blank_remaining = datarate_remaining.split(" ")
             # datarate, remaining = datarate_blank_remaining[0], datarate_blank_remaining[-1]
-            # print(f" -> size= {size}, percent= {percentage}, rate= {datarate}, remain= {remaining}")
+            # print(f" -> size={size}, percent={percentage}, rate={datarate}, remain={remaining}")
             # return size, percentage, datarate, remaining
         except ValueError as e:
             logging.error(f"Error parsing {string_object}: {e}")
 
     def execute_rsync_command(self, cmd):
         """Execute rsync command through subprocess."""
+
         errors = []
         bOK = True
         rc = 0
