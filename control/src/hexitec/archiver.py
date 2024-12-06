@@ -230,7 +230,7 @@ class Archiver():
         # rsync error: <No description>  (code -9)
 
         self.archiving_in_progress = True
-        logging.debug("Transferring selected file(s)..")
+        logging.debug("Transferring file(s)..")
         local_dir = self.local_dir
         files_failed_this_time = 0
         files_archived_this_time = 0
@@ -248,6 +248,7 @@ class Archiver():
             if self.is_server_accessible(server):
                 self.flag_error(f"Node {server} unreachable, skipped file {file}")
                 files_failed_this_time += 1
+                self.number_files_failed += 1
                 self.queue.task_done()
                 continue
 
@@ -269,21 +270,20 @@ class Archiver():
             if bOK:
                 self.flag_ok(f"Copied {server}:{file} to {local_dir}")
                 files_archived_this_time += 1
-                # File safely transferred, persist queue change:
+                self.number_files_archived += 1
+                # File transferred, check whether all data of same acquisition received:
                 if self.check_run_data_completed(file):
                     if self.map_virtual_datasets(file) != 0:
-                        logging.warning("VDS failed to map Virtual datasets")
+                        logging.warning("VDS failed to map the virtual datasets")
             else:
                 self.flag_error(f"Failed to copy {server}:{file} error: {errors}")
                 files_failed_this_time += 1
+                self.number_files_failed += 1
             # Once rsync transfer completed, persist the change in the queue (item dequeued):
             self.queue.task_done()
         logging.debug(f"Archiving completed, {files_archived_this_time} file(s) archived.")
         if files_failed_this_time:
-            logging.warning(f"{files_failed_this_time} file(s) failed to be archived.")
-        # Total up number of successes, failures over multiple transfers:
-        self.number_files_failed += files_failed_this_time
-        self.number_files_archived += files_archived_this_time
+            logging.warning(f"Couldn't archive {files_failed_this_time} file(s).")
         self.archiving_in_progress = False
         self.status = "Idle"
 
@@ -295,10 +295,7 @@ class Archiver():
         cmd = ['ping', server, '-c', '1', '-W', '2']
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         p.wait()
-        # waiting = p.wait()
-        polling = p.poll()
-        # logging.debug(f"DEBUG waiting: {waiting} polling: {polling}")
-        return polling
+        return p.poll()
 
     def parse_rsync_output(self, bytes_object):
         """Parse output from rsync command execution.
@@ -389,7 +386,7 @@ class Archiver():
             raise ValueError(error)
 
     def map_virtual_datasets(self, filename):
-        """Maps actual datasets into set of virtual datasets."""
+        """Map real datasets into set of virtual datasets."""
         file_tokenised = filename.split(".h5")
         file_without_extension = file_tokenised[0]
         data_files = f"{file_without_extension}_*.h5"
@@ -582,5 +579,5 @@ class Archiver():
         This method stops the background tasks, allowing the adapter state to be cleaned up
         correctly.
         """
-        logging.debug("SHUTTING DOWN, cleanup called")
+        logging.debug("Shutting down, cleanup called")
         self.stop_background_tasks()
