@@ -252,6 +252,10 @@ class Hexitec():
         # Store initialisation time
         self.init_time = time.time()
 
+        self.leak_fault = 0
+        self.leak_warning = 0
+        self.leak_health = True
+        self.leak_error = ""
         self.system_health = True
         self.status_message = ""
         self.status_error = ""
@@ -292,7 +296,12 @@ class Hexitec():
                 "status_error": (lambda: self.status_error, None),
                 "elog": (lambda: self.elog, self.set_elog),
                 "fem_health": (lambda: self.fem_health, None),
-                "number_nodes": (lambda: self.number_nodes, self.set_number_nodes)
+                "number_nodes": (lambda: self.number_nodes, self.set_number_nodes),
+                "leak": {
+                    "fault": (lambda: bool(self.leak_fault), None),
+                    "warning": (lambda: bool(self.leak_warning), None),
+                    "leak_error": (self._get_leak_error, None)
+                }
             }
         })
 
@@ -346,7 +355,7 @@ class Hexitec():
         return frames_processed
 
     def poll_fem(self):
-        """Poll FEM for acquisition and health status."""
+        """Poll FEM for acquisition and health statuses."""
         if self.fem.acquisition_completed:
             frames_processed = self.get_frames_processed()
             # Check all frames finished processed
@@ -355,9 +364,44 @@ class Hexitec():
                 self.fem.acquisition_completed = False
         fem_health = self.fem.get_health()
         self.fem_health = fem_health
-        self.status_error = self.fem._get_status_error()
-        self.status_message = self.fem._get_status_message()
-        self.system_health = self.system_health and self.fem_health
+
+        # If connection established, any leak detector error?
+        if self.fem.hardware_connected:
+            request = ApiAdapterRequest(None, content_type="application/json")
+            response = self.adapters["proxy"].get("", request)
+            self.leak_fault = response.data["leak"]["system"]["fault"]
+            self.leak_warning = response.data["leak"]["system"]["warning"]
+            self.leak_health = not self.leak_fault
+            # print(f"\n H: {self.leak_health} F: {self.leak_fault} W: {self.leak_warning}")
+        # If leak detector fault, display in GUI (overrides any fem faults)
+        if self.leak_fault:
+            # Log leak detector fault only once
+            if self.leak_error == "":
+                self.software_state = "Error"
+                # TODO Obtain actual error message from leak detector
+
+                error_message = "{}".format("Leak Detector fault!")
+                logging.error(error_message)
+                # Amend leak to logging but bypass fem's error reporting
+                timestamp = self.fem.create_timestamp()
+                self.fem.errors_history.append([timestamp, error_message])
+                # Report leak fault to GUI
+                self.status_error = error_message
+                self.status_message = "Check leak detector unit!"
+                self._set_leak_error(error_message)
+        else:
+            self._set_leak_error("")
+            # No leak fault(s), set Fem's instead (or blank if none)
+            self.status_error = self.fem._get_status_error()
+            self.status_message = self.fem._get_status_message()
+        # Determine system health
+        self.system_health = self.fem_health and self.leak_health
+
+    def _set_leak_error(self, error):
+        self.leak_error = str(error)
+
+    def _get_leak_error(self):
+        return self.leak_error
 
     def check_daq_watchdog(self):
         """Monitor DAQ's frames_processed while data processed.
@@ -397,18 +441,18 @@ class Hexitec():
         finally:
             return response
 
-    def connect_hardware(self, msg):
+    def connect_hardware(self, msg=None):
         """Connect with hardware."""
         self.software_state = "Connecting"
         self.fem.connect_hardware(msg)
 
-    def initialise_hardware(self, msg):
+    def initialise_hardware(self, msg=None):
         """Initialise hardware."""
         self.fem.initialise_hardware(msg)
         # Wait for fem initialisation
         IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
 
-    def disconnect_hardware(self, msg):
+    def disconnect_hardware(self, msg=None):
         """Disconnect FEM's hardware connection."""
         if self.daq.in_progress:
             # Stop hardware if still in acquisition
@@ -431,7 +475,7 @@ class Hexitec():
         """
         return path.split(keyword)[-1]
 
-    def save_odin(self, msg):
+    def save_odin(self, msg=None):
         """Save Odin's settings to file."""
         config = {}
         config["daq/addition_enable"] = self.daq.addition_enable
@@ -473,7 +517,7 @@ class Hexitec():
         except Exception as e:
             self.fem.flag_error("Saving Odin config", str(e))
 
-    def load_odin(self, msg):
+    def load_odin(self, msg=None):
         """Load Odin's settings from file."""
         try:
             with open(self.odin_config_file, "r") as f:
@@ -672,11 +716,11 @@ class Hexitec():
         self.software_state = "Idle"
         # print("  {} -> adp.cancel_acq() SW_date = Idle".format(self.daq.debug_timestamp()))
 
-    def _collect_offsets(self, msg):
+    def _collect_offsets(self, msg=None):
         """Instruct FEM to collect offsets."""
         self.fem.collect_offsets()
 
-    def commit_configuration(self, msg):
+    def commit_configuration(self, msg=None):
         """Push HexitecDAQ's 'config/' ParameterTree settings into FP's plugins."""
         try:
             if self.fem.prepare_hardware():
@@ -687,32 +731,37 @@ class Hexitec():
         except Exception as e:
             self.fem.flag_error(str(e))
 
-    def hv_on(self, msg):
+    def hv_on(self, msg=None):
         """Switch HV on."""
         try:
             self.fem.hv_on()
         except Exception as e:
             self.fem.flag_error(str(e))
 
-    def hv_off(self, msg):
+    def hv_off(self, msg=None):
         """Switch HV off."""
         try:
             self.fem.hv_off()
         except Exception as e:
             self.fem.flag_error(str(e))
 
-    def environs(self, msg):
+    def environs(self, msg=None):
         """Readout environmental data."""
         self.fem.environs()
 
-    def reset_error(self, msg):
-        """Reset error."""
+    def reset_error(self, msg=None):
+        """Reset fem error.
+
+        Note that any leak unit error will remain.
+        """
         self.fem.reset_error()
         # Reset system status
-        self.status_error = ""
+        self.status_error = self.leak_error
         self.status_message = ""
-        self.system_health = True
-        self.software_state = "Cleared"
+        # Determine system health
+        self.system_health = self.fem_health and self.leak_health
+        if not self.leak_health:
+            self.software_state = "Error"
 
     def get(self, path):
         """

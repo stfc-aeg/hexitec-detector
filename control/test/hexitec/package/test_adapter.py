@@ -59,6 +59,7 @@ class DetectorAdapterTestFixture(object):
         self.fake_fp = MagicMock()
         self.fake_fr = MagicMock()
         self.fake_fi = MagicMock()
+        self.fake_proxy = MagicMock()
 
         # Once the odin_data adapter is refactored to use param tree,
         # this structure will need fixing
@@ -101,6 +102,15 @@ class DetectorAdapterTestFixture(object):
             ]
         }
 
+        self.proxy_data = {
+            "leak": {
+                "system": {
+                "fault": False,
+                "warning": True
+                }
+            }
+        }
+
         # set up fake adapters
         fp_return = Mock()
         fp_return.configure_mock(data=self.fp_data)
@@ -109,12 +119,17 @@ class DetectorAdapterTestFixture(object):
         # fr_return.configure_mock(data=self.fr_data)
         self.fake_fr.get = Mock(return_value=fr_return)
 
+        proxy_return = Mock()
+        proxy_return.configure_mock(data=self.proxy_data)
+        self.fake_proxy.get = Mock(return_value=proxy_return)
+
         fi_return = Mock()
         fi_return.configure_mock(data=self.fi_data)
 
         self.adapters = {
             "fp": self.fake_fp,
             "fr": self.fake_fr,
+            "proxy": self.fake_proxy,
             "file_interface": self.fake_fi
         }
         self.config = \
@@ -297,26 +312,34 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.update_meta(meta)
         assert self.test_adapter.detector.xtek_meta == meta
 
-    def test_poll_fem_handles_mid_acquisition(self):
-        """Test poll fem handles mid acquisition."""
-        self.test_adapter.detector.adapters = self.test_adapter.adapters
-        self.test_adapter.detector.fem.acquisition_completed = True
-        self.test_adapter.detector.fem.health = True
-        self.test_adapter.detector.poll_fem()
-        # Ensure shutdown_processing() was called [it changes the following bool]
-        assert self.test_adapter.detector.acquisition_in_progress is False
-
-    def test_poll_fem_handles_processing_completed(self):
-        """Test poll fem handles processing completed."""
+    def test_poll_fem_handles_polling_leak_unit_no_faults(self):
+        """Test poll fem handles polling leak detector unit returning no issues."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.fem.acquisition_completed = True
         self.test_adapter.detector.get_frames_processed = Mock(return_value=10)
         self.test_adapter.detector.fem.health = True
+        self.test_adapter.detector.leak_fault = False
+        self.test_adapter.detector.leak_warning = False
         self.test_adapter.detector.poll_fem()
 
         # Ensure shutdown_processing() was called [it changes the following bool]
         assert self.test_adapter.detector.acquisition_in_progress is False
         assert self.test_adapter.detector.fem.acquisition_completed is False
+        assert self.test_adapter.detector.leak_fault is False
+        assert self.test_adapter.detector.leak_warning is True
+
+    def test_poll_fem_handles_leak_fault(self):
+        """Test poll fem handles leak detector fault."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.fem.hardware_connected = False
+        self.test_adapter.detector.fem.create_timestamp = Mock()
+        self.test_adapter.detector.fem.health = False
+        self.test_adapter.detector.leak_fault = True
+        self.test_adapter.detector.leak_error = ""
+        with patch("logging.error") as mock_log:
+            self.test_adapter.detector.poll_fem()
+            mock_log.assert_called_once()
+        # raise Exception("what a/")
 
     def test_check_daq_watchdog(self):
         """Test daq watchdog works."""
@@ -746,3 +769,17 @@ class TestDetector(unittest.TestCase):
         assert self.test_adapter.detector.status_error == ""
         assert self.test_adapter.detector.status_message == ""
         assert self.test_adapter.detector.system_health is True
+
+    def test_reset_error_leak_fault(self):
+        """Test function reset the error message."""
+        self.test_adapter.detector.status_error = "Error"
+        self.test_adapter.detector.status_message = "message"
+        self.test_adapter.detector.system_health = False
+        self.test_adapter.detector.leak_health = False
+        leak_error = "Leak Error!"
+        self.test_adapter.detector.leak_error = leak_error
+        self.test_adapter.detector.reset_error("")
+        self.test_adapter.detector.fem.reset_error.assert_called()
+        assert self.test_adapter.detector.status_error == leak_error
+        assert self.test_adapter.detector.status_message == ""
+        assert self.test_adapter.detector.system_health is False
