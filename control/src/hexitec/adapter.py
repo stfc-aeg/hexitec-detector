@@ -263,7 +263,7 @@ class Hexitec():
         self.number_nodes = 1
         # Software states:
         #   Cold, Environs, Initialising, Offsets, Disconnected,
-        #   Idle, Ready, Acquiring, Error, Cleared
+        #   Idle, Ready, Acquiring, Error, Cleared, Interlocked
         self.software_state = "Cold"
         self.cold_initialisation = True
 
@@ -343,6 +343,19 @@ class Hexitec():
 
         IOLoop.instance().call_later(1.0, self.polling)
 
+    def report_leak_detector_error(self, error_message):
+        """Report leak detector error.
+
+        Report leak detector error without overwriting any fem error(s).
+        """
+        logging.error(error_message)
+        # Pass error to logging but bypass fem's error reporting
+        timestamp = self.fem.create_timestamp()
+        self.fem.errors_history.append([timestamp, error_message])
+        # Report leak fault to GUI
+        self.status_error = error_message
+        self._set_leak_error(error_message)
+
     def get_frames_processed(self):
         """Get number of frames processed across node(s)."""
         status = self._get_od_status("fp")
@@ -353,6 +366,18 @@ class Hexitec():
             # print("    g_f_p(), rank: {} frames_processed: {}".format(rank, frames))
             frames_processed = frames_processed + index.get('histogram').get('frames_processed')
         return frames_processed
+
+    def _get_leak_detector_status(self):
+        """Get leak detector status."""
+        response = [{"Error": "Adapter proxy not found"}]
+        try:
+            request = ApiAdapterRequest(None, content_type="application/json")
+            response = self.adapters["proxy"].get("", request)
+            response = response.data
+        except KeyError:
+            logging.warning("proxy Adapter Not Found")
+        finally:
+            return response
 
     def poll_fem(self):
         """Poll FEM for acquisition and health statuses."""
@@ -365,35 +390,47 @@ class Hexitec():
         fem_health = self.fem.get_health()
         self.fem_health = fem_health
 
-        # If connection established, any leak detector error?
-        if self.fem.hardware_connected:
-            request = ApiAdapterRequest(None, content_type="application/json")
-            response = self.adapters["proxy"].get("", request)
-            self.leak_fault = response.data["leak"]["system"]["fault"]
-            self.leak_warning = response.data["leak"]["system"]["warning"]
-            self.leak_health = not self.leak_fault
-            # print(f"\n H: {self.leak_health} F: {self.leak_fault} W: {self.leak_warning}")
-        # If leak detector fault, display in GUI (overrides any fem faults)
-        if self.leak_fault:
+        # Any leak detector error?
+        try:
+            response = self._get_leak_detector_status()
+            # print(f" [E leak detector response: {response} ({type(response)})");time.sleep(0.9)
+            self.leak_fault = response["leak"]["system"]["fault"]
+            self.leak_warning = response["leak"]["system"]["warning"]
+
+            # If leak detector fault, display in GUI (overrides any fem faults)
+            if self.leak_fault:
+                self.leak_health = not self.leak_fault
+                # print(f"\n [E IF* LH: {self.leak_health} LF: {self.leak_fault} LW: {self.leak_warning} state: {self.software_state} leak_err: '{self.leak_error}' cond {self.leak_error != ''}")
+                # Log leak detector fault only once
+                if self.leak_error == "":
+                    self.software_state = "Interlocked"
+                    # TODO Obtain actual error message from leak detector
+
+                    self.report_leak_detector_error("Leak Detector fault!")
+                    self.status_message = "Check leak detector unit!"
+            else:
+                # print(f"\n [E ELS LH: {self.leak_health} LF: {self.leak_fault} LW: {self.leak_warning} state: {self.software_state} leak_err: {self.leak_error} cond {self.leak_error != ''}")
+
+                # No leak fault(s), set to Fem's instead (or blank if none)
+                self.status_error = self.fem._get_status_error()
+                self.status_message = self.fem._get_status_message()
+                if (self.leak_fault is False) and (self.leak_health is False):
+                    # Leak fault cleared, leak health not yet toggled
+                    self.leak_health = not self.leak_fault
+                    self._set_leak_error("")
+                # Is there a fem error?
+                if self.status_error != "":
+                    self.software_state = "Error"
+                elif (self.status_error == ""):
+                    if (self.software_state == "Error") or (self.software_state == "Interlocked"):
+                        # Neither of Fem error or leak fault just cleared, update software state
+                        self.software_state = "Cleared"
+        except KeyError:
             # Log leak detector fault only once
             if self.leak_error == "":
-                self.software_state = "Error"
-                # TODO Obtain actual error message from leak detector
-
-                error_message = "{}".format("Leak Detector fault!")
-                logging.error(error_message)
-                # Amend leak to logging but bypass fem's error reporting
-                timestamp = self.fem.create_timestamp()
-                self.fem.errors_history.append([timestamp, error_message])
-                # Report leak fault to GUI
-                self.status_error = error_message
+                self.software_state = "Interlocked"
+                self.report_leak_detector_error("Leak Detector unreachable!")
                 self.status_message = "Check leak detector unit!"
-                self._set_leak_error(error_message)
-        else:
-            self._set_leak_error("")
-            # No leak fault(s), set Fem's instead (or blank if none)
-            self.status_error = self.fem._get_status_error()
-            self.status_message = self.fem._get_status_message()
         # Determine system health
         self.system_health = self.fem_health and self.leak_health
 
@@ -431,40 +468,56 @@ class Hexitec():
 
     def _get_od_status(self, adapter):
         """Get status from adapter."""
+        response = [{"Error": "Adapter {} not found".format(adapter)}]
         try:
             request = ApiAdapterRequest(None, content_type="application/json")
             response = self.adapters[adapter].get("status", request)
             response = response.data["value"]
         except KeyError:
             logging.warning("%s Adapter Not Found" % adapter)
-            response = [{"Error": "Adapter {} not found".format(adapter)}]
         finally:
             return response
 
     def connect_hardware(self, msg=None):
         """Connect with hardware."""
-        self.software_state = "Connecting"
-        self.fem.connect_hardware(msg)
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't connect with camera")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        else:
+            self.software_state = "Connecting"
+            self.fem.connect_hardware(msg)
 
     def initialise_hardware(self, msg=None):
         """Initialise hardware."""
-        self.fem.initialise_hardware(msg)
-        # Wait for fem initialisation
-        IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't initialise Hardware")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        else:
+            self.fem.initialise_hardware(msg)
+            # Wait for fem initialisation
+            IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
 
     def disconnect_hardware(self, msg=None):
         """Disconnect FEM's hardware connection."""
-        if self.daq.in_progress:
-            # Stop hardware if still in acquisition
-            if self.fem.hardware_busy:
-                self.cancel_acquisition()
-            # Reset daq
-            self.shutdown_processing()
-            # Allow processing to shutdown before disconnecting hardware
-            IOLoop.instance().call_later(0.2, self.fem.disconnect_hardware)
+        print(f"state: {self.software_state}")
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't disconnect Hardware")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
         else:
-            # Nothing in progress, disconnect hardware
-            self.fem.disconnect_hardware(msg)
+            if self.daq.in_progress:
+                # Stop hardware if still in acquisition
+                if self.fem.hardware_busy:
+                    self.cancel_acquisition()
+                # Reset daq
+                self.shutdown_processing()
+                # Allow processing to shutdown before disconnecting hardware
+                IOLoop.instance().call_later(0.2, self.fem.disconnect_hardware)
+            else:
+                # Nothing in progress, disconnect hardware
+                self.fem.disconnect_hardware(msg)
 
     def strip_base_path(self, path, keyword):
         """Remove base path from path.
@@ -613,50 +666,55 @@ class Hexitec():
 
     def acquisition(self, put_data=None):
         """Instruct DAQ and FEM to acquire data."""
-        # Clear (any previous) daq error
-        self.daq.in_error = False
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't acquire data")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        else:
+            # Clear (any previous) daq error
+            self.daq.in_error = False
 
-        if self.daq.in_progress:
-            logging.warning("Cannot Start Acquistion: Already in progress")
-            self.fem._set_status_error("Cannot Start Acquistion: Already in progress")
-            return
+            if self.daq.in_progress:
+                logging.warning("Cannot Start Acquistion: Already in progress")
+                self.fem._set_status_error("Cannot Start Acquistion: Already in progress")
+                return
 
-        if not self.daq.prepare_odin():
-            logging.error("Odin's frameReceiver/frameProcessor not ready")
-            return
+            if not self.daq.prepare_odin():
+                logging.error("Odin's frameReceiver/frameProcessor not ready")
+                return
 
-        self.total_delay = 0
-        self.number_frames_to_request = self.number_frames
+            self.total_delay = 0
+            self.number_frames_to_request = self.number_frames
 
-        # Issue reset to histogram
-        command = "config/histogram/reset_histograms"
-        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-        request.body = "{}".format(1)
-        self.adapters["fp"].put(command, request)
+            # Issue reset to histogram
+            command = "config/histogram/reset_histograms"
+            request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+            request.body = "{}".format(1)
+            self.adapters["fp"].put(command, request)
 
-        # Issue reset to summed_image
-        command = "config/summed_image/reset_image"
-        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-        request.body = "{}".format(1)
-        self.adapters["fp"].put(command, request)
+            # Issue reset to summed_image
+            command = "config/summed_image/reset_image"
+            request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+            request.body = "{}".format(1)
+            self.adapters["fp"].put(command, request)
 
-        # Issue reset to threshold plugin, to clear occupancy data
-        command = "config/threshold/reset_occupancy"
-        request = ApiAdapterRequest(self.file_dir, content_type="application/json")
-        request.body = "{}".format(1)
-        self.adapters["fp"].put(command, request)
+            # Issue reset to threshold plugin, to clear occupancy data
+            command = "config/threshold/reset_occupancy"
+            request = ApiAdapterRequest(self.file_dir, content_type="application/json")
+            request.body = "{}".format(1)
+            self.adapters["fp"].put(command, request)
 
-        # Reset FR(s) statistics
-        command = "command/reset_statistics"
-        request = ApiAdapterRequest("", content_type="application/json")
-        self.adapters["fr"].put(command, request)
+            # Reset FR(s) statistics
+            command = "command/reset_statistics"
+            request = ApiAdapterRequest("", content_type="application/json")
+            self.adapters["fr"].put(command, request)
 
-        self.daq.prepare_daq(self.number_frames)
-        # Acquisition starts here
-        self.acquisition_in_progress = True
-        self.software_state = "Acquiring"
-        # Wait for DAQ (i.e. file writer) to be enabled before FEM told to collect data
-        IOLoop.instance().add_callback(self.await_daq_ready)
+            self.daq.prepare_daq(self.number_frames)
+            # Acquisition starts here
+            self.acquisition_in_progress = True
+            self.software_state = "Acquiring"
+            # Wait for DAQ (i.e. file writer) to be enabled before FEM told to collect data
+            IOLoop.instance().add_callback(self.await_daq_ready)
 
     def await_daq_ready(self):
         """Wait until DAQ has configured, enabled file writer."""
@@ -707,47 +765,76 @@ class Hexitec():
 
         Not yet possible to stop FEM, mid-acquisition
         """
-        self.fem.stop_acquisition = True
-        # Inject End of Acquisition Frame
-        command = "config/inject_eoa"
-        request = ApiAdapterRequest("", content_type="application/json")
-        self.adapters["fp"].put(command, request)
-        self.shutdown_processing()
-        self.software_state = "Idle"
-        # print("  {} -> adp.cancel_acq() SW_date = Idle".format(self.daq.debug_timestamp()))
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't cancel acquisition")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        else:
+            self.fem.stop_acquisition = True
+            # Inject End of Acquisition Frame
+            command = "config/inject_eoa"
+            request = ApiAdapterRequest("", content_type="application/json")
+            self.adapters["fp"].put(command, request)
+            self.shutdown_processing()
+            self.software_state = "Idle"
 
     def _collect_offsets(self, msg=None):
         """Instruct FEM to collect offsets."""
-        self.fem.collect_offsets()
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't collect offsets")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        else:
+            self.fem.collect_offsets()
 
     def commit_configuration(self, msg=None):
         """Push HexitecDAQ's 'config/' ParameterTree settings into FP's plugins."""
-        try:
-            if self.fem.prepare_hardware():
-                self.daq.commit_configuration()
-                # Clear cold initialisation if first config commit
-                if self.cold_initialisation:
-                    self.cold_initialisation = False
-        except Exception as e:
-            self.fem.flag_error(str(e))
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't commit configuration")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        else:
+            try:
+                if self.fem.prepare_hardware():
+                    self.daq.commit_configuration()
+                    # Clear cold initialisation if first config commit
+                    if self.cold_initialisation:
+                        self.cold_initialisation = False
+            except Exception as e:
+                self.fem.flag_error(str(e))
 
     def hv_on(self, msg=None):
         """Switch HV on."""
-        try:
-            self.fem.hv_on()
-        except Exception as e:
-            self.fem.flag_error(str(e))
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't switch on HV")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        else:
+            try:
+                self.fem.hv_on()
+            except Exception as e:
+                self.fem.flag_error(str(e))
 
     def hv_off(self, msg=None):
         """Switch HV off."""
-        try:
-            self.fem.hv_off()
-        except Exception as e:
-            self.fem.flag_error(str(e))
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't switch off HV")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        else:
+            try:
+                self.fem.hv_off()
+            except Exception as e:
+                self.fem.flag_error(str(e))
 
     def environs(self, msg=None):
         """Readout environmental data."""
-        self.fem.environs()
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't read environs")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        else:
+            self.fem.environs()
 
     def reset_error(self, msg=None):
         """Reset fem error.
@@ -761,7 +848,11 @@ class Hexitec():
         # Determine system health
         self.system_health = self.fem_health and self.leak_health
         if not self.leak_health:
+            self.software_state = "Interlocked"
+        elif not self.fem_health:
             self.software_state = "Error"
+        else:
+            self.software_state = "Cleared"
 
     def get(self, path):
         """

@@ -105,8 +105,8 @@ class DetectorAdapterTestFixture(object):
         self.proxy_data = {
             "leak": {
                 "system": {
-                "fault": False,
-                "warning": True
+                    "fault": False,
+                    "warning": True
                 }
             }
         }
@@ -312,21 +312,66 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.update_meta(meta)
         assert self.test_adapter.detector.xtek_meta == meta
 
-    def test_poll_fem_handles_polling_leak_unit_no_faults(self):
-        """Test poll fem handles polling leak detector unit returning no issues."""
+    def test_report_leak_detector_error(self):
+        """Test reporting leak detector errors working."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        e_message = "sample error"
+        self.test_adapter.detector.fem.create_timestamp = Mock()
+        self.test_adapter.detector.report_leak_detector_error(e_message)
+        assert self.test_adapter.detector.status_error == e_message
+        assert self.test_adapter.detector.leak_error == e_message
+
+    def test_get_leak_detector_status_exception(self):
+        """Test function handles KeyError."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        # Simulate proxy adapter not loaded:
+        del self.test_adapter.detector.adapters["proxy"]
+        warning = [{'Error': 'Adapter proxy not found'}]
+        with patch("logging.warning") as mock_log:
+            rc = self.test_adapter.detector._get_leak_detector_status()
+            mock_log.assert_called()
+            assert rc == warning
+
+    def test_poll_fem_handles_polling_leak_detector_issue_just_cleared(self):
+        """Test poll fem handles leak detector issue just resolved."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.fem.acquisition_completed = True
+        self.test_adapter.detector.fem._get_status_error = Mock(return_value="")
+        self.test_adapter.detector.fem._get_status_message = Mock(return_value="")
         self.test_adapter.detector.get_frames_processed = Mock(return_value=10)
+        self.test_adapter.detector.software_state = "Interlocked"
         self.test_adapter.detector.fem.health = True
         self.test_adapter.detector.leak_fault = False
         self.test_adapter.detector.leak_warning = False
+        self.test_adapter.detector.leak_health = False
         self.test_adapter.detector.poll_fem()
-
         # Ensure shutdown_processing() was called [it changes the following bool]
         assert self.test_adapter.detector.acquisition_in_progress is False
         assert self.test_adapter.detector.fem.acquisition_completed is False
         assert self.test_adapter.detector.leak_fault is False
         assert self.test_adapter.detector.leak_warning is True
+        assert self.test_adapter.detector.software_state == "Cleared"
+        assert self.test_adapter.detector.system_health is True
+
+    def test_poll_fem_handles_no_leak_issue_but_fem_fault(self):
+        """Test poll fem handles leak detector fine but fem issue."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.fem.acquisition_completed = True
+        self.test_adapter.detector.fem._get_status_error = Mock(return_value="Error")
+        self.test_adapter.detector.fem._get_status_message = Mock(return_value="")
+        self.test_adapter.detector.get_frames_processed = Mock(return_value=10)
+        self.test_adapter.detector.software_state = "Idle"
+        self.test_adapter.detector.fem.health = True
+        self.test_adapter.detector.leak_fault = False
+        self.test_adapter.detector.leak_warning = False
+        self.test_adapter.detector.leak_health = False
+        self.test_adapter.detector.poll_fem()
+        # Ensure shutdown_processing() was called [it changes the following bool]
+        assert self.test_adapter.detector.acquisition_in_progress is False
+        assert self.test_adapter.detector.fem.acquisition_completed is False
+        assert self.test_adapter.detector.leak_fault is False
+        assert self.test_adapter.detector.leak_warning is True
+        assert self.test_adapter.detector.software_state == "Error"
 
     def test_poll_fem_handles_leak_fault(self):
         """Test poll fem handles leak detector fault."""
@@ -336,10 +381,29 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.fem.health = False
         self.test_adapter.detector.leak_fault = True
         self.test_adapter.detector.leak_error = ""
+        rv = {"leak": {"system": {"fault": True, "warning": True}}}
+        self.test_adapter.detector._get_leak_detector_status = Mock(return_value=rv)
+        self.test_adapter.detector.report_leak_detector_error = Mock()
+        self.test_adapter.detector.poll_fem()
+        self.test_adapter.detector.report_leak_detector_error.assert_called()
+
+    def test_poll_fem_handles_exception(self):
+        """Test poll fem handles KeyError."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.fem.hardware_connected = False
+        self.test_adapter.detector.fem.create_timestamp = Mock()
+        self.test_adapter.detector.fem.health = False
+        self.test_adapter.detector.leak_fault = True
+        self.test_adapter.detector._get_leak_detector_status = Mock()
+        self.test_adapter.detector._get_leak_detector_status.side_effect = KeyError()
+        self.test_adapter.detector._set_leak_error = Mock()
+        self.test_adapter.detector.software_state = "Connected"
         with patch("logging.error") as mock_log:
             self.test_adapter.detector.poll_fem()
-            mock_log.assert_called_once()
-        # raise Exception("what a/")
+            mock_log.assert_called()
+            assert self.test_adapter.detector.software_state == "Interlocked"
+            self.test_adapter.detector.fem.create_timestamp.assert_called()
+            self.test_adapter.detector._set_leak_error.assert_called()
 
     def test_check_daq_watchdog(self):
         """Test daq watchdog works."""
@@ -381,37 +445,46 @@ class TestDetector(unittest.TestCase):
     def test_detector_get_od_status_misnamed_adapter(self):
         """Test detector throws exception on misnamed adapter."""
         with patch("hexitec.adapter.ApiAdapterRequest"):
-
             # Initialise adapters in adapter
             self.test_adapter.detector.adapters = self.test_adapter.adapters
             adapter = "wRong"
             rc_value = self.test_adapter.detector._get_od_status(adapter)
             response = [{"Error": "Adapter {} not found".format(adapter)}]
-
             assert response == rc_value
 
     def test_connect_hardware(self):
         """Test function works OK."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state == "Cold"
         self.test_adapter.detector.fem.connect_hardware = Mock()
         self.test_adapter.detector.connect_hardware("")
         self.test_adapter.detector.fem.connect_hardware.assert_called()
+        assert self.test_adapter.detector.software_state == "Connecting"
+
+    def test_connect_hardware_handles_interlocked(self):
+        """Test function prevents connecting when interlocked."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state = "Interlocked"
+        rv = "Interlocked: Can't connect with camera"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
+        with pytest.raises(ParameterTreeError, match=rv):
+            self.test_adapter.detector.connect_hardware("")
 
     def test_initialise_hardware(self):
-        """Test function initialises hardware.
-
-        First initialisation means 2 frames should be collected.
-        """
-        frames = 10
-        self.test_adapter.detector.number_frames = frames
-
+        """Test function initialises hardware."""
         with patch("hexitec.adapter.IOLoop") as mock_loop:
-
             self.test_adapter.detector.initialise_hardware("")
-
-            assert self.test_adapter.detector.backed_up_number_frames == frames
-            # assert self.test_adapter.detector.number_frames == 2
             i = mock_loop.instance()
             i.call_later.assert_called_with(0.5, self.test_adapter.detector.monitor_fem_progress)
+
+    def test_initialise_hardware_handles_interlocked(self):
+        """Test function prevents initialisation when interlocked."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state = "Interlocked"
+        rv = "Interlocked: Can't initialise Hardware"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
+        with pytest.raises(ParameterTreeError, match=rv):
+            self.test_adapter.detector.initialise_hardware("")
 
     def test_disconnect_hardware(self):
         """Test function disconnects hardware."""
@@ -436,6 +509,15 @@ class TestDetector(unittest.TestCase):
             self.test_adapter.detector.shutdown_processing.assert_called_with()
             i = mock.instance()
             i.call_later.assert_called_with(0.2, self.test_adapter.detector.fem.disconnect_hardware)
+
+    def test_disconnect_hardware_handles_interlocked(self):
+        """Test function prevents disconnecting when interlocked."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state = "Interlocked"
+        rv = "Interlocked: Can't disconnect Hardware"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
+        with pytest.raises(ParameterTreeError, match=rv):
+            self.test_adapter.detector.disconnect_hardware("")
 
     def test_strip_base_path(self):
         """Test function correctly strips out base path."""
@@ -618,6 +700,15 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.daq.prepare_odin.assert_called()
         self.test_adapter.detector.daq.prepare_daq.assert_not_called()
 
+    def test_detector_acquisition_handles_interlocked(self):
+        """Test function prevents acquisition when interlocked."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state = "Interlocked"
+        rv = "Interlocked: Can't acquire data"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
+        with pytest.raises(ParameterTreeError, match=rv):
+            self.test_adapter.detector.acquisition("")
+
     def test_await_daq_ready_waits_for_daq(self):
         """Test adapter's await_daq_ready waits for DAQ to be ready."""
         self.test_adapter.detector.daq.configure_mock(
@@ -701,18 +792,34 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.daq.configure_mock(
             in_progress=False
         )
-
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.fem.stop_acquisition = False
         self.test_adapter.detector.cancel_acquisition()
-
         assert self.test_adapter.detector.fem.stop_acquisition is True
+
+    def test_cancel_acquisition_handles_interlocked(self):
+        """Test function prevents cancelling acquisition when interlocked."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state = "Interlocked"
+        rv = "Interlocked: Can't cancel acquisition"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
+        with pytest.raises(ParameterTreeError, match=rv):
+            self.test_adapter.detector.cancel_acquisition("")
 
     def test_collect_offsets(self):
         """Test function initiates collect offsets."""
         self.test_adapter.detector.fem.hardware_busy = False
         self.test_adapter.detector._collect_offsets("")
         self.test_adapter.detector.fem.collect_offsets.assert_called()
+
+    def test_collect_offsets_handles_interlocked(self):
+        """Test function prevents offsets collected when interlocked."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state = "Interlocked"
+        rv = "Interlocked: Can't collect offsets"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
+        with pytest.raises(ParameterTreeError, match=rv):
+            self.test_adapter.detector._collect_offsets("")
 
     def test_commit_configuration(self):
         """Test function calls daq's commit_configuration."""
@@ -728,6 +835,15 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.daq.commit_configuration.assert_not_called()
         self.test_adapter.detector.fem.flag_error.assert_called_with(e)
 
+    def test_commit_configuration_handles_interlocked(self):
+        """Test function prevents committing configuration when interlocked."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state = "Interlocked"
+        rv = "Interlocked: Can't commit configuration"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
+        with pytest.raises(ParameterTreeError, match=rv):
+            self.test_adapter.detector.commit_configuration("")
+
     def test_hv_on(self):
         """Test function switches HV on."""
         self.test_adapter.detector.hv_on("")
@@ -740,6 +856,15 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.fem.hv_on.side_effect = Exception(e)
         self.test_adapter.detector.hv_on("")
         self.test_adapter.detector.fem.flag_error.assert_called_with(e)
+
+    def test_hv_on_handles_interlocked(self):
+        """Test function prevents switching on HV when interlocked."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state = "Interlocked"
+        rv = "Interlocked: Can't switch on HV"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
+        with pytest.raises(ParameterTreeError, match=rv):
+            self.test_adapter.detector.hv_on("")
 
     def test_hv_off(self):
         """Test function switches HV off."""
@@ -754,10 +879,28 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.hv_off("")
         self.test_adapter.detector.fem.flag_error.assert_called_with(e)
 
+    def test_hv_off_handles_interlocked(self):
+        """Test function prevents switching off HV when interlocked."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state = "Interlocked"
+        rv = "Interlocked: Can't switch off HV"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
+        with pytest.raises(ParameterTreeError, match=rv):
+            self.test_adapter.detector.hv_off("")
+
     def test_environs(self):
         """Test function calls readout environmental data."""
         self.test_adapter.detector.environs("")
         self.test_adapter.detector.fem.environs.assert_called()
+
+    def test_environs_handles_interlocked(self):
+        """Test function prevents reading environs when interlocked."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state = "Interlocked"
+        rv = "Interlocked: Can't read environs"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
+        with pytest.raises(ParameterTreeError, match=rv):
+            self.test_adapter.detector.environs("")
 
     def test_reset_error(self):
         """Test function reset the error message."""
@@ -771,7 +914,8 @@ class TestDetector(unittest.TestCase):
         assert self.test_adapter.detector.system_health is True
 
     def test_reset_error_leak_fault(self):
-        """Test function reset the error message."""
+        """Test function handle leak detector fault."""
+        self.test_adapter.detector.software_date = "Idle"
         self.test_adapter.detector.status_error = "Error"
         self.test_adapter.detector.status_message = "message"
         self.test_adapter.detector.system_health = False
@@ -782,4 +926,22 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.fem.reset_error.assert_called()
         assert self.test_adapter.detector.status_error == leak_error
         assert self.test_adapter.detector.status_message == ""
+        assert self.test_adapter.detector.software_state == "Interlocked"
+        assert self.test_adapter.detector.system_health is False
+
+        # self.test_adapter.detector.adapters = self.test_adapter.adapters
+    def test_reset_error_fem_error(self):
+        """Test function handle fem error."""
+        self.test_adapter.detector.software_state = "Idle"
+        self.test_adapter.detector.status_error = "Error"
+        self.test_adapter.detector.status_message = "message"
+        self.test_adapter.detector.fem_health = False
+        self.test_adapter.detector.leak_health = True
+        # leak_error = "Leak Error!"
+        # self.test_adapter.detector.leak_error = leak_error
+        self.test_adapter.detector.reset_error("")
+        self.test_adapter.detector.fem.reset_error.assert_called()
+        # assert self.test_adapter.detector.status_error == leak_error
+        assert self.test_adapter.detector.status_message == ""
+        assert self.test_adapter.detector.software_state == "Error"
         assert self.test_adapter.detector.system_health is False

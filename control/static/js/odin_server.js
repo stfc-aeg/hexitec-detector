@@ -25,6 +25,32 @@ var software_state = "Unknown";
 var odin_cold_initialisation = true;
 // Changing raw, process dataset must force Applying changes
 var force_apply = false;
+// Define the UI elements, to allow leak detector fault disabling them when fault occur
+var leak_detector_fault = false;
+var acquireButton = document.querySelector('#acquireButton').disabled;
+var applyButton = document.querySelector('#applyButton').disabled;
+var applyButton2 = document.querySelector('#applyButton2').disabled;
+var cancelButton = document.querySelector('#cancelButton').disabled;
+var connectButton = document.querySelector('#connectButton').disabled;
+var disconnectButton = document.querySelector('#disconnectButton').disabled;
+var durationButton = document.querySelector('#duration-text').disabled;
+var environsButton = document.querySelector('#environsButton').disabled;
+var framesButton = document.querySelector('#frames-text').disabled;
+var hdfFilePathButton = document.querySelector('#hdf-file-path-text').disabled;
+var hdfFileNameButton = document.querySelector('#hdf-file-name-text').disabled;
+var hexitecConfigButton = document.querySelector('#hexitec-config-text').disabled;
+var hvOffButton = document.querySelector('#hvOffButton').disabled;
+var hvOnButton = document.querySelector('#hvOnButton').disabled;
+var imageFrequencyButton = false;
+var initialiseButton = document.querySelector('#initialiseButton').disabled;
+var lvDatasetButton = document.querySelector('#lv_dataset_select').disabled;
+var lvframesFrameFrequencyButton = false;
+var lvframesPerSecondButton = false;
+var lvspectraFrameFrequencyButton = false;
+var lvspectraPerSecondButton = false;
+var offsetsButton = document.querySelector('#offsetsButton').disabled;
+var thresholdLowerButton = false;
+var thresholdUpperButton = false;
 
 // Called once, when page 1st loaded
 document.addEventListener("DOMContentLoaded", function () {
@@ -213,6 +239,96 @@ function start_polling_thread() {
     poll_fem();
 }
 
+function display_ui_states() {
+    // Debugging function
+    console.log("acquireButton = " + document.querySelector('#acquireButton').disabled);
+    console.log("applyButton = " + document.querySelector('#applyButton').disabled);
+    console.log("applyButton2 = " + document.querySelector('#applyButton2').disabled);
+    console.log("cancelButton = " + document.querySelector('#cancelButton').disabled);
+    console.log("connectButton = " + document.querySelector('#connectButton').disabled);
+    console.log("disconnectButton = " + document.querySelector('#disconnectButton').disabled);
+    console.log("durationButton = " + document.querySelector('#duration-text').disabled);
+    console.log("environsButton = " + document.querySelector('#environsButton').disabled);
+    console.log("framesButton = " + document.querySelector('#frames-text').disabled);
+    console.log("hdfFilePathButton = " + document.querySelector('#hdf-file-path-text').disabled);
+    console.log("hdfFileNameButton = " + document.querySelector('#hdf-file-name-text').disabled);
+    console.log("hexitecConfigButton = " + document.querySelector('#hexitec-config-text').disabled);
+    console.log("hvOffButton = " + document.querySelector('#hvOffButton').disabled);
+    console.log("hvOnButton = " + document.querySelector('#hvOnButton').disabled);
+    console.log("initialiseButton = " + document.querySelector('#initialiseButton').disabled);
+    console.log("lvDatasetButton = " + document.querySelector('#lv_dataset_select').disabled);
+    console.log("offsetsButton = " + document.querySelector('#offsetsButton').disabled);
+}
+
+function interlock_tripped_lock_ui() {
+    // Note current settings (enabled or disabled)
+    acquireButton = document.querySelector('#acquireButton').disabled;
+    applyButton = document.querySelector('#applyButton').disabled;
+    applyButton2 = document.querySelector('#applyButton2').disabled;
+    cancelButton = document.querySelector('#cancelButton').disabled;
+    connectButton = document.querySelector('#connectButton').disabled;
+    disconnectButton = document.querySelector('#disconnectButton').disabled;
+    durationButton = document.querySelector('#duration-text').disabled;
+    environsButton = document.querySelector('#environsButton').disabled;
+    framesButton = document.querySelector('#frames-text').disabled;
+    hdfFilePathButton = document.querySelector('#hdf-file-path-text').disabled;
+    hdfFileNameButton = document.querySelector('#hdf-file-name-text').disabled;
+    hexitecConfigButton = document.querySelector('#hexitec-config-text').disabled;
+    hvOffButton = document.querySelector('#hvOffButton').disabled;
+    hvOnButton = document.querySelector('#hvOnButton').disabled;
+    initialiseButton = document.querySelector('#initialiseButton').disabled;
+    lvDatasetButton = document.querySelector('#lv_dataset_select').disabled;
+    offsetsButton = document.querySelector('#offsetsButton').disabled;
+
+    // console.log("____________________ UI components before locking");
+    // display_ui_states();
+    // Lock all controls while leak detector fault
+    lock_ui_components();
+
+}
+
+function lock_ui_components() {
+    // Locks (disables) all UI components
+    document.querySelector('#acquireButton').disabled = true;
+    document.querySelector('#applyButton').disabled = true;
+    document.querySelector('#applyButton2').disabled = true;
+    document.querySelector('#cancelButton').disabled = true;
+    document.querySelector('#connectButton').disabled = true;
+    document.querySelector('#disconnectButton').disabled = true;
+    document.querySelector('#duration-text').disabled = true;
+    document.querySelector('#environsButton').disabled = true;
+    document.querySelector('#frames-text').disabled = true;
+    document.querySelector('#hdf-file-path-text').disabled = true;
+    document.querySelector('#hdf-file-name-text').disabled = true;
+    document.querySelector('#hexitec-config-text').disabled = true;
+    document.querySelector('#hvOffButton').disabled = true;
+    document.querySelector('#hvOnButton').disabled = true;
+    document.querySelector('#initialiseButton').disabled = true;
+    document.querySelector('#lv_dataset_select').disabled = true;
+    document.querySelector('#offsetsButton').disabled = true;
+}
+
+function interlock_restored_unlock_ui() {
+    // Restore UI components to their various states prior to leak detector fault
+    document.querySelector('#acquireButton').disabled = acquireButton;
+    document.querySelector('#applyButton').disabled = applyButton;
+    document.querySelector('#applyButton2').disabled = applyButton2;
+    document.querySelector('#cancelButton').disabled = cancelButton;
+    document.querySelector('#connectButton').disabled = connectButton;
+    document.querySelector('#disconnectButton').disabled = disconnectButton;
+    document.querySelector('#duration-text').disabled = durationButton;
+    document.querySelector('#environsButton').disabled = environsButton;
+    document.querySelector('#frames-text').disabled = framesButton;
+    document.querySelector('#hdf-file-path-text').disabled = hdfFilePathButton;
+    document.querySelector('#hdf-file-name-text').disabled = hdfFileNameButton;
+    document.querySelector('#hexitec-config-text').disabled = hexitecConfigButton;
+    document.querySelector('#hvOffButton').disabled = hvOffButton;
+    document.querySelector('#hvOnButton').disabled = hvOnButton;
+    document.querySelector('#initialiseButton').disabled = initialiseButton;
+    document.querySelector('#lv_dataset_select').disabled = lvDatasetButton;
+    document.querySelector('#offsetsButton').disabled = offsetsButton;
+}
+
 function toggle_ui_elements(bBool) {
     try {
         document.querySelector('#initialiseButton').disabled = bBool;
@@ -231,14 +347,6 @@ function toggle_ui_elements(bBool) {
         document.querySelector('#hexitec-config-text').disabled = bBool;
 
         document.querySelector('#lv_dataset_select').disabled = bBool;
-        // document.querySelector('#lvframes-frame-frequency-text').disabled = bBool;
-        // document.querySelector('#lvframes-per-second-text').disabled = bBool;
-        // document.querySelector('#lvspectra-per-second-text').disabled = bBool;
-        // document.querySelector('#lvspectra-frame-frequency-text').disabled = bBool;
-        // document.querySelector('#lvframes-frame-frequency-text').disabled = bBool;
-        // document.querySelector('#threshold-lower-text').disabled = bBool;
-        // document.querySelector('#threshold-upper-text').disabled = bBool;
-        // document.querySelector('#image-frequency-text').disabled = bBool;
     } catch(error) {
         console.log("toggle_ui_elements() Error: " + error);
     }
@@ -248,7 +356,6 @@ function update_ui_with_leak_detector_settings(result){
     var results = result["value"];
     var system = result["leak"]["system"];
     var outlets = system["outlets"];
-    var packet_info = result["leak"]["system"]["packet_info"];
 
     var ld_warning = system["warning"];
     var ld_chiller_state = outlets["chiller"]["state"];
@@ -264,6 +371,24 @@ function update_ui_with_leak_detector_settings(result){
     document.querySelector('#ld_daq_enabled').innerHTML = ld_daq_enable;
     document.querySelector('#ld_daq_state').innerHTML = ld_daq_state;
 
+    if (ld_fault === true) {
+        if (leak_detector_fault === false) {
+            // Act only on the first time leak detector fault detected
+            // console.log(" *** interlocking tripped!");
+            interlock_tripped_lock_ui()
+            leak_detector_fault = true;
+        }
+    }
+    else {
+        if (leak_detector_fault === true) {
+            // Act only the first time that the leak detector fault is cleared
+            // console.log(" *** interlock restored!");
+            // console.log("____________________ UI components after unlocking");
+            interlock_restored_unlock_ui()
+            leak_detector_fault = false;
+            display_ui_states();
+        }
+    }
 
     // Expand leak detector parameter coverage
 
@@ -302,7 +427,6 @@ function poll_fem() {
             }
 
             // Odin running, commence polling
-
             // Polls the fem(s) for hardware status, environmental data, etc
             hexitec_endpoint.get_url(hexitec_url + 'fr/status/')
                 .then(result => {
@@ -313,7 +437,6 @@ function poll_fem() {
                         const buffers = result["value"][i].buffers;
                         document.querySelector('#frames_dropped' + (i+1)).innerHTML = frames.dropped;
                         document.querySelector('#frames_timedout' + (i+1)).innerHTML = frames.timedout;
-
                         document.querySelector('#packets_lost' + (i+1)).innerHTML = decoder.packets_lost;
                         document.querySelector('#buffers_empty' + (i+1)).innerHTML = buffers.empty;
                         document.querySelector('#buffers_mapped' + (i+1)).innerHTML = buffers.mapped;
@@ -406,69 +529,72 @@ function poll_fem() {
                     var processing_progress = document.getElementById("processing-progress");
                     processing_progress.value = fraction_processed * 100;
 
-                    // Enable buttons when connection completed
-                    if (hardware_connected === true) {
-                        // Disable connect, enable disconnect button
-                        document.querySelector('#disconnectButton').disabled = false;
-                        document.querySelector('#connectButton').disabled = true;
-                        if (hardware_busy === true) {
-                            toggle_ui_elements(true);   // Disable UI elements
-                        }
-                        else {
-                            toggle_ui_elements(false);  // Enable UI elements..
-                            // ..but keep Offsets, Acquire buttons disabled until system initialised
-                            if (system_initialised === false) {
-                                document.querySelector('#acquireButton').disabled = true;
-                                document.querySelector('#offsetsButton').disabled = true;
+                    // UI components may only change state(s) in the absence of any leak detector fault
+                    if (leak_detector_fault === false) {
+                        // Enable buttons when connection completed
+                        if (hardware_connected === true) {
+                            // Disable connect, enable disconnect button
+                            document.querySelector('#disconnectButton').disabled = false;
+                            document.querySelector('#connectButton').disabled = true;
+                            if (hardware_busy === true) {
+                                toggle_ui_elements(true);   // Disable UI elements
                             }
-                            else
-                            {
-                                document.querySelector('#offsetsButton').disabled = false;
-                                // Has either of Raw, Process datasets been changed but not Applied?
-                                if (force_apply === true)
+                            else {
+                                toggle_ui_elements(false);  // Enable UI elements..
+                                // ..but keep Offsets, Acquire buttons disabled until system initialised
+                                if (system_initialised === false) {
                                     document.querySelector('#acquireButton').disabled = true;
+                                    document.querySelector('#offsetsButton').disabled = true;
+                                }
                                 else
-                                    document.querySelector('#acquireButton').disabled = false;
+                                {
+                                    document.querySelector('#offsetsButton').disabled = false;
+                                    // Has either of Raw, Process datasets been changed but not Applied?
+                                    if (force_apply === true)
+                                        document.querySelector('#acquireButton').disabled = true;
+                                    else
+                                        document.querySelector('#acquireButton').disabled = false;
+                                }
+                                // Disable Environs button if collecting environmental data
+                                if (fem["environs_in_progress"] === true)
+                                    document.querySelector('#environsButton').disabled = true;
+                                else
+                                    document.querySelector('#environsButton').disabled = false;
                             }
-                            // Disable Environs button if collecting environmental data
-                            if (fem["environs_in_progress"] === true)
-                                document.querySelector('#environsButton').disabled = true;
-                            else
-                                document.querySelector('#environsButton').disabled = false;
-                        }
-                        if (daq_in_progress === true) {
-                            // Enable cancelButton but disable changing file[path]
-                            document.querySelector('#cancelButton').disabled = false;
-                            document.querySelector('#hdf-file-path-text').disabled = true;
-                            document.querySelector('#hdf-file-name-text').disabled = true;
+                            if (daq_in_progress === true) {
+                                // Enable cancelButton but disable changing file[path]
+                                document.querySelector('#cancelButton').disabled = false;
+                                document.querySelector('#hdf-file-path-text').disabled = true;
+                                document.querySelector('#hdf-file-name-text').disabled = true;
+                            }
+                            else {
+                                // Disable cancelButton but enable changing file[path]
+                                document.querySelector('#cancelButton').disabled = true;
+                                document.querySelector('#hdf-file-path-text').disabled = false;
+                                document.querySelector('#hdf-file-name-text').disabled = false;
+                            }
                         }
                         else {
-                            // Disable cancelButton but enable changing file[path]
+                            // Hardware not connected
+                            document.querySelector('#disconnectButton').disabled = true;
+                            document.querySelector('#connectButton').disabled = false;
+                            document.querySelector('#initialiseButton').disabled = true;
+                            document.querySelector('#acquireButton').disabled = true;
                             document.querySelector('#cancelButton').disabled = true;
+                            if (hv_enabled)
+                                document.querySelector('#hvOffButton').disabled = true;
+                            else
+                                document.querySelector('#hvOnButton').disabled = true;
+                            document.querySelector('#environsButton').disabled = true;
+                            document.querySelector('#offsetsButton').disabled = true;
+
+                            // Unlock configuration related UI elements
+                            document.querySelector('#applyButton').disabled = false;
+                            document.querySelector('#applyButton2').disabled = false;
                             document.querySelector('#hdf-file-path-text').disabled = false;
                             document.querySelector('#hdf-file-name-text').disabled = false;
+                            document.querySelector('#hexitec-config-text').disabled = false;
                         }
-                    }
-                    else {
-                        // Hardware not connected
-                        document.querySelector('#disconnectButton').disabled = true;
-                        document.querySelector('#connectButton').disabled = false;
-                        document.querySelector('#initialiseButton').disabled = true;
-                        document.querySelector('#acquireButton').disabled = true;
-                        document.querySelector('#cancelButton').disabled = true;
-                        if (hv_enabled)
-                            document.querySelector('#hvOffButton').disabled = true;
-                        else
-                            document.querySelector('#hvOnButton').disabled = true;
-                        document.querySelector('#environsButton').disabled = true;
-                        document.querySelector('#offsetsButton').disabled = true;
-
-                        // Unlock configuration related UI elements
-                        document.querySelector('#applyButton').disabled = false;
-                        document.querySelector('#applyButton2').disabled = false;
-                        document.querySelector('#hdf-file-path-text').disabled = false;
-                        document.querySelector('#hdf-file-name-text').disabled = false;
-                        document.querySelector('#hexitec-config-text').disabled = false;
                     }
 
                     var fem_diagnostics = fem["diagnostics"];

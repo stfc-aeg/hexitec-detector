@@ -792,20 +792,6 @@ class HexitecDAQ():
         finally:
             return response
 
-    def get_od_status(self, adapter):
-        """Get status from adapter."""
-        if not self.is_initialised:
-            return {"Error": "Adapter not initialised with references yet"}
-        try:
-            request = ApiAdapterRequest(None, content_type="application/json")
-            response = self.adapters[adapter].get("status", request)
-            response = response.data["value"][0]
-        except KeyError:
-            logging.warning("%s Adapter Not Found" % adapter)
-            response = {"Error": "Adapter {} not found".format(adapter)}
-        finally:
-            return response
-
     def get_config_file(self, adapter):
         """Get config file from adapter."""
         if not self.is_initialised:

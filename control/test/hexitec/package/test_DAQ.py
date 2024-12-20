@@ -251,7 +251,7 @@ class TestDAQ(unittest.TestCase):
     def test_initialize_missing_adapter(self):
         """Test initialisation (part 3)."""
         mocked_dictionary = Mock()
-        mocked_dictionary.items.side_effect=KeyError("whoops")
+        mocked_dictionary.items.side_effect = KeyError("whoops")
         self.test_daq.daq.initialize(mocked_dictionary)
 
     def test_initialize_handles_live_view_error(self):
