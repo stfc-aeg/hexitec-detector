@@ -261,11 +261,12 @@ class Hexitec():
         self.status_error = ""
         self.elog = ""
         self.number_nodes = 1
+        self.archiver_status = 200
         # Software states:
-        #   Cold, Environs, Initialising, Offsets, Disconnected,
+        #   Cold, Connecting, Environs, Initialising, Offsets, Disconnected,
         #   Idle, Ready, Acquiring, Error, Cleared, Interlocked
         self.software_state = "Cold"
-        self.cold_initialisation = True
+        self.cold_start = True
 
         detector = ParameterTree({
             "fem": self.fem.param_tree,
@@ -275,10 +276,9 @@ class Hexitec():
             "disconnect_hardware": (None, self.disconnect_hardware),
             "save_odin": (None, self.save_odin),
             "load_odin": (None, self.load_odin),
-            "collect_offsets": (None, self._collect_offsets),
+            "collect_offsets": (None, self.collect_offsets),
             "commit_configuration": (None, self.commit_configuration),
             "software_state": (lambda: self.software_state, None),
-            "cold_initialisation": (lambda: self.cold_initialisation, None),
             "hv_on": (None, self.hv_on),
             "hv_off": (None, self.hv_off),
             "environs": (None, self.environs),
@@ -337,11 +337,23 @@ class Hexitec():
         # Poll FEM acquisition & health status
         self.poll_fem()
 
-        # Monitor HexitecDAQ rate of frames_processed updated.. (Break if stalled)
+        # Check archiver running?
+        self.check_archiver_running()
+
+        # If acquiring monitor HexitecDAQ rate of frames_processed updating.. (Break if stalled)
         if self.daq.processing_interruptable:
             self.check_daq_watchdog()
 
         IOLoop.instance().call_later(1.0, self.polling)
+
+    def check_archiver_running(self):
+        """Check that archiver is running."""
+        archiver_response = self.get_proxy_adapter_data("archiver")
+        archiver_status = archiver_response['status']['archiver']['status_code']
+        # print(f" [E archiver response: {archiver_response}")
+        if (archiver_status != 200) and (archiver_status != self.archiver_status):
+            self.fem.flag_error(f"Archiver not responding, HTTP code: {archiver_status}")
+        self.archiver_status = archiver_status
 
     def report_leak_detector_error(self, error_message):
         """Report leak detector error.
@@ -367,17 +379,30 @@ class Hexitec():
             frames_processed = frames_processed + index.get('histogram').get('frames_processed')
         return frames_processed
 
-    def _get_leak_detector_status(self):
-        """Get leak detector status."""
-        response = [{"Error": "Adapter proxy not found"}]
+    def get_proxy_adapter_data(self, adapter):
+        """Get leak detector data."""
+        response = {"Error": f"Adapter {adapter} not found"}
         try:
             request = ApiAdapterRequest(None, content_type="application/json")
-            response = self.adapters["proxy"].get("", request)
+            response = self.adapters[adapter].get("", request)
             response = response.data
         except KeyError:
-            logging.warning("proxy Adapter Not Found")
+            logging.warning(f"{adapter} Adapter Not Found")
         finally:
             return response
+
+    def parse_leak_detector_response(self, response):
+        """Parse leak detector response."""
+        status_code = response['status']['leak']['status_code']
+        leak_fault = True
+        leak_warning = True
+        if status_code == 200:
+            leak_fault = response["leak"]["system"]["fault"]
+            leak_warning = response["leak"]["system"]["warning"]
+        else:
+            pass    # Cannot reach leak detector unit
+        # print(f"[E SC {status_code} LF {leak_fault} lw {leak_warning}")
+        return leak_fault, leak_warning
 
     def poll_fem(self):
         """Poll FEM for acquisition and health statuses."""
@@ -392,10 +417,8 @@ class Hexitec():
 
         # Any leak detector error?
         try:
-            response = self._get_leak_detector_status()
-            # print(f" [E leak detector response: {response} ({type(response)})");time.sleep(0.9)
-            self.leak_fault = response["leak"]["system"]["fault"]
-            self.leak_warning = response["leak"]["system"]["warning"]
+            response = self.get_proxy_adapter_data("proxy")
+            self.leak_fault, self.leak_warning = self.parse_leak_detector_response(response)
 
             # If leak detector fault, display in GUI (overrides any fem faults)
             if self.leak_fault:
@@ -431,6 +454,7 @@ class Hexitec():
                 self.software_state = "Interlocked"
                 self.report_leak_detector_error("Leak Detector unreachable!")
                 self.status_message = "Check leak detector unit!"
+
         # Determine system health
         self.system_health = self.fem_health and self.leak_health
 
@@ -485,6 +509,10 @@ class Hexitec():
             self.report_leak_detector_error(error_message)
             raise ParameterTreeError(error_message)
         else:
+            # Must ensure Odin data configured before connecting
+            if self.cold_start:
+                self.commit_configuration()
+                self.fem.set_hexitec_config("")
             self.software_state = "Connecting"
             self.fem.connect_hardware(msg)
 
@@ -501,7 +529,6 @@ class Hexitec():
 
     def disconnect_hardware(self, msg=None):
         """Disconnect FEM's hardware connection."""
-        print(f"state: {self.software_state}")
         if self.software_state == "Interlocked":
             error_message = "{}".format("Interlocked: Can't disconnect Hardware")
             self.report_leak_detector_error(error_message)
@@ -675,13 +702,14 @@ class Hexitec():
             self.daq.in_error = False
 
             if self.daq.in_progress:
-                logging.warning("Cannot Start Acquistion: Already in progress")
-                self.fem._set_status_error("Cannot Start Acquistion: Already in progress")
-                return
+                error = "Error: Acquistion Already in progress"
+                self.fem._set_status_error(error)
+                raise ParameterTreeError(error)
 
             if not self.daq.prepare_odin():
-                logging.error("Odin's frameReceiver/frameProcessor not ready")
-                return
+                error = "Error: Odin's frameReceiver/frameProcessor not ready"
+                self.fem._set_status_error(error)
+                raise ParameterTreeError(error)
 
             self.total_delay = 0
             self.number_frames_to_request = self.number_frames
@@ -778,14 +806,14 @@ class Hexitec():
             self.shutdown_processing()
             self.software_state = "Idle"
 
-    def _collect_offsets(self, msg=None):
+    def collect_offsets(self, msg=None):
         """Instruct FEM to collect offsets."""
         if self.software_state == "Interlocked":
             error_message = "{}".format("Interlocked: Can't collect offsets")
             self.report_leak_detector_error(error_message)
             raise ParameterTreeError(error_message)
         else:
-            self.fem.collect_offsets()
+            self.fem.run_collect_offsets()
 
     def commit_configuration(self, msg=None):
         """Push HexitecDAQ's 'config/' ParameterTree settings into FP's plugins."""
@@ -797,11 +825,10 @@ class Hexitec():
             try:
                 if self.fem.prepare_hardware():
                     self.daq.commit_configuration()
-                    # Clear cold initialisation if first config commit
-                    if self.cold_initialisation:
-                        self.cold_initialisation = False
             except Exception as e:
-                self.fem.flag_error(str(e))
+                error = f"Error: commit configuration: {str(e)}"
+                self.fem.flag_error(error)
+                raise ParameterTreeError(error)
 
     def hv_on(self, msg=None):
         """Switch HV on."""
@@ -813,7 +840,9 @@ class Hexitec():
             try:
                 self.fem.hv_on()
             except Exception as e:
-                self.fem.flag_error(str(e))
+                error = f"Error switching on HV: {str(e)}"
+                self.fem.flag_error(error)
+                raise ParameterTreeError(error)
 
     def hv_off(self, msg=None):
         """Switch HV off."""
@@ -825,7 +854,9 @@ class Hexitec():
             try:
                 self.fem.hv_off()
             except Exception as e:
-                self.fem.flag_error(str(e))
+                error = f"Error switching off HV: {str(e)}"
+                self.fem.flag_error(error)
+                raise ParameterTreeError(error)
 
     def environs(self, msg=None):
         """Readout environmental data."""
@@ -847,6 +878,7 @@ class Hexitec():
         self.status_message = ""
         # Determine system health
         self.system_health = self.fem_health and self.leak_health
+        # print(f"\n [E IF* FH: {self.fem_health} LH: {self.leak_health} ");time.sleep(0.2)
         if not self.leak_health:
             self.software_state = "Interlocked"
         elif not self.fem_health:

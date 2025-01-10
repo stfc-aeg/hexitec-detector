@@ -22,7 +22,6 @@ var ui_frames = 10;
 var js_not_initialised = true;
 var hv_enabled = false;
 var software_state = "Unknown";
-var odin_cold_initialisation = true;
 // Changing raw, process dataset must force Applying changes
 var force_apply = false;
 // Define the UI elements, to allow leak detector fault disabling them when fault occur
@@ -92,17 +91,7 @@ function applyButton2Clicked() {
 }
 
 function connectButtonClicked() {
-    // On cold initialisation: configure FP, wait 800 ms before connecting
-    //  Any subsequent time: Do not configure FP, connect straightaway
-    let time_delay = 0;
-    if (odin_cold_initialisation) {
-        commit_configuration();
-        hexitec_config_changed();
-        time_delay = 800;
-    }
-    setTimeout(function () {
-        connect_hardware();
-    }, time_delay);
+    connect_hardware();
 }
 
 function hvOnButtonClicked() {
@@ -386,7 +375,7 @@ function update_ui_with_leak_detector_settings(result){
             // console.log("____________________ UI components after unlocking");
             interlock_restored_unlock_ui()
             leak_detector_fault = false;
-            display_ui_states();
+            // display_ui_states();
         }
     }
 
@@ -415,7 +404,6 @@ function poll_fem() {
             // Clear any previous error
             document.querySelector('#odin-control-error').innerHTML = "";
             software_state = result["detector"]["software_state"];
-            odin_cold_initialisation = result["detector"]["cold_initialisation"];
 
             // If gui not populated (i.e. not initialised, populate it with Odin Control's settings
             if (js_not_initialised)

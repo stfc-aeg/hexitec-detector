@@ -25,7 +25,7 @@ from hexitec_vsr.VsrModule import VsrModule
 import hexitec.ALL_RDMA_REGISTERS as HEX_REGISTERS
 
 from socket import error as socket_error
-from odin.adapters.parameter_tree import ParameterTree
+from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 
 from tornado.ioloop import IOLoop
@@ -203,7 +203,6 @@ class HexitecFem():
 
         self.param_tree = ParameterTree(param_tree_dict)
 
-        self.cold_start = True
         self.data_lane1 = None
         self.data_lane2 = None
         self.number_nodes = None
@@ -492,6 +491,18 @@ class HexitecFem():
             raise socket_error("Failed to setup Control connection: %s" % e)
         return
 
+    def environs(self, msg=None):
+        """Readout environmental data if hardware connected and not busy."""
+        if self.hardware_connected is not True:
+            raise ParameterTreeError("Error: Can't read sensors without a connection")
+        if self.hardware_busy:
+            error = "Error: Can't read sensors, Hardware busy"
+            self.flag_error(error, "")
+            raise ParameterTreeError(error)
+        else:
+            self._set_status_error("")
+        IOLoop.instance().add_callback(self.read_sensors)
+
     @run_on_executor(executor='thread_executor')
     def read_sensors(self, msg=None):
         """Read environmental sensors and updates parameter tree with results."""
@@ -589,19 +600,19 @@ class HexitecFem():
                 self.parent.software_state = "Cold"
                 return
             if self.hardware_connected:
-                raise HexitecFemError("Connection already established")
+                raise ParameterTreeError("Error: Connection already established")
             else:
                 self._set_status_error("")
             self.hardware_busy = True
             self.hardware_connected = True
             # Configure control, data lines unless already configured
             # - Insist Control interface configured on every connect
-            if self.cold_start:
+            if self.parent.cold_start:
                 # Commit configuration (again) otherwise FP(s) shutdown prematurely
-                self.parent.daq.commit_configuration()
+                self.parent.daq.commit_configuration()  # TODO superfluous?
                 # Configure Control, Camera interfaces
                 self.configure_camera_interfaces()
-                self.cold_start = True
+                self.parent.cold_start = True
             else:
                 self.connect()
                 # Power up the VSRs
@@ -610,11 +621,13 @@ class HexitecFem():
             self.flag_error("Connection Error", str(e))
             self.hardware_connected = False
             self.hardware_busy = False
+            raise ParameterTreeError(f"Connection Error: {e}")
         except socket.error as e:
             self.flag_error("Connection Socket Error", str(e))
             self._set_status_message("Is the camera powered?")
             self.hardware_connected = False
             self.hardware_busy = False
+            raise ParameterTreeError(f"Connection Socket Error: {e}")
 
     def power_up_modules(self):
         """Power up and enable VSRs."""
@@ -661,33 +674,33 @@ class HexitecFem():
 
     def initialise_hardware(self, msg=None):
         """Initialise sensors, load enables, etc to initialise both VSR boards."""
+        if self.hardware_connected is not True:
+            raise ParameterTreeError("Error: Can't initialise without a connection")
+        if self.hardware_busy:
+            error = "Error: Can't initialise camera, Hardware busy"
+            self.flag_error(error, "")
+            raise ParameterTreeError(error)
+        else:
+            self._set_status_error("")
         try:
-            if self.hardware_connected is not True:
-                raise HexitecFemError("No connection established")
-            if self.hardware_busy:
-                raise HexitecFemError("Can't initialise, Hardware busy")
-            else:
-                self._set_status_error("")
             self.hardware_busy = True
             self.parent.software_state = "Initialising"
             self.initialise_system()
-        except HexitecFemError as e:
-            self.flag_error("Failed to initialise camera", str(e))
-            self.hardware_busy = False
         except Exception as e:
             error = "Camera initialisation failed"
             self.flag_error(error, str(e))
             self.hardware_busy = False
+            raise ParameterTreeError(f"{error}: {str(e)}")
 
     def collect_data(self, msg=None):
         """Acquire data from camera."""
+        if self.hardware_connected is not True:
+            raise ParameterTreeError("Error: Can't collect data without a connection")
+        if self.hardware_busy and (self.ignore_busy is False):
+            raise ParameterTreeError("Error: Hardware sensors busy initialising")
+        else:
+            self._set_status_error("")
         try:
-            if self.hardware_connected is not True:
-                raise HexitecFemError("No connection established")
-            if self.hardware_busy and (self.ignore_busy is False):
-                raise HexitecFemError("Hardware sensors busy initialising")
-            else:
-                self._set_status_error("")
             # Clear ignore_busy if set
             if self.ignore_busy:
                 self.ignore_busy = False
@@ -695,12 +708,11 @@ class HexitecFem():
             # self.parent.software_state = "Acquiring"
             self._set_status_message("Acquiring data..")
             self.acquire_data()
-        except HexitecFemError as e:
-            self.flag_error("Failed to collect data", str(e))
-            self.hardware_busy = False
         except Exception as e:
-            self.flag_error("Data collection failed", str(e))
+            error = "Data collection failed"
+            self.flag_error(error, str(e))
             self.hardware_busy = False
+            raise ParameterTreeError(f"{error}: {str(e)}")
 
     def disconnect_hardware(self, msg=None):
         """Disconnect camera."""
@@ -787,8 +799,10 @@ class HexitecFem():
 
             IOLoop.instance().call_later(0.1, self.check_acquire_finished)
         except Exception as e:
-            self.flag_error("Failed to start acquire_data", str(e))
+            error = "Failed to start acquire_data"
+            self.flag_error(error, str(e))
             self.hardware_busy = False
+            raise ParameterTreeError(error)
 
     def check_acquire_finished(self):
         """Check whether all data transferred, until completed or cancelled by user."""
@@ -806,7 +820,6 @@ class HexitecFem():
                 # 0 during data transmission, 65536 when completed
                 self.all_data_sent = (status & 65536)
                 if self.all_data_sent == 0:
-                    # print(f" *** Awaiting data.. (status = {status})***")
                     IOLoop.instance().call_later(0.1, self.check_acquire_finished)
                     return
                 else:
@@ -865,21 +878,24 @@ class HexitecFem():
         self.acquisition_completed = True
         self.all_data_sent = 0
 
+    def run_collect_offsets(self):
+        """Run collect offsets sequence if connected and hardware not busy."""
+        if self.hardware_connected is not True:
+            raise ParameterTreeError("Error: Can't collect offsets while disconnected")
+        if self.hardware_busy:
+            raise ParameterTreeError("Error: Can't collect offsets, Hardware busy")
+        else:
+            self._set_status_error("")
+        self.collect_offsets()
+
     @run_on_executor(executor='thread_executor')
     def collect_offsets(self):
         """Run collect offsets sequence.
 
         Stop state machine, gathers offsets, calculats average picture, re-starts state machine.
         """
+        # beginning = time.time()
         try:
-            # beginning = time.time()
-
-            if self.hardware_connected is not True:
-                raise HexitecFemError("Can't collect offsets while disconnected")
-            if self.hardware_busy:
-                raise HexitecFemError("Can't collect offsets, Hardware busy")
-            else:
-                self._set_status_error("")
             self.hardware_busy = True
             current_state = self.parent.software_state
             self.parent.software_state = "Offsets"
@@ -912,8 +928,6 @@ class HexitecFem():
             # print("Offsets timestamp, format of dd-mm-yyyy HH:MM:SS: ", str_date_time)
             # ending = time.time()
             # print("     collect_offsets took: {}".format(ending-beginning))
-        except HexitecFemError as e:
-            self.flag_error("Offsets", str(e))
         except Exception as e:
             self.flag_error("Failed to collect offsets", str(e))
         self.hardware_busy = False
@@ -1290,15 +1304,17 @@ class HexitecFem():
 
     def set_hexitec_config(self, filename):
         """Check whether file exists, load parameters from file."""
-        filename = self.control_config_path + filename
-        try:
-            with open(filename, 'r') as f:  # noqa: F841
-                pass
-            self.hexitec_config = filename
-            logging.debug("hexitec_config: '%s'" % (self.hexitec_config))
-        except IOError as e:
-            self.flag_error("Cannot open provided hexitec file", str(e))
-            return
+        # Use existing filename if none supplied
+        if len(filename) > 0:
+            filename = self.control_config_path + filename
+            try:
+                with open(filename, 'r') as f:  # noqa: F841
+                    pass
+                self.hexitec_config = filename
+                logging.debug("hexitec_config: '%s'" % (self.hexitec_config))
+            except IOError as e:
+                self.flag_error("Cannot open provided hexitec file", str(e))
+                return
 
         try:
             logging.debug("Loading INI file settings..")
@@ -1610,6 +1626,14 @@ class HexitecFem():
 
     def hv_on(self):
         """Switch HV on."""
+        if self.hardware_connected is not True:
+            raise ParameterTreeError("Can't switch on HV without a connection")
+        if self.hardware_busy:
+            error = "Can't switch on HV, Hardware busy"
+            self.flag_error(error, "")
+            raise ParameterTreeError(error)
+        else:
+            self._set_status_error("")
         logging.debug("Going to set HV bias to -{} volts".format(self.bias_level))
         hv_msb, hv_lsb = self.convert_bias_to_dac_values(self.bias_level)
         # print(f" HV Bias (-{self.bias_level}) : {hv_msb[0]:X} {hv_msb[1]:X}",
@@ -1623,16 +1647,20 @@ class HexitecFem():
 
     def hv_off(self):
         """Switch HV off."""
+        if self.hardware_connected is not True:
+            raise ParameterTreeError("Can't switch off HV without a connection")
+        if self.hardware_busy:
+            error = "Can't switch off HV, Hardware busy"
+            self.flag_error(error, "")
+            raise ParameterTreeError(error)
+        else:
+            self._set_status_error("")
         logging.debug("Disable: [0xE2]")
         # Can call hv_off function on any VSR object
         self.vsr_list[0].hv_off()
         self._set_status_message("HV turned off")
         self.hv_bias_enabled = False
         logging.debug("HV now OFF")
-
-    def environs(self):
-        """Readout environmental data."""
-        IOLoop.instance().add_callback(self.read_sensors)
 
     def reset_error(self):
         """Reset error message."""
