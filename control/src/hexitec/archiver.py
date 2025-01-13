@@ -151,7 +151,6 @@ class Archiver():
 
         self.number_files_archived = 0
         self.number_files_failed = 0
-        self.persistent_file_path = "/tmp/"
 
         # Track history of errors, messages
         self.errors_history = []
@@ -164,7 +163,7 @@ class Archiver():
         self.transfer_progress = ""
         self.archiving_in_progress = False
         # Persistent Queue
-        self.queue = Queue(self.persistent_file_path)
+        self.queue = Queue(self.local_dir)
         self.qsize = self.queue.qsize
 
         # Store all information in a parameter tree
