@@ -1094,8 +1094,9 @@ class HexitecFem():
             timeout = (expected_duration * 1.2) + 1
             self.hardware_busy = True
             for vsr in self.vsr_list:
-                logging.debug(" --- Initialising VSR: 0x{0:X} ---".format(vsr.addr))
-                self._set_status_message("Initialising VSR{}..".format(vsr.addr-143))
+                vsr_id = vsr.addr-143
+                logging.debug(" --- Initialising VSR: 0x{0:X} ---".format(vsr_id))
+                self._set_status_message("Initialising VSR{}..".format(vsr_id))
                 vsr.enable_vcal(self.vcal_enabled)
                 self.initialise_vsr(vsr)
                 # Check PLLs locked
@@ -1111,11 +1112,11 @@ class HexitecFem():
                         time_taken += 0.1
                     if time.time() - beginning > timeout:
                         logging.error("VSR{0:X} R.89 took long: {1:2.5} s".format(
-                            vsr.addr-143, time_taken))
-                        raise HexitecFemError("Timed out awaiting DC Capture Ready")
+                            vsr_id, time_taken))
+                        raise HexitecFemError(f"VSR{vsr_id} Timed out awaiting DC Capture Ready")
 
                 logging.debug("VSR{0:X} DC Capture ready took: {1} s".format(
-                    vsr.addr-143, round(time_taken, 3)))
+                    vsr_id, round(time_taken, 3)))
 
             logging.debug("LVDS Training")
             self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL['addr'],
