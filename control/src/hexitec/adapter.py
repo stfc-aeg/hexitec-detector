@@ -706,10 +706,7 @@ class Hexitec():
                 self.fem._set_status_error(error)
                 raise ParameterTreeError(error)
 
-            if not self.daq.prepare_odin():
-                error = "Error: Odin's frameReceiver/frameProcessor not ready"
-                self.fem._set_status_error(error)
-                raise ParameterTreeError(error)
+            self.daq.prepare_odin()
 
             self.total_delay = 0
             self.number_frames_to_request = self.number_frames

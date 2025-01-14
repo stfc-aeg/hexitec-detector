@@ -427,55 +427,39 @@ class TestDAQ(unittest.TestCase):
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
 
             self.test_daq.fp_data["value"][0]["hdf"]["frames_processed"] = 0
-            odin_ready = self.test_daq.daq.prepare_odin()
+            self.test_daq.daq.prepare_odin()
             self.test_daq.daq.prepare_daq(10)
 
             assert self.test_daq.daq.frame_start_acquisition == 0
             assert self.test_daq.daq.in_progress is True
             assert self.test_daq.daq.daq_ready is False
             assert self.test_daq.daq.file_writing is True
-            assert odin_ready is True
 
             instance = mock_loop.instance()
             instance.call_later.assert_called_with(1.3, self.test_daq.daq.acquisition_check_loop)
 
-    def test_start_acquisition_flags_nonempty_buffers_as_error(self):
-        """Test function flags if there are no empty buffers available."""
-        self.test_daq.daq.are_buffers_available = Mock(return_value=False)
-        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
-
-            self.test_daq.fp_data["value"][0]["hdf"]["frames_processed"] = 0
-            odin_ready = self.test_daq.daq.prepare_odin()
-            self.test_daq.daq.prepare_daq(10)
-
-            assert self.test_daq.daq.frame_start_acquisition == 0
-            assert self.test_daq.daq.in_progress is True
-            assert self.test_daq.daq.daq_ready is False
-            assert self.test_daq.daq.file_writing is True
-            assert odin_ready is False
-
-            instance = mock_loop.instance()
-            instance.call_later.assert_called_with(1.3, self.test_daq.daq.acquisition_check_loop)
-
-    def test_start_acquisition_needs_configure(self):
-        """Test function works."""
-        new_fp_data = {
-            "value": [{
-                "connected": True
-            }]
+    def test_start_prepare_odin_fr_disconnected(self):
+        """Test function raises Exception if fr(s) disconnected."""
+        new_fr_data = {
+            "not_value": False
         }
-
-        config = {"configuration_complete": True}
-        with patch("hexitec.HexitecDAQ.IOLoop"), \
+        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop, \
             patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
-                patch.dict(self.test_daq.fr_data['value'][0]['status'], config, clear=True), \
-                patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
+                patch.dict(self.test_daq.fr_data, new_fr_data, clear=True):
 
-            return_value = self.test_daq.daq.prepare_odin()
-            assert return_value is False
+            error = "Frame Receiver(s) not connected!"
+            with pytest.raises(ParameterTreeError) as exc_info:
+                self.test_daq.daq.prepare_odin()
+            assert exc_info.value.args[0] == error
+            assert exc_info.type is ParameterTreeError
 
-    def test_start_acquisition_unconfigured_fp_fails(self):
-        """Test function works."""
+            assert self.test_daq.daq.file_writing is False
+            assert self.test_daq.daq.in_progress is False
+
+            mock_loop.instance().add_callback.assert_not_called()
+
+    def test_prepare_odin_fr_not_configured(self):
+        """Test function raises Exception if fr(s) not configured."""
         new_fp_data = {
             "value": [{
                 "connected": True
@@ -487,47 +471,68 @@ class TestDAQ(unittest.TestCase):
                 patch.dict(self.test_daq.fr_data['value'][0]['status'], config, clear=True), \
                 patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
 
-            odin_ready = self.test_daq.daq.prepare_odin()
-            assert odin_ready is False
+            error = "Frame Receiver(s) not configured!"
+            with pytest.raises(ParameterTreeError) as exc_info:
+                self.test_daq.daq.prepare_odin()
+            assert exc_info.value.args[0] == error
+            assert exc_info.type is ParameterTreeError
 
             # Check that HexitecDAQ.acquisition_check_loop() not called:
             mock_loop.instance().call_later.assert_not_called()
 
-    def test_start_acquisition_fr_disconnected(self):
-        """Test acquisition won't start with fr disconnected."""
-        new_fr_data = {
-            "not_value": False
-        }
+    def test_prepare_odin_fails_if_no_buffers_available(self):
+        """Test function flags if there are no buffers available."""
+        self.test_daq.daq.are_buffers_available = Mock(return_value=False)
+        self.test_daq.fp_data["value"][0]["hdf"]["frames_processed"] = 0
+        error = "FR buffers not available!"
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_daq.daq.prepare_daq(10)
+            self.test_daq.daq.prepare_odin()
+        assert exc_info.value.args[0] == error
+        assert exc_info.type is ParameterTreeError
 
-        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop, \
-            patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
-                patch.dict(self.test_daq.fr_data, new_fr_data, clear=True):
+        assert self.test_daq.daq.frame_start_acquisition == 0
+        assert self.test_daq.daq.in_progress is True
+        assert self.test_daq.daq.daq_ready is False
+        assert self.test_daq.daq.file_writing is True
 
-            odin_ready = self.test_daq.daq.prepare_odin()
-
-            assert self.test_daq.daq.file_writing is False
-            assert self.test_daq.daq.in_progress is False
-            assert odin_ready is False
-
-            mock_loop.instance().add_callback.assert_not_called()
-
-    def test_start_acquisition_fp_disconnected(self):
-        """Test acquisition won't start with fp disconnected."""
+    def test_prepare_odin_fp_disconnected(self):
+        """Test function raises Exception if fp(s) disconnected."""
         new_fp_data = {
             "not_value": False
         }
-
+        error = "Frame Processor(s) not connected!"
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop, \
             patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
                 patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
 
-            odin_ready = self.test_daq.daq.prepare_odin()
-
+            with pytest.raises(ParameterTreeError) as exc_info:
+                self.test_daq.daq.prepare_odin()
+            assert exc_info.value.args[0] == error
+            assert exc_info.type is ParameterTreeError
             assert self.test_daq.daq.file_writing is False
             assert self.test_daq.daq.in_progress is False
-            assert odin_ready is False
 
             mock_loop.instance().add_callback.assert_not_called()
+
+    def test_prepare_odin_fp_not_configured(self):
+        """Test function raises Exception if fp(s) not configured."""
+        new_fp_data = {
+            "value": [{
+                "connected": True
+            }]
+        }
+        config = {"configuration_complete": True}
+        with patch("hexitec.HexitecDAQ.IOLoop"), \
+            patch("hexitec.HexitecDAQ.ApiAdapterRequest"), \
+                patch.dict(self.test_daq.fr_data['value'][0]['status'], config, clear=True), \
+                patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
+
+            error = "Frame Processor(s) not configured!"
+            with pytest.raises(ParameterTreeError) as exc_info:
+                self.test_daq.daq.prepare_odin()
+            assert exc_info.value.args[0] == error
+            assert exc_info.type is ParameterTreeError
 
     def test_are_buffers_available_flag_no_empty_buffers(self):
         """Test function flags if frameReceiver buffers are empty."""

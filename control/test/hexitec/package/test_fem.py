@@ -419,7 +419,7 @@ class TestFem(unittest.TestCase):
         """Test function fails when no connection established."""
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.initialise_hardware()
-        error = "Error: Can't initialise without a connection"
+        error = "Error: Can't initialise hardware without a connection"
         assert exc_info.value.args[0] == error
         assert exc_info.type is ParameterTreeError
         assert self.test_fem.fem.hardware_connected is False
@@ -445,7 +445,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.hardware_busy = True
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.initialise_hardware()
-        error = "Error: Can't initialise camera, Hardware busy"
+        error = "Error: Can't initialise hardware, Hardware busy"
         assert exc_info.value.args[0] == error
         assert exc_info.type is ParameterTreeError
 
@@ -530,7 +530,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.hardware_busy = True
         self.test_fem.fem.ignore_busy = False
-        error = "Error: Hardware sensors busy initialising"
+        error = "Error: Can't collect data, Hardware busy"
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.collect_data()
         assert exc_info.value.args[0] == error
@@ -779,7 +779,7 @@ class TestFem(unittest.TestCase):
 
     def test_run_collect_offsets_handles_hardware_disconnected(self):
         self.test_fem.fem.hardware_connected = False
-        error = "Error: Can't collect offsets while disconnected"
+        error = "Error: Can't collect offsets without a connection"
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.run_collect_offsets()
         assert exc_info.value.args[0] == error
@@ -1333,7 +1333,7 @@ class TestFem(unittest.TestCase):
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.hv_on()
         assert exc_info.type is ParameterTreeError
-        assert exc_info.value.args[0] == "Can't switch on HV without a connection"
+        assert exc_info.value.args[0] == "Error: Can't switch HV on without a connection"
 
     def test_hv_on_fails_if_hardware_busy(self):
         """Test function fails if hardware busy."""
@@ -1342,7 +1342,7 @@ class TestFem(unittest.TestCase):
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.hv_on()
         assert exc_info.type is ParameterTreeError
-        assert exc_info.value.args[0] == "Can't switch on HV, Hardware busy"
+        assert exc_info.value.args[0] == "Error: Can't switch HV on, Hardware busy"
 
     @patch('hexitec_vsr.VsrModule')
     def test_hv_off(self, mocked_vsr_module):
@@ -1361,7 +1361,7 @@ class TestFem(unittest.TestCase):
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.hv_off()
         assert exc_info.type is ParameterTreeError
-        assert exc_info.value.args[0] == "Can't switch off HV without a connection"
+        assert exc_info.value.args[0] == "Error: Can't switch HV off without a connection"
 
     def test_hv_off_fails_if_hardware_busy(self):
         """Test function fails if hardware busy."""
@@ -1370,7 +1370,7 @@ class TestFem(unittest.TestCase):
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.hv_off()
         assert exc_info.type is ParameterTreeError
-        assert exc_info.value.args[0] == "Can't switch off HV, Hardware busy"
+        assert exc_info.value.args[0] == "Error: Can't switch HV off, Hardware busy"
 
     def test_reset_error(self):
         """Test function works ok."""

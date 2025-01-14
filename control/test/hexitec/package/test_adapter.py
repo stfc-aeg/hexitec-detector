@@ -760,19 +760,6 @@ class TestDetector(unittest.TestCase):
         assert exc_info.value.args[0] == error
         self.test_adapter.detector.daq.prepare_odin.assert_not_called()
 
-    def test_detector_acquisition_prevents_acquisition_if_odin_not_ready(self):
-        """Test adapter won't start acquisition while FR/FP not ready."""
-        self.test_adapter.detector.daq.configure_mock(
-            in_progress=False
-        )
-        self.test_adapter.detector.daq.prepare_odin = Mock(return_value=False)
-        error = "Error: Odin's frameReceiver/frameProcessor not ready"
-        with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_adapter.detector.acquisition("data")
-        assert exc_info.value.args[0] == error
-        self.test_adapter.detector.daq.prepare_odin.assert_called()
-        self.test_adapter.detector.daq.prepare_daq.assert_not_called()
-
     def test_detector_acquisition_handles_interlocked(self):
         """Test function prevents acquisition when interlocked."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters

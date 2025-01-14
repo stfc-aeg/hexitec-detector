@@ -301,31 +301,36 @@ class HexitecDAQ():
         fr_status = self.get_adapter_status("fr")
         fp_status = self.get_adapter_status("fp")
         if self.are_processes_connected(fr_status) is False:
-            self.parent.fem.flag_error("Frame Receiver(s) not connected!")
+            error = "Frame Receiver(s) not connected!"
+            self.parent.fem.flag_error(error, "")
             self.in_error = True
-            return False
+            raise ParameterTreeError(error)
         elif self.are_processes_configured(fr_status, "fr") is False:
-            self.parent.fem.flag_error("Frame Receiver(s) not configured!")
+            error = "Frame Receiver(s) not configured!"
+            self.parent.fem.flag_error(error, "")
             self.in_error = True
-            return False
+            raise ParameterTreeError(error)
         elif self.are_buffers_available(fr_status) is False:
-            self.parent.fem.flag_error("FR buffers not empty!")
+            error = "FR buffers not available!"
+            self.parent.fem.flag_error(error, "")
             self.in_error = True
-            return False
+            raise ParameterTreeError(error)
         else:
             logging.debug("Frame Receiver(s) connected and configured")
 
         if self.are_processes_connected(fp_status) is False:
-            self.parent.fem.flag_error("Frame Processor(s) not connected!")
+            error = "Frame Processor(s) not connected!"
+            self.parent.fem.flag_error(error, "")
             self.in_error = True
-            return False
+            raise ParameterTreeError(error)
         elif self.are_processes_configured(fp_status, "fp") is False:
-            self.parent.fem.flag_error("Frame Processor(s) not configured!")
+            error = "Frame Processor(s) not configured!"
+            self.parent.fem.flag_error(error, "")
             self.in_error = True
-            return False
+            raise ParameterTreeError(error)
         else:
             logging.debug("Frame Processor(s) connected and configured")
-        # DAQ ready only if no data collection in progress
+        # DAQ is ready if no data collection in progress
         if not self.in_progress:
             self.daq_ready = True
         return True

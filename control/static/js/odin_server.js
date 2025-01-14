@@ -21,7 +21,6 @@ var system_health = true;
 var ui_frames = 10;
 var js_not_initialised = true;
 var hv_enabled = false;
-var software_state = "Unknown";
 // Changing raw, process dataset must force Applying changes
 var force_apply = false;
 // Define the UI elements, to allow leak detector fault disabling them when fault occur
@@ -403,7 +402,6 @@ function poll_fem() {
             display_log_messages();
             // Clear any previous error
             document.querySelector('#odin-control-error').innerHTML = "";
-            software_state = result["detector"]["software_state"];
 
             // If gui not populated (i.e. not initialised, populate it with Odin Control's settings
             if (js_not_initialised)
