@@ -23,6 +23,9 @@ var js_not_initialised = true;
 var hv_enabled = false;
 // Changing raw, process dataset must force Applying changes
 var force_apply = false;
+// Variables for tracking leak detector unit status (even when it's unresponsive)
+var adapter_leak_fault = false;
+var adapter_leak_warning = false;
 // Define the UI elements, to allow leak detector fault disabling them when fault occur
 var leak_detector_fault = false;
 var acquireButton = document.querySelector('#acquireButton').disabled;
@@ -272,7 +275,6 @@ function interlock_tripped_lock_ui() {
     // display_ui_states();
     // Lock all controls while leak detector fault
     lock_ui_components();
-
 }
 
 function lock_ui_components() {
@@ -340,17 +342,23 @@ function toggle_ui_elements(bBool) {
     }
 }
 
-function update_ui_with_leak_detector_settings(result){
-    var results = result["value"];
+function update_ui_with_leak_detector_settings(result) {
+    // var results = result["value"];
+    // var results = result["leak"];   // Leak Detector faked
+    // console.log("result['leak']: " + JSON.stringify(results, null, 4) );
+    // console.log("result['leak']['system']: " + JSON.stringify(results['system'], null, 4) );
+    // var system = result["leak"]["system"];
+
     var system = result["leak"]["system"];
     var outlets = system["outlets"];
 
-    var ld_warning = system["warning"];
+    // Get leak detector info from adapter.py or won't notice if leak detector losses power
+    var ld_warning = adapter_leak_warning;
+    var ld_fault = adapter_leak_fault;
     var ld_chiller_state = outlets["chiller"]["state"];
     var ld_chiller_enable = outlets["chiller"]["enabled"];
     var ld_daq_state = outlets["daq"]["state"];
-    var ld_daq_enable = outlets["chiller"]["enabled"];
-    var ld_fault = system["fault"]
+    var ld_daq_enable = outlets["daq"]["enabled"];
 
     document.querySelector('#ld_warning').innerHTML = ld_warning;
     document.querySelector('#ld_fault').innerHTML = ld_fault;
@@ -371,7 +379,6 @@ function update_ui_with_leak_detector_settings(result){
         if (leak_detector_fault === true) {
             // Act only the first time that the leak detector fault is cleared
             // console.log(" *** interlock restored!");
-            // console.log("____________________ UI components after unlocking");
             interlock_restored_unlock_ui()
             leak_detector_fault = false;
             // display_ui_states();
@@ -480,6 +487,11 @@ function poll_fem() {
 
             hexitec_endpoint.get_url(hexitec_url + 'detector')
                 .then(result => {
+                    var adapter_leak = result["detector"]["status"]["leak"];
+                    adapter_leak_fault = adapter_leak["fault"];
+                    adapter_leak_warning = adapter_leak["warning"];
+                    // console.log("poll_fem, ADP F: " + adapter_leak_fault + " W: " + adapter_leak_warning);
+
                     const fem = result["detector"]["fem"]
                     const adapter_status = result["detector"]["status"] // adapter.py's status
                     // document.querySelector('#all_data_sent').innerHTML = fem["all_data_sent"];
