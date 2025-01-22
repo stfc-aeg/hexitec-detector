@@ -9,6 +9,12 @@ from hexitec.GenerateConfigFiles import GenerateConfigFiles
 import unittest
 import pytest
 import json
+import sys
+
+if sys.version_info[0] == 3:  # pragma: no cover
+    from unittest.mock import Mock, MagicMock, patch, mock_open
+else:                         # pragma: no cover
+    from mock import Mock, MagicMock, patch
 
 
 class ObjectTestFixture(object):
@@ -179,70 +185,71 @@ class TestObject(unittest.TestCase):
 
     def test_generate_config_files(self):
         """Test function works ok."""
-        store_temp_name, execute_temp_name, store_string_without_cr, \
-            execute_string_without_cr = self.test_detector_adapter.adapter.generate_config_files()
-        assert store_temp_name == "/tmp/_tmp_store.json"
-        assert execute_temp_name == "/tmp/_tmp_execute.json"
+        with patch("builtins.open", mock_open(read_data="data")):
+            store_temp_name, execute_temp_name, store_string_without_cr, \
+                execute_string_without_cr = self.test_detector_adapter.adapter.generate_config_files()
+            assert store_temp_name == "/tmp/_tmp_store.json"
+            assert execute_temp_name == "/tmp/_tmp_execute.json"
 
-        sl_value = self.test_detector_adapter.adapter.param_tree["sensors_layout"]
-        sl_dic = {'sensors_layout': sl_value}
-        d = json.loads(store_string_without_cr)
-        assert d['index'] == store_temp_name[5:]
-        assert d['value'][0]['plugin']['load']['index'] == 'reorder'
-        assert d['value'][1]['plugin']['load']['index'] == 'threshold'
-        assert d['value'][2]['plugin']['load']['index'] == 'calibration'
-        assert d['value'][3]['plugin']['load']['index'] == 'addition'
-        assert d['value'][4]['plugin']['load']['index'] == 'summed_image'
-        assert d['value'][5]['plugin']['load']['index'] == 'histogram'
-        assert d['value'][6]['plugin']['load']['index'] == 'lvframes'
-        assert d['value'][7]['plugin']['load']['index'] == 'lvspectra'
-        assert d['value'][8]['plugin']['load']['index'] == 'blosc'
-        assert d['value'][9]['plugin']['load']['index'] == 'hdf'
-        assert d['value'][10]['plugin'] == {'connect': {'index': 'lvframes',
-                                            'connection': 'histogram'}}
-        assert d['value'][11]['plugin'] == {'connect': {'index': 'lvspectra',
-                                            'connection': 'histogram'}}
-        assert d['value'][12]['plugin'] == {'connect': {'index': 'reorder',
-                                            'connection': 'frame_receiver'}}
-        assert d['value'][13]['plugin'] == {'connect':
-                                            {'index': 'threshold', 'connection': 'reorder'}}
-        assert d['value'][14]['plugin'] == {'connect':
-                                            {'index': 'calibration', 'connection': 'threshold'}}
-        assert d['value'][15]['plugin'] == {'connect':
-                                            {'index': 'addition', 'connection': 'calibration'}}
-        assert d['value'][16]['plugin'] == {'connect':
-                                            {'index': 'summed_image', 'connection': 'addition'}}
-        assert d['value'][17]['plugin'] == {'connect':
-                                            {'index': 'histogram', 'connection': 'summed_image'}}
-        assert d['value'][18]['plugin'] == {'connect':
-                                            {'index': 'blosc', 'connection': 'histogram'}}
-        assert d['value'][19]['plugin'] == {'connect': {'index': 'hdf', 'connection': 'blosc'}}
-        assert d['value'][20] == {'reorder': sl_dic}
-        assert d['value'][21] == {'threshold':
-                                  {'threshold_file': '', 'threshold_value': 99,
-                                   'threshold_mode': 'none', 'sensors_layout': sl_value}}
-        assert d['value'][22] == {'calibration':
-                                  {'gradients_file': '', 'intercepts_file': '',
-                                   'sensors_layout': sl_value}}
-        assert d['value'][23] == {'addition': {'pixel_grid_size': 3, 'sensors_layout': sl_value}}
-        assert d['value'][24] == {'summed_image':
-                                  {'threshold_lower': 120, 'threshold_upper': 4800,
-                                   'sensors_layout': sl_value}}
-        assert d['value'][25] == {'histogram':
-                                  {'bin_start': 0, 'bin_end': 8000, 'bin_width': 10.0,
-                                   'max_frames_received': 10, 'pass_processed': True,
-                                   'pass_raw': True, 'sensors_layout': sl_value}}
-        assert d['value'][26] == {'blosc': sl_dic}
-        assert d['value'][27] == {'lvframes':
-                                  {'frame_frequency': 0, 'per_second': 2,
-                                   'live_view_socket_addr': 'tcp://127.0.0.1:5020',
-                                   'dataset_name': 'raw_frames'}}
-        assert d['value'][28] == {'lvspectra':
-                                  {'frame_frequency': 0, 'per_second': 1,
-                                   'live_view_socket_addr': 'tcp://127.0.0.1:5021',
-                                   'dataset_name': 'summed_spectra'}}
+            sl_value = self.test_detector_adapter.adapter.param_tree["sensors_layout"]
+            sl_dic = {'sensors_layout': sl_value}
+            d = json.loads(store_string_without_cr)
+            assert d['index'] == store_temp_name[5:]
+            assert d['value'][0]['plugin']['load']['index'] == 'reorder'
+            assert d['value'][1]['plugin']['load']['index'] == 'threshold'
+            assert d['value'][2]['plugin']['load']['index'] == 'calibration'
+            assert d['value'][3]['plugin']['load']['index'] == 'addition'
+            assert d['value'][4]['plugin']['load']['index'] == 'summed_image'
+            assert d['value'][5]['plugin']['load']['index'] == 'histogram'
+            assert d['value'][6]['plugin']['load']['index'] == 'lvframes'
+            assert d['value'][7]['plugin']['load']['index'] == 'lvspectra'
+            assert d['value'][8]['plugin']['load']['index'] == 'blosc'
+            assert d['value'][9]['plugin']['load']['index'] == 'hdf'
+            assert d['value'][10]['plugin'] == {'connect': {'index': 'lvframes',
+                                                'connection': 'histogram'}}
+            assert d['value'][11]['plugin'] == {'connect': {'index': 'lvspectra',
+                                                'connection': 'histogram'}}
+            assert d['value'][12]['plugin'] == {'connect': {'index': 'reorder',
+                                                'connection': 'frame_receiver'}}
+            assert d['value'][13]['plugin'] == {'connect':
+                                                {'index': 'threshold', 'connection': 'reorder'}}
+            assert d['value'][14]['plugin'] == {'connect':
+                                                {'index': 'calibration', 'connection': 'threshold'}}
+            assert d['value'][15]['plugin'] == {'connect':
+                                                {'index': 'addition', 'connection': 'calibration'}}
+            assert d['value'][16]['plugin'] == {'connect':
+                                                {'index': 'summed_image', 'connection': 'addition'}}
+            assert d['value'][17]['plugin'] == {'connect':
+                                                {'index': 'histogram', 'connection': 'summed_image'}}
+            assert d['value'][18]['plugin'] == {'connect':
+                                                {'index': 'blosc', 'connection': 'histogram'}}
+            assert d['value'][19]['plugin'] == {'connect': {'index': 'hdf', 'connection': 'blosc'}}
+            assert d['value'][20] == {'reorder': sl_dic}
+            assert d['value'][21] == {'threshold':
+                                    {'threshold_file': '', 'threshold_value': 99,
+                                    'threshold_mode': 'none', 'sensors_layout': sl_value}}
+            assert d['value'][22] == {'calibration':
+                                    {'gradients_file': '', 'intercepts_file': '',
+                                    'sensors_layout': sl_value}}
+            assert d['value'][23] == {'addition': {'pixel_grid_size': 3, 'sensors_layout': sl_value}}
+            assert d['value'][24] == {'summed_image':
+                                    {'threshold_lower': 120, 'threshold_upper': 4800,
+                                    'sensors_layout': sl_value}}
+            assert d['value'][25] == {'histogram':
+                                    {'bin_start': 0, 'bin_end': 8000, 'bin_width': 10.0,
+                                    'max_frames_received': 10, 'pass_processed': True,
+                                    'pass_raw': True, 'sensors_layout': sl_value}}
+            assert d['value'][26] == {'blosc': sl_dic}
+            assert d['value'][27] == {'lvframes':
+                                    {'frame_frequency': 0, 'per_second': 2,
+                                    'live_view_socket_addr': 'tcp://127.0.0.1:5020',
+                                    'dataset_name': 'raw_frames'}}
+            assert d['value'][28] == {'lvspectra':
+                                    {'frame_frequency': 0, 'per_second': 1,
+                                    'live_view_socket_addr': 'tcp://127.0.0.1:5021',
+                                    'dataset_name': 'summed_spectra'}}
 
-        assert execute_string_without_cr == '{"index":"_tmp_store.json"}'
+            assert execute_string_without_cr == '{"index":"_tmp_store.json"}'
 
 
 class TestObject2(unittest.TestCase):
@@ -264,4 +271,5 @@ class TestObject2(unittest.TestCase):
 
     def testing_bad_config(self):
         """Test function."""
-        self.test_detector_badadapter.adapter.generate_config_files()
+        with patch("builtins.open", mock_open(read_data="data")):
+            self.test_detector_badadapter.adapter.generate_config_files()

@@ -950,13 +950,22 @@ class TestDAQ(unittest.TestCase):
 
     def test_set_calibration_enable(self):
         """Test function sets calibration bool."""
+        self.test_daq.daq._set_bin_start = Mock()
+        self.test_daq.daq._set_bin_end = Mock()
+        self.test_daq.daq._set_bin_width = Mock()
         calibration_enable = True
         self.test_daq.daq._set_calibration_enable(calibration_enable)
         assert calibration_enable is self.test_daq.daq.calibration_enable
+        self.test_daq.daq._set_bin_start.assert_called_with(0)
+        self.test_daq.daq._set_bin_end.assert_called_with(200)
+        self.test_daq.daq._set_bin_width.assert_called_with(0.25)
 
         calibration_enable = False
         self.test_daq.daq._set_calibration_enable(calibration_enable)
         assert calibration_enable is self.test_daq.daq.calibration_enable
+        self.test_daq.daq._set_bin_start.assert_called_with(0)
+        self.test_daq.daq._set_bin_end.assert_called_with(8000)
+        self.test_daq.daq._set_bin_width.assert_called_with(10)
 
     def test_set_discrimination_enable(self):
         """Test function sets discrimination bool."""
@@ -1262,22 +1271,27 @@ class TestDAQ(unittest.TestCase):
                     {'threshold_lower': 120, 'threshold_upper': 4800}},
                  'sensors_layout': '2x6'}
 
-        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
+        patched_function = "hexitec.GenerateConfigFiles.GenerateConfigFiles.generate_config_files"
+        with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop, patch(patched_function) as mock_gcf:
 
-            self.test_daq.daq.param_tree.get = Mock(return_value=config_dict)
-            self.test_daq.daq.pass_raw = True
-            self.test_daq.daq.pass_processed = True
+                self.test_daq.daq.param_tree.get = Mock(return_value=config_dict)
+                self.test_daq.daq.pass_raw = True
+                self.test_daq.daq.pass_processed = True
+                store_config = "/tmp/_tmp_store1.json"
+                execute_config = "/tmp/_tmp_execute.json"
+                store_string = {"index":"_tmp_store1.json","value":[]}
+                execute_string = {"index":"_tmp_store1.json"}
+                mock_gcf.return_value = (store_config, execute_config, store_string, execute_string)
+                self.test_daq.daq.commit_configuration()
 
-            self.test_daq.daq.commit_configuration()
+                # self.test_daq.fake_fp.put.assert_has_calls([
+                #     # TODO: REPLACE ANY WITH ApiAdapterRequest
+                #     call("config/hdf/delete_datasets/", ANY),
+                #     call("config/config_file/", ANY)
+                # ])
 
-            # self.test_daq.fake_fp.put.assert_has_calls([
-            #     # TODO: REPLACE ANY WITH ApiAdapterRequest
-            #     call("config/config_file/", ANY),
-            #     call("config/config_file/", ANY)
-            # ])
-
-            instance = mock_loop.instance()
-            instance.call_later.assert_called_with(.4, self.test_daq.daq.submit_configuration)
+                instance = mock_loop.instance()
+                instance.call_later.assert_called_with(.4, self.test_daq.daq.submit_configuration)
 
     def test_submit_configuration_hdf_branch(self):
         """Test function handles sample parameter tree ok."""

@@ -40,7 +40,7 @@ class DetectorAdapterTestFixture(object):
                 """
         }
         with patch("hexitec.adapter.HexitecFem"), patch("hexitec.adapter.HexitecDAQ"):
-            with patch("hexitec.adapter.Hexitec._start_polling"):
+            with patch("hexitec.adapter.Hexitec.start_polling"):
 
                 self.adapter = HexitecAdapter(**self.options)
                 self.detector = self.adapter.hexitec  # shortcut, makes assert lines shorter
@@ -309,6 +309,15 @@ class TestDetector(unittest.TestCase):
                 parent=detector,
                 config=defaults.fem
             )
+
+    def test_start_polling(self):
+        """Test start polling works."""
+        with patch("hexitec.adapter.IOLoop") as mock_loop:
+            self.test_adapter.detector.start_polling()
+            i = mock_loop.instance()
+            # Patching only recognises last (delayed) function called
+            # i.call_later.assert_called_with(1.0, self.test_adapter.detector.load_odin)
+            i.call_later.assert_called_with(2.0, self.test_adapter.detector.polling)
 
     def test_update_meta(self):
         """Test update meta works."""

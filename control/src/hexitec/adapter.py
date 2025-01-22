@@ -319,14 +319,17 @@ class Hexitec():
 
         self.odin_config_file = self.control_config_path + "odin_config.json"
 
-        self._start_polling()
+        self.start_polling()
 
     def update_meta(self, meta):
         """Save to parameter tree meta data PUT by Manchester."""
         self.xtek_meta = meta
 
-    def _start_polling(self):
-        IOLoop.instance().add_callback(self.polling)
+    def start_polling(self):
+        # Load default Odin values
+        IOLoop.instance().call_later(1.0, self.load_odin)
+        # Then commence polling
+        IOLoop.instance().call_later(2.0, self.polling)
 
     def polling(self):  # pragma: no cover
         """Poll FEM for status.

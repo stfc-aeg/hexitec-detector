@@ -896,6 +896,14 @@ class HexitecDAQ():
 
     def _set_calibration_enable(self, calibration_enable):
         self.calibration_enable = calibration_enable
+        if self.calibration_enable:
+            self._set_bin_start(0)
+            self._set_bin_end(200)
+            self._set_bin_width(0.25)
+        else:
+            self._set_bin_start(0)
+            self._set_bin_end(8000)
+            self._set_bin_width(10)
 
     def _set_discrimination_enable(self, discrimination_enable):
         self.discrimination_enable = discrimination_enable
@@ -1016,9 +1024,27 @@ class HexitecDAQ():
 
     def _set_pass_processed(self, pass_processed):
         self.pass_processed = pass_processed
+        command = "config/histogram"
+        formatted_string = ('{"pass_processed": %s}' % self.pass_processed).lower()
+        request = ApiAdapterRequest(formatted_string, content_type="application/json")
+
+        response = self.adapters["fp"].put(command, request)
+        status_code = response.status_code
+        if (status_code != 200):
+            error = "Error {} updating histogram's processed dataset".format(status_code)
+            self.parent.fem.flag_error(error)
 
     def _set_pass_raw(self, pass_raw):
         self.pass_raw = pass_raw
+        command = "config/histogram"
+        formatted_string = ('{"pass_raw": %s}' % self.pass_raw).lower()
+        request = ApiAdapterRequest(formatted_string, content_type="application/json")
+
+        response = self.adapters["fp"].put(command, request)
+        status_code = response.status_code
+        if (status_code != 200):
+            error = "Error {} updating fp histogram's raw dataset".format(status_code)
+            self.parent.fem.flag_error(error)
 
     def _set_threshold_filename(self, threshold_filename):
         threshold_filename = self.data_config_path + threshold_filename

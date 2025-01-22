@@ -19,7 +19,7 @@ var duration_enable = false;
 var polling_thread_running = false;
 var system_health = true;
 var ui_frames = 10;
-var js_not_initialised = true;
+var update_js_with_config = true;
 var hv_enabled = false;
 // Changing raw, process dataset must force Applying changes
 var force_apply = false;
@@ -34,24 +34,18 @@ var applyButton2 = document.querySelector('#applyButton2').disabled;
 var cancelButton = document.querySelector('#cancelButton').disabled;
 var connectButton = document.querySelector('#connectButton').disabled;
 var disconnectButton = document.querySelector('#disconnectButton').disabled;
-var durationButton = document.querySelector('#duration-text').disabled;
+var durationText = document.querySelector('#duration-text').disabled;
 var environsButton = document.querySelector('#environsButton').disabled;
-var framesButton = document.querySelector('#frames-text').disabled;
-var hdfFilePathButton = document.querySelector('#hdf-file-path-text').disabled;
-var hdfFileNameButton = document.querySelector('#hdf-file-name-text').disabled;
-var hexitecConfigButton = document.querySelector('#hexitec-config-text').disabled;
+var framesText = document.querySelector('#frames-text').disabled;
+var hdfFilePathText = document.querySelector('#hdf-file-path-text').disabled;
+var hdfFileNameText = document.querySelector('#hdf-file-name-text').disabled;
+var hexitecConfigText = document.querySelector('#hexitec-config-text').disabled;
 var hvOffButton = document.querySelector('#hvOffButton').disabled;
 var hvOnButton = document.querySelector('#hvOnButton').disabled;
 var imageFrequencyButton = false;
 var initialiseButton = document.querySelector('#initialiseButton').disabled;
-var lvDatasetButton = document.querySelector('#lv_dataset_select').disabled;
-var lvframesFrameFrequencyButton = false;
-var lvframesPerSecondButton = false;
-var lvspectraFrameFrequencyButton = false;
-var lvspectraPerSecondButton = false;
+var lvDatasetSelect = document.querySelector('#lv_dataset_select').disabled;
 var offsetsButton = document.querySelector('#offsetsButton').disabled;
-var thresholdLowerButton = false;
-var thresholdUpperButton = false;
 
 // Called once, when page 1st loaded
 document.addEventListener("DOMContentLoaded", function () {
@@ -93,23 +87,39 @@ function applyButton2Clicked() {
 }
 
 function connectButtonClicked() {
-    connect_hardware();
+    hexitec_endpoint.put({ "connect_hardware": "" }, 'detector')
+        .then(result => {
+            document.querySelector('#odin-control-error').innerHTML = "";
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = error.message;
+        });
 }
 
 function hvOnButtonClicked() {
-    // TODO: Switch HV on
     hv_enabled = true;
     document.querySelector('#hvOnButton').disabled = true;
     document.querySelector('#hvOffButton').disabled = false;
-    hv_on();
+    hexitec_endpoint.put({ "hv_on": "" }, 'detector')
+        .then(result => {
+            document.querySelector('#odin-control-error').innerHTML = "";
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = error.message;
+        });
 }
 
 function hvOffButtonClicked() {
-    // TODO: Switch HV off
     hv_enabled = false;
     document.querySelector('#hvOnButton').disabled = false;
     document.querySelector('#hvOffButton').disabled = true;
-    hv_off();
+    hexitec_endpoint.put({ "hv_off": "" }, 'detector')
+        .then(result => {
+            document.querySelector('#odin-control-error').innerHTML = "";
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = error.message;
+        });
 }
 
 function environsButtonClicked() {
@@ -123,40 +133,99 @@ function environsButtonClicked() {
 }
 
 function initialiseButtonClicked() {
-    initialise_hardware();
+    hexitec_endpoint.put({ "initialise_hardware": "" }, 'detector')
+        .then(result => {
+            document.querySelector('#odin-control-error').innerHTML = "";
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = error.message;
+        });
 }
 
 function offsetsButtonClicked() {
-    collect_offsets();
+    // Collects offsets used for dark corrections in subsequent acquisitions
+    hexitec_endpoint.put({ "collect_offsets": "" }, 'detector')
+        .then(result => {
+            document.querySelector('#odin-control-error').innerHTML = "";
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = error.message;
+        });
 }
 
 function acquireButtonClicked() {
-    collect_data();
+    hexitec_endpoint.put({ "start_acq": "" }, 'detector/acquisition')
+        .then(result => {
+            document.querySelector('#odin-control-error').innerHTML = "";
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = error.message;
+        });
 }
 
 function cancelButtonClicked() {
-    cancel_data();
+    hexitec_endpoint.put({ "stop_acq": "" }, 'detector/acquisition')
+        .then(result => {
+            document.querySelector('#odin-control-error').innerHTML = "";
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = error.message;
+        });
 }
 
 function resetButtonClicked() {
-    reset_error();
+    hexitec_endpoint.put({ "reset_error": "" }, 'detector')
+        .then(result => {
+            document.querySelector('#odin-control-error').innerHTML = "";
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = error.message;
+        });
 }
 
 function disconnectButtonClicked() {
     // Disconnect will automatically turn HV off, so signal "off" to Software
     hvOffButtonClicked();
     setTimeout(function () {
-        disconnect_hardware();
+        hexitec_endpoint.put({ "disconnect_hardware": "" }, 'detector')
+        .then(result => {
+            document.querySelector('#odin-control-error').innerHTML = "";
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = error.message;
+        });
     }, 400);
 }
 
 function saveOdinClicked() {
-    save_odin();
+    saveOdinButton = document.querySelector('#saveOdinButton');
+    hexitec_endpoint.put({ "save_odin": "" }, 'detector')
+        .then(result => {
+            document.querySelector('#odin-control-error').innerHTML = "";
+            saveOdinButton.classList.remove('alert-danger');
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = error.message;
+            saveOdinButton.setCustomValidity(error.message);
+            saveOdinButton.reportValidity();
+            saveOdinButton.classList.add('alert-danger');
+        });
 }
 
 function loadOdinClicked() {
-    load_odin();
-    js_not_initialised = true;
+    loadOdinButton = document.querySelector('#loadOdinButton');
+    hexitec_endpoint.put({ "load_odin": "" }, 'detector')
+        .then(result => {
+            document.querySelector('#odin-control-error').innerHTML = "";
+            loadOdinButton.classList.remove('alert-danger');
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = error.message;
+            loadOdinButton.setCustomValidity(error.message);
+            loadOdinButton.reportValidity();
+            loadOdinButton.classList.add('alert-danger');
+        });
+    update_js_with_config = true;
 }
 
 // Set Charged Sharing selection, supporting function
@@ -238,16 +307,16 @@ function display_ui_states() {
     console.log("cancelButton = " + document.querySelector('#cancelButton').disabled);
     console.log("connectButton = " + document.querySelector('#connectButton').disabled);
     console.log("disconnectButton = " + document.querySelector('#disconnectButton').disabled);
-    console.log("durationButton = " + document.querySelector('#duration-text').disabled);
+    console.log("durationText = " + document.querySelector('#duration-text').disabled);
     console.log("environsButton = " + document.querySelector('#environsButton').disabled);
-    console.log("framesButton = " + document.querySelector('#frames-text').disabled);
-    console.log("hdfFilePathButton = " + document.querySelector('#hdf-file-path-text').disabled);
-    console.log("hdfFileNameButton = " + document.querySelector('#hdf-file-name-text').disabled);
-    console.log("hexitecConfigButton = " + document.querySelector('#hexitec-config-text').disabled);
+    console.log("framesText = " + document.querySelector('#frames-text').disabled);
+    console.log("hdfFilePathText = " + document.querySelector('#hdf-file-path-text').disabled);
+    console.log("hdfFileNameText = " + document.querySelector('#hdf-file-name-text').disabled);
+    console.log("hexitecConfigText = " + document.querySelector('#hexitec-config-text').disabled);
     console.log("hvOffButton = " + document.querySelector('#hvOffButton').disabled);
     console.log("hvOnButton = " + document.querySelector('#hvOnButton').disabled);
     console.log("initialiseButton = " + document.querySelector('#initialiseButton').disabled);
-    console.log("lvDatasetButton = " + document.querySelector('#lv_dataset_select').disabled);
+    console.log("lvDatasetSelect = " + document.querySelector('#lv_dataset_select').disabled);
     console.log("offsetsButton = " + document.querySelector('#offsetsButton').disabled);
 }
 
@@ -259,16 +328,16 @@ function interlock_tripped_lock_ui() {
     cancelButton = document.querySelector('#cancelButton').disabled;
     connectButton = document.querySelector('#connectButton').disabled;
     disconnectButton = document.querySelector('#disconnectButton').disabled;
-    durationButton = document.querySelector('#duration-text').disabled;
+    durationText = document.querySelector('#duration-text').disabled;
     environsButton = document.querySelector('#environsButton').disabled;
-    framesButton = document.querySelector('#frames-text').disabled;
-    hdfFilePathButton = document.querySelector('#hdf-file-path-text').disabled;
-    hdfFileNameButton = document.querySelector('#hdf-file-name-text').disabled;
-    hexitecConfigButton = document.querySelector('#hexitec-config-text').disabled;
+    framesText = document.querySelector('#frames-text').disabled;
+    hdfFilePathText = document.querySelector('#hdf-file-path-text').disabled;
+    hdfFileNameText = document.querySelector('#hdf-file-name-text').disabled;
+    hexitecConfigText = document.querySelector('#hexitec-config-text').disabled;
     hvOffButton = document.querySelector('#hvOffButton').disabled;
     hvOnButton = document.querySelector('#hvOnButton').disabled;
     initialiseButton = document.querySelector('#initialiseButton').disabled;
-    lvDatasetButton = document.querySelector('#lv_dataset_select').disabled;
+    lvDatasetSelect = document.querySelector('#lv_dataset_select').disabled;
     offsetsButton = document.querySelector('#offsetsButton').disabled;
 
     // console.log("____________________ UI components before locking");
@@ -306,16 +375,16 @@ function interlock_restored_unlock_ui() {
     document.querySelector('#cancelButton').disabled = cancelButton;
     document.querySelector('#connectButton').disabled = connectButton;
     document.querySelector('#disconnectButton').disabled = disconnectButton;
-    document.querySelector('#duration-text').disabled = durationButton;
+    document.querySelector('#duration-text').disabled = durationText;
     document.querySelector('#environsButton').disabled = environsButton;
-    document.querySelector('#frames-text').disabled = framesButton;
-    document.querySelector('#hdf-file-path-text').disabled = hdfFilePathButton;
-    document.querySelector('#hdf-file-name-text').disabled = hdfFileNameButton;
-    document.querySelector('#hexitec-config-text').disabled = hexitecConfigButton;
+    document.querySelector('#frames-text').disabled = framesText;
+    document.querySelector('#hdf-file-path-text').disabled = hdfFilePathText;
+    document.querySelector('#hdf-file-name-text').disabled = hdfFileNameText;
+    document.querySelector('#hexitec-config-text').disabled = hexitecConfigText;
     document.querySelector('#hvOffButton').disabled = hvOffButton;
     document.querySelector('#hvOnButton').disabled = hvOnButton;
     document.querySelector('#initialiseButton').disabled = initialiseButton;
-    document.querySelector('#lv_dataset_select').disabled = lvDatasetButton;
+    document.querySelector('#lv_dataset_select').disabled = lvDatasetSelect;
     document.querySelector('#offsetsButton').disabled = offsetsButton;
 }
 
@@ -335,7 +404,6 @@ function toggle_ui_elements(bBool) {
         document.querySelector('#hdf-file-path-text').disabled = bBool;
         document.querySelector('#hdf-file-name-text').disabled = bBool;
         document.querySelector('#hexitec-config-text').disabled = bBool;
-
         document.querySelector('#lv_dataset_select').disabled = bBool;
     } catch(error) {
         console.log("toggle_ui_elements() Error: " + error);
@@ -352,7 +420,7 @@ function update_ui_with_leak_detector_settings(result) {
     var system = result["leak"]["system"];
     var outlets = system["outlets"];
 
-    // Get leak detector info from adapter.py or won't notice if leak detector losses power
+    // Get leak detector info from adapter.py
     var ld_warning = adapter_leak_warning;
     var ld_fault = adapter_leak_fault;
     var ld_chiller_state = outlets["chiller"]["state"];
@@ -369,23 +437,21 @@ function update_ui_with_leak_detector_settings(result) {
 
     if (ld_fault === true) {
         if (leak_detector_fault === false) {
-            // Act only on the first time leak detector fault detected
-            // console.log(" *** interlocking tripped!");
+            // Prevent acting multiple times detecting the same fault
             interlock_tripped_lock_ui()
             leak_detector_fault = true;
         }
     }
     else {
         if (leak_detector_fault === true) {
-            // Act only the first time that the leak detector fault is cleared
-            // console.log(" *** interlock restored!");
+            // Act only once when a detector fault is cleared
             interlock_restored_unlock_ui()
             leak_detector_fault = false;
             // display_ui_states();
         }
     }
 
-    // Expand leak detector parameter coverage
+    // Update chiller and daq states
 
     if (ld_chiller_state === true) {
         document.querySelector('#ld_chiller_control_radio1').checked = true;    // Enables
@@ -403,20 +469,18 @@ function update_ui_with_leak_detector_settings(result) {
 }
 
 function poll_fem() {
-    // Check whether odin_server is running
-    hexitec_endpoint.get_url(hexitec_url + 'detector')
+    // Check whether odin_control is running
+    hexitec_endpoint.get_url(hexitec_url + 'detector/status/system_health')
         .then(result => {
             display_log_messages();
             // Clear any previous error
             document.querySelector('#odin-control-error').innerHTML = "";
 
-            // If gui not populated (i.e. not initialised, populate it with Odin Control's settings
-            if (js_not_initialised)
+            // Update gui with Odin settings
+            if (update_js_with_config)
             {
-                // Load settings from configuration file, then update to UI
-                load_odin();
                 update_ui_with_odin_settings();
-                js_not_initialised = false;
+                update_js_with_config = false;
             }
 
             // Odin running, commence polling
@@ -449,7 +513,7 @@ function poll_fem() {
                 });
 
             // http://localhost:8888/api/0.1/hexitec/fp/status/error/2
-            // Polls the fem for hardware status, environmental data, etc
+            // Polls frameProcessor(s) for status(es)
             hexitec_endpoint.get_url(hexitec_url + 'fp/status/')
                 .then(result => {
 
@@ -485,6 +549,7 @@ function poll_fem() {
                     document.querySelector('#odin-control-error').innerHTML = "Polling FP: " + error.message;
                 });
 
+            // Poll adapter for statuses: daq transmission, hardware busy, system error/message + VSRs env data
             hexitec_endpoint.get_url(hexitec_url + 'detector')
                 .then(result => {
                     var adapter_leak = result["detector"]["status"]["leak"];
@@ -678,127 +743,6 @@ function poll_fem() {
     if (polling_thread_running === true) {
         window.setTimeout(poll_fem, 850);
     }
-}
-
-function connect_hardware() {
-    hexitec_endpoint.put({ "connect_hardware": "" }, 'detector')
-        .then(result => {
-            document.querySelector('#odin-control-error').innerHTML = "";
-        })
-        .catch(error => {
-            document.querySelector('#odin-control-error').innerHTML = error.message;
-        });
-}
-
-function hv_on() {
-    hexitec_endpoint.put({ "hv_on": "" }, 'detector')
-        .then(result => {
-            document.querySelector('#odin-control-error').innerHTML = "";
-        })
-        .catch(error => {
-            document.querySelector('#odin-control-error').innerHTML = error.message;
-        });
-}
-
-function hv_off() {
-    hexitec_endpoint.put({ "hv_off": "" }, 'detector')
-        .then(result => {
-            document.querySelector('#odin-control-error').innerHTML = "";
-        })
-        .catch(error => {
-            document.querySelector('#odin-control-error').innerHTML = error.message;
-        });
-}
-
-function initialise_hardware() {
-    hexitec_endpoint.put({ "initialise_hardware": "" }, 'detector')
-        .then(result => {
-            document.querySelector('#odin-control-error').innerHTML = "";
-        })
-        .catch(error => {
-            document.querySelector('#odin-control-error').innerHTML = error.message;
-        });
-}
-
-function collect_offsets() {
-    // Collects offsets used for dark corrections in subsequent acquisitions
-    hexitec_endpoint.put({ "collect_offsets": "" }, 'detector')
-        .then(result => {
-            document.querySelector('#odin-control-error').innerHTML = "";
-        })
-        .catch(error => {
-            document.querySelector('#odin-control-error').innerHTML = error.message;
-        });
-}
-
-function collect_data() {
-    hexitec_endpoint.put({ "start_acq": "" }, 'detector/acquisition')
-        .then(result => {
-            document.querySelector('#odin-control-error').innerHTML = "";
-        })
-        .catch(error => {
-            document.querySelector('#odin-control-error').innerHTML = error.message;
-        });
-}
-
-function cancel_data() {
-    hexitec_endpoint.put({ "stop_acq": "" }, 'detector/acquisition')
-        .then(result => {
-            document.querySelector('#odin-control-error').innerHTML = "";
-        })
-        .catch(error => {
-            document.querySelector('#odin-control-error').innerHTML = error.message;
-        });
-}
-
-function reset_error() {
-    hexitec_endpoint.put({ "reset_error": "" }, 'detector')
-        .then(result => {
-            document.querySelector('#odin-control-error').innerHTML = "";
-        })
-        .catch(error => {
-            document.querySelector('#odin-control-error').innerHTML = error.message;
-        });
-}
-
-function disconnect_hardware() {
-    hexitec_endpoint.put({ "disconnect_hardware": "" }, 'detector')
-        .then(result => {
-            document.querySelector('#odin-control-error').innerHTML = "";
-        })
-        .catch(error => {
-            document.querySelector('#odin-control-error').innerHTML = error.message;
-        });
-}
-
-function save_odin() {
-    saveOdinButton = document.querySelector('#saveOdinButton');
-    hexitec_endpoint.put({ "save_odin": "" }, 'detector')
-        .then(result => {
-            document.querySelector('#odin-control-error').innerHTML = "";
-            saveOdinButton.classList.remove('alert-danger');
-        })
-        .catch(error => {
-            document.querySelector('#odin-control-error').innerHTML = error.message;
-            saveOdinButton.setCustomValidity(error.message);
-            saveOdinButton.reportValidity();
-            saveOdinButton.classList.add('alert-danger');
-        });
-}
-
-function load_odin() {
-    loadOdinButton = document.querySelector('#loadOdinButton');
-    hexitec_endpoint.put({ "load_odin": "" }, 'detector')
-        .then(result => {
-            document.querySelector('#odin-control-error').innerHTML = "";
-            loadOdinButton.classList.remove('alert-danger');
-        })
-        .catch(error => {
-            document.querySelector('#odin-control-error').innerHTML = error.message;
-            loadOdinButton.setCustomValidity(error.message);
-            loadOdinButton.reportValidity();
-            loadOdinButton.classList.add('alert-danger');
-        });
 }
 
 function commit_configuration() {
@@ -1032,16 +976,9 @@ function configure_duration(duration_enable) {
 
 function changeProcessedDataEnable() {
     force_apply = true;
-    // Odin Control do not support bool, must target FP and DAQ adapter
     processed_data_enable = document.getElementById('processed_data_radio1').checked;
-
     processed_data_enable = JSON.stringify(processed_data_enable);
     processed_data_enable = (processed_data_enable === "true");
-    hexitec_endpoint.put(processed_data_enable, 'fp/config/histogram/pass_processed')
-        .catch(error => {
-            console.log("Processed dataset in FP: couldn't be changed: " + errorr.message);
-        });
-
     hexitec_endpoint.put(processed_data_enable, 'detector/daq/config/histogram/pass_processed')
         .catch(error => {
             console.log("Processed dataset in daq: couldn't be changed: " + error.message);
@@ -1050,16 +987,9 @@ function changeProcessedDataEnable() {
 
 function changeRawDataEnable() {
     force_apply = true;
-    // Odin Control do not support bool, must target FP and DAQ adapter
     raw_data_enable = document.getElementById('raw_data_radio1').checked;
-
     raw_data_enable = JSON.stringify(raw_data_enable);
     raw_data_enable = (raw_data_enable === "true");
-    hexitec_endpoint.put(raw_data_enable, 'fp/config/histogram/pass_raw')
-        .catch(error => {
-            console.log("Raw dataset in FP: couldn't be changed: " + error.message);
-        });
-
     hexitec_endpoint.put(raw_data_enable, 'detector/daq/config/histogram/pass_raw')
         .catch(error => {
             console.log("Raw dataset in daq: couldn't be changed: " + error.message);
@@ -1095,18 +1025,10 @@ function changeCalibrationEnable() {
     calibration_enable = JSON.stringify(calibration_enable);
     calibration_enable = (calibration_enable === "true");
     configure_bin_labels(calibration_enable);
-    if (calibration_enable) {
-        document.querySelector('#bin-start-text').value = 0;
-        document.querySelector('#bin-end-text').value = 200;
-        document.querySelector('#bin-width-text').value = 0.25;
-    }
-    else {
-        document.querySelector('#bin-start-text').value = 0;
-        document.querySelector('#bin-end-text').value = 8000;
-        document.querySelector('#bin-width-text').value = 10;
-    }
-
     hexitec_endpoint.put(calibration_enable, 'detector/daq/config/calibration/enable')
+        .then(result => {
+            update_ui_with_odin_settings();
+        })
         .catch(error => {
             console.log("calibration_enable failed: " + error.message);
         });
@@ -1303,15 +1225,6 @@ function lv_dataset_changed() {
 }
 
 function update_ui_with_odin_settings() {
-    hexitec_endpoint.get_url('/api/' + api_version + '/proxy/')
-        .then(result => {
-            // Update GUI with leak detector information
-            update_ui_with_leak_detector_settings(result)
-        })
-        .catch(error => {
-            console.log("update_ui_with_odin_settings() proxy ERROR: " + error.message);
-        });
-
     hexitec_endpoint.get_url(hexitec_url + 'detector')
         .then(result => {
             const daq_config = result["detector"]["daq"]["config"];
@@ -1409,21 +1322,6 @@ function update_ui_with_odin_settings() {
             document.querySelector('#elog-text').value = elog;
             const dataset_name = daq_config.lvframes.dataset_name;
             document.querySelector('#lv_dataset_select').value = dataset_name;
-
-            // const summed_image = daq_config.summed_image;
-            // document.querySelector('#threshold-lower-text').value = summed_image.threshold_lower;
-            // document.querySelector('#threshold-upper-text').value = summed_image.threshold_upper;
-            // document.querySelector('#image-frequency-text').value = summed_image.image_frequency;
-
-            // const lvframes_frame_frequency = daq_config.lvframes.frame_frequency;
-            // document.querySelector('#lvframes-frame-frequency-text').value = lvframes_frame_frequency;
-            // const lvframes_per_second = daq_config.lvframes.per_second;
-            // document.querySelector('#lvframes-per-second-text').value = lvframes_per_second;
-
-            // const lvspectra_frame_frequency = daq_config.lvspectra.frame_frequency;
-            // document.querySelector('#lvspectra-frame-frequency-text').value = lvspectra_frame_frequency;
-            // const lvspectra_per_second = daq_config.lvspectra.per_second;
-            // document.querySelector('#lvspectra-per-second-text').value = lvspectra_per_second;
         })
         .catch(error => {
             console.log("update_ui_with_odin_settings() detector ERROR: " + error.message);
@@ -1519,18 +1417,11 @@ function showTime() {
 function display_log_messages() {
     get_log_messages()
         .then(result => {
-            // console.log("result: " + JSON.stringify(result.fem.log_messages, null, 4))
             log_messages = result.fem.log_messages;
             if (!is_empty_object(log_messages)) {
                 last_message_timestamp = log_messages[log_messages.length - 1][0];
-                // console.log("pre-loop");
-                // console.log("log_messages: " + JSON.stringify(log_messages, null, 4));
-                // console.log("   " + log_messages[0]);
-                // console.log("   " + log_messages[1]);
                 pre_scrollable = document.querySelector('#log-messages');
                 for (log_message in log_messages) {
-                    // console.log("log_messages[log_message][0]: i.e. log_messages['" + log_message + "'][0] : " + log_messages[log_message][0]);
-                    // console.log("log_messages[log_message][1]: i.e. log_messages['" + log_message + "'][1] : " + log_messages[log_message][1]);
                     timestamp = log_messages[log_message][0];
                     timestamp = timestamp.substr(0, timestamp.length - 3);
                     pre_scrollable.innerHTML +=
