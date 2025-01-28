@@ -278,6 +278,7 @@ class Hexitec():
             "load_odin": (None, self.load_odin),
             "collect_offsets": (None, self.collect_offsets),
             "commit_configuration": (None, self.commit_configuration),
+            "apply_config": (None, self.apply_config),
             "software_state": (lambda: self.software_state, None),
             "hv_on": (None, self.hv_on),
             "hv_off": (None, self.hv_off),
@@ -379,7 +380,9 @@ class Hexitec():
             # rank = index.get('hdf', None).get('rank')
             # frames = index.get('histogram').get('frames_processed')
             # print("    g_f_p(), rank: {} frames_processed: {}".format(rank, frames))
-            frames_processed = frames_processed + index.get('histogram').get('frames_processed')
+            histogram = index.get('histogram')
+            if histogram is not None:
+                frames_processed += histogram.get('frames_processed', 0)
         return frames_processed
 
     def get_proxy_adapter_data(self, adapter):
@@ -518,6 +521,11 @@ class Hexitec():
                 self.fem.set_hexitec_config("")
             self.software_state = "Connecting"
             self.fem.connect_hardware(msg)
+
+    def apply_config(self, msg=None):
+        """Apply configuration to Odin and VSR Hardware."""
+        self.commit_configuration()
+        self.fem.set_hexitec_config("")
 
     def initialise_hardware(self, msg=None):
         """Initialise hardware."""
@@ -701,6 +709,9 @@ class Hexitec():
             self.report_leak_detector_error(error_message)
             raise ParameterTreeError(error_message)
         else:
+            if self.daq.commit_config_before_acquire:
+                self.daq.commit_config_before_acquire = False
+                self.apply_config()
             # Clear (any previous) daq error
             self.daq.in_error = False
 

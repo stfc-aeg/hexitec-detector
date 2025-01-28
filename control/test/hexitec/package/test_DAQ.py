@@ -1166,11 +1166,15 @@ class TestDAQ(unittest.TestCase):
         """Test function sets pass_raw bool."""
         pass_raw = True
         self.test_daq.daq._set_pass_raw(pass_raw)
-        assert pass_raw is self.test_daq.daq.pass_raw
+        assert self.test_daq.daq.pass_raw is pass_raw
 
         pass_raw = False
         self.test_daq.daq._set_pass_raw(pass_raw)
-        assert pass_raw is self.test_daq.daq.pass_raw
+        assert self.test_daq.daq.pass_raw is pass_raw
+
+        pass_raw = None
+        self.test_daq.daq._set_pass_raw(pass_raw)
+        assert self.test_daq.daq.pass_raw is False
 
     def test_set_threshold_mode(self):
         """Test function sets threshold mode."""

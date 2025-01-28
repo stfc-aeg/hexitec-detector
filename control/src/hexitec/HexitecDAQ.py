@@ -247,6 +247,7 @@ class HexitecDAQ():
             "compression_type": (self._get_compression_type, self._set_compression_type),
             "sensors_layout": (self._get_sensors_layout, self._set_sensors_layout)
         })
+        self.commit_config_before_acquire = False
         self.update_rows_columns_pixels()
         # Placeholder for GenerateConfigFiles instance generating json files
         self.gcf = None
@@ -1022,8 +1023,10 @@ class HexitecDAQ():
     def _set_max_frames_received(self, max_frames_received):
         self.max_frames_received = max_frames_received
 
-    def _set_pass_processed(self, pass_processed):
-        self.pass_processed = pass_processed
+    def _set_pass_processed(self, pass_processed=None):
+        if pass_processed is not None:
+            self.pass_processed = pass_processed
+        self.commit_config_before_acquire = True
         command = "config/histogram"
         formatted_string = ('{"pass_processed": %s}' % self.pass_processed).lower()
         request = ApiAdapterRequest(formatted_string, content_type="application/json")
@@ -1034,8 +1037,11 @@ class HexitecDAQ():
             error = "Error {} updating histogram's processed dataset".format(status_code)
             self.parent.fem.flag_error(error)
 
-    def _set_pass_raw(self, pass_raw):
-        self.pass_raw = pass_raw
+    def _set_pass_raw(self, pass_raw=None):
+        """Change pass_raw if provided, then update FP setting."""
+        if pass_raw is not None:
+            self.pass_raw = pass_raw
+        self.commit_config_before_acquire = True
         command = "config/histogram"
         formatted_string = ('{"pass_raw": %s}' % self.pass_raw).lower()
         request = ApiAdapterRequest(formatted_string, content_type="application/json")

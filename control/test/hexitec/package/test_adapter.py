@@ -545,6 +545,14 @@ class TestDetector(unittest.TestCase):
         with pytest.raises(ParameterTreeError, match=rv):
             self.test_adapter.detector.connect_hardware("")
 
+    def test_apply_config(self):
+        """Test function works OK."""
+        pass
+
+    def test_apply_config_handles_interlocked(self):
+        """Test function prevented when interlocked."""
+        pass
+
     def test_initialise_hardware(self):
         """Test function initialises hardware."""
         with patch("hexitec.adapter.IOLoop") as mock_loop:

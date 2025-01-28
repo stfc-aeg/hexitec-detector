@@ -77,17 +77,17 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 800);
 });
 
-// Apply UI configuration choices
+// Apply configuration choices
 function applyButtonClicked() {
-    apply_ui_values();
+    apply_config();
 }
 
 function applyButton2Clicked() {
-    apply_ui_values();
+    apply_config();
 }
 
 function connectButtonClicked() {
-    hexitec_endpoint.put({ "connect_hardware": "" }, 'detector')
+    hexitec_endpoint.put({"connect_hardware": "" }, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
         })
@@ -100,7 +100,7 @@ function hvOnButtonClicked() {
     hv_enabled = true;
     document.querySelector('#hvOnButton').disabled = true;
     document.querySelector('#hvOffButton').disabled = false;
-    hexitec_endpoint.put({ "hv_on": "" }, 'detector')
+    hexitec_endpoint.put({"hv_on": "" }, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
         })
@@ -113,7 +113,7 @@ function hvOffButtonClicked() {
     hv_enabled = false;
     document.querySelector('#hvOnButton').disabled = false;
     document.querySelector('#hvOffButton').disabled = true;
-    hexitec_endpoint.put({ "hv_off": "" }, 'detector')
+    hexitec_endpoint.put({"hv_off": "" }, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
         })
@@ -123,7 +123,7 @@ function hvOffButtonClicked() {
 }
 
 function environsButtonClicked() {
-    hexitec_endpoint.put({ "environs": "" }, 'detector')
+    hexitec_endpoint.put({"environs": "" }, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
         })
@@ -133,7 +133,7 @@ function environsButtonClicked() {
 }
 
 function initialiseButtonClicked() {
-    hexitec_endpoint.put({ "initialise_hardware": "" }, 'detector')
+    hexitec_endpoint.put({"initialise_hardware": "" }, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
         })
@@ -144,7 +144,7 @@ function initialiseButtonClicked() {
 
 function offsetsButtonClicked() {
     // Collects offsets used for dark corrections in subsequent acquisitions
-    hexitec_endpoint.put({ "collect_offsets": "" }, 'detector')
+    hexitec_endpoint.put({"collect_offsets": "" }, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
         })
@@ -154,7 +154,7 @@ function offsetsButtonClicked() {
 }
 
 function acquireButtonClicked() {
-    hexitec_endpoint.put({ "start_acq": "" }, 'detector/acquisition')
+    hexitec_endpoint.put({"start_acq": "" }, 'detector/acquisition')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
         })
@@ -164,7 +164,7 @@ function acquireButtonClicked() {
 }
 
 function cancelButtonClicked() {
-    hexitec_endpoint.put({ "stop_acq": "" }, 'detector/acquisition')
+    hexitec_endpoint.put({"stop_acq": "" }, 'detector/acquisition')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
         })
@@ -174,7 +174,7 @@ function cancelButtonClicked() {
 }
 
 function resetButtonClicked() {
-    hexitec_endpoint.put({ "reset_error": "" }, 'detector')
+    hexitec_endpoint.put({"reset_error": "" }, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
         })
@@ -187,7 +187,7 @@ function disconnectButtonClicked() {
     // Disconnect will automatically turn HV off, so signal "off" to Software
     hvOffButtonClicked();
     setTimeout(function () {
-        hexitec_endpoint.put({ "disconnect_hardware": "" }, 'detector')
+        hexitec_endpoint.put({"disconnect_hardware": "" }, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
         })
@@ -199,7 +199,7 @@ function disconnectButtonClicked() {
 
 function saveOdinClicked() {
     saveOdinButton = document.querySelector('#saveOdinButton');
-    hexitec_endpoint.put({ "save_odin": "" }, 'detector')
+    hexitec_endpoint.put({"save_odin": "" }, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
             saveOdinButton.classList.remove('alert-danger');
@@ -214,7 +214,7 @@ function saveOdinClicked() {
 
 function loadOdinClicked() {
     loadOdinButton = document.querySelector('#loadOdinButton');
-    hexitec_endpoint.put({ "load_odin": "" }, 'detector')
+    hexitec_endpoint.put({"load_odin": "" }, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
             loadOdinButton.classList.remove('alert-danger');
@@ -609,16 +609,6 @@ function poll_fem() {
                                     document.querySelector('#acquireButton').disabled = true;
                                     document.querySelector('#offsetsButton').disabled = true;
                                 }
-                                else
-                                {
-                                    document.querySelector('#offsetsButton').disabled = false;
-                                    // Has either of Raw, Process datasets been changed but not Applied?
-                                    if (force_apply === true)
-                                        document.querySelector('#acquireButton').disabled = true;
-                                    else
-                                        document.querySelector('#acquireButton').disabled = false;
-                                }
-                                // Disable Environs button if collecting environmental data
                                 if (fem["environs_in_progress"] === true)
                                     document.querySelector('#environsButton').disabled = true;
                                 else
@@ -746,7 +736,7 @@ function poll_fem() {
 }
 
 function commit_configuration() {
-    hexitec_endpoint.put({ "commit_configuration": "" }, 'detector')
+    hexitec_endpoint.put({"commit_configuration": "" }, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
         })
@@ -755,45 +745,14 @@ function commit_configuration() {
         });
 }
 
-// apply_ui_values: Disconnect existing sequence of plugins, 
-//  load the sequence of plugins corresponding to UI settings
-function apply_ui_values() {
-    // Load all UI settings into HexitecDAQ's ParameterTree
-
-    // Generate temporary config file(s) loading plugins chain,
-    //  push HexitecDAQ's ParameterTree settings to FP's plugins
-    commit_configuration();
-
-    // Read configuration file into memory, recalculate frame_rate
-    hexitec_config_changed();
-
-    // This will be executed after however many milliseconds 
-    //  specified at the end of this function definition
-    setTimeout(function () {
-
-        // Delay necessary otherwise some plugins' variables are configured 
-        // before they are actually loaded (which will not work obviously)
-
-        changeRawDataEnable();
-        changeProcessedDataEnable();
-        threshold_mode_changed();
-        threshold_value_changed();
-        threshold_filename_changed();
-        gradients_filename_changed();
-        intercepts_filename_changed();
-        pixel_grid_size_changed();
-        bin_start_changed();
-        bin_end_changed();
-        bin_width_changed();
-
-        hdf_file_path_changed();
-        hdf_file_name_changed();
-
-        force_apply = false;
-
-        // (Re-)set duration/frames as hexitec config may have changed frame_rate
-        changeModeEnable();
-    }, 300);
+function apply_config() {
+    hexitec_endpoint.put({"apply_config": "" }, 'detector')
+        .then(result => {
+            document.querySelector('#odin-control-error').innerHTML = "";
+        })
+        .catch(error => {
+            document.querySelector('#odin-control-error').innerHTML = error.message;
+        });
 }
 
 function threshold_filename_changed() {
@@ -1056,7 +1015,7 @@ function configure_bin_labels(calibration_enable) {
 
 // function sensorsLayoutChange(sensors_layout) {
 //     // Sets hardware sensors Configuration; i.e. number of rows and columns of sensors
-//     hexitec_endpoint.put({ "sensors_layout": sensors_layout }, 'detector/daq')
+//     hexitec_endpoint.put({"sensors_layout": sensors_layout }, 'detector/daq')
 //         .then(result => {
 //             document.querySelector('#sensors-layout-warning').innerHTML = "";
 //         })
@@ -1078,7 +1037,7 @@ function numberNodesChange(number_nodes) {
 
 function compressionChange(compression) {
     // Sets compression on (blosc) or off (none)
-    hexitec_endpoint.put({ "compression_type": compression }, 'detector/daq')
+    hexitec_endpoint.put({"compression_type": compression }, 'detector/daq')
         .then(result => {
             document.querySelector('#compression-warning').innerHTML = "";
         })
@@ -1157,7 +1116,7 @@ function image_frequency_changed() {
 
 function hexitec_config_changed() {
     var hexitec_config = document.querySelector('#hexitec-config-text');
-    hexitec_endpoint.put({ "hexitec_config": hexitec_config.value }, 'detector/fem/')
+    hexitec_endpoint.put({"hexitec_config": hexitec_config.value }, 'detector/fem/')
         .then(result => {
             hexitec_config.classList.remove('alert-danger');
         })
