@@ -537,9 +537,9 @@ class HexitecFem():
         except Exception as e:
             self.flag_error("Reading sensors failed", str(e))
         else:
-            self.environs_in_progress = False
             self.parent.software_state = current_state
             self._set_status_message("VSRs sensors read")
+        self.environs_in_progress = False
         self.hardware_busy = False
 
     def disconnect(self):
