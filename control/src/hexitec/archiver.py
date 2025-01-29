@@ -239,7 +239,7 @@ class Archiver():
             full_path = self.queue.get()
             try:
                 server, file = full_path.split(":")
-            except AttributeError:
+            except ValueError:
                 logging.error(f"Unexpected Queue item: {full_path}")
                 self.queue.task_done()
                 continue
