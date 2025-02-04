@@ -19,7 +19,7 @@ from datetime import datetime
 import socket
 
 if sys.version_info[0] == 3:  # pragma: no cover
-    from unittest.mock import Mock, patch, mock_open
+    from unittest.mock import Mock, patch, mock_open, MagicMock
 else:                         # pragma: no cover
     from mock import Mock, patch
 
@@ -1383,3 +1383,17 @@ class TestFem(unittest.TestCase):
         timestamp = '{}'.format(datetime.now().strftime(HexitecFem.DATE_FORMAT))
         ts = self.test_fem.fem.create_timestamp()
         assert timestamp[:-4] == ts[:-4]
+
+
+class TestHexitecFem(unittest.TestCase):
+
+    def setUp(self):
+        self.parent = MagicMock()
+        self.config = {"farm_mode": "farm_mode.json"}
+        self.test_fem = HexitecFem(self.parent, self.config)
+
+    @patch("builtins.open", new_callable=mock_open, read_data='{"camera_ctrl_ip": 10.0.1.100}')
+    def test_load_farm_mode_json_parameters_handles_json_decode_error(self, mock_open):
+        with self.assertRaises(HexitecFemError) as context:
+            self.test_fem.load_farm_mode_json_parameters()
+        self.assertIn("Farm Mode: Bad json:", str(context.exception))

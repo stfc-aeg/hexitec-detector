@@ -429,7 +429,7 @@ class Hexitec():
             # If leak detector fault, display in GUI (overrides any fem faults)
             if self.leak_fault:
                 self.leak_health = not self.leak_fault
-                # print(f"\n [E IF* LH: {self.leak_health} LF: {self.leak_fault} LW: {self.leak_warning} state: {self.software_state} leak_err: '{self.leak_error}' cond {self.leak_error != ''}")
+                # print(f"\n [E  IF* LH: {self.leak_health} LF: {self.leak_fault} LW: {self.leak_warning} state: {self.software_state} leak_err: '{self.leak_error}' cond {self.leak_error != ''}")
                 # Log leak detector fault only once
                 if self.leak_error == "":
                     self.software_state = "Interlocked"
@@ -438,7 +438,7 @@ class Hexitec():
                     self.report_leak_detector_error("Leak Detector fault!")
                     self.status_message = "Check leak detector unit!"
             else:
-                # print(f"\n [E ELS LH: {self.leak_health} LF: {self.leak_fault} LW: {self.leak_warning} state: {self.software_state} leak_err: {self.leak_error} cond {self.leak_error != ''}")
+                # print(f"\n [E  ELS LH: {self.leak_health} LF: {self.leak_fault} LW: {self.leak_warning} state: {self.software_state} leak_err: {self.leak_error} cond {self.leak_error != ''}")
 
                 # No leak fault(s), set to Fem's instead (or blank if none)
                 self.status_error = self.fem._get_status_error()

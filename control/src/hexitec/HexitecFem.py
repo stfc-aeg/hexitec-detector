@@ -328,7 +328,7 @@ class HexitecFem():
         """Prepare hardware connection."""
         return self.prepare_farm_mode()
 
-    def configure_camera_interfaces(self):  # pragma: no cover
+    def configure_camera_interfaces(self):
         """Configure IP, Mac and port parameters for detector's Control and Data interfaces."""
         Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
                                  rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
@@ -948,7 +948,7 @@ class HexitecFem():
         while not dc_ready:
             dc_statuses = self.check_dc_statuses()
             dc_ready = self.are_dc_ready(dc_statuses)
-            if self.debug:   # pragma: no coverage
+            if self.debug:   # pragma: no cover
                 logging.debug("Register 0x89: {0}, Done? {1} Timing: {2:2.5} s".format(
                     dc_statuses, dc_ready, time.time() - poll_beginning))
             if time.time() - poll_beginning > timeout:
@@ -1076,7 +1076,7 @@ class HexitecFem():
 
         logging.debug("Power, Cal and Read Enables have been loaded")
 
-    def make_list_hexadecimal(self, value):  # pragma: no cover
+    def make_list_hexadecimal(self, value):
         """Debug function: Turn decimal list into hexadecimal list."""
         value_hexadecimal = []
         for val in value:
@@ -1163,7 +1163,7 @@ class HexitecFem():
             self.flag_error("Camera initialisation failed", str(e))
         self.hardware_busy = False
 
-    def initialise_vsr(self, vsr):  # pragma: no coverage
+    def initialise_vsr(self, vsr):
         """Initialise a VSR."""
         # Original aSpect VSR config recipe split into sections of block quotes
         """
@@ -1642,13 +1642,14 @@ class HexitecFem():
         self.parent.software_state = "Cleared"
 
     def flag_error(self, message, e=None):
-        """Place software into error state."""
+        """Place software into error state, unless already Interlocked."""
         error_message = "{}".format(message)
         if e:
             error_message += ": {}".format(e)
         self._set_status_error(error_message)
         logging.error(error_message)
-        self.parent.software_state = "Error"
+        if self.parent.software_state != "Interlocked":
+            self.parent.software_state = "Error"
         timestamp = self.create_timestamp()
         # Append to errors_history list, nested list of timestamp, error message
         self.errors_history.append([timestamp, error_message])

@@ -386,6 +386,11 @@ class Archiver():
 
     def map_virtual_datasets(self, filename):
         """Map real datasets into set of virtual datasets."""
+        # Strip (incoming) path from filename
+        file_without_path = os.path.basename(filename)
+        # Prepend local path to filename
+        filename = os.path.join(self.local_dir, file_without_path)
+        # Determine all files with same prefix
         file_tokenised = filename.split(".h5")
         file_without_extension = file_tokenised[0]
         data_files = f"{file_without_extension}_*.h5"
@@ -467,22 +472,22 @@ class Archiver():
 
             layout = h5py.VirtualLayout(shape=outshape, dtype=dtype[index])
 
-            for (idx, vsource) in enumerate(vsources):
-                current_index = idx % num_datasets
-                if current_index == index:
-                    temp_idx = dataset_index[current_index]
-
-                    if dataset == "spectra_bins":
-                        # print(f" spectra_bins, layout[, ] = layout[, ]")
-                        layout[:, :] = vsource
-                    elif dataset == "pixel_spectra":
-                        # print(f" layout: [{temp_idx}:{num_frames[index]}:{num_sources}, :, :, :]")
-                        layout[temp_idx:num_frames[index]:num_sources, :, :, :] = vsource
-                    else:
-                        # print(f" layout: [{temp_idx}:{num_frames[index]}:{num_sources}, :, :]")
-                        layout[temp_idx:num_frames[index]:num_sources, :, :] = vsource
-                    dataset_index[current_index] += 1
             try:
+                for (idx, vsource) in enumerate(vsources):
+                    current_index = idx % num_datasets
+                    if current_index == index:
+                        temp_idx = dataset_index[current_index]
+
+                        if dataset == "spectra_bins":
+                            # print(f" spectra_bins, layout[, ] = layout[, ]")
+                            layout[:, :] = vsource
+                        elif dataset == "pixel_spectra":
+                            # print(f" layout: [{temp_idx}:{num_frames[index]}:{num_sources}, :, :, :]")
+                            layout[temp_idx:num_frames[index]:num_sources, :, :, :] = vsource
+                        else:
+                            # print(f" layout: [{temp_idx}:{num_frames[index]}:{num_sources}, :, :]")
+                            layout[temp_idx:num_frames[index]:num_sources, :, :] = vsource
+                        dataset_index[current_index] += 1
                 with h5py.File(dest_file, 'a', libver='latest') as outfile:
                     outfile.create_virtual_dataset(dataset_names[index], layout)
             except ValueError as e:

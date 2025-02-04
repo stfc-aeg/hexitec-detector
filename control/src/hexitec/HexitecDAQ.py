@@ -475,7 +475,7 @@ class HexitecDAQ():
         #     self.processed_remaining))
 
     def check_hdf_write_statuses(self):
-        """Check hdf node(s) statuses, return True until all finished writing."""
+        """Check hdf node(s) statuses, return True if all finished writing."""
         fp_statuses = self.get_adapter_status("fp")
         hdf_status = False
         for status in fp_statuses:
@@ -488,7 +488,6 @@ class HexitecDAQ():
     def hdf_closing_loop(self):
         """Wait for processing to complete but don't block, before prep to write meta data."""
         if self.check_hdf_write_statuses():
-            # print(" DAQ Waiting, hdf_closing_loop()")
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
             self.frames_received = self.get_total_frames_received()
