@@ -545,17 +545,22 @@ class Hexitec():
             self.report_leak_detector_error(error_message)
             raise ParameterTreeError(error_message)
         else:
-            if self.daq.in_progress:
-                # Stop hardware if still in acquisition
-                if self.fem.hardware_busy:
-                    self.cancel_acquisition()
-                # Reset daq
-                self.shutdown_processing()
-                # Allow processing to shutdown before disconnecting hardware
-                IOLoop.instance().call_later(0.2, self.fem.disconnect_hardware)
+            if self.fem.hardware_connected:
+                if self.daq.in_progress:
+                    # Stop hardware if still in acquisition
+                    if self.fem.hardware_busy:
+                        self.cancel_acquisition()
+                    # Reset daq
+                    self.shutdown_processing()
+                    # Allow processing to shutdown before disconnecting hardware
+                    IOLoop.instance().call_later(0.2, self.fem.disconnect_hardware)
+                else:
+                    # Nothing in progress, disconnect hardware
+                    self.fem.disconnect_hardware(msg)
             else:
-                # Nothing in progress, disconnect hardware
-                self.fem.disconnect_hardware(msg)
+                error = "No connection to disconnect"
+                self.fem.flag_error(error)
+                raise ParameterTreeError(error)
 
     def strip_base_path(self, path, keyword):
         """Remove base path from path.
@@ -809,13 +814,18 @@ class Hexitec():
             self.report_leak_detector_error(error_message)
             raise ParameterTreeError(error_message)
         else:
-            self.fem.stop_acquisition = True
-            # Inject End of Acquisition Frame
-            command = "config/inject_eoa"
-            request = ApiAdapterRequest("", content_type="application/json")
-            self.adapters["fp"].put(command, request)
-            self.shutdown_processing()
-            self.software_state = "Idle"
+            if self.software_state != "Acquiring":
+                error = "No acquisition in progress"
+                self.fem.flag_error(error)
+                raise ParameterTreeError(error)
+            else:
+                self.fem.stop_acquisition = True
+                # Inject End of Acquisition Frame
+                command = "config/inject_eoa"
+                request = ApiAdapterRequest("", content_type="application/json")
+                self.adapters["fp"].put(command, request)
+                self.shutdown_processing()
+                self.software_state = "Idle"
 
     def collect_offsets(self, msg=None):
         """Instruct FEM to collect offsets."""

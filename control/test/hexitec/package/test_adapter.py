@@ -603,6 +603,15 @@ class TestDetector(unittest.TestCase):
             self.test_adapter.detector.disconnect_hardware("")
         assert exc_info.value.args[0] == error
 
+    def test_disconnect_hardware_no_connection(self):
+        """Test function prevents disconnecting when connection to disconnect."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.fem.hardware_connected = False
+        error = "No connection to disconnect"
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_adapter.detector.disconnect_hardware("")
+        assert exc_info.value.args[0] == error
+
     def test_strip_base_path(self):
         """Test function correctly strips out base path."""
         keyword = "data/"
@@ -870,9 +879,25 @@ class TestDetector(unittest.TestCase):
             in_progress=False
         )
         self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state = "Acquiring"
         self.test_adapter.detector.fem.stop_acquisition = False
         self.test_adapter.detector.cancel_acquisition()
         assert self.test_adapter.detector.fem.stop_acquisition is True
+
+    def test_cancel_acquisition_no_acquisition(self):
+        """Test function blocks cancel if no acquisition running."""
+        self.test_adapter.detector.daq.configure_mock(
+            in_progress=False
+        )
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state = "Idle"
+        self.test_adapter.detector.shutdown_processing = Mock()
+        error = "No acquisition in progress"
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_adapter.detector.cancel_acquisition()
+        assert exc_info.value.args[0] == error
+        self.test_adapter.detector.fem.flag_error.assert_called_with(error)
+        self.test_adapter.detector.shutdown_processing.assert_not_called()
 
     def test_cancel_acquisition_handles_interlocked(self):
         """Test function prevents cancelling acquisition when interlocked."""
