@@ -365,6 +365,12 @@ function lock_ui_components() {
     document.querySelector('#initialiseButton').disabled = true;
     document.querySelector('#lv_dataset_select').disabled = true;
     document.querySelector('#offsetsButton').disabled = true;
+    document.querySelector('#mode_radio1').disabled = true;
+    document.querySelector('#mode_radio2').disabled = true;
+    if (duration_enable)
+        document.querySelector('#duration-text').disabled = true;
+    else
+        document.querySelector('#frames-text').disabled = true;
 }
 
 function interlock_restored_unlock_ui() {
@@ -386,6 +392,8 @@ function interlock_restored_unlock_ui() {
     document.querySelector('#initialiseButton').disabled = initialiseButton;
     document.querySelector('#lv_dataset_select').disabled = lvDatasetSelect;
     document.querySelector('#offsetsButton').disabled = offsetsButton;
+    document.querySelector('#mode_radio1').disabled = false;
+    document.querySelector('#mode_radio2').disabled = false;
 }
 
 function toggle_ui_elements(bBool) {
@@ -405,6 +413,12 @@ function toggle_ui_elements(bBool) {
         document.querySelector('#hdf-file-name-text').disabled = bBool;
         document.querySelector('#hexitec-config-text').disabled = bBool;
         document.querySelector('#lv_dataset_select').disabled = bBool;
+        document.querySelector('#mode_radio1').disabled = bBool;
+        document.querySelector('#mode_radio2').disabled = bBool;
+        if (duration_enable)
+            document.querySelector('#duration-text').disabled = bBool;
+        else
+            document.querySelector('#frames-text').disabled = bBool;
     } catch(error) {
         console.log("toggle_ui_elements() Error: " + error);
     }
