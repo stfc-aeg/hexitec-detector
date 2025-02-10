@@ -1017,6 +1017,67 @@ class TestFem(unittest.TestCase):
         assert self.test_fem.fem.status_error == "Camera initialisation failed: {}".format("E")
         assert self.test_fem.fem.parent.software_state == "Error"
 
+    @patch("hexitec.HexitecFem.HexitecFem.load_pwr_cal_read_enables")
+    @patch("hexitec.HexitecFem.HexitecFem.write_dac_values")
+    def test_initialise_vsr(self, mock_write_dac_values, mock_load_pwr_cal_read_enables):
+        vsr = MagicMock()
+        row_s1 = 1
+        s1_sph = 2
+        sph_s2 = 3
+        adc1_delay = 4
+        delay_sync_signals = 5
+        vcal2_vcal1 = 6
+        self.test_fem.fem.row_s1 = row_s1
+        self.test_fem.fem.s1_sph = s1_sph
+        self.test_fem.fem.sph_s2 = sph_s2
+        self.test_fem.fem.gain_string = "high"
+        self.test_fem.fem.adc1_delay = adc1_delay
+        self.test_fem.fem.delay_sync_signals = delay_sync_signals
+        self.test_fem.fem.vcal2_vcal1 = vcal2_vcal1
+
+        self.test_fem.fem.initialise_vsr(vsr)
+
+        vsr.set_rows1_clock.assert_called_once_with(row_s1)
+        vsr.set_s1sph.assert_called_once_with(s1_sph)
+        vsr.set_sphs2.assert_called_once_with(sph_s2)
+        vsr.set_gain.assert_called_once_with("high")
+        vsr.set_adc_clock_delay.assert_called_once_with(adc1_delay)
+        vsr.set_adc_signal_delay.assert_called_once_with(delay_sync_signals)
+        vsr.set_sm_vcal_clock.assert_called_once_with(vcal2_vcal1)
+        mock_load_pwr_cal_read_enables.assert_called_once_with(vsr)
+        mock_write_dac_values.assert_called_once_with(vsr)
+        vsr.initialise.assert_called_once()
+
+    @patch("hexitec.HexitecFem.HexitecFem.load_pwr_cal_read_enables")
+    @patch("hexitec.HexitecFem.HexitecFem.write_dac_values")
+    def test_initialise_vsr_no_adc_delay(self, mock_write_dac_values,
+                                         mock_load_pwr_cal_read_enables):
+        vsr = MagicMock()
+        row_s1 = 1
+        s1_sph = 2
+        sph_s2 = 3
+        adc1_delay = -1
+        self.test_fem.fem.row_s1 = row_s1
+        self.test_fem.fem.s1_sph = s1_sph
+        self.test_fem.fem.sph_s2 = sph_s2
+        self.test_fem.fem.gain_string = "high"
+        self.test_fem.fem.adc1_delay = adc1_delay
+        self.test_fem.fem.delay_sync_signals = -1
+        self.test_fem.fem.vcal2_vcal1 = -1
+
+        self.test_fem.fem.initialise_vsr(vsr)
+
+        vsr.set_rows1_clock.assert_called_once_with(row_s1)
+        vsr.set_s1sph.assert_called_once_with(s1_sph)
+        vsr.set_sphs2.assert_called_once_with(sph_s2)
+        vsr.set_gain.assert_called_once_with("high")
+        vsr.set_adc_clock_delay.assert_not_called()
+        vsr.set_adc_signal_delay.assert_not_called()
+        vsr.set_sm_vcal_clock.assert_not_called()
+        mock_load_pwr_cal_read_enables.assert_called_once_with(vsr)
+        mock_write_dac_values.assert_called_once_with(vsr)
+        vsr.initialise.assert_called_once()
+
     def test_calculate_frame_rate(self):
         """Test calculate_frame_rate works."""
         row_s1 = 5

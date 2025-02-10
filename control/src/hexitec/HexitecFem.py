@@ -1076,13 +1076,6 @@ class HexitecFem():
 
         logging.debug("Power, Cal and Read Enables have been loaded")
 
-    def make_list_hexadecimal(self, value):
-        """Debug function: Turn decimal list into hexadecimal list."""
-        value_hexadecimal = []
-        for val in value:
-            value_hexadecimal.append("0x%x" % val)
-        return value_hexadecimal
-
     @run_on_executor(executor='thread_executor')
     def initialise_system(self):
         """Configure in full all VSRs.

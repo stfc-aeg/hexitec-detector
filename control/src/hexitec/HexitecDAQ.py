@@ -611,11 +611,7 @@ class HexitecDAQ():
         elif isinstance(value, dict):
             for key, entry in value.items():
                 value[key] = self._convert_values(entry)
-        try:
-            val = literal_eval(value)
-        except Exception:
-            val = value
-        return str(val) if isinstance(val, type(None)) else val
+        return str(value) if isinstance(value, type(None)) else value
 
     def write_metadata(self, metadata_group, param_tree_dict, hdf_file):
         """Write parameter tree(s) and config files as meta data."""
