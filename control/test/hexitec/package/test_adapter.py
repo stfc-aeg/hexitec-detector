@@ -353,7 +353,7 @@ class TestDetector(unittest.TestCase):
         """Test reporting leak detector errors working."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         e_message = "sample error"
-        self.test_adapter.detector.fem.create_timestamp = Mock()
+        self.test_adapter.detector.fem.create_iso_timestamp = Mock()
         self.test_adapter.detector.report_leak_detector_error(e_message)
         assert self.test_adapter.detector.status_error == e_message
         assert self.test_adapter.detector.leak_error == e_message
@@ -465,7 +465,7 @@ class TestDetector(unittest.TestCase):
         """Test poll fem handles KeyError."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.fem.hardware_connected = False
-        self.test_adapter.detector.fem.create_timestamp = Mock()
+        self.test_adapter.detector.fem.create_iso_timestamp = Mock()
         self.test_adapter.detector.fem.health = False
         self.test_adapter.detector.leak_fault = True
         self.test_adapter.detector.get_proxy_adapter_data = Mock()
@@ -477,7 +477,7 @@ class TestDetector(unittest.TestCase):
             mock_log.assert_called()
             assert self.test_adapter.detector.software_state == "Interlocked"
             assert self.test_adapter.detector.status_error == "Leak Detector unreachable!"
-            self.test_adapter.detector.fem.create_timestamp.assert_called()
+            self.test_adapter.detector.fem.create_iso_timestamp.assert_called()
             self.test_adapter.detector._set_leak_error.assert_called()
 
     def test_check_daq_watchdog(self):

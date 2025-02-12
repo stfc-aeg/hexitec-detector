@@ -16,6 +16,7 @@ from hexitec.adapter import HexitecAdapter
 
 from socket import error as socket_error
 from datetime import datetime
+from datetime import timezone
 import socket
 
 if sys.version_info[0] == 3:  # pragma: no cover
@@ -127,7 +128,7 @@ class TestFem(unittest.TestCase):
 
     def test_get_log_messages_display_new_messages(self):
         """Test the function displays new messages."""
-        datestamp = self.test_fem.fem.create_timestamp()
+        datestamp = self.test_fem.fem.create_iso_timestamp()
         log_messages = [(datestamp, 'Initialised OK.')]
         self.test_fem.fem.last_message_timestamp = "something"
         self.test_fem.fem.get_log_messages("")
@@ -137,7 +138,7 @@ class TestFem(unittest.TestCase):
 
     def test_get_log_messages_display_all_messages(self):
         """Test the function displays all messages."""
-        datestamp = self.test_fem.fem.create_timestamp()
+        datestamp = self.test_fem.fem.create_iso_timestamp()
         log_messages = [(datestamp, 'Initialised OK.')]
         self.test_fem.fem.get_log_messages("")
         # Test part of timestamp, as milliseconds will not agree anyway
@@ -657,19 +658,19 @@ class TestFem(unittest.TestCase):
 
     def test_acquire_data(self):
         """Test function handles normal configuration."""
-        DATE_FORMAT = self.test_fem.fem.DATE_FORMAT
-        acquire_start_time = '%s' % (datetime.now().strftime(DATE_FORMAT))
+        acquire_start_time = datetime.now(timezone.utc).isoformat()
         with patch("time.sleep"), patch("hexitec.HexitecFem.IOLoop") as mock_loop:
             self.test_fem.fem.acquire_data()
             i = mock_loop.instance()
             i.call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
             # Don't compare last 5 chars as corresponds to < 100 milliseconds:
-            assert self.test_fem.fem.acquire_start_time[:-5] == acquire_start_time[:-5]
+            # (e.g. 2020-06-30T14:00:00.123456+00:00, avoids 3456+00:00)
+            assert self.test_fem.fem.acquire_start_time[:-10] == acquire_start_time[:-10]
 
     def test_acquire_data_handles_exception(self):
         """Test function handles exception."""
-        self.test_fem.fem.create_timestamp = Mock()
-        self.test_fem.fem.create_timestamp.side_effect = Exception()
+        self.test_fem.fem.create_iso_timestamp = Mock()
+        self.test_fem.fem.create_iso_timestamp.side_effect = Exception()
         self.test_fem.fem.flag_error = Mock()
         with patch("time.sleep"), patch("hexitec.HexitecFem.IOLoop"):
             with pytest.raises(ParameterTreeError) as exc_info:
@@ -759,10 +760,9 @@ class TestFem(unittest.TestCase):
         assert self.test_fem.fem.hardware_busy is False
         assert self.test_fem.fem.acquisition_completed is True
 
-    def test_acquire_data_completed_works(self):
+    def test_acquire_data_completed(self):
         """Test function handles normal end of acquisition."""
-        DATE_FORMAT = self.test_fem.fem.DATE_FORMAT
-        self.test_fem.fem.acquire_start_time = '%s' % (datetime.now().strftime(DATE_FORMAT))
+        self.test_fem.fem.acquire_start_time = datetime.now(timezone.utc).isoformat()
         self.test_fem.fem.parent.software_state = "Cold"
         self.test_fem.fem.acquire_data_completed()
         assert self.test_fem.fem.hardware_busy is False
@@ -1439,11 +1439,13 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.reset_error()
         assert self.test_fem.fem._get_status_error() == ""
 
-    def test_create_timestamp(self):
+    def test_create_iso_timestamp(self):
         """Test function works ok."""
-        timestamp = '{}'.format(datetime.now().strftime(HexitecFem.DATE_FORMAT))
-        ts = self.test_fem.fem.create_timestamp()
-        assert timestamp[:-4] == ts[:-4]
+        timestamp = datetime.now(timezone.utc).isoformat()
+        ts = self.test_fem.fem.create_iso_timestamp()
+        print(f" {timestamp} ==\n {ts}")
+        # Omit last 9 characters as microseconds differ (timezone info form final 6 characters)
+        assert timestamp[:-9] == ts[:-9]
 
 
 class TestHexitecFem(unittest.TestCase):

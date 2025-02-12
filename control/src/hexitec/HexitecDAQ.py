@@ -14,11 +14,11 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from hexitec.GenerateConfigFiles import GenerateConfigFiles
 
 import h5py
-from ast import literal_eval
 import collections.abc
 import numpy as np
 import statistics
-import datetime
+from datetime import datetime
+from datetime import timezone
 import time
 import os
 
@@ -148,9 +148,9 @@ class HexitecDAQ():
         self.hdf_is_reset = False
 
         # Diagnostics
-        self.daq_start_time = 0
-        self.fem_not_busy = 0
-        self.daq_stop_time = 0
+        self.daq_start_time = "0"
+        self.fem_not_busy = "0"
+        self.daq_stop_time = "0"
 
         self.param_tree = ParameterTree({
             "diagnostics": {
@@ -358,9 +358,9 @@ class HexitecDAQ():
         logging.debug("Starting File Writer")
         self.set_file_writing(True)
         # Diagnostics:
-        self.daq_start_time = '%s' % (datetime.datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
-        self.fem_not_busy = 0
-        self.daq_stop_time = 0
+        self.daq_start_time = datetime.now(timezone.utc).isoformat()
+        self.fem_not_busy = "0"
+        self.daq_stop_time = "0"
         # About to receive fem data, daq therefore now busy
         self.daq_ready = False
         # Wait while fem finish sending data
@@ -371,7 +371,7 @@ class HexitecDAQ():
         remaining_time = self.parent.fem.duration
         if len(self.parent.fem.acquire_start_time) > 0:
             acquire_start = self.parent.fem.acquire_start_time
-            ts = datetime.datetime.strptime(acquire_start, HexitecDAQ.DATE_FORMAT).timestamp()
+            ts = datetime.fromisoformat(acquire_start).timestamp()
             current_time = time.time()
             remaining_time = self.parent.fem.duration - (current_time - ts)
         return remaining_time
@@ -394,7 +394,7 @@ class HexitecDAQ():
         else:
             # Allow watchdog to interrupt processing if timed out
             self.processing_interruptable = True
-            self.fem_not_busy = '%s' % (datetime.datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
+            self.fem_not_busy = datetime.now(timezone.utc).isoformat()
             IOLoop.instance().call_later(0.5, self.processing_check_loop)
 
     def processing_check_loop(self):
@@ -466,7 +466,7 @@ class HexitecDAQ():
             else:
                 self.parent.fem.flag_error("DAQ timed out, file didn't close")
         self.hdf_retry = 0
-        self.daq_stop_time = '%s' % (datetime.datetime.now().strftime(HexitecDAQ.DATE_FORMAT))
+        self.daq_stop_time = datetime.now(timezone.utc).isoformat()
         self.set_file_writing(False)
         self.frames_processed = self.get_total_frames_processed(self.plugin)
         self.processed_remaining = self.number_frames - self.frames_processed
@@ -623,7 +623,7 @@ class HexitecDAQ():
         # Only write parent's (Hexitec class) parameter tree's config files once
         if metadata_group.name == u'/hexitec':
             # Add additional attribute to record current date
-            metadata_group.attrs['runDate'] = datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')
+            metadata_group.attrs['runDate'] = datetime.now(timezone.utc).isoformat()
             # Write the configuration files into the metadata group
             self.config_ds = {}
             str_type = h5py.special_dtype(vlen=str)
@@ -1222,4 +1222,4 @@ class HexitecDAQ():
 
     def debug_timestamp(self):  # pragma: no cover
         """Debug function returning current timestamp in sub second resolution."""
-        return '%s' % (datetime.datetime.now().strftime('%H%M%S.%f'))
+        return '%s' % (datetime.now().strftime('%H%M%S.%f'))

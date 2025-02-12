@@ -11,12 +11,12 @@ import distutils.util
 
 import time
 from datetime import datetime
+from datetime import timezone
 import logging
 import configparser
 import psutil
 from json.decoder import JSONDecodeError
 import json
-import os
 
 from RdmaUdp import *
 from udpcore.UdpCore import *
@@ -26,7 +26,6 @@ import hexitec.ALL_RDMA_REGISTERS as HEX_REGISTERS
 
 from socket import error as socket_error
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
-
 
 from tornado.ioloop import IOLoop
 from tornado.concurrent import run_on_executor
@@ -147,11 +146,11 @@ class HexitecFem():
         self.acquire_start_time = ""
         self.acquire_stop_time = ""
         self.acquire_time = 0.0
-        self.offsets_timestamp = 0
+        self.offsets_timestamp = "0"
 
         # Track history of errors
         self.errors_history = []
-        timestamp = self.create_timestamp()
+        timestamp = self.create_iso_timestamp()
         self.errors_history.append([timestamp, "Initialised OK."])
         self.last_message_timestamp = ''
         self.log_messages = [timestamp, "initialised OK"]
@@ -766,7 +765,7 @@ class HexitecFem():
         try:
             logging.info("Initiate Data Capture")
             self.acquire_time = 0
-            self.acquire_start_time = self.create_timestamp()
+            self.acquire_start_time = self.create_iso_timestamp()
             self.acquire_stop_time = "0"
 
             logging.debug("Reset frame number")
@@ -827,7 +826,7 @@ class HexitecFem():
 
     def acquire_data_completed(self):
         """Reset variables and read out Firmware monitors post data transfer."""
-        self.acquire_stop_time = self.create_timestamp()
+        self.acquire_stop_time = self.create_iso_timestamp()
 
         if self.stop_acquisition:
             logging.info("Cancelling Acquisition..")
@@ -844,10 +843,8 @@ class HexitecFem():
             return
 
         # Workout exact duration of fem data transmission:
-        self.acquire_time = float(self.acquire_stop_time.split("_")[1]) \
-            - float(self.acquire_start_time.split("_")[1])
-        start_ = datetime.strptime(self.acquire_start_time, HexitecFem.DATE_FORMAT)
-        stop_ = datetime.strptime(self.acquire_stop_time, HexitecFem.DATE_FORMAT)
+        start_ = datetime.fromisoformat(self.acquire_start_time)
+        stop_ = datetime.fromisoformat(self.acquire_stop_time)
         self.acquire_time = (stop_ - start_).total_seconds()
 
         logging.debug("Sending {} frames took {} seconds".format(str(self.number_frames),
@@ -905,13 +902,7 @@ class HexitecFem():
             self._set_status_message("Offsets collections operation completed.")
             self.parent.software_state = current_state
             # Timestamp when offsets collected
-            self.offsets_timestamp = self.create_timestamp()
-            # # String format can be turned into millisecond format:
-            # date_time = datetime.strptime(self.offsets_timestamp, HexitecFem.DATE_FORMAT)
-            # ts = date_time.timestamp() * 1000
-            # # convert timestamp to string in dd-mm-yyyy HH:MM:SS
-            # str_date_time = date_time.strftime("%d-%m-%Y, %H:%M:%S")
-            # print("Offsets timestamp, format of dd-mm-yyyy HH:MM:SS: ", str_date_time)
+            self.offsets_timestamp = self.create_iso_timestamp()
             # ending = time.time()
             # print("     collect_offsets took: {}".format(ending-beginning))
         except Exception as e:
@@ -1643,13 +1634,13 @@ class HexitecFem():
         logging.error(error_message)
         if self.parent.software_state != "Interlocked":
             self.parent.software_state = "Error"
-        timestamp = self.create_timestamp()
+        timestamp = self.create_iso_timestamp()
         # Append to errors_history list, nested list of timestamp, error message
         self.errors_history.append([timestamp, error_message])
 
-    def create_timestamp(self):
-        """Returns timestamp of now."""
-        return '{}'.format(datetime.now().strftime(HexitecFem.DATE_FORMAT))
+    def create_iso_timestamp(self):
+        """Returns an ISO formatted timestamp of now."""
+        return datetime.now(timezone.utc).isoformat()
 
     def get_log_messages(self, last_message_timestamp):
         """This method gets the log messages that are appended to the log message deque by the
@@ -1666,7 +1657,7 @@ class HexitecFem():
                     break
         else:
             logs = self.errors_history
-            self.last_message_timestamp = self.create_timestamp()
+            self.last_message_timestamp = self.create_iso_timestamp()
 
         self.log_messages = [(str(timestamp), log_message) for timestamp, log_message in logs]
 

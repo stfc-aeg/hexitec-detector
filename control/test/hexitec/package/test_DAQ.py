@@ -4,6 +4,8 @@ Test Cases for the Hexitec DAQ in hexitec.HexitecDAQ.
 Christian Angelsen, STFC Detector Systems Software Group
 """
 
+from datetime import datetime
+from datetime import timezone
 import statistics
 import unittest
 import os.path
@@ -582,19 +584,12 @@ class TestDAQ(unittest.TestCase):
             instance = mock_loop.instance()
             instance.call_later.assert_called_with(.5, self.test_daq.daq.processing_check_loop)
 
-    def test_calculate_remaining_collection_time(self):
-        """Test the function calculate remaining collection time from fem."""
-        now_timestamp = "20240725_112646.951029"
-        self.test_daq.daq.parent.fem.acquire_start_time = now_timestamp
-        duration = 60
-        delay = 2.0
-        self.test_daq.daq.parent.fem.duration = duration
-        with patch("time.time") as mock_time, patch("datetime.datetime") as mock_dt:
-            mock_time.return_value = 1721903208.958006
-            mock_dt.strptime.return_value.timestamp = Mock(return_value=1721903206.951029)
-            time_remaining = self.test_daq.daq.calculate_remaining_collection_time()
-            # Check calculated remaining collection time + delay ~= duration
-            assert pytest.approx(time_remaining+delay, 0.1) == duration
+    @patch('time.time', return_value=time.time())
+    def test_calculate_remaining_collection_time(self, mock_time):
+        self.test_daq.daq.parent.fem.duration = 10
+        self.test_daq.daq.parent.fem.acquire_start_time = datetime.now(timezone.utc).isoformat()
+        remaining_time = self.test_daq.daq.calculate_remaining_collection_time()
+        self.assertAlmostEqual(remaining_time, self.test_daq.daq.parent.fem.duration, delta=1)
 
     def test_processing_check_loop_polls_file_status_after_processing_complete(self):
         """Test processing check loop polls for processed file closed once processing done."""
@@ -1278,24 +1273,24 @@ class TestDAQ(unittest.TestCase):
         patched_function = "hexitec.GenerateConfigFiles.GenerateConfigFiles.generate_config_files"
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop, patch(patched_function) as mock_gcf:
 
-                self.test_daq.daq.param_tree.get = Mock(return_value=config_dict)
-                self.test_daq.daq.pass_raw = True
-                self.test_daq.daq.pass_processed = True
-                store_config = "/tmp/_tmp_store1.json"
-                execute_config = "/tmp/_tmp_execute.json"
-                store_string = {"index":"_tmp_store1.json","value":[]}
-                execute_string = {"index":"_tmp_store1.json"}
-                mock_gcf.return_value = (store_config, execute_config, store_string, execute_string)
-                self.test_daq.daq.commit_configuration()
+            self.test_daq.daq.param_tree.get = Mock(return_value=config_dict)
+            self.test_daq.daq.pass_raw = True
+            self.test_daq.daq.pass_processed = True
+            store_config = "/tmp/_tmp_store1.json"
+            execute_config = "/tmp/_tmp_execute.json"
+            store_string = {"index": "_tmp_store1.json", "value": []}
+            execute_string = {"index": "_tmp_store1.json"}
+            mock_gcf.return_value = (store_config, execute_config, store_string, execute_string)
+            self.test_daq.daq.commit_configuration()
 
-                # self.test_daq.fake_fp.put.assert_has_calls([
-                #     # TODO: REPLACE ANY WITH ApiAdapterRequest
-                #     call("config/hdf/delete_datasets/", ANY),
-                #     call("config/config_file/", ANY)
-                # ])
+            # self.test_daq.fake_fp.put.assert_has_calls([
+            #     # TODO:  REPLACE ANY WITH ApiAdapterRequest
+            #     call("config/hdf/delete_datasets/", ANY),
+            #     call("config/config_file/", ANY)
+            # ])
 
-                instance = mock_loop.instance()
-                instance.call_later.assert_called_with(.4, self.test_daq.daq.submit_configuration)
+            instance = mock_loop.instance()
+            instance.call_later.assert_called_with(0.4, self.test_daq.daq.submit_configuration)
 
     def test_submit_configuration_hdf_branch(self):
         """Test function handles sample parameter tree ok."""

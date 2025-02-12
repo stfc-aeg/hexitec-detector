@@ -366,7 +366,7 @@ class Hexitec():
         """
         logging.error(error_message)
         # Pass error to logging but bypass fem's error reporting
-        timestamp = self.fem.create_timestamp()
+        timestamp = self.fem.create_iso_timestamp()
         self.fem.errors_history.append([timestamp, error_message])
         # Report leak fault to GUI
         self.status_error = error_message

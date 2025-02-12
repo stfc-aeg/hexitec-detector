@@ -9,6 +9,7 @@ import time
 from persistqueue import Queue
 from concurrent import futures
 from datetime import datetime
+from datetime import timezone
 import subprocess
 import h5py
 import glob
@@ -482,10 +483,10 @@ class Archiver():
                             # print(f" spectra_bins, layout[, ] = layout[, ]")
                             layout[:, :] = vsource
                         elif dataset == "pixel_spectra":
-                            # print(f" layout: [{temp_idx}:{num_frames[index]}:{num_sources}, :, :, :]")
+                            # print(f" l'out: [{temp_idx}:{num_frames[index]}:{num_sources}, :, :, :]")
                             layout[temp_idx:num_frames[index]:num_sources, :, :, :] = vsource
                         else:
-                            # print(f" layout: [{temp_idx}:{num_frames[index]}:{num_sources}, :, :]")
+                            # print(f" l'out: [{temp_idx}:{num_frames[index]}:{num_sources}, :, :]")
                             layout[temp_idx:num_frames[index]:num_sources, :, :] = vsource
                         dataset_index[current_index] += 1
                 with h5py.File(dest_file, 'a', libver='latest') as outfile:
@@ -526,7 +527,7 @@ class Archiver():
 
     def create_timestamp(self):
         """Returns timestamp of now."""
-        return '{}'.format(datetime.now().strftime('%Y%m%d_%H%M%S.%f'))
+        return datetime.now(timezone.utc).isoformat()
 
     def get_log_messages(self, last_message_timestamp):
         """This method gets the log messages that are appended to the log message deque by the

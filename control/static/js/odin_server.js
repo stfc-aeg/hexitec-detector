@@ -675,20 +675,21 @@ function poll_fem() {
                     var acquire_start = fem_diagnostics["acquire_start_time"];
                     var acquire_stop = fem_diagnostics["acquire_stop_time"];
                     var acquire_time = fem_diagnostics["acquire_time"];
-                    document.querySelector('#acquire_start').innerHTML = acquire_start;
-                    document.querySelector('#acquire_stop').innerHTML = acquire_stop;
+
+                    document.querySelector('#acquire_start').innerHTML = acquire_start.split("+")[0];
+                    document.querySelector('#acquire_stop').innerHTML = acquire_stop.split("+")[0];
                     document.querySelector('#acquire_time').innerHTML = acquire_time;
 
                     var daq_diagnostics = result["detector"]["daq"]["diagnostics"];
                     var daq_start = daq_diagnostics["daq_start_time"];
                     var daq_stop = daq_diagnostics["daq_stop_time"];
                     var fem_not_busy = daq_diagnostics["fem_not_busy"];
-                    document.querySelector('#daq_start').innerHTML = daq_start;
-                    document.querySelector('#daq_stop').innerHTML = daq_stop;
-                    document.querySelector('#fem_not_busy').innerHTML = fem_not_busy;
+                    document.querySelector('#daq_start').innerHTML = daq_start.split("+")[0];
+                    document.querySelector('#daq_stop').innerHTML = daq_stop.split("+")[0];
+                    document.querySelector('#fem_not_busy').innerHTML = fem_not_busy.split("+")[0];
 
                     const offsets_timestamp = fem["offsets_timestamp"];
-                    document.querySelector('#offsets_ts').innerHTML = offsets_timestamp
+                    document.querySelector('#offsets_ts').innerHTML = offsets_timestamp.split("+")[0];
 
                     // Obtain overall adapter(.py's) status
 
