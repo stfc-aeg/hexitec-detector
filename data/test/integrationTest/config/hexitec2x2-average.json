@@ -37,12 +37,11 @@
     },
     "receiver":
     {
-        "json_file": "${INSTALL_PREFIX}\/test_config\/hexitec2x2-fr.json",
-        "m": "500000000"
+        "config": "${INSTALL_PREFIX}\/test_config\/hexitec2x2-fr.json"
     },
     "processor":
     {
-        "json_file": "${INSTALL_PREFIX}\/test_config\/hexitec2x2-fp-average.json"
+        "config": "${INSTALL_PREFIX}\/test_config\/hexitec2x2-fp-average.json"
     },
     "test":
     {

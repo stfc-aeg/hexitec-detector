@@ -9,7 +9,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
       with:
@@ -23,28 +23,28 @@ jobs:
         sudo apt-get install libzmq3-dev libpcap-dev liblog4cxx-dev libblosc-dev libhdf5-dev
     - name: Clone Odin-data
       run: |
-        git clone -b 1.8.0 https://github.com/odin-detector/odin-data.git
+        git clone -b 1.10.1 https://github.com/odin-detector/odin-data.git
     - name: Build odin-data
       run: |
-        cd odin-data
+        cd odin-data/cpp/
         echo "INSTALL_PREFIX is ${INSTALL_PREFIX}"
         mkdir -p $INSTALL_PREFIX
         mkdir build && cd build
         cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX ..
         make install VERBOSE=1
       env:
-        MAKEFLAGS: "-j2"
+        MAKEFLAGS: "-j4"
     - name: Run frame receiver unit tests
       env:
         INSTALL_PREFIX: ${{ env.INSTALL_PREFIX }}
       run: |
-        cd odin-data/build
+        cd odin-data/cpp/build
         bin/frameReceiverTest
     - name: Run frame processor unit tests
       env:
         INSTALL_PREFIX: ${{ env.INSTALL_PREFIX }}
       run: |
-        cd odin-data/build
+        cd odin-data/cpp/build
         bin/frameProcessorTest
     - name: Build hexitec-detector 
       run: |
@@ -55,13 +55,13 @@ jobs:
         cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -DODINDATA_ROOT_DIR=$INSTALL_PREFIX ..
         make install VERBOSE=1
       env:
-        MAKEFLAGS: "-j2"
+        MAKEFLAGS: "-j4"
     - name: Run odin-data frame integration test
       env:
         INSTALL_PREFIX: ${{ env.INSTALL_PREFIX }}
       run: |
         echo "INSTALL_PREFIX is ${INSTALL_PREFIX}"
-        cd odin-data/build
+        cd odin-data/cpp/build
         bin/odinDataTest --json=$INSTALL_PREFIX/test_config/hexitec2x6-average.json
         echo "Python version:"
         python --version

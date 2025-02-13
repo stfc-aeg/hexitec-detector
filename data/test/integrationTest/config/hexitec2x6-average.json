@@ -16,7 +16,7 @@
             "process": false,
             "command": "${INSTALL_PREFIX}\/bin\/frameSimulator",
             "pos-args": "Hexitec",
-            "sleep": 1
+            "sleep": 10
         },
         "test": {
             "process": false,
@@ -28,24 +28,27 @@
     "simulator":
     {
         "lib-path": "${INSTALL_PREFIX}\/lib",
-        "frames": "11",
+        "frames": "10",
         "dest-ip": "127.0.0.1",
         "ports": "61649",
         "pattern-path": "${INSTALL_PREFIX}\/test_config\/patterns\/CSD_2x6_average.json",
         "interval": "1",
+        "packet-gap": 10,
     	"sensors_layout": "2x6"
     },
     "receiver":
     {
-        "json_file": "${INSTALL_PREFIX}\/test_config\/hexitec2x6-fr.json",
-        "m": "500000000"
+        "config": "${INSTALL_PREFIX}\/test_config\/hexitec2x6-fr.json",
+        "log-config": "${INSTALL_PREFIX}\/test_config\/fr_log4cxx.xml"
     },
     "processor":
     {
-        "json_file": "${INSTALL_PREFIX}\/test_config\/hexitec2x6-fp-average.json"
+        "config": "${INSTALL_PREFIX}\/test_config\/hexitec2x6-fp-average.json",
+        "log-config": "${INSTALL_PREFIX}\/test_config\/fp_log4cxx.xml"
     },
     "test":
     {
-        "json": "${INSTALL_PREFIX}\/test_config\/test2x6-average.json"
+        "json": "${INSTALL_PREFIX}\/test_config\/test2x6-average.json",
+        "log-config": "${INSTALL_PREFIX}\/test_config\/fs_log4cxx.xml"
     }
 }
