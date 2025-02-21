@@ -13,10 +13,7 @@ import time
 import sys
 import os
 
-if sys.version_info[0] == 3:  # pragma: no cover
-    from unittest.mock import Mock, patch
-else:                         # pragma: no cover
-    from mock import Mock, patch
+from unittest.mock import Mock, patch
 
 
 class AdapterTestFixture(object):

@@ -19,10 +19,7 @@ from datetime import datetime
 from datetime import timezone
 import socket
 
-if sys.version_info[0] == 3:  # pragma: no cover
-    from unittest.mock import Mock, patch, mock_open, MagicMock
-else:                         # pragma: no cover
-    from mock import Mock, patch
+from unittest.mock import Mock, call, patch, mock_open, MagicMock
 
 
 # Custom decorator to support testing of asynchronous functions
@@ -145,6 +142,52 @@ class TestFem(unittest.TestCase):
         assert self.test_fem.fem.log_messages[0][:-4] == log_messages[0][:-4]
         assert self.test_fem.fem.log_messages[0][1] == log_messages[0][1]
 
+    def test_check_hardware_ready(self):
+        """Test function working okay."""
+        self.test_fem.fem.hardware_connected = True
+        self.test_fem.fem.hardware_busy = False
+        self.test_fem.fem.flag_error = Mock()
+        self.test_fem.fem.check_hardware_ready("test")
+        self.test_fem.fem.flag_error.assert_not_called()
+
+    def test_check_hardware_ready_fails_without_hardware_connection(self):
+        """Test function fails when hardware not connected."""
+        self.test_fem.fem.hardware_connected = False
+        self.test_fem.fem.flag_error = Mock()
+        error = "Can't test without a connection"
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_fem.fem.check_hardware_ready("test")
+        assert exc_info.value.args[0] == error
+
+    def test_check_hardware_ready_fails_if_hardware_busy(self):
+        """Test function fails when hardware busy."""
+        self.test_fem.fem.hardware_connected = True
+        self.test_fem.fem.hardware_busy = True
+        self.test_fem.fem.flag_error = Mock()
+        error = "Can't test, Hardware busy"
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_fem.fem.check_hardware_ready("test")
+        assert exc_info.value.args[0] == error
+        self.test_fem.fem.flag_error.assert_called_with(error, "")
+
+    def test_check_system_initialised(self):
+        """Test function working ok."""
+        self.test_fem.fem.system_initialised = True
+        self.test_fem.fem._set_status_error = Mock()
+        self.test_fem.fem.check_system_initialised("")
+        self.test_fem.fem._set_status_error.assert_called_with("")
+
+    def test_check_system_initialised_fails_if_system_not_initialised(self):
+        """Test function fails if system not initialised."""
+        self.test_fem.fem.system_initialised = False
+        self.test_fem.fem.flag_error = Mock()
+        reason = "test"
+        error = f"Can't {reason}, system not initialised"
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_fem.fem.check_system_initialised(reason)
+        assert exc_info.value.args[0] == error
+        self.test_fem.fem.flag_error.assert_called_with(error, "")
+
     def test_environs(self):
         """Test function works ok."""
         self.test_fem.fem.hardware_connected = True
@@ -158,7 +201,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.hardware_connected = False
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.environs()
-        error = "Error: Can't read sensors without a connection"
+        error = "Can't read sensors without a connection"
         assert exc_info.value.args[0] == error
         assert exc_info.type is ParameterTreeError
 
@@ -168,7 +211,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.hardware_busy = True
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.environs()
-        error = "Error: Can't read sensors, Hardware busy"
+        error = "Can't read sensors, Hardware busy"
         assert exc_info.value.args[0] == error
         assert exc_info.type is ParameterTreeError
 
@@ -272,10 +315,38 @@ class TestFem(unittest.TestCase):
     def test_connect_hardware_already_connected_fails(self):
         """Test that connecting with connection already established is handled."""
         self.test_fem.fem.hardware_connected = True
-        e = "Error: Connection already established"
+        e = "Connection already established"
         with pytest.raises(ParameterTreeError, match=e):
             self.test_fem.fem.connect_hardware()
         assert self.test_fem.fem.hardware_connected is True
+
+    @patch("hexitec.HexitecFem.RdmaUDP")
+    @patch("hexitec.HexitecFem.UdpCore")
+    @patch("hexitec.HexitecFem.IOLoop.instance")
+    def test_configure_camera_interfaces(self, mock_ioloop, mock_UdpCore, mock_RdmaUDP):
+        """Test function working ok."""
+        mocked_loop = MagicMock()
+        mock_ioloop.return_value = mocked_loop
+
+        self.test_fem.fem.configure_camera_interfaces()
+
+        mock_RdmaUDP.assert_called_once_with(local_ip=self.test_fem.fem.server_ctrl_ip,
+                                             local_port=self.test_fem.fem.server_ctrl_port,
+                                             rdma_ip=self.test_fem.fem.camera_ctrl_ip,
+                                             rdma_port=self.test_fem.fem.camera_ctrl_port,
+                                             multicast=True, debug=False)
+
+        mock_UdpCore.assert_called_once_with(mock_RdmaUDP.return_value, ctrl_flag=True,
+                                             iface_name=self.test_fem.fem.control_interface,
+                                             qsfp_idx=self.test_fem.fem.control_qsfp_idx,
+                                             lane=self.test_fem.fem.control_lane)
+
+        self.assertEqual(self.test_fem.fem.status_message, "Set Control params..")
+        # Clutch to avoid flake8 E501 line too long
+        config_w_multicast = self.test_fem.fem.configure_control_with_multicast
+        mocked_loop.call_later.assert_called_once_with(2, config_w_multicast,
+                                                       mock_RdmaUDP.return_value,
+                                                       mock_UdpCore.return_value)
 
     def test_connect_hardware_handles_Exception(self):
         """Test that connecting with hardware handles failure."""
@@ -368,38 +439,6 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.extract_string_parameters(["list", "not_supported"])
         assert exc_info.type is HexitecFemError
 
-    def test_prepare_hardware(self):
-        """Test prepare hardware work OK."""
-        self.test_fem.fem.prepare_farm_mode = Mock(return_value=True)
-        self.test_fem.fem.configure_camera_interfaces = Mock()
-        with patch("hexitec.HexitecFem.RdmaUDP"):
-            success = self.test_fem.fem.prepare_hardware()
-            assert success is True
-
-    def test_prepare_hardware_handles_error(self):
-        """Test prepare hardware handle error(s)."""
-        self.test_fem.fem.prepare_farm_mode = Mock(return_value=False)
-        self.test_fem.fem.power_up_modules = Mock()
-        with patch("hexitec.HexitecFem.RdmaUDP"):
-            success = self.test_fem.fem.prepare_hardware()
-            assert success is False
-
-    # # TODO the 2 mocked_ objects should/shouldn't be MagicMock (actual versus expected)
-    # @patch('udpcore.UdpCore')
-    # @patch('RdmaUdp.RdmaUdp')
-    # def test_configure_camera_interfaces(self, mocked_core, mocked_rdma):
-    #     """Test function fails when no connection established."""
-    #     with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
-    #         self.test_fem.fem._set_status_message = Mock()
-    #         mocked_core.rdma_ip = "127.0.0.1"
-    #         mocked_rdma.rdma_ip = "127.0.0.1"
-    #         self.test_fem.fem.configure_camera_interfaces()
-    #         self.test_fem.fem._set_status_message.assert_called_with("Set Control params..")
-    #         i = mock_loop.instance()
-    #         i.call_later.assert_called_with(2,
-    #                                         self.test_fem.fem.configure_control_with_multicast,
-    #                                         mocked_core, mocked_rdma)
-
     def test_populate_lists(self):
         """Test function works ok."""
         self.test_fem.fem.farm_target_ip = ['10.0.1.2', '10.0.1.3', '10.0.1.4', '10.0.1.1']
@@ -420,7 +459,7 @@ class TestFem(unittest.TestCase):
         """Test function fails when no connection established."""
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.initialise_hardware()
-        error = "Error: Can't initialise hardware without a connection"
+        error = "Can't initialise hardware without a connection"
         assert exc_info.value.args[0] == error
         assert exc_info.type is ParameterTreeError
         assert self.test_fem.fem.hardware_connected is False
@@ -446,7 +485,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.hardware_busy = True
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.initialise_hardware()
-        error = "Error: Can't initialise hardware, Hardware busy"
+        error = "Can't initialise hardware, Hardware busy"
         assert exc_info.value.args[0] == error
         assert exc_info.type is ParameterTreeError
 
@@ -526,27 +565,10 @@ class TestFem(unittest.TestCase):
         assert self.test_fem.fem.hardware_connected is False
         assert self.test_fem.fem.hardware_busy is False
 
-    def test_collect_data_fails_on_hardware_busy(self):
-        """Test function fails when hardware already busy."""
-        self.test_fem.fem.hardware_connected = True
-        self.test_fem.fem.hardware_busy = True
-        self.test_fem.fem.ignore_busy = False
-        error = "Error: Can't collect data, Hardware busy"
-        with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_fem.fem.collect_data()
-        assert exc_info.value.args[0] == error
-
-    def test_collect_data_fails_without_connection(self):
-        """Test function fails without established hardware connection."""
-        self.test_fem.fem.hardware_connected = False
-        error = "Error: Can't collect data without a connection"
-        with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_fem.fem.collect_data()
-        assert exc_info.value.args[0] == error
-
     def test_collect_data_fails_on_exception(self):
         """Test function can handle unexpected exception."""
         self.test_fem.fem.hardware_connected = True
+        self.test_fem.fem.system_initialised = True
         self.test_fem.fem.hardware_busy = False
         self.test_fem.fem.acquire_data = Mock()
         self.test_fem.fem.acquire_data.side_effect = AttributeError()
@@ -559,8 +581,8 @@ class TestFem(unittest.TestCase):
         """Test function works all right."""
         # Ensure correct circumstances
         self.test_fem.fem.hardware_connected = True
+        self.test_fem.fem.system_initialised = True
         self.test_fem.fem.hardware_busy = False
-        self.test_fem.fem.ignore_busy = True
         # Reset variables, to be checked post run
         self.test_fem.fem.acquisition_completed = False
         self.test_fem.fem.acquire_data = Mock()
@@ -622,15 +644,19 @@ class TestFem(unittest.TestCase):
 
     def test_cam_connect_completed(self):
         """Test function works ok."""
+        self.test_fem.fem.parent.daq.commit_configuration = Mock()
         self.test_fem.fem.cam_connect_completed()
         assert self.test_fem.fem.hardware_busy is False
         assert self.test_fem.fem.parent.software_state == "Idle"
+        self.test_fem.fem.parent.daq.commit_configuration.assert_called()
 
     def test_cam_disconnect(self):
         """Test function works ok."""
         self.test_fem.fem.send_cmd = Mock()
         self.test_fem.fem.disconnect = Mock()
+        self.test_fem.fem.system_initialised = True
         self.test_fem.fem.cam_disconnect()
+        assert self.test_fem.fem.system_initialised is False
 
     @patch('hexitec_vsr.VsrModule')
     def test_cam_disconnect_fails_network_error(self, mocked_vsr_module):
@@ -656,16 +682,35 @@ class TestFem(unittest.TestCase):
         assert exc_info.type is HexitecFemError
         assert self.test_fem.fem.hardware_connected is False
 
-    def test_acquire_data(self):
-        """Test function handles normal configuration."""
-        acquire_start_time = datetime.now(timezone.utc).isoformat()
+    def test_acquire_data_hardware_calls(self):
+        """Nominally tests the four hardware functions called by acquire_data.
+
+            Actually just bumps the unit test coverage to 100%.
+            TODO Cover four functions directly:
+            frame_reset_to_zero, data_path_reset, set_nof_frames, data_en
+        """
         with patch("time.sleep"), patch("hexitec.HexitecFem.IOLoop") as mock_loop:
             self.test_fem.fem.acquire_data()
             i = mock_loop.instance()
             i.call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
-            # Don't compare last 5 chars as corresponds to < 100 milliseconds:
-            # (e.g. 2020-06-30T14:00:00.123456+00:00, avoids 3456+00:00)
-            assert self.test_fem.fem.acquire_start_time[:-10] == acquire_start_time[:-10]
+
+    def test_acquire_data(self):
+        """Test function handles normal configuration."""
+        self.test_fem.fem.frame_reset_to_zero = Mock()
+        self.test_fem.fem.data_path_reset = Mock()
+        self.test_fem.fem.set_nof_frames = Mock()
+        self.test_fem.fem.data_en = Mock()
+        number_frames = 10
+        self.test_fem.fem.number_frames = number_frames
+        with patch("time.sleep"), patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.acquire_data()
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
+            self.test_fem.fem.frame_reset_to_zero.assert_called_once()
+            self.test_fem.fem.data_path_reset.assert_called_once()
+            self.test_fem.fem.set_nof_frames.assert_called_once_with(number_frames)
+            self.test_fem.fem.data_en.assert_has_calls([call(enable=True), call(enable=False)])
+            self.assertEqual(self.test_fem.fem.data_en.call_count, 2)
 
     def test_acquire_data_handles_exception(self):
         """Test function handles exception."""
@@ -771,6 +816,7 @@ class TestFem(unittest.TestCase):
 
     def test_run_collect_offsets(self):
         """Test function working okay."""
+        self.test_fem.fem.system_initialised = True
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.hardware_busy = False
         self.test_fem.fem.collect_offsets = Mock()
@@ -779,7 +825,7 @@ class TestFem(unittest.TestCase):
 
     def test_run_collect_offsets_handles_hardware_disconnected(self):
         self.test_fem.fem.hardware_connected = False
-        error = "Error: Can't collect offsets without a connection"
+        error = "Can't collect offsets without a connection"
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.run_collect_offsets()
         assert exc_info.value.args[0] == error
@@ -788,10 +834,22 @@ class TestFem(unittest.TestCase):
         """Test function handles hardware busy."""
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.hardware_busy = True
-        error = "Error: Can't collect offsets, Hardware busy"
+        error = "Can't collect offsets, Hardware busy"
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.run_collect_offsets()
         assert exc_info.value.args[0] == error
+
+    def test_run_collect_offsets_handles_system_not_initialised(self):
+        """Test function handles system not yet initialised."""
+        self.test_fem.fem.system_initialised = False
+        self.test_fem.fem.hardware_connected = True
+        self.test_fem.fem.hardware_busy = False
+        self.test_fem.fem.flag_error = Mock()
+        error = "Can't collect offsets, system not initialised"
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_fem.fem.run_collect_offsets()
+        assert exc_info.value.args[0] == error
+        self.test_fem.fem.flag_error.assert_called_with(error, "")
 
     @async_test
     async def test_collect_offsets(self):
@@ -1158,13 +1216,12 @@ class TestFem(unittest.TestCase):
         assert self.test_fem.fem.bias_level == 15
         assert self.test_fem.fem.vsrs_selected == 63
 
-    def test_set_hexitec_config_fails_invalid_filename(self):
-        """Test function fails on invalid file name."""
-        filename = "invalid/file.name"
-        rc = self.test_fem.fem.set_hexitec_config(filename)
-        error = "Cannot open provided hexitec file: [Errno 2] No such file or directory:"
-        # Skipping end of status_error (beyond 71 characters) as file path irrelevant here
-        assert self.test_fem.fem.status_error[:71] == error
+    @patch("builtins.open", new_callable=mock_open)
+    def test_set_hexitec_config_fails_invalid_filename(self, mock_open):
+        mock_open.side_effect = IOError
+        rc = self.test_fem.fem.set_hexitec_config("invalid/file.name")
+        error = "Cannot open provided hexitec file"
+        assert self.test_fem.fem.status_error == error
         assert rc is None
 
     def test_set_hexitec_config_fails_missing_key(self):
@@ -1394,7 +1451,7 @@ class TestFem(unittest.TestCase):
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.hv_on()
         assert exc_info.type is ParameterTreeError
-        assert exc_info.value.args[0] == "Error: Can't switch HV on without a connection"
+        assert exc_info.value.args[0] == "Can't switch HV on without a connection"
 
     def test_hv_on_fails_if_hardware_busy(self):
         """Test function fails if hardware busy."""
@@ -1403,7 +1460,7 @@ class TestFem(unittest.TestCase):
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.hv_on()
         assert exc_info.type is ParameterTreeError
-        assert exc_info.value.args[0] == "Error: Can't switch HV on, Hardware busy"
+        assert exc_info.value.args[0] == "Can't switch HV on, Hardware busy"
 
     @patch('hexitec_vsr.VsrModule')
     def test_hv_off(self, mocked_vsr_module):
@@ -1422,7 +1479,7 @@ class TestFem(unittest.TestCase):
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.hv_off()
         assert exc_info.type is ParameterTreeError
-        assert exc_info.value.args[0] == "Error: Can't switch HV off without a connection"
+        assert exc_info.value.args[0] == "Can't switch HV off without a connection"
 
     def test_hv_off_fails_if_hardware_busy(self):
         """Test function fails if hardware busy."""
@@ -1431,7 +1488,7 @@ class TestFem(unittest.TestCase):
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.hv_off()
         assert exc_info.type is ParameterTreeError
-        assert exc_info.value.args[0] == "Error: Can't switch HV off, Hardware busy"
+        assert exc_info.value.args[0] == "Can't switch HV off, Hardware busy"
 
     def test_reset_error(self):
         """Test function works ok."""
@@ -1443,7 +1500,6 @@ class TestFem(unittest.TestCase):
         """Test function works ok."""
         timestamp = datetime.now(timezone.utc).isoformat()
         ts = self.test_fem.fem.create_iso_timestamp()
-        print(f" {timestamp} ==\n {ts}")
         # Omit last 9 characters as microseconds differ (timezone info form final 6 characters)
         assert timestamp[:-9] == ts[:-9]
 

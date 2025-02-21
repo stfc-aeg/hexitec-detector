@@ -297,7 +297,7 @@ class HexitecDAQ():
             return return_value
 
     def prepare_odin(self):
-        """Ensure the odin data FP and FR are configured."""
+        """Ensure the odin data FP(s) and FR(s) are configured."""
         logging.debug("Setting up Acquisition")
         fr_status = self.get_adapter_status("fr")
         fp_status = self.get_adapter_status("fp")
@@ -513,7 +513,7 @@ class HexitecDAQ():
             self.hdf_retry = 0
             self.in_progress = False
             self.daq_ready = True
-            self.parent.fem.flag_error("Error reopening HDF file: %s" % e)
+            self.parent.fem.flag_error("Reopening HDF file: %s" % e)
             self.parent.software_state = "Error"
             return
 
@@ -959,21 +959,21 @@ class HexitecDAQ():
         if bin_end < 1:
             raise ParameterTreeError("bin_end must be positive!")
         self.bin_end = bin_end
-        self.update_histogram_dimensions()
+        self.update_number_histograms()
 
     def _set_bin_start(self, bin_start):
         """Update bin_start and datasets' histograms' dimensions."""
         if bin_start < 0:
             raise ParameterTreeError("bin_start must be positive!")
         self.bin_start = bin_start
-        self.update_histogram_dimensions()
+        self.update_number_histograms()
 
     def _set_bin_width(self, bin_width):
         """Update bin_width and datasets' histograms' dimensions."""
         if bin_width <= 0:
             raise ParameterTreeError("bin_width must be positive!")
         self.bin_width = bin_width
-        self.update_histogram_dimensions()
+        self.update_number_histograms()
 
     def update_datasets_frame_dimensions(self):
         """Update frames' datasets' dimensions."""
@@ -983,69 +983,24 @@ class HexitecDAQ():
             request = ApiAdapterRequest(str(payload), content_type="application/json")
             self.adapters["fp"].put(command, request)
 
-    def update_histogram_dimensions(self):
-        """Update histograms' dimensions in the relevant datasets."""
+    def update_number_histograms(self):
+        """Update number of histograms."""
         self.number_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
-        self.gcf = GenerateConfigFiles(self.param_tree.get(''), self.number_histograms,
-                                       compression_type=self.compression_type,
-                                       master_dataset=self.master_dataset,
-                                       extra_datasets=self.extra_datasets,
-                                       live_view_selected=False,
-                                       odin_path=self.odin_path)
-        # spectra_bins dataset
-        payload = '{"dims": [%s], "chunks": [1, %s]}' % \
-            (self.number_histograms, self.number_histograms)
-        command = "config/hdf/dataset/" + "spectra_bins"
-        request = ApiAdapterRequest(str(payload), content_type="application/json")
-        self.adapters["fp"].put(command, request)
-
-        # pixel_spectra dataset
-        ps_params = self.gcf.generate_pixel_spectra_params()
-        payload = '{%s}' % (ps_params)
-        command = "config/hdf/dataset/" + "pixel_spectra"
-        request = ApiAdapterRequest(str(payload), content_type="application/json")
-        self.adapters["fp"].put(command, request)
-
-        # summed_spectra dataset
-        payload = '{"dims": [%s], "chunks": [1, %s]}' % \
-            (self.number_histograms, self.number_histograms)
-        command = "config/hdf/dataset/" + "summed_spectra"
-        request = ApiAdapterRequest(str(payload), content_type="application/json")
-        self.adapters["fp"].put(command, request)
-        del self.gcf
-        self.gcf = None
 
     def _set_max_frames_received(self, max_frames_received):
         self.max_frames_received = max_frames_received
 
     def _set_pass_processed(self, pass_processed=None):
+        """Toggle passing processed dataset on/off."""
         if pass_processed is not None:
             self.pass_processed = pass_processed
-        self.commit_config_before_acquire = True
-        command = "config/histogram"
-        formatted_string = ('{"pass_processed": %s}' % self.pass_processed).lower()
-        request = ApiAdapterRequest(formatted_string, content_type="application/json")
-
-        response = self.adapters["fp"].put(command, request)
-        status_code = response.status_code
-        if (status_code != 200):
-            error = "Error {} updating histogram's processed dataset".format(status_code)
-            self.parent.fem.flag_error(error)
+        self.commit_config_before_acquire = True 
 
     def _set_pass_raw(self, pass_raw=None):
-        """Change pass_raw if provided, then update FP setting."""
+        """Toggle passing raw dataset on/off."""
         if pass_raw is not None:
             self.pass_raw = pass_raw
         self.commit_config_before_acquire = True
-        command = "config/histogram"
-        formatted_string = ('{"pass_raw": %s}' % self.pass_raw).lower()
-        request = ApiAdapterRequest(formatted_string, content_type="application/json")
-
-        response = self.adapters["fp"].put(command, request)
-        status_code = response.status_code
-        if (status_code != 200):
-            error = "Error {} updating fp histogram's raw dataset".format(status_code)
-            self.parent.fem.flag_error(error)
 
     def _set_threshold_filename(self, threshold_filename):
         threshold_filename = self.data_config_path + threshold_filename
@@ -1102,7 +1057,7 @@ class HexitecDAQ():
 
         self.update_rows_columns_pixels()
         self.update_datasets_frame_dimensions()
-        self.update_histogram_dimensions()
+        self.update_number_histograms()
 
     def _get_compression_type(self):
         return self.compression_type
@@ -1152,6 +1107,7 @@ class HexitecDAQ():
         # Enable live view for first node only
         live_view_selected = True
         logging.debug("Sending configuration to %s FP(s)" % self.number_nodes)
+
         # Loop over node(s)
         for index in range(self.number_nodes):
             self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
@@ -1181,9 +1137,32 @@ class HexitecDAQ():
             if (status_code != 200):
                 error = "Error {} loading plugins config in fp adapter".format(status_code)
                 self.parent.fem.flag_error(error)
+            pixel_spectra_params = self.gcf.generate_pixel_spectra_params()
             # Delete GCF object before next iteration
             del self.gcf
             self.gcf = None
+
+        # Update dataset dimensions
+
+        # spectra_bins dataset
+        payload = '{"dims": [%s], "chunks": [1, %s]}' % \
+            (self.number_histograms, self.number_histograms)
+        command = "config/hdf/dataset/" + "spectra_bins"
+        request = ApiAdapterRequest(str(payload), content_type="application/json")
+        self.adapters["fp"].put(command, request)
+
+        # pixel_spectra dataset
+        payload = '{%s}' % (pixel_spectra_params)
+        command = "config/hdf/dataset/" + "pixel_spectra"
+        request = ApiAdapterRequest(str(payload), content_type="application/json")
+        self.adapters["fp"].put(command, request)
+
+        # summed_spectra dataset
+        payload = '{"dims": [%s], "chunks": [1, %s]}' % \
+            (self.number_histograms, self.number_histograms)
+        command = "config/hdf/dataset/" + "summed_spectra"
+        request = ApiAdapterRequest(str(payload), content_type="application/json")
+        self.adapters["fp"].put(command, request)
 
         # Allow FP time to process above PUT requests before configuring plugin settings
         IOLoop.instance().call_later(0.4, self.submit_configuration)
@@ -1213,6 +1192,26 @@ class HexitecDAQ():
             self.plugin = "hdf"
         else:
             self.plugin = "histogram"
+
+        command = "config/histogram"
+        formatted_string = ('{"pass_processed": %s}' % self.pass_processed).lower()
+        request = ApiAdapterRequest(formatted_string, content_type="application/json")
+
+        response = self.adapters["fp"].put(command, request)
+        status_code = response.status_code
+        if (status_code != 200):
+            error = "Error {} updating histogram's processed dataset".format(status_code)
+            self.parent.fem.flag_error(error)
+
+        command = "config/histogram"
+        formatted_string = ('{"pass_raw": %s}' % self.pass_raw).lower()
+        request = ApiAdapterRequest(formatted_string, content_type="application/json")
+
+        response = self.adapters["fp"].put(command, request)
+        status_code = response.status_code
+        if (status_code != 200):
+            error = "Error {} updating fp histogram's raw dataset".format(status_code)
+            self.parent.fem.flag_error(error)
 
         # Update live histogram labelling according to calibration enabled (or not)
         command = ""

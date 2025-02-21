@@ -105,8 +105,6 @@ class HexitecAdapter(ApiAdapter):
         response = {}
         checkAdapters = True if len(path) > 0 else False
         requestSent = False
-        # print("   put, Path: {}".format(path))
-        # print("     request: {}".format(request))
         try:
             if checkAdapters:
                 for name, adapter in self.adapters.items():
@@ -262,9 +260,9 @@ class Hexitec():
         self.elog = ""
         self.number_nodes = 1
         self.archiver_status = 200
-        # Software states:
-        #   Cold, Connecting, Environs, Initialising, Offsets, Disconnected,
-        #   Idle, Ready, Acquiring, Error, Cleared, Interlocked
+        # Software states in alphabetical order:
+        #  Acquiring, Cleared, Cold, Connecting, Disconnected, Environs,
+        #  Error, Idle, Initialising, Interlocked, Offsets, Ready
         self.software_state = "Cold"
         self.cold_start = True
 
@@ -277,7 +275,7 @@ class Hexitec():
             "save_odin": (None, self.save_odin),
             "load_odin": (None, self.load_odin),
             "collect_offsets": (None, self.collect_offsets),
-            "commit_configuration": (None, self.commit_configuration),
+            "prepare_fem_farm_mode": (None, self.prepare_fem_farm_mode),
             "apply_config": (None, self.apply_config),
             "software_state": (lambda: self.software_state, None),
             "hv_on": (None, self.hv_on),
@@ -354,7 +352,6 @@ class Hexitec():
         """Check that archiver is running."""
         archiver_response = self.get_proxy_adapter_data("archiver")
         archiver_status = archiver_response['status']['archiver']['status_code']
-        # print(f" [E archiver response: {archiver_response}")
         if (archiver_status != 200) and (archiver_status != self.archiver_status):
             self.fem.flag_error(f"Archiver not responding, HTTP code: {archiver_status}")
         self.archiver_status = archiver_status
@@ -517,14 +514,14 @@ class Hexitec():
         else:
             # Must ensure Odin data configured before connecting
             if self.cold_start:
-                self.commit_configuration()
+                self.prepare_fem_farm_mode()
                 self.fem.set_hexitec_config("")
             self.software_state = "Connecting"
             self.fem.connect_hardware(msg)
 
     def apply_config(self, msg=None):
         """Apply configuration to Odin and VSR Hardware."""
-        self.commit_configuration()
+        self.prepare_fem_farm_mode()
         self.fem.set_hexitec_config("")
 
     def initialise_hardware(self, msg=None):
@@ -714,17 +711,23 @@ class Hexitec():
             self.report_leak_detector_error(error_message)
             raise ParameterTreeError(error_message)
         else:
-            if self.daq.commit_config_before_acquire:
-                self.daq.commit_config_before_acquire = False
-                self.apply_config()
+            # Check hardware ready, system initialised before acquisition
+            self.fem.check_hardware_ready("collect data")
+            self.fem.check_system_initialised("collect data")
+
+            # if self.daq.commit_config_before_acquire:
+            #     self.daq.commit_config_before_acquire = False
+            self.daq.commit_configuration()
+
             # Clear (any previous) daq error
             self.daq.in_error = False
 
             if self.daq.in_progress:
-                error = "Error: Acquistion Already in progress"
+                error = "Acquistion already in progress"
                 self.fem._set_status_error(error)
                 raise ParameterTreeError(error)
 
+            # Check Odin data ready, following configuration committed above
             self.daq.prepare_odin()
 
             self.total_delay = 0
@@ -836,18 +839,17 @@ class Hexitec():
         else:
             self.fem.run_collect_offsets()
 
-    def commit_configuration(self, msg=None):
-        """Push HexitecDAQ's 'config/' ParameterTree settings into FP's plugins."""
+    def prepare_fem_farm_mode(self, msg=None):
+        """Instruct fem to load farm mode parameters."""
         if self.software_state == "Interlocked":
-            error_message = "{}".format("Interlocked: Can't commit configuration")
+            error_message = "{}".format("Interlocked: Can't load fem farm mode")
             self.report_leak_detector_error(error_message)
             raise ParameterTreeError(error_message)
         else:
             try:
-                if self.fem.prepare_hardware():
-                    self.daq.commit_configuration()
+                self.fem.prepare_farm_mode()
             except Exception as e:
-                error = f"Error: commit configuration: {str(e)}"
+                error = f"Commit configuration: {str(e)}"
                 self.fem.flag_error(error)
                 raise ParameterTreeError(error)
 
@@ -861,7 +863,7 @@ class Hexitec():
             try:
                 self.fem.hv_on()
             except Exception as e:
-                error = f"Error switching on HV: {str(e)}"
+                error = f"Switching on HV: {str(e)}"
                 self.fem.flag_error(error)
                 raise ParameterTreeError(error)
 
@@ -875,7 +877,7 @@ class Hexitec():
             try:
                 self.fem.hv_off()
             except Exception as e:
-                error = f"Error switching off HV: {str(e)}"
+                error = f"Switching off HV: {str(e)}"
                 self.fem.flag_error(error)
                 raise ParameterTreeError(error)
 

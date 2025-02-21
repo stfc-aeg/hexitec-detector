@@ -323,10 +323,6 @@ class HexitecFem():
         self.number_nodes = num_ips
         self.parent.set_number_nodes(self.number_nodes)
 
-    def prepare_hardware(self, bDebug=False):
-        """Prepare hardware connection."""
-        return self.prepare_farm_mode()
-
     def configure_camera_interfaces(self):
         """Configure IP, Mac and port parameters for detector's Control and Data interfaces."""
         Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
@@ -489,15 +485,27 @@ class HexitecFem():
             raise socket_error("Failed to setup Control connection: %s" % e)
         return
 
-    def check_hardware_status(self, action):
+    def check_hardware_ready(self, action):
         """Helper function checking hardware connected and not busy.
 
         Raise Exception if hardware not connected, or hardware busy.
         """
         if self.hardware_connected is not True:
-            raise ParameterTreeError(f"Error: Can't {action} without a connection")
+            raise ParameterTreeError(f"Can't {action} without a connection")
         if self.hardware_busy:
-            error = f"Error: Can't {action}, Hardware busy"
+            error = f"Can't {action}, Hardware busy"
+            self.flag_error(error, "")
+            raise ParameterTreeError(error)
+        else:
+            self._set_status_error("")
+
+    def check_system_initialised(self, action):
+        """Helper function checking system initialised.
+
+        Raise Exception if system not initialised.
+        """
+        if self.system_initialised is not True:
+            error = f"Can't {action}, system not initialised"
             self.flag_error(error, "")
             raise ParameterTreeError(error)
         else:
@@ -505,7 +513,7 @@ class HexitecFem():
 
     def environs(self, msg=None):
         """Readout environmental data if hardware connected and not busy."""
-        self.check_hardware_status("read sensors")
+        self.check_hardware_ready("read sensors")
         IOLoop.instance().add_callback(self.read_sensors)
 
     @run_on_executor(executor='thread_executor')
@@ -605,7 +613,9 @@ class HexitecFem():
                 self.parent.software_state = "Cold"
                 return
             if self.hardware_connected:
-                raise ParameterTreeError("Error: Connection already established")
+                error = "Connection already established"
+                self.flag_error(error, "")
+                raise ParameterTreeError(error)
             else:
                 self._set_status_error("")
             self.hardware_busy = True
@@ -613,8 +623,6 @@ class HexitecFem():
             # Configure control, data lines unless already configured
             # - Insist Control interface configured on every connect
             if self.parent.cold_start:
-                # Commit configuration (again) otherwise FP(s) shutdown prematurely
-                self.parent.daq.commit_configuration()  # TODO superfluous?
                 # Configure Control, Camera interfaces
                 self.configure_camera_interfaces()
                 self.parent.cold_start = True
@@ -679,7 +687,7 @@ class HexitecFem():
 
     def initialise_hardware(self, msg=None):
         """Initialise sensors, load enables, etc to initialise both VSR boards."""
-        self.check_hardware_status("initialise hardware")
+        self.check_hardware_ready("initialise hardware")
         try:
             self.hardware_busy = True
             self.parent.software_state = "Initialising"
@@ -692,10 +700,8 @@ class HexitecFem():
 
     def collect_data(self, msg=None):
         """Acquire data from camera."""
-        self.check_hardware_status("collect data")
         try:
             self.hardware_busy = True
-            # self.parent.software_state = "Acquiring"
             self._set_status_message("Acquiring data..")
             self.acquire_data()
         except Exception as e:
@@ -741,6 +747,7 @@ class HexitecFem():
         logging.debug("Modules Enabled")
         self._set_status_message("VSRs booted")
         self.hardware_busy = False
+        self.parent.daq.commit_configuration()
         self.parent.software_state = "Idle"
 
     def cam_disconnect(self):
@@ -751,7 +758,6 @@ class HexitecFem():
             logging.debug("Modules Disabled")
             self.disconnect()
             logging.debug("Camera is Disconnected")
-            self.system_initialised = False
         except socket_error as e:
             self.flag_error("Unable to disconnect camera", str(e))
             raise HexitecFemError(e)
@@ -759,6 +765,7 @@ class HexitecFem():
             error = "Unable to disconnect camera: No active connection"
             self.flag_error(error, str(e))
             raise HexitecFemError("%s; %s" % (e, "No active connection"))
+        self.system_initialised = False
 
     def acquire_data(self):
         """Acquire data, poll fem for completion."""
@@ -868,7 +875,8 @@ class HexitecFem():
 
     def run_collect_offsets(self):
         """Run collect offsets sequence if connected and hardware not busy."""
-        self.check_hardware_status("collect offsets")
+        self.check_hardware_ready("collect offsets")
+        self.check_system_initialised("collect offsets")
         self.collect_offsets()
 
     @run_on_executor(executor='thread_executor')
@@ -1597,7 +1605,7 @@ class HexitecFem():
 
     def hv_on(self):
         """Switch HV on."""
-        self.check_hardware_status("switch HV on")
+        self.check_hardware_ready("switch HV on")
         logging.debug("Going to set HV bias to -{} volts".format(self.bias_level))
         hv_msb, hv_lsb = self.convert_bias_to_dac_values(self.bias_level)
         # print(f" HV Bias (-{self.bias_level}) : {hv_msb[0]:X} {hv_msb[1]:X}",
@@ -1611,7 +1619,7 @@ class HexitecFem():
 
     def hv_off(self):
         """Switch HV off."""
-        self.check_hardware_status("switch HV off")
+        self.check_hardware_ready("switch HV off")
         logging.debug("Disable: [0xE2]")
         # Can call hv_off function on any VSR object
         self.vsr_list[0].hv_off()

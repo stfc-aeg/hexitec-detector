@@ -14,10 +14,7 @@ import time
 import sys
 import os
 
-if sys.version_info[0] == 3:  # pragma: no cover
-    from unittest.mock import Mock, MagicMock, patch, mock_open
-else:                         # pragma: no cover
-    from mock import Mock, MagicMock, patch
+from unittest.mock import Mock, MagicMock, patch, mock_open
 
 
 class DetectorAdapterTestFixture(object):
@@ -540,18 +537,21 @@ class TestDetector(unittest.TestCase):
         """Test function prevents connecting when interlocked."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.software_state = "Interlocked"
-        rv = "Interlocked: Can't connect with camera"
-        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
-        with pytest.raises(ParameterTreeError, match=rv):
+        error = "Interlocked: Can't connect with camera"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=error)
+        with pytest.raises(ParameterTreeError) as exc_info:
             self.test_adapter.detector.connect_hardware("")
+        assert exc_info.value.args[0] == error
 
     def test_apply_config(self):
         """Test function works OK."""
-        pass
-
-    def test_apply_config_handles_interlocked(self):
-        """Test function prevented when interlocked."""
-        pass
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        # self.test_adapter.detector.daq.in_progress = False
+        self.test_adapter.detector.prepare_fem_farm_mode = Mock()
+        self.test_adapter.detector.fem.set_hexitec_config = Mock()
+        self.test_adapter.detector.apply_config("")
+        self.test_adapter.detector.prepare_fem_farm_mode.assert_called()
+        self.test_adapter.detector.fem.set_hexitec_config.assert_called()
 
     def test_initialise_hardware(self):
         """Test function initialises hardware."""
@@ -752,48 +752,90 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.set_number_frames(frames)
         assert self.test_adapter.detector.number_frames == frames
 
-    def test_detector_acquisition_clears_previous_daq_errors(self):
-        """Test function clears any previous daq error."""
-        self.test_adapter.detector.daq.configure_mock(
-            in_progress=False
-        )
-        self.test_adapter.detector.daq.in_error = True
-        self.test_adapter.detector.adapters = self.test_adapter.adapters
-
-        with patch("hexitec.adapter.IOLoop"):
-            self.test_adapter.detector.acquisition("data")
-            assert self.test_adapter.detector.daq.in_error is False
-
     def test_detector_acquisition_correct(self):
         """Test acquisition function works."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.daq.configure_mock(
             in_progress=False
         )
+        self.test_adapter.detector.fem.check_hardware_ready = Mock()
+        self.test_adapter.detector.fem.check_system_initialised = Mock()
+        self.test_adapter.detector.commit_config_before_acquire = True
+        self.test_adapter.detector.daq.commit_configuration = Mock()
+        self.test_adapter.detector.daq.prepare_odin = Mock()
+        number_frames = 10
+        self.test_adapter.detector.number_frames = number_frames
 
+        with patch("hexitec.adapter.IOLoop") as mock_loop:
+            self.test_adapter.detector.acquisition("data")
+            instance = mock_loop.instance()
+            instance.add_callback.assert_called_with(self.test_adapter.detector.await_daq_ready)
+
+        self.test_adapter.detector.daq.prepare_daq.assert_called_with(number_frames)
+        self.test_adapter.detector.daq.commit_configuration.assert_called()
+        self.test_adapter.detector.daq.prepare_odin.assert_called()
+        assert self.test_adapter.detector.daq.in_error is False
+        assert self.test_adapter.detector.acquisition_in_progress is True
+        assert self.test_adapter.detector.software_state == "Acquiring"
+
+    def test_detector_acquisition_handles_interlocked(self):
+        """Test function prevents acquisition when interlocked."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.software_state = "Interlocked"
+        error = "Interlocked: Can't acquire data"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=error)
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_adapter.detector.acquisition("")
+        assert exc_info.value.args[0] == error
 
-        self.test_adapter.detector.acquisition("data")
-        self.test_adapter.detector.daq.prepare_daq.assert_called_with(10)
+    def test_detector_acquisition_fails_on_hardware_busy(self):
+        """Test function fails when hardware already busy."""
+        self.test_adapter.detector.fem.hardware_connected = True
+        self.test_adapter.detector.fem.hardware_busy = True
+        error = "Can't collect data, Hardware busy"
+        self.test_adapter.detector.fem.check_hardware_ready = Mock()
+        self.test_adapter.detector.fem.check_hardware_ready.side_effect = \
+            ParameterTreeError(error)
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_adapter.detector.acquisition("")
+        assert exc_info.value.args[0] == error
+
+    def test_detector_acquisition_fails_without_connection(self):
+        """Test function fails without established hardware connection."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        error = "Can't collect data without a connection"
+        self.test_adapter.detector.fem.check_hardware_ready = Mock()
+        self.test_adapter.detector.fem.check_hardware_ready.side_effect = \
+            ParameterTreeError(error)
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_adapter.detector.acquisition("")
+        assert exc_info.value.args[0] == error
+        self.test_adapter.detector.fem.check_hardware_ready.assert_called_with("collect data")
+
+    def test_collect_data_fails_system_not_initialised(self):
+        """Test function prevents an initialised system from collecting data."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        error = "Can't collect data, system not initialised"
+        self.test_adapter.detector.fem.check_hardware_ready = Mock()
+        self.test_adapter.detector.fem.check_system_initialised = Mock()
+        self.test_adapter.detector.fem.check_system_initialised.side_effect = \
+            ParameterTreeError(error)
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_adapter.detector.acquisition("")
+        assert exc_info.value.args[0] == error
+        self.test_adapter.detector.fem.check_system_initialised.assert_called_with("collect data")
 
     def test_detector_acquisition_prevents_new_acquisition_whilst_one_in_progress(self):
         """Test adapter won't start acquisition whilst one already in progress."""
         self.test_adapter.detector.daq.configure_mock(
             in_progress=True
         )
-        error = "Error: Acquistion Already in progress"
+        self.test_adapter.detector.fem.check_system_initialised = Mock()
+        error = "Acquistion already in progress"
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_adapter.detector.acquisition("data")
         assert exc_info.value.args[0] == error
         self.test_adapter.detector.daq.prepare_odin.assert_not_called()
-
-    def test_detector_acquisition_handles_interlocked(self):
-        """Test function prevents acquisition when interlocked."""
-        self.test_adapter.detector.adapters = self.test_adapter.adapters
-        self.test_adapter.detector.software_state = "Interlocked"
-        rv = "Interlocked: Can't acquire data"
-        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
-        with pytest.raises(ParameterTreeError, match=rv):
-            self.test_adapter.detector.acquisition("")
 
     def test_await_daq_ready_waits_for_daq(self):
         """Test adapter's await_daq_ready waits for DAQ to be ready."""
@@ -923,34 +965,31 @@ class TestDetector(unittest.TestCase):
         with pytest.raises(ParameterTreeError, match=rv):
             self.test_adapter.detector.collect_offsets("")
 
-    def test_commit_configuration(self):
-        """Test function calls daq's commit_configuration."""
+    def test_prepare_fem_farm_mode(self):
+        """Test function calls fem's prepare_farm_mode function."""
         self.test_adapter.detector.fem.prepare_hardware = Mock()
-        self.test_adapter.detector.daq.commit_configuration = Mock()
-        self.test_adapter.detector.commit_configuration("")
-        self.test_adapter.detector.fem.prepare_hardware.assert_called()
-        self.test_adapter.detector.daq.commit_configuration.assert_called()
+        self.test_adapter.detector.prepare_fem_farm_mode("")
+        self.test_adapter.detector.fem.prepare_farm_mode.assert_called()
 
-    def test_commit_configuration_handles_exception(self):
+    def test_prepare_fem_farm_mode_handles_exception(self):
         """Test function handles exception."""
         e = "Error"
-        self.test_adapter.detector.fem.prepare_hardware = Mock()
-        self.test_adapter.detector.fem.prepare_hardware.side_effect = Exception(e)
-        error = f"Error: commit configuration: {e}"
+        self.test_adapter.detector.fem.prepare_farm_mode = Mock()
+        self.test_adapter.detector.fem.prepare_farm_mode.side_effect = Exception(e)
+        error = f"Commit configuration: {e}"
         with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_adapter.detector.commit_configuration("")
+            self.test_adapter.detector.prepare_fem_farm_mode("")
         assert exc_info.value.args[0] == error
-        self.test_adapter.detector.daq.commit_configuration.assert_not_called()
         self.test_adapter.detector.fem.flag_error.assert_called_with(error)
 
-    def test_commit_configuration_handles_interlocked(self):
-        """Test function prevents committing configuration when interlocked."""
+    def test_prepare_fem_farm_mode_handles_interlocked(self):
+        """Test function prevents setting farm mode when interlocked."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.software_state = "Interlocked"
-        error = "Interlocked: Can't commit configuration"
+        error = "Interlocked: Can't load fem farm mode"
         self.test_adapter.detector.report_leak_detector_error = Mock(return_value=error)
         with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_adapter.detector.commit_configuration("")
+            self.test_adapter.detector.prepare_fem_farm_mode("")
         assert exc_info.value.args[0] == error
 
     def test_hv_on(self):
@@ -963,7 +1002,7 @@ class TestDetector(unittest.TestCase):
         e = "Error"
         self.test_adapter.detector.fem.hv_on = Mock()
         self.test_adapter.detector.fem.hv_on.side_effect = Exception(e)
-        error = f"Error switching on HV: {e}"
+        error = f"Switching on HV: {e}"
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_adapter.detector.hv_on("")
         assert exc_info.value.args[0] == error
@@ -988,7 +1027,7 @@ class TestDetector(unittest.TestCase):
         e = "Error"
         self.test_adapter.detector.fem.hv_off = Mock()
         self.test_adapter.detector.fem.hv_off.side_effect = Exception(e)
-        error = f"Error switching off HV: {e}"
+        error = f"Switching off HV: {e}"
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_adapter.detector.hv_off("")
         assert exc_info.value.args[0] == error

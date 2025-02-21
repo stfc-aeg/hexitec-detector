@@ -490,82 +490,21 @@ function poll_fem() {
             // Clear any previous error
             document.querySelector('#odin-control-error').innerHTML = "";
 
-            // Update gui with Odin settings
-            if (update_js_with_config)
-            {
-                update_ui_with_odin_settings();
-                update_js_with_config = false;
-            }
-
-            // Odin running, commence polling
-            // Polls the fem(s) for hardware status, environmental data, etc
-            hexitec_endpoint.get_url(hexitec_url + 'fr/status/')
-                .then(result => {
-                    var numNodes = result["value"].length;
-                    for (var i = 0; i < numNodes; i++) {
-                        const frames = result["value"][i].frames;
-                        const decoder = result["value"][i].decoder;
-                        const buffers = result["value"][i].buffers;
-                        document.querySelector('#frames_dropped' + (i+1)).innerHTML = frames.dropped;
-                        document.querySelector('#frames_timedout' + (i+1)).innerHTML = frames.timedout;
-                        document.querySelector('#packets_lost' + (i+1)).innerHTML = decoder.packets_lost;
-                        document.querySelector('#buffers_empty' + (i+1)).innerHTML = buffers.empty;
-                        document.querySelector('#buffers_mapped' + (i+1)).innerHTML = buffers.mapped;
-                    }
-                })
-                .catch(error => {
-                    document.querySelector('#odin-control-error').innerHTML = "Polling FR: " + error.message;
-                });
-
-            // Polls Proxy adapter for leak detector information
-            hexitec_endpoint.get_url('/api/' + api_version + '/proxy/')
-                .then(result => {
-                    update_ui_with_leak_detector_settings(result)
-                })
-                .catch(error => {
-                    document.querySelector('#odin-control-error').innerHTML = "Polling Leak: " + error.message;
-                });
-
-            // http://localhost:8888/api/0.1/hexitec/fp/status/error/2
-            // Polls frameProcessor(s) for status(es)
-            hexitec_endpoint.get_url(hexitec_url + 'fp/status/')
-                .then(result => {
-
-                    // // Print all errors reported by one FP:
-                    // console.log("   ParameterTree: " + JSON.stringify(result["value"].error, null, 4));
-                    var numNodes = result["value"].length;
-                    for (var i = 0; i < numNodes; i++) {
-
-                        if (result["value"][i].histogram === undefined) {
-                            // Current node not configured, clear any previous value(s)
-                            document.querySelector('#fp_processed' + (i+1)).innerHTML = 0;
-                        }
-                        else {
-                            var processed = result["value"][i].histogram.frames_processed
-                            document.querySelector('#fp_processed' + (i+1)).innerHTML = processed;
-                        }
-
-                        if (result["value"][i].error === undefined) {
-                            // Current node not configured, clear any previous error(s)
-                            document.querySelector('#fp_errors' + (i+1)).innerHTML = 0;
-                        }
-                        else {
-                            var numErrors = result["value"][i].error.length;
-                            document.querySelector('#fp_errors' + (i+1)).innerHTML = numErrors;
-                            for (var j = 0; j < numErrors; j++) {
-                                // Report all nodes error(s)
-                                // console.log(" Node" + i + ", Err line " + j + " : " + result["value"][i].error[j]);
-                            }
-                        }
-                    }
-                })
-                .catch(error => {
-                    document.querySelector('#odin-control-error').innerHTML = "Polling FP: " + error.message;
-                });
-
             // Poll adapter for statuses: daq transmission, hardware busy, system error/message + VSRs env data
             hexitec_endpoint.get_url(hexitec_url + 'detector')
                 .then(result => {
+
+                    // hexitec_endpoint.get_url(hexitec_url + 'detector')
+                    // .then(result => {
+                    //     // Note software state
+                    //     const software_state = result["detector"]["software_state"];
+                    //     console.log("SW State: " + software_state);
+                    //     // document.querySelector('#software-state').innerHTML = software_state;
+                    // })
+                    // .catch(error => {
+                    //     document.querySelector('#odin-control-error').innerHTML = "Polling Software States: " + error.message;
+                    // });
+
                     var adapter_leak = result["detector"]["status"]["leak"];
                     adapter_leak_fault = adapter_leak["fault"];
                     adapter_leak_warning = adapter_leak["warning"];
@@ -741,6 +680,80 @@ function poll_fem() {
                 .catch(error => {
                     document.querySelector('#odin-control-error').innerHTML = "Polling Detector: " + error.message;
                 });
+
+            // Update gui with Odin settings
+            if (update_js_with_config)
+            {
+                update_ui_with_odin_settings();
+                update_js_with_config = false;
+            }
+
+            // Odin running, commence polling
+            // Polls the fem(s) for hardware status, environmental data, etc
+            hexitec_endpoint.get_url(hexitec_url + 'fr/status/')
+                .then(result => {
+                    var numNodes = result["value"].length;
+                    for (var i = 0; i < numNodes; i++) {
+                        const frames = result["value"][i].frames;
+                        const decoder = result["value"][i].decoder;
+                        const buffers = result["value"][i].buffers;
+                        document.querySelector('#frames_dropped' + (i+1)).innerHTML = frames.dropped;
+                        document.querySelector('#frames_timedout' + (i+1)).innerHTML = frames.timedout;
+                        document.querySelector('#packets_lost' + (i+1)).innerHTML = decoder.packets_lost;
+                        document.querySelector('#buffers_empty' + (i+1)).innerHTML = buffers.empty;
+                        document.querySelector('#buffers_mapped' + (i+1)).innerHTML = buffers.mapped;
+                    }
+                })
+                .catch(error => {
+                    document.querySelector('#odin-control-error').innerHTML = "Polling FR: " + error.message;
+                });
+
+            // Polls Proxy adapter for leak detector information
+            hexitec_endpoint.get_url('/api/' + api_version + '/proxy/')
+                .then(result => {
+                    update_ui_with_leak_detector_settings(result)
+                })
+                .catch(error => {
+                    document.querySelector('#odin-control-error').innerHTML = "Polling Leak: " + error.message;
+                });
+
+            // http://localhost:8888/api/0.1/hexitec/fp/status/error/2
+            // Polls frameProcessor(s) for status(es)
+            hexitec_endpoint.get_url(hexitec_url + 'fp/status/')
+                .then(result => {
+
+                    // // Print all errors reported by one FP:
+                    // console.log("   ParameterTree: " + JSON.stringify(result["value"].error, null, 4));
+                    var numNodes = result["value"].length;
+                    for (var i = 0; i < numNodes; i++) {
+
+                        if (result["value"][i].histogram === undefined) {
+                            // Current node not configured, clear any previous value(s)
+                            document.querySelector('#fp_processed' + (i+1)).innerHTML = 0;
+                        }
+                        else {
+                            var processed = result["value"][i].histogram.frames_processed
+                            document.querySelector('#fp_processed' + (i+1)).innerHTML = processed;
+                        }
+
+                        if (result["value"][i].error === undefined) {
+                            // Current node not configured, clear any previous error(s)
+                            document.querySelector('#fp_errors' + (i+1)).innerHTML = 0;
+                        }
+                        else {
+                            var numErrors = result["value"][i].error.length;
+                            document.querySelector('#fp_errors' + (i+1)).innerHTML = numErrors;
+                            for (var j = 0; j < numErrors; j++) {
+                                // Report all nodes error(s)
+                                // console.log(" Node" + i + ", Err line " + j + " : " + result["value"][i].error[j]);
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    document.querySelector('#odin-control-error').innerHTML = "Polling FP: " + error.message;
+                });
+
         })
         .catch(error => {
             document.querySelector('#odin-control-error').innerHTML = "Odin_server unreachable";
@@ -750,8 +763,8 @@ function poll_fem() {
     }
 }
 
-function commit_configuration() {
-    hexitec_endpoint.put({"commit_configuration": "" }, 'detector')
+function prepare_fem_farm_mode() {
+    hexitec_endpoint.put({"prepare_fem_farm_mode": "" }, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
         })
