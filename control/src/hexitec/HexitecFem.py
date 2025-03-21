@@ -270,6 +270,12 @@ class HexitecFem():
                         ip_address = str(interface_param.address)
                     if str(interface_param.family) == "AddressFamily.AF_PACKET":
                         mac_address = str(interface_param.address)
+        if ip_address is None:
+            error = f"Control Interface '{iface}' couldn't parse IP from '{ip_address}'"
+            raise ParameterTreeError(error)
+        if mac_address is None:
+            error = f"Control Interface '{iface}' couldn't parse MAC from '{mac_address}'"
+            raise ParameterTreeError(error)
         return ip_address, mac_address
 
     def extract_string_parameters(self, param):
@@ -787,8 +793,6 @@ class HexitecFem():
             logging.debug("Enable data")
             self.data_en(enable=True)
             time.sleep(0.2)
-            # data_triggered_timestamp = '%s' % (datetime.now().strftime(HexitecFem.DATE_FORMAT))
-            # print(f"  fem.data_triggered_timestamp: {data_triggered_timestamp} [X ")
 
             # Stop data flow (free acquisition mode), reset setting if number of frames mode
             logging.debug("Disable data")

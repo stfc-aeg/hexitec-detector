@@ -20,7 +20,7 @@ from tornado.escape import json_decode
 
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
-from odin._version import get_versions
+from odin._version import __version__
 
 
 class ArchiverAdapter(ApiAdapter):
@@ -148,7 +148,7 @@ class Archiver():
         self.init_time = time.time()
 
         # Get package version information
-        version_info = get_versions()
+        version_info = __version__
 
         self.number_files_archived = 0
         self.number_files_failed = 0
@@ -176,7 +176,7 @@ class Archiver():
             'last_message_timestamp': (lambda: self.last_message_timestamp, self.get_log_messages),
             'local_dir': (lambda: self.local_dir, self.set_local_dir),
             'log_messages': (lambda: self.log_messages, None),
-            'odin_version': version_info['version'],
+            'odin_version': version_info,
             'server_uptime': (self.get_server_uptime, None),
             'transfer_progress': (lambda: self.transfer_progress, None),
             'files_archived': (lambda: self.number_files_archived, None),

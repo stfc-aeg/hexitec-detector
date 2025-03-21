@@ -638,7 +638,7 @@ class HexitecDAQ():
 
             for param_file in file_name:
                 if param_file not in param_tree_dict:
-                    print(" *** {} not in parameter tree: {}".format(param_file, param_tree_dict))
+                    logging.error("File {} not in parameter tree: {}".format(param_file, param_tree_dict))
                     continue
                 # Only attempt to open file if it exists
                 file_name = param_tree_dict[param_file]

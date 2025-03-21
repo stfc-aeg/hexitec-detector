@@ -1516,3 +1516,49 @@ class TestHexitecFem(unittest.TestCase):
         with self.assertRaises(HexitecFemError) as context:
             self.test_fem.load_farm_mode_json_parameters()
         self.assertIn("Farm Mode: Bad json:", str(context.exception))
+
+    @patch("psutil.net_if_addrs")
+    def test_extract_interface_parameters_success(self, mock_net_if_addrs):
+        mock_net_if_addrs.return_value = {
+            "eth0": [
+                MagicMock(family="AddressFamily.AF_INET", address="10.0.1.1"),
+                MagicMock(family="AddressFamily.AF_PACKET", address="00:11:22:33:44:55")
+            ]
+        }
+        ip_address, mac_address = self.test_fem.extract_interface_parameters("eth0")
+        self.assertEqual(ip_address, "10.0.1.1")
+        self.assertEqual(mac_address, "00:11:22:33:44:55")
+
+    @patch("psutil.net_if_addrs")
+    def test_extract_interface_parameters_handles_unknown_interface(self, mock_net_if_addrs):
+        mock_net_if_addrs.return_value = {
+            "eth0": [
+                MagicMock(family="AddressFamily.AF_INET", address="10.0.1.1"),
+                MagicMock(family="AddressFamily.AF_PACKET", address="00:11:22:33:44:55")
+            ]
+        }
+        with self.assertRaises(HexitecFemError) as context:
+            self.test_fem.extract_interface_parameters("eth1")
+        self.assertIn("Unknown interface: 'eth1'!", str(context.exception))
+
+    @patch("psutil.net_if_addrs")
+    def test_extract_interface_parameters_handles_no_ip_address(self, mock_net_if_addrs):
+        mock_net_if_addrs.return_value = {
+            "eth0": [
+                MagicMock(family="AddressFamily.AF_PACKET", address="00:11:22:33:44:55")
+            ]
+        }
+        with self.assertRaises(ParameterTreeError) as context:
+            self.test_fem.extract_interface_parameters("eth0")
+        self.assertIn("Control Interface 'eth0' couldn't parse IP from 'None'", str(context.exception))
+
+    @patch("psutil.net_if_addrs")
+    def test_extract_interface_parameters_handles_no_mac_address(self, mock_net_if_addrs):
+        mock_net_if_addrs.return_value = {
+            "eth0": [
+                MagicMock(family="AddressFamily.AF_INET", address="10.0.1.1")
+            ]
+        }
+        with self.assertRaises(ParameterTreeError) as context:
+            self.test_fem.extract_interface_parameters("eth0")
+        self.assertIn("Control Interface 'eth0' couldn't parse MAC from 'None'", str(context.exception))

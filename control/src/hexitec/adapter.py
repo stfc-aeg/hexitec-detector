@@ -108,6 +108,7 @@ class HexitecAdapter(ApiAdapter):
         try:
             if checkAdapters:
                 for name, adapter in self.adapters.items():
+
                     if path.startswith(name):
 
                         relative_path = path.split(name + '/')
@@ -776,7 +777,6 @@ class Hexitec():
 
     def trigger_fem_acquisition(self):
         """Trigger data acquisition in fem."""
-        # print(" \n trigger_fem_acquisition() executing")
         # TODO: Temp hack: Prevent frames being 1 (continuous readout) by setting to 2 if it is
         self.number_frames_to_request = 2 if (self.number_frames_to_request == 1) else \
             self.number_frames_to_request
@@ -791,12 +791,10 @@ class Hexitec():
         -Initialising
         -Waiting for data collection to complete
         """
-        # print("\n adpt.monitor_fem_progress() called")
         if (self.fem.hardware_busy):
             # Still sending data
             IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
             return
-        # print("\n adpt.monitor_fem_progress() fem done")
 
         self.reset_state_variables()
 

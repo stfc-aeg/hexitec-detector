@@ -17,7 +17,7 @@ from tornado.escape import json_decode
 
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
-from odin._version import get_versions
+from odin._version import __version__
 
 DIRECTORY_CONFIG_NAME = "directories"
 
@@ -146,11 +146,11 @@ class FileInterface():
         self.init_time = time.time()
 
         # Get package version information
-        version_info = get_versions()
+        version_info = __version__
 
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
-            'odin_version': version_info['version'],
+            'odin_version': version_info,
             'tornado_version': tornado.version,
             'server_uptime': (self.get_server_uptime, None),
             'fr_config_files': (self.get_fr_config_files, None),

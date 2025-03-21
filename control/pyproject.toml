@@ -1,0 +1,138 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm[toml]>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hexitec"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+description = "Odin Detector Adapters for Hexitec"
+dynamic = ["version"]
+readme = "README.md"
+license.file = "LICENSE"
+authors = [
+    {name = "Christian Angelsen", email = "christian.angelsen@stfc.ac.uk"},
+]
+requires-python = ">= 3.8"
+
+dependencies = [
+    "odin-control @ git+https://git@github.com/odin-detector/odin-control.git",
+    "odin-data @ git+https://git@github.com/odin-detector/odin-data.git@1.10.2#subdirectory=python",
+    "attrs",
+    "coverage",
+    "exceptiongroup",
+    "future",
+    "httpie",
+    "h5py",
+    "iniconfig",
+    "matplotlib",
+    "numpy==1.24.2",
+    "opencv-python",
+    "persist-queue",
+    "pluggy",
+    "psutil",
+    "pytest",
+    "pytest-cov",
+    "pytest_asyncio",
+    "pyzmq",
+    "requests",
+    "tox",
+    "urllib3==1.26.14",
+    "xmltodict"
+]
+
+[project.optional-dependencies]
+dev = [
+    "tox",
+]
+
+sync_proxy = [
+    "requests"
+]
+graylog = [
+    "pygelf"
+]
+
+[project.scripts]
+odin_control = "odin.main:main"
+odin_server = "odin.main:main_deprecate"
+
+[project.urls]
+GitHub = "https://github.com/stfc-aeg/hexitec-detector"
+
+[tool.setuptools_scm]
+version_file = "src/hexitec/_version.py"
+root = ".."
+
+[tool.coverage.paths]
+source = ["src", "**/site-packages/"]
+
+[tool.coverage.run]
+data_file = "/tmp/hexitec.coverage"
+
+[tool.pytest.ini_options]
+addopts = "-vv --cov=odin --cov-report=term-missing --asyncio-mode=strict"
+# Addresses '"asyncio_default_fixture_loop_scope" is unset':
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.tox]
+legacy_tox_ini = """
+# tox test configuration for hexitec
+
+[tox]
+envlist = clean, py{38, 39, 310}, report
+
+[gh-actions]
+python =
+    3.8: py38
+    3.9: py39
+    3.10: py310, clean, report
+
+[testenv]
+install_command = pip install --no-deps --index-url https://gitlab.com/api/v4/projects/44753656/packages/pypi/simple rdmacontrol boardcfgstatus hexitec-vsr udpcore
+
+deps = 
+    cycler
+    git+https://github.com/odin-detector/odin-control.git#egg=odin_control
+    Pillow
+    kiwisolver
+    pytest
+    pytest-cov
+    pytest_asyncio
+    python-dateutil 
+    requests
+    six
+    tomli
+    tornado>=6.4.1
+    xmltodict
+setenv = 
+    py{38,39, 310}: COVERAGE_FILE=.coverage.{envname}
+commands =
+    pytest --cov=hexitec {posargs:-vv}
+depends =
+    py{38,39,310}: clean
+    report: py{38,39,310}
+
+[testenv:clean]
+skip_install = true
+deps = coverage
+commands = coverage erase
+
+[testenv:report]
+skip_install = true
+deps = coverage
+commands =
+    coverage combine
+    coverage report -m
+
+[flake8]
+ignore = E226,E302,E41
+max-line-length = 160
+exclude = tests/*
+max-complexity = 10
+"""
