@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright(c) 2023 UNITED KINGDOM RESEARCH AND INNOVATION
+# Copyright(c) 2024 UNITED KINGDOM RESEARCH AND INNOVATION
 # Electronic System Design Group, Technology Department,
 # Science and Technology Facilities Council
 # Licensed under the BSD 3-Clause license. See LICENSE file in the project root for details.
@@ -640,7 +640,14 @@ HEXITEC_2X6_HEXITEC_CTRL = { 'addr': 40,
                 'name': 'HEXITEC_RST',
                 'nof_bits': 1,
                 'reset_value': '0x0',
-                'shiftr': 0}],
+                'shiftr': 0},
+              { 'description': 'Hexitec 2x6 data acquisition abort',
+                'is_bit': True,
+                'mask': 16,
+                'name': 'HEXITEC_ACQ_ABORT',
+                'nof_bits': 1,
+                'reset_value': '0x0',
+                'shiftr': 4}],
   'mask': 4294967295,
   'name': 'HEXITEC_2X6_HEXITEC_CTRL',
   'nof_bits': 32,
@@ -648,14 +655,15 @@ HEXITEC_2X6_HEXITEC_CTRL = { 'addr': 40,
   'shiftr': 0}
 """:const:`HEXITEC_2X6_HEXITEC_CTRL` generated from `XML2VHDL` output.
 
-================  ==================================  ===============  ==============  ===============
+=================  ==================================  ===============  ==============  ===============
 **Register**
-**Name:**         HEXITEC_2X6_HEXITEC_CTRL
-**Address:**      ``0x0000_0028``
-**Description:**  exitec 2x6 output datapath control
-**Bit Fields**    **Description**                     **Mask**         **Permission**  **Reset Value**
-HEXITEC_RST       Hexitec 2x6 output datapath reset   ``0x0000_0001``  Read/Write      ``0x0000_0000``
-================  ==================================  ===============  ==============  ===============
+**Name:**          HEXITEC_2X6_HEXITEC_CTRL
+**Address:**       ``0x0000_0028``
+**Description:**   exitec 2x6 output datapath control
+**Bit Fields**     **Description**                     **Mask**         **Permission**  **Reset Value**
+HEXITEC_RST        Hexitec 2x6 output datapath reset   ``0x0000_0001``  Read/Write      ``0x0000_0000``
+HEXITEC_ACQ_ABORT  Hexitec 2x6 data acquisition abort  ``0x0000_0010``  Read/Write      ``0x0000_0000``
+=================  ==================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -666,7 +674,9 @@ HEXITEC_RST       Hexitec 2x6 output datapath reset   ``0x0000_0001``  Read/Writ
       scale_interval = 8
 
       0: HEXITEC_RST [ rotate = 270 ]
-      1-31:  [ color = lightgrey ]
+      1-3:  [ rotate = 270, color = lightgrey ]
+      4: HEXITEC_ACQ_ABORT [ rotate = 270 ]
+      5-31:  [ color = lightgrey ]
    }
 
 """

@@ -471,7 +471,7 @@ class HexitecFem():
         try:
             self.x10g_rdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
                                      rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
-                                     debug=False, uart_offset=0xC)
+                                     debug=False, uart_offset=0x0)
             self.broadcast_VSRs = \
                 VsrModule(self.x10g_rdma, slot=0, init_time=0, addr_mapping=self.vsr_addr_mapping)
             self.vsr_list = []
@@ -843,6 +843,13 @@ class HexitecFem():
             logging.info("Cancelling Acquisition..")
             for vsr in self.vsr_list:
                 vsr.disable_vsr()
+            # Issue abort, assert register
+            self.abort_data_acquisition(enable=True)
+            # Deassert data enable
+            self.data_en(enable=False)
+            # Deassert abort
+            self.abort_data_acquisition(enable=False)
+            #
             self.data_path_reset()
             logging.info("Acquisition cancelled")
             # Reset variables
@@ -1709,6 +1716,17 @@ class HexitecFem():
             self.set_bit(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL, "DATA_EN")
         else:
             self.reset_bit(HEX_REGISTERS.HEXITEC_2X6_VSR_DATA_CTRL, "DATA_EN")
+
+    def abort_data_acquisition(self, enable=True):
+        """Abort hexitec data acquisition.
+
+        enable=True: assert the abort register, i.e. abort
+        enable=False: de-assert the abort register
+        """
+        if enable:
+            self.set_bit(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL, "HEXITEC_ACQ_ABORT")
+        else:
+            self.reset_bit(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL, "HEXITEC_ACQ_ABORT")
 
 
 class HexitecFemError(Exception):   # pragma: no cover
