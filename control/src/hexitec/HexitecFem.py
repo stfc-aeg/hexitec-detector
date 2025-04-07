@@ -120,7 +120,7 @@ class HexitecFem():
 
         self.status_message = ""
         self.status_error = ""
-        self.stop_acquisition = False
+        self.cancel_acquisition = False
 
         # 6 VSRs x 7 sensors each, 7 lists with sensor data
         self.ambient_list = [0, 0, 0, 0, 0, 0]
@@ -725,7 +725,7 @@ class HexitecFem():
                 self._set_status_error("")
             # Stop acquisition if it's hung
             if self.hardware_busy:
-                self.stop_acquisition = True
+                self.cancel_acquisition = True
             self.hardware_connected = False
             self._set_status_message("Disconnecting camera..")
             self.cam_disconnect()
@@ -808,8 +808,8 @@ class HexitecFem():
     def check_acquire_finished(self):
         """Check whether all data transferred, until completed or cancelled by user."""
         try:
-            # Stop if user clicked on Cancel button
-            if (self.stop_acquisition):
+            # Stop if user clicked the Disconnect button
+            if (self.cancel_acquisition):
                 logging.debug("Acquire cancellation initiated")
                 self.acquire_data_completed()
                 return
@@ -839,7 +839,7 @@ class HexitecFem():
         """Reset variables and read out Firmware monitors post data transfer."""
         self.acquire_stop_time = self.create_iso_timestamp()
 
-        if self.stop_acquisition:
+        if self.cancel_acquisition:
             logging.info("Cancelling Acquisition..")
             for vsr in self.vsr_list:
                 vsr.disable_vsr()
@@ -853,7 +853,7 @@ class HexitecFem():
             self.data_path_reset()
             logging.info("Acquisition cancelled")
             # Reset variables
-            self.stop_acquisition = False
+            self.cancel_acquisition = False
             self.hardware_busy = False
             self.acquisition_completed = True
             self._set_status_message("Acquire cancelled")
@@ -1457,7 +1457,6 @@ class HexitecFem():
                 setting = -1
         except KeyError:
             raise HexitecFemError("Missing Key: '%s'" % descriptor)
-
         return setting
 
     def _extract_boolean(self, parameter_dict, descriptor):

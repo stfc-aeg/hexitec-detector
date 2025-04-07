@@ -477,18 +477,6 @@ class TestDetector(unittest.TestCase):
             self.test_adapter.detector.fem.create_iso_timestamp.assert_called()
             self.test_adapter.detector._set_leak_error.assert_called()
 
-    def test_check_daq_watchdog(self):
-        """Test daq watchdog works."""
-        self.test_adapter.detector.daq.in_progress = True
-        # Ensure time difference is three seconds while timeout artificially at 0 seconds
-        self.test_adapter.detector.daq.processing_timestamp = time.time() - 3
-        self.test_adapter.detector.daq_idle_timeout = 0
-
-        self.test_adapter.detector.check_daq_watchdog()
-        # Ensure shutdown_processing() was called [it changes the following two bools]
-        assert self.test_adapter.detector.daq.shutdown_processing is True
-        assert self.test_adapter.detector.acquisition_in_progress is False
-
     def test_detector_shutdown_processing_correct(self):
         """Test function shuts down processing."""
         self.test_adapter.detector.daq.shutdown_processing = False
@@ -584,11 +572,11 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.daq.in_progress = True
         self.test_adapter.detector.fem.hardware_busy = True
         with patch("hexitec.adapter.IOLoop") as mock:
-            self.test_adapter.detector.cancel_acquisition = Mock()
+            self.test_adapter.detector.stop_acquisition = Mock()
             self.test_adapter.detector.shutdown_processing = Mock()
             self.test_adapter.detector.disconnect_hardware("")
             assert self.test_adapter.detector.acquisition_in_progress is False
-            self.test_adapter.detector.cancel_acquisition.assert_called()
+            self.test_adapter.detector.stop_acquisition.assert_called()
             self.test_adapter.detector.shutdown_processing.assert_called()
             i = mock.instance()
             i.call_later.assert_called_with(0.2, self.test_adapter.detector.fem.disconnect_hardware)
@@ -752,7 +740,7 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.set_number_frames(frames)
         assert self.test_adapter.detector.number_frames == frames
 
-    def test_detector_acquisition_correct(self):
+    def test_detector_start_acquisition_correct(self):
         """Test acquisition function works."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.daq.configure_mock(
@@ -767,7 +755,7 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.number_frames = number_frames
 
         with patch("hexitec.adapter.IOLoop") as mock_loop:
-            self.test_adapter.detector.acquisition("data")
+            self.test_adapter.detector.start_acquisition("data")
             instance = mock_loop.instance()
             instance.add_callback.assert_called_with(self.test_adapter.detector.await_daq_ready)
 
@@ -778,17 +766,17 @@ class TestDetector(unittest.TestCase):
         assert self.test_adapter.detector.acquisition_in_progress is True
         assert self.test_adapter.detector.software_state == "Acquiring"
 
-    def test_detector_acquisition_handles_interlocked(self):
+    def test_detector_start_acquisition_handles_interlocked(self):
         """Test function prevents acquisition when interlocked."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.software_state = "Interlocked"
         error = "Interlocked: Can't acquire data"
         self.test_adapter.detector.report_leak_detector_error = Mock(return_value=error)
         with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_adapter.detector.acquisition("")
+            self.test_adapter.detector.start_acquisition("")
         assert exc_info.value.args[0] == error
 
-    def test_detector_acquisition_fails_on_hardware_busy(self):
+    def test_detector_start_acquisition_fails_on_hardware_busy(self):
         """Test function fails when hardware already busy."""
         self.test_adapter.detector.fem.hardware_connected = True
         self.test_adapter.detector.fem.hardware_busy = True
@@ -797,10 +785,10 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.fem.check_hardware_ready.side_effect = \
             ParameterTreeError(error)
         with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_adapter.detector.acquisition("")
+            self.test_adapter.detector.start_acquisition("")
         assert exc_info.value.args[0] == error
 
-    def test_detector_acquisition_fails_without_connection(self):
+    def test_detector_start_acquisition_fails_without_connection(self):
         """Test function fails without established hardware connection."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         error = "Can't collect data without a connection"
@@ -808,7 +796,7 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.fem.check_hardware_ready.side_effect = \
             ParameterTreeError(error)
         with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_adapter.detector.acquisition("")
+            self.test_adapter.detector.start_acquisition("")
         assert exc_info.value.args[0] == error
         self.test_adapter.detector.fem.check_hardware_ready.assert_called_with("collect data")
 
@@ -821,11 +809,11 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.fem.check_system_initialised.side_effect = \
             ParameterTreeError(error)
         with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_adapter.detector.acquisition("")
+            self.test_adapter.detector.start_acquisition("")
         assert exc_info.value.args[0] == error
         self.test_adapter.detector.fem.check_system_initialised.assert_called_with("collect data")
 
-    def test_detector_acquisition_prevents_new_acquisition_whilst_one_in_progress(self):
+    def test_detector_start_acquisition_prevents_new_acquisition_whilst_one_in_progress(self):
         """Test adapter won't start acquisition whilst one already in progress."""
         self.test_adapter.detector.daq.configure_mock(
             in_progress=True
@@ -833,7 +821,7 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.fem.check_system_initialised = Mock()
         error = "Acquistion already in progress"
         with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_adapter.detector.acquisition("data")
+            self.test_adapter.detector.start_acquisition("data")
         assert exc_info.value.args[0] == error
         self.test_adapter.detector.daq.prepare_odin.assert_not_called()
 
@@ -915,18 +903,18 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.reset_state_variables()
         assert self.test_adapter.detector.acquisition_in_progress is False
 
-    def test_cancel_acquisition(self):
+    def test_stop_acquisition(self):
         """Test function can cancel (in software) ongoing acquisition."""
         self.test_adapter.detector.daq.configure_mock(
             in_progress=False
         )
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.software_state = "Acquiring"
-        self.test_adapter.detector.fem.stop_acquisition = False
-        self.test_adapter.detector.cancel_acquisition()
-        assert self.test_adapter.detector.fem.stop_acquisition is True
+        self.test_adapter.detector.fem.cancel_acquisition = False
+        self.test_adapter.detector.stop_acquisition()
+        assert self.test_adapter.detector.fem.cancel_acquisition is True
 
-    def test_cancel_acquisition_no_acquisition(self):
+    def test_stop_acquisition_no_acquisition(self):
         """Test function blocks cancel if no acquisition running."""
         self.test_adapter.detector.daq.configure_mock(
             in_progress=False
@@ -936,19 +924,19 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.shutdown_processing = Mock()
         error = "No acquisition in progress"
         with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_adapter.detector.cancel_acquisition()
+            self.test_adapter.detector.stop_acquisition()
         assert exc_info.value.args[0] == error
         self.test_adapter.detector.fem.flag_error.assert_called_with(error)
         self.test_adapter.detector.shutdown_processing.assert_not_called()
 
-    def test_cancel_acquisition_handles_interlocked(self):
+    def test_stop_acquisition_handles_interlocked(self):
         """Test function prevents cancelling acquisition when interlocked."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.software_state = "Interlocked"
         rv = "Interlocked: Can't cancel acquisition"
         self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
         with pytest.raises(ParameterTreeError, match=rv):
-            self.test_adapter.detector.cancel_acquisition("")
+            self.test_adapter.detector.stop_acquisition("")
 
     def test_collect_offsets(self):
         """Test function initiates collect offsets."""

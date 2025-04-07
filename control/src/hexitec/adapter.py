@@ -287,8 +287,8 @@ class Hexitec():
                 "number_frames": (lambda: self.number_frames, self.set_number_frames),
                 "duration": (lambda: self.duration, self.set_duration),
                 "duration_enable": (lambda: self.duration_enable, self.set_duration_enable),
-                "start_acq": (None, self.acquisition),
-                "stop_acq": (None, self.cancel_acquisition)
+                "start_acq": (None, self.start_acquisition),
+                "stop_acq": (None, self.stop_acquisition)
             },
             "status": {
                 "system_health": (lambda: self.system_health, None),
@@ -342,10 +342,6 @@ class Hexitec():
 
         # Check archiver running?
         self.check_archiver_running()
-
-        # If acquiring monitor HexitecDAQ rate of frames_processed updating.. (Break if stalled)
-        if self.daq.processing_interruptable:
-            self.check_daq_watchdog()
 
         IOLoop.instance().call_later(1.0, self.polling)
 
@@ -468,27 +464,6 @@ class Hexitec():
     def _get_leak_error(self):
         return self.leak_error
 
-    def check_daq_watchdog(self):
-        """Monitor DAQ's frames_processed while data processed.
-
-        Ensure frames_processed increments, completes within reasonable time of acquisition.
-        Failure to do so indicate missing/dropped packet(s), stop processing if stalled.
-        """
-        if self.daq.in_progress:
-            idle_time = time.time() - self.daq.processing_timestamp
-            # print("  {} -> check_daq_watchdog() checking.. delta: {}".format(
-            #      self.daq.debug_timestamp(), idle_time))
-            if (idle_time > self.daq_idle_timeout):
-                # DAQ: Timed out waiting for next frame to process
-                self.shutdown_processing()
-                logging.warning("DAQ processing timed out; Saw %s expected %s frames" %
-                                (self.daq.frames_processed, self.daq.number_frames))
-                self.fem._set_status_error("Processing timed out: {0:.2f} seconds \
-                    (exceeded {1:.2f}); Expected {2} got {3} frames\
-                        ".format(idle_time, self.daq_idle_timeout,
-                                 self.daq.number_frames, self.daq.frames_processed))
-                self.fem._set_status_message("Processed frames, some packet(s) loss")
-
     def shutdown_processing(self):
         """Stop processing in DAQ."""
         self.daq.shutdown_processing = True
@@ -547,7 +522,7 @@ class Hexitec():
                 if self.daq.in_progress:
                     # Stop hardware if still in acquisition
                     if self.fem.hardware_busy:
-                        self.cancel_acquisition()
+                        self.stop_acquisition()
                     # Reset daq
                     self.shutdown_processing()
                     # Allow processing to shutdown before disconnecting hardware
@@ -705,7 +680,7 @@ class Hexitec():
         self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
         self.daq.initialize(self.adapters)
 
-    def acquisition(self, put_data=None):
+    def start_acquisition(self, put_data=None):
         """Instruct DAQ and FEM to acquire data."""
         if self.software_state == "Interlocked":
             error_message = "{}".format("Interlocked: Can't acquire data")
@@ -722,6 +697,7 @@ class Hexitec():
 
             # Clear (any previous) daq error
             self.daq.in_error = False
+            self.fem.cancel_acquisition = False
 
             if self.daq.in_progress:
                 error = "Acquistion already in progress"
@@ -805,7 +781,7 @@ class Hexitec():
         """
         self.acquisition_in_progress = False
 
-    def cancel_acquisition(self, put_data=None):
+    def stop_acquisition(self, put_data=None):
         """Cancel ongoing acquisition in Software.
 
         Not yet possible to stop FEM, mid-acquisition
@@ -820,7 +796,7 @@ class Hexitec():
                 self.fem.flag_error(error)
                 raise ParameterTreeError(error)
             else:
-                self.fem.stop_acquisition = True
+                self.fem.cancel_acquisition = True
                 # Inject End of Acquisition Frame
                 command = "config/inject_eoa"
                 request = ApiAdapterRequest("", content_type="application/json")

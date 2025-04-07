@@ -609,7 +609,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.hardware_busy = True
         self.test_fem.fem.cam_disconnect = Mock()
         self.test_fem.fem.disconnect_hardware()
-        assert self.test_fem.fem.stop_acquisition is True
+        assert self.test_fem.fem.cancel_acquisition is True
 
     def test_disconnect_hardware_handles_exception(self):
         """Test function can handle Exception thrown."""
@@ -729,37 +729,23 @@ class TestFem(unittest.TestCase):
         """Test check_acquire_finished calls acquire_data_completed if acquire cancelled."""
         with patch("hexitec.HexitecFem.IOLoop"):
             with patch("logging.debug") as mock_log:
-                self.test_fem.fem.stop_acquisition = True
+                self.test_fem.fem.cancel_acquisition = True
                 self.test_fem.fem.acquire_data_completed = Mock()
 
                 self.test_fem.fem.check_acquire_finished()
                 self.test_fem.fem.acquire_data_completed.assert_called()
                 mock_log.assert_called_with("Acquire cancellation initiated")
 
-    # TODO Modify/remove?
-    # def test_check_acquire_finished_handles_data_being_sent(self):
-    #     """Test check_acquire_finished calls itself while data being transferred."""
-    #     with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
-    #         self.test_fem.fem.stop_acquisition = False
-    #         # TODO: Faking all_data_sent = 0 (ongoing) until firmware can readout data..
-    #         self.test_fem.fem.all_data_sent = 0
-    #         # self.test_fem.fem.x10g_rdma.read = Mock()
-    #         # self.test_fem.fem.x10g_rdma.read.side_effect = [1]  # >0 Signals all data sent
-    #         # self.test_fem.fem.acquire_data_completed = Mock()
-    #         self.test_fem.fem.check_acquire_finished()
-    #         i = mock_loop.instance()
-    #         i.call_later.assert_called_with(0.5, self.test_fem.fem.check_acquire_finished)
-
     def test_check_acquire_finished_handles_data_transmission_complete(self):
         """Test check_acquire_finished handles data transmited."""
-        self.test_fem.fem.stop_acquisition = False
+        self.test_fem.fem.cancel_acquisition = False
         self.test_fem.fem.acquire_data_completed = Mock()
         self.test_fem.fem.check_acquire_finished()
         self.test_fem.fem.acquire_data_completed.assert_called()
 
     def test_check_acquire_finished_handles_data_transmission_ongoing(self):
         """Test check_acquire_finished handles ongoing data transmission."""
-        self.test_fem.fem.stop_acquisition = False
+        self.test_fem.fem.cancel_acquisition = False
         self.test_fem.fem.x10g_rdma.udp_rdma_read = Mock()
         self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [0]
         self.test_fem.fem.acquire_data_completed = Mock()
@@ -770,7 +756,7 @@ class TestFem(unittest.TestCase):
 
     def test_check_acquire_finished_handles_HexitecFemError(self):
         """Test check_acquire_finished handles HexitecFemError exception."""
-        self.test_fem.fem.stop_acquisition = True
+        self.test_fem.fem.cancel_acquisition = True
         self.test_fem.fem.acquisition_completed = False
         self.test_fem.fem.acquire_data_completed = Mock()
         e_msg = "Bad Error"
@@ -783,7 +769,7 @@ class TestFem(unittest.TestCase):
 
     def test_check_acquire_finished_handles_exception(self):
         """Test check_acquire_finished handles bog standard exception."""
-        self.test_fem.fem.stop_acquisition = True
+        self.test_fem.fem.cancel_acquisition = True
         self.test_fem.fem.acquisition_completed = False
         self.test_fem.fem.acquire_data_completed = Mock()
         e_msg = "Badder Error"
@@ -796,12 +782,12 @@ class TestFem(unittest.TestCase):
 
     def test_acquire_data_completed_handles_manual_stop(self):
         """Test function handles user stopping acquisition."""
-        self.test_fem.fem.stop_acquisition = True
+        self.test_fem.fem.cancel_acquisition = True
         self.test_fem.fem.send_cmd = Mock()
 
         self.test_fem.fem.acquire_data_completed()
 
-        assert self.test_fem.fem.stop_acquisition is False
+        assert self.test_fem.fem.cancel_acquisition is False
         assert self.test_fem.fem.hardware_busy is False
         assert self.test_fem.fem.acquisition_completed is True
 
