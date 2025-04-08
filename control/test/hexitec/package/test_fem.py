@@ -572,7 +572,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.hardware_busy = False
         self.test_fem.fem.acquire_data = Mock()
         self.test_fem.fem.acquire_data.side_effect = AttributeError()
-        error = "Data collection failed: "
+        error = "Data acquisition failed: "
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.collect_data()
         assert exc_info.value.args[0] == error
@@ -776,7 +776,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.acquire_data_completed.side_effect = Exception(e_msg)
 
         self.test_fem.fem.check_acquire_finished()
-        error = "Data collection failed: {}".format(e_msg)
+        error = "Data acquisition failed: {}".format(e_msg)
         assert self.test_fem.fem._get_status_error() == error
         assert self.test_fem.fem.acquisition_completed is True
 

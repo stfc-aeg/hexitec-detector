@@ -688,8 +688,8 @@ class Hexitec():
             raise ParameterTreeError(error_message)
         else:
             # Check hardware ready, system initialised before acquisition
-            self.fem.check_hardware_ready("collect data")
-            self.fem.check_system_initialised("collect data")
+            self.fem.check_hardware_ready("acquire data")
+            self.fem.check_system_initialised("acquire data")
 
             # if self.daq.commit_config_before_acquire:
             #     self.daq.commit_config_before_acquire = False
@@ -737,7 +737,7 @@ class Hexitec():
             # Acquisition starts here
             self.acquisition_in_progress = True
             self.software_state = "Acquiring"
-            # Wait for DAQ (i.e. file writer) to be enabled before FEM told to collect data
+            # Wait for DAQ (i.e. file writer) to be enabled before FEM told to acquire data
             IOLoop.instance().add_callback(self.await_daq_ready)
 
     def await_daq_ready(self):

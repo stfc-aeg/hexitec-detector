@@ -780,7 +780,7 @@ class TestDetector(unittest.TestCase):
         """Test function fails when hardware already busy."""
         self.test_adapter.detector.fem.hardware_connected = True
         self.test_adapter.detector.fem.hardware_busy = True
-        error = "Can't collect data, Hardware busy"
+        error = "Can't acquire data, Hardware busy"
         self.test_adapter.detector.fem.check_hardware_ready = Mock()
         self.test_adapter.detector.fem.check_hardware_ready.side_effect = \
             ParameterTreeError(error)
@@ -791,19 +791,19 @@ class TestDetector(unittest.TestCase):
     def test_detector_start_acquisition_fails_without_connection(self):
         """Test function fails without established hardware connection."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
-        error = "Can't collect data without a connection"
+        error = "Can't acquire data without a connection"
         self.test_adapter.detector.fem.check_hardware_ready = Mock()
         self.test_adapter.detector.fem.check_hardware_ready.side_effect = \
             ParameterTreeError(error)
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_adapter.detector.start_acquisition("")
         assert exc_info.value.args[0] == error
-        self.test_adapter.detector.fem.check_hardware_ready.assert_called_with("collect data")
+        self.test_adapter.detector.fem.check_hardware_ready.assert_called_with("acquire data")
 
-    def test_collect_data_fails_system_not_initialised(self):
+    def test_acquire_data_fails_system_not_initialised(self):
         """Test function prevents an initialised system from collecting data."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
-        error = "Can't collect data, system not initialised"
+        error = "Can't acquire data, system not initialised"
         self.test_adapter.detector.fem.check_hardware_ready = Mock()
         self.test_adapter.detector.fem.check_system_initialised = Mock()
         self.test_adapter.detector.fem.check_system_initialised.side_effect = \
@@ -811,7 +811,7 @@ class TestDetector(unittest.TestCase):
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_adapter.detector.start_acquisition("")
         assert exc_info.value.args[0] == error
-        self.test_adapter.detector.fem.check_system_initialised.assert_called_with("collect data")
+        self.test_adapter.detector.fem.check_system_initialised.assert_called_with("acquire data")
 
     def test_detector_start_acquisition_prevents_new_acquisition_whilst_one_in_progress(self):
         """Test adapter won't start acquisition whilst one already in progress."""

@@ -157,3 +157,5 @@ control/static/js/bootstrap-3.3.6-dist/*
 __pycache__/*
 
 .*_
+
+**/_version.py

@@ -711,7 +711,7 @@ class HexitecFem():
             self._set_status_message("Acquiring data..")
             self.acquire_data()
         except Exception as e:
-            error = "Data collection failed"
+            error = "Data acquisition failed"
             self.flag_error(error, str(e))
             self.hardware_busy = False
             raise ParameterTreeError(f"{error}: {str(e)}")
@@ -829,7 +829,7 @@ class HexitecFem():
         except HexitecFemError as e:
             self.flag_error("Failed to collect data", str(e))
         except Exception as e:
-            self.flag_error("Data collection failed", str(e))
+            self.flag_error("Data acquisition failed", str(e))
         self.hardware_busy = False
 
         # Acquisition interrupted
@@ -1096,6 +1096,11 @@ class HexitecFem():
             expected_duration = 8192 / self.frame_rate
             timeout = (expected_duration * 1.2) + 1
             self.hardware_busy = True
+            # Reset sync status
+            for vsr in self.vsr_list:
+                index = vsr.addr - self.vsr_base_address
+                self.sync_list[index] = 0
+
             for vsr in self.vsr_list:
                 vsr_id = vsr.addr-143
                 logging.debug(" --- Initialising VSR: 0x{0:X} ---".format(vsr_id))
