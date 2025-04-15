@@ -733,6 +733,14 @@ class Hexitec():
             request = ApiAdapterRequest("", content_type="application/json")
             self.adapters["fr"].put(command, request)
 
+            IOLoop.instance().add_callback(self.await_daq_configuring_fps)
+
+    def await_daq_configuring_fps(self):
+        """Wait until DAQ configured frameProcessor plugin chain(s)."""
+        print(f" *** busy configuring FPS: {self.daq.busy_configuring_fps}")
+        if (self.daq.busy_configuring_fps):
+            IOLoop.instance().call_later(0.05, self.await_daq_configuring_fps)
+        else:
             self.daq.prepare_daq(self.number_frames)
             # Acquisition starts here
             self.acquisition_in_progress = True

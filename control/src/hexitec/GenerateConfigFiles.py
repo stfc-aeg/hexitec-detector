@@ -146,7 +146,12 @@ class GenerateConfigFiles():
         The execute config file is used to execute the configuration of the store file.
         """
         store_temp_name = "/tmp/_tmp_store{}.json".format(id)
-        self.store_temp = open(store_temp_name, mode='w+t')
+        try:
+            self.store_temp = open(store_temp_name, mode='w+t')
+        except PermissionError as e:
+            error = f"Couldn't generate FP config file: {e}"
+            logging.error(error)
+            raise PermissionError(error)
 
         # Generate a unique index name
         (blank, folder, filename) = store_temp_name.split("/")

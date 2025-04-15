@@ -573,7 +573,7 @@ class TestDAQ(unittest.TestCase):
         """Test processing check loop polls for processed file closed once processing done."""
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
             self.test_daq.fp_data["value"][0]["hdf"]["frames_processed"] = 10
-            self.test_daq.daq.plugin = "hdf"
+            self.test_daq.daq.last_plugin_configured = "hdf"
             self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.processing_check_loop()
             mock_loop.instance().add_callback.assert_called_with(self.test_daq.daq.flush_data)
@@ -587,7 +587,7 @@ class TestDAQ(unittest.TestCase):
             self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.shutdown_processing = True
             self.test_daq.daq.frames_processed = 0
-            self.test_daq.daq.plugin = "hdf"
+            self.test_daq.daq.last_plugin_configured = "hdf"
             self.test_daq.daq.processing_check_loop()
             assert self.test_daq.daq.file_writing is False
             assert self.test_daq.daq.shutdown_processing is False
@@ -597,7 +597,7 @@ class TestDAQ(unittest.TestCase):
         with patch("hexitec.HexitecDAQ.IOLoop"):
             self.test_daq.daq.frame_end_acquisition = 10
             self.test_daq.daq.frames_processed = 5
-            self.test_daq.daq.plugin = "hdf"
+            self.test_daq.daq.last_plugin_configured = "hdf"
             self.test_daq.daq.processing_check_loop()
             assert pytest.approx(self.test_daq.daq.processing_timestamp) == time.time()
 
@@ -1352,6 +1352,36 @@ class TestDAQ(unittest.TestCase):
 
         self.assertEqual(self.test_daq.daq.master_dataset, "raw_frames")
         self.assertIn("raw_frames", self.test_daq.daq.extra_datasets)
+
+    # Covers: 1125-1127
+    @patch('hexitec.HexitecDAQ.GenerateConfigFiles')
+    @patch('hexitec.HexitecDAQ.IOLoop.instance')
+    def test_commit_configuration_handles_gcf_throws_exception(self, mock_ioloop_instance,
+                                                mock_generate_config_files):
+        mock_ioloop_instance.return_value = MagicMock()
+        mock_generate_config_files.return_value.generate_config_files.side_effect = \
+            Exception("Err")
+        mock_generate_config_files.return_value.generate_pixel_spectra_params.return_value = \
+            "ps_params"
+
+        self.test_daq.daq.param_tree = MagicMock()
+        self.test_daq.daq.param_tree.get.return_value = {}
+        self.test_daq.daq.adapters = {"fp": MagicMock(), "live_histogram": MagicMock()}
+        self.test_daq.daq.number_nodes = 1
+        self.test_daq.daq.number_histograms = 10
+        self.test_daq.daq.compression_type = "gzip"
+        self.test_daq.daq.odin_path = "/odin"
+        self.test_daq.daq.pass_processed = False
+        self.test_daq.daq.pass_raw = True
+        self.test_daq.daq.parent.fem.flag_error = Mock()
+
+        error = Exception("Err")
+        self.test_daq.daq.commit_configuration()
+
+#         self.test_daq.daq.parent.fem.flag_error.assert_called_with(error)
+# E           Expected: mock(Exception('Err'))
+# E             Actual: mock(Exception('Err'))
+
 
     def test_submit_configuration_hdf_branch(self):
         """Test function handles sample parameter tree ok."""

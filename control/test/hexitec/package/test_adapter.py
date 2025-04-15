@@ -748,7 +748,6 @@ class TestDetector(unittest.TestCase):
         )
         self.test_adapter.detector.fem.check_hardware_ready = Mock()
         self.test_adapter.detector.fem.check_system_initialised = Mock()
-        self.test_adapter.detector.commit_config_before_acquire = True
         self.test_adapter.detector.daq.commit_configuration = Mock()
         self.test_adapter.detector.daq.prepare_odin = Mock()
         number_frames = 10
@@ -757,11 +756,39 @@ class TestDetector(unittest.TestCase):
         with patch("hexitec.adapter.IOLoop") as mock_loop:
             self.test_adapter.detector.start_acquisition("data")
             instance = mock_loop.instance()
+            instance.add_callback.assert_called_with(self.test_adapter.detector.await_daq_configuring_fps)
+
+    def test_await_daq_configuring_fps_wait_while_busy_configuring(self):
+        """Test function handles daq busy configuring frameProcessors."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.daq.configure_mock(
+            in_progress=False
+        )
+        self.test_adapter.detector.daq.busy_configuring_fps = True
+
+        with patch("hexitec.adapter.IOLoop") as mock_loop:
+            self.test_adapter.detector.await_daq_configuring_fps()
+            instance = mock_loop.instance()
+            instance.call_later.assert_called_with(0.05, \
+                self.test_adapter.detector.await_daq_configuring_fps)
+
+    def test_await_daq_configuring_fps_handle_configuring_finished(self):
+        """Test function handles daq no longer busy."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.daq.configure_mock(
+            in_progress=False
+        )
+        self.test_adapter.detector.daq.busy_configuring_fps = False
+        number_frames = 10
+        self.test_adapter.detector.number_frames = number_frames
+
+        with patch("hexitec.adapter.IOLoop") as mock_loop:
+            self.test_adapter.detector.daq.in_error = False
+            self.test_adapter.detector.await_daq_configuring_fps()
+            instance = mock_loop.instance()
             instance.add_callback.assert_called_with(self.test_adapter.detector.await_daq_ready)
 
         self.test_adapter.detector.daq.prepare_daq.assert_called_with(number_frames)
-        self.test_adapter.detector.daq.commit_configuration.assert_called()
-        self.test_adapter.detector.daq.prepare_odin.assert_called()
         assert self.test_adapter.detector.daq.in_error is False
         assert self.test_adapter.detector.acquisition_in_progress is True
         assert self.test_adapter.detector.software_state == "Acquiring"

@@ -106,7 +106,7 @@ class HexitecDAQ():
         self.pass_raw = False
 
         # Look at histogram/hdf to determine when processing finished:
-        self.plugin = "histogram"
+        self.last_plugin_configured = "histogram"
         self.master_dataset = "spectra_bins"
         self.extra_datasets = []
         # Processing timeout variables, support adapter's watchdog
@@ -146,6 +146,8 @@ class HexitecDAQ():
         self.received_remaining = self.number_frames - self.frames_received
         self.collection_time_remaining = 0
         self.hdf_is_reset = False
+        # Flag telling adapter when daq busy configuring FP plugin chain(s) (less hdf plugin)
+        self.busy_configuring_fps = False
 
         # Diagnostics
         self.daq_start_time = "0"
@@ -383,7 +385,7 @@ class HexitecDAQ():
         self.processing_timestamp = time.time()
         if bBusy:
             self.frames_received = self.get_total_frames_received()
-            self.frames_processed = self.get_total_frames_processed(self.plugin)
+            self.frames_processed = self.get_total_frames_processed(self.last_plugin_configured)
             self.received_remaining = self.number_frames - self.frames_received
             self.processed_remaining = self.number_frames - self.frames_processed
             self.collection_time_remaining = self.calculate_remaining_collection_time()
@@ -400,7 +402,7 @@ class HexitecDAQ():
     def processing_check_loop(self):
         """Check that the processing has completed."""
         # Check HDF/histogram processing progress
-        total_frames_processed = self.get_total_frames_processed(self.plugin)
+        total_frames_processed = self.get_total_frames_processed(self.last_plugin_configured)
         self.frames_received = self.get_total_frames_received()
         self.received_remaining = self.number_frames - self.frames_received
         if self.collection_time_remaining < 0.9:
@@ -468,7 +470,7 @@ class HexitecDAQ():
         self.hdf_retry = 0
         self.daq_stop_time = datetime.now(timezone.utc).isoformat()
         self.set_file_writing(False)
-        self.frames_processed = self.get_total_frames_processed(self.plugin)
+        self.frames_processed = self.get_total_frames_processed(self.last_plugin_configured)
         self.processed_remaining = self.number_frames - self.frames_processed
         # print("\n2\t rxd {} proc'd {} left: {}\n".format(
         #     self.frames_received, self.frames_processed,
@@ -1071,6 +1073,7 @@ class HexitecDAQ():
 
     def commit_configuration(self):
         """Generate and sends the FP config files."""
+        self.busy_configuring_fps = True
         # Generate JSON config file determining which plugins, the order to chain them, etc
         parameter_tree = self.param_tree.get('')
 
@@ -1116,8 +1119,13 @@ class HexitecDAQ():
                                            extra_datasets=self.extra_datasets,
                                            live_view_selected=live_view_selected,
                                            odin_path=self.odin_path)
-            store_config, execute_config, store_string, execute_string = \
-                self.gcf.generate_config_files(index)
+            try:
+                store_config, execute_config, store_string, execute_string = \
+                    self.gcf.generate_config_files(index)
+            except Exception as e:
+                self.parent.fem.flag_error(e)
+                return
+
             live_view_selected = False
 
             command = "config/store/" + str(index)    # Configure using strings
@@ -1171,10 +1179,11 @@ class HexitecDAQ():
         """Send each ParameterTree value to the corresponding FP plugin."""
         # Loop overall plugins in ParameterTree, updating fp's settings except reorder
         for plugin in self.param_tree.tree.get("config"):
+            # print(f"  [E plugin: {plugin}")
 
             for param_key in self.param_tree.tree['config'].get(plugin):
 
-                # print("  DEBUG            config/%s/%s" % (plugin, param_key), " -> ",
+                # print("  [E config/%s/%s" % (plugin, param_key), " -> ",
                 #     self.param_tree.tree['config'][plugin][param_key].get())
 
                 # Don't send histogram's pass_raw, pass_processed,
@@ -1189,9 +1198,9 @@ class HexitecDAQ():
 
         # Which plugin determines when processing finished?
         if (self.pass_raw or self.pass_processed):
-            self.plugin = "hdf"
+            self.last_plugin_configured = "hdf"
         else:
-            self.plugin = "histogram"
+            self.last_plugin_configured = "histogram"
 
         command = "config/histogram"
         formatted_string = ('{"pass_processed": %s}' % self.pass_processed).lower()
@@ -1218,6 +1227,8 @@ class HexitecDAQ():
         payload = ('{"calibration_enable": %s}' % self.calibration_enable).lower()
         request = ApiAdapterRequest(payload, content_type="application/json")
         self.adapters["live_histogram"].put(command, request)
+
+        self.busy_configuring_fps = False
 
     def debug_timestamp(self):  # pragma: no cover
         """Debug function returning current timestamp in sub second resolution."""
