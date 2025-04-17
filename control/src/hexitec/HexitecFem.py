@@ -1299,6 +1299,7 @@ class HexitecFem():
 
     def set_hexitec_config(self, filename):
         """Check whether file exists, load parameters from file."""
+        self.parent.daq.check_daq_acquiring_data("hexitec config file")
         # Use existing filename if none supplied
         if len(filename) > 0:
             filename = self.control_config_path + filename

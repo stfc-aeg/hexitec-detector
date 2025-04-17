@@ -21,6 +21,7 @@ var system_health = true;
 var ui_frames = 10;
 var update_js_with_config = true;
 var hv_enabled = false;
+var software_state = "cold";
 // Changing raw, process dataset must force Applying changes
 var force_apply = false;
 // Variables for tracking leak detector unit status (even when it's unresponsive)
@@ -42,7 +43,6 @@ var hdfFileNameText = document.querySelector('#hdf-file-name-text').disabled;
 var hexitecConfigText = document.querySelector('#hexitec-config-text').disabled;
 var hvOffButton = document.querySelector('#hvOffButton').disabled;
 var hvOnButton = document.querySelector('#hvOnButton').disabled;
-var imageFrequencyButton = false;
 var initialiseButton = document.querySelector('#initialiseButton').disabled;
 var lvDatasetSelect = document.querySelector('#lv_dataset_select').disabled;
 var offsetsButton = document.querySelector('#offsetsButton').disabled;
@@ -321,6 +321,7 @@ function display_ui_states() {
 }
 
 function interlock_tripped_lock_ui() {
+
     // Note current settings (enabled or disabled)
     acquireButton = document.querySelector('#acquireButton').disabled;
     applyButton = document.querySelector('#applyButton').disabled;
@@ -339,9 +340,6 @@ function interlock_tripped_lock_ui() {
     initialiseButton = document.querySelector('#initialiseButton').disabled;
     lvDatasetSelect = document.querySelector('#lv_dataset_select').disabled;
     offsetsButton = document.querySelector('#offsetsButton').disabled;
-
-    // console.log("____________________ UI components before locking");
-    // display_ui_states();
     // Lock all controls while leak detector fault
     lock_ui_components();
 }
@@ -371,6 +369,26 @@ function lock_ui_components() {
         document.querySelector('#duration-text').disabled = true;
     else
         document.querySelector('#frames-text').disabled = true;
+    // Additional elements to lock
+    document.querySelector('#elog-text').disabled = true;
+    document.querySelector('#noneButton').disabled = true;
+    document.querySelector('#addButton').disabled = true;
+    document.querySelector('#disButton').disabled = true;
+    document.querySelector('#raw_data_radio1').disabled = true;
+    document.querySelector('#raw_data_radio2').disabled = true;
+    document.querySelector('#calibration_radio1').disabled = true;
+    document.querySelector('#calibration_radio2').disabled = true;
+    document.querySelector('#processed_data_radio1').disabled = true;
+    document.querySelector('#processed_data_radio2').disabled = true;
+    document.querySelector('#gradients-filename-text').disabled = true;
+    document.querySelector('#intercepts-filename-text').disabled = true;
+    document.querySelector('#bin-start-text').disabled = true;
+    document.querySelector('#bin-end-text').disabled = true;
+    document.querySelector('#bin-width-text').disabled = true;
+    document.querySelector('#pixel-grid-size-text').disabled = true;
+    document.querySelector('#threshold-mode-text').disabled = true;
+    document.querySelector('#threshold-filename-text').disabled = true;
+    document.querySelector('#threshold-value-text').disabled = true;
 }
 
 function interlock_restored_unlock_ui() {
@@ -394,6 +412,26 @@ function interlock_restored_unlock_ui() {
     document.querySelector('#offsetsButton').disabled = offsetsButton;
     document.querySelector('#mode_radio1').disabled = false;
     document.querySelector('#mode_radio2').disabled = false;
+    // Additional elements to unlock
+    document.querySelector('#elog-text').disabled = false;
+    document.querySelector('#noneButton').disabled = false;
+    document.querySelector('#addButton').disabled = false;
+    document.querySelector('#disButton').disabled = false;
+    document.querySelector('#raw_data_radio1').disabled = false;
+    document.querySelector('#raw_data_radio2').disabled = false;
+    document.querySelector('#calibration_radio1').disabled = false;
+    document.querySelector('#calibration_radio2').disabled = false;
+    document.querySelector('#processed_data_radio1').disabled = false;
+    document.querySelector('#processed_data_radio2').disabled = false;
+    document.querySelector('#gradients-filename-text').disabled = false;
+    document.querySelector('#intercepts-filename-text').disabled = false;
+    document.querySelector('#bin-start-text').disabled = false;
+    document.querySelector('#bin-end-text').disabled = false;
+    document.querySelector('#bin-width-text').disabled = false;
+    document.querySelector('#pixel-grid-size-text').disabled = false;
+    document.querySelector('#threshold-mode-text').disabled = false;
+    document.querySelector('#threshold-filename-text').disabled = false;
+    document.querySelector('#threshold-value-text').disabled = false;
 }
 
 function toggle_ui_elements(bBool) {
@@ -494,16 +532,25 @@ function poll_fem() {
             hexitec_endpoint.get_url(hexitec_url + 'detector')
                 .then(result => {
 
-                    // hexitec_endpoint.get_url(hexitec_url + 'detector')
-                    // .then(result => {
-                    //     // Note software state
-                    //     const software_state = result["detector"]["software_state"];
-                    //     console.log("SW State: " + software_state);
-                    //     // document.querySelector('#software-state').innerHTML = software_state;
-                    // })
-                    // .catch(error => {
-                    //     document.querySelector('#odin-control-error').innerHTML = "Polling Software States: " + error.message;
-                    // });
+                    hexitec_endpoint.get_url(hexitec_url + 'detector')
+                    .then(result => {
+                        // Note software state
+                        const new_software_state = result["detector"]["software_state"];
+                        // console.log("SW State was: " + software_state + " now is: " + new_software_state);
+                        if (new_software_state !== software_state)
+                        {
+                            // If state just became Interlocked or Acquiring, lock GUI processing options/buttons
+                            if ((new_software_state === "Interlocked") || (new_software_state === "Acquiring"))
+                                interlock_tripped_lock_ui();
+                            // If state no longer neither Interlocked nor Acquiring, unlock GUI ditto
+                            if ((software_state === "Interlocked") || (software_state === "Acquiring"))
+                                interlock_restored_unlock_ui();
+                            software_state = new_software_state;
+                        }
+                    })
+                    .catch(error => {
+                        document.querySelector('#odin-control-error').innerHTML = "Polling Software States: " + error.message;
+                    });
 
                     var adapter_leak = result["detector"]["status"]["leak"];
                     adapter_leak_fault = adapter_leak["fault"];
@@ -512,7 +559,6 @@ function poll_fem() {
 
                     const fem = result["detector"]["fem"]
                     const adapter_status = result["detector"]["status"] // adapter.py's status
-                    // document.querySelector('#all_data_sent').innerHTML = fem["all_data_sent"];
                     const hardware_connected = fem["hardware_connected"];
                     const hardware_busy = fem["hardware_busy"];
                     const system_initialised = fem["system_initialised"];
@@ -656,7 +702,6 @@ function poll_fem() {
                         document.querySelector('#vsr' + idx + '_hv').innerHTML = fem["vsr_hv_list"][i].toFixed(2);
                         document.querySelector('#vsr' + idx + '_sync').innerHTML = fem["vsr_sync_list"][i];
                     }
-                    /// To be implemented: system_health - true=fem OK, false=fem bad
 
                     // Traffic "light" green/red to indicate system good/bad
 

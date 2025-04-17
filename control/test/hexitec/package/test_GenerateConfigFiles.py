@@ -11,7 +11,7 @@ import pytest
 import json
 import sys
 
-from unittest.mock import patch, mock_open
+from unittest.mock import patch, mock_open, Mock
 
 
 class ObjectTestFixture(object):
@@ -161,6 +161,13 @@ class TestObject(unittest.TestCase):
         live_view_config = \
             self.test_detector_adapter.adapter.live_view_settings(plugin_name, settings)
         assert live_view_config == correct_live_view_settings
+
+    def test_generate_config_file_handle_permission_error(self):
+        """Test function handles exception."""
+        with patch("builtins.open", mock_open(read_data="data")) as mock_file:
+            mock_file.side_effect = PermissionError(Mock())
+            with self.assertRaises(PermissionError):
+                self.test_detector_adapter.adapter.generate_config_files()
 
     def test_summed_image_settings_fails_invalid_config(self):
         """Test function fails on bad settings."""

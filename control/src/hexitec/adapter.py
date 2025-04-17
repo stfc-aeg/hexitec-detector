@@ -321,6 +321,11 @@ class Hexitec():
 
         self.start_polling()
 
+    def initialize(self, adapters):
+        """Get references to adapters, and pass these to the classes that need to use them."""
+        self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
+        self.daq.initialize(self.adapters)
+
     def update_meta(self, meta):
         """Save to parameter tree meta data PUT by Manchester."""
         self.xtek_meta = meta
@@ -588,6 +593,7 @@ class Hexitec():
 
     def load_odin(self, msg=None):
         """Load Odin's settings from file."""
+        self.daq.check_daq_acquiring_data("odin settings")
         try:
             with open(self.odin_config_file, "r") as f:
                 config = json.load(f)
@@ -633,6 +639,7 @@ class Hexitec():
 
     def set_duration_enable(self, duration_enable):
         """Set duration enable, calculating number of frames accordingly."""
+        self.daq.check_daq_acquiring_data("duration enable")
         self.duration_enable = duration_enable
         self.fem.set_duration_enable(duration_enable)
         # Ensure DAQ, FEM have correct duration/number of frames configured
@@ -647,6 +654,7 @@ class Hexitec():
 
     def set_number_frames(self, frames):
         """Set number of frames in DAQ, FEM."""
+        self.daq.check_daq_acquiring_data("number of frames")
         # Ensure even number of frames
         if frames % 2:
             frames = self.round_to_even(frames)
@@ -659,6 +667,7 @@ class Hexitec():
 
     def set_duration(self, duration):
         """Set duration, calculate frames from frame rate and update DAQ, FEM."""
+        self.daq.check_daq_acquiring_data("duration")
         if duration <= 0:
             raise ParameterTreeError("duration must be above 0!")
         self.duration = duration
@@ -668,17 +677,13 @@ class Hexitec():
 
     def set_elog(self, entry):
         """Set the elog entry provided by the user through the UI."""
+        self.daq.check_daq_acquiring_data("eLog message")
         self.elog = entry
 
     def set_number_nodes(self, number_nodes):
         """Set number of nodes."""
         self.number_nodes = number_nodes
         self.daq.set_number_nodes(self.number_nodes)
-
-    def initialize(self, adapters):
-        """Get references to adapters, and pass these to the classes that need to use them."""
-        self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
-        self.daq.initialize(self.adapters)
 
     def start_acquisition(self, put_data=None):
         """Instruct DAQ and FEM to acquire data."""

@@ -1183,6 +1183,14 @@ class TestDAQ(unittest.TestCase):
         with pytest.raises(ParameterTreeError, match="image_frequency must be positive!"):
             self.test_daq.daq._set_image_frequency(-1)
 
+    def test_check_daq_acquiring_data(self):
+        """Test function raises ParameterTreeError if software_state is Acquiring."""
+        self.test_daq.daq.parent.software_state = "Acquiring"
+        parameter = "threshold value"
+        error = f"Acquiring: Can't change {parameter}"
+        with pytest.raises(ParameterTreeError, match=error):
+            self.test_daq.daq.check_daq_acquiring_data(parameter)
+
     def test_access_sensors_layout(self):
         """Test function sets sensors_layout."""
         sensors_layout = "2x6"

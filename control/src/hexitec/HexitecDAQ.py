@@ -817,6 +817,7 @@ class HexitecDAQ():
 
     def set_data_dir(self, directory):
         """Set directory of processed file."""
+        self.check_daq_acquiring_data("file path")
         self.file_dir = directory
 
     def set_number_frames(self, number_frames):
@@ -834,6 +835,7 @@ class HexitecDAQ():
 
     def set_file_name(self, name):
         """Set processed file name."""
+        self.check_daq_acquiring_data("filename")
         self.file_name = name
 
     def set_file_writing(self, writing):
@@ -890,9 +892,11 @@ class HexitecDAQ():
         self.pixels = self.rows * self.columns
 
     def _set_addition_enable(self, addition_enable):
+        self.check_daq_acquiring_data("addition")
         self.addition_enable = addition_enable
 
     def _set_calibration_enable(self, calibration_enable):
+        self.check_daq_acquiring_data("calibration")
         self.calibration_enable = calibration_enable
         if self.calibration_enable:
             self._set_bin_start(0)
@@ -904,6 +908,7 @@ class HexitecDAQ():
             self._set_bin_width(10)
 
     def _set_discrimination_enable(self, discrimination_enable):
+        self.check_daq_acquiring_data("discrimination")
         self.discrimination_enable = discrimination_enable
 
     def _set_lvframes_dataset_name(self, lvframes_dataset_name):
@@ -939,18 +944,21 @@ class HexitecDAQ():
         self.lvspectra_per_second = lvspectra_per_second
 
     def _set_pixel_grid_size(self, size):
+        self.check_daq_acquiring_data("pixel grid size")
         if (size in [3, 5]):
             self.pixel_grid_size = size
         else:
             raise ParameterTreeError("Must be either 3 or 5")
 
     def _set_gradients_filename(self, gradients_filename):
+        self.check_daq_acquiring_data("gradients filename")
         gradients_filename = self.data_config_path + gradients_filename
         if (os.path.isfile(gradients_filename) is False):
             raise ParameterTreeError("Gradients file doesn't exist")
         self.gradients_filename = gradients_filename
 
     def _set_intercepts_filename(self, intercepts_filename):
+        self.check_daq_acquiring_data("intercepts filename")
         intercepts_filename = self.data_config_path + intercepts_filename
         if (os.path.isfile(intercepts_filename) is False):
             raise ParameterTreeError("Intercepts file doesn't exist")
@@ -958,6 +966,7 @@ class HexitecDAQ():
 
     def _set_bin_end(self, bin_end):
         """Update bin_end and datasets' histograms' dimensions."""
+        self.check_daq_acquiring_data("bin end")
         if bin_end < 1:
             raise ParameterTreeError("bin_end must be positive!")
         self.bin_end = bin_end
@@ -965,6 +974,7 @@ class HexitecDAQ():
 
     def _set_bin_start(self, bin_start):
         """Update bin_start and datasets' histograms' dimensions."""
+        self.check_daq_acquiring_data("bin start")
         if bin_start < 0:
             raise ParameterTreeError("bin_start must be positive!")
         self.bin_start = bin_start
@@ -972,6 +982,7 @@ class HexitecDAQ():
 
     def _set_bin_width(self, bin_width):
         """Update bin_width and datasets' histograms' dimensions."""
+        self.check_daq_acquiring_data("bin width")
         if bin_width <= 0:
             raise ParameterTreeError("bin_width must be positive!")
         self.bin_width = bin_width
@@ -994,23 +1005,27 @@ class HexitecDAQ():
 
     def _set_pass_processed(self, pass_processed=None):
         """Toggle passing processed dataset on/off."""
+        self.check_daq_acquiring_data("processed dataset")
         if pass_processed is not None:
             self.pass_processed = pass_processed
         self.commit_config_before_acquire = True 
 
     def _set_pass_raw(self, pass_raw=None):
         """Toggle passing raw dataset on/off."""
+        self.check_daq_acquiring_data("raw dataset")
         if pass_raw is not None:
             self.pass_raw = pass_raw
         self.commit_config_before_acquire = True
 
     def _set_threshold_filename(self, threshold_filename):
+        self.check_daq_acquiring_data("threshold filename")
         threshold_filename = self.data_config_path + threshold_filename
         if (os.path.isfile(threshold_filename) is False):
             raise ParameterTreeError("Threshold file doesn't exist")
         self.threshold_filename = threshold_filename
 
     def _set_threshold_mode(self, threshold_mode):
+        self.check_daq_acquiring_data("threshold mode")
         threshold_mode = threshold_mode.lower()
         if (threshold_mode in self.THRESHOLDOPTIONS):
             self.threshold_mode = threshold_mode
@@ -1018,6 +1033,7 @@ class HexitecDAQ():
             raise ParameterTreeError("Must be one of: value, filename or none")
 
     def _set_threshold_value(self, threshold_value):
+        self.check_daq_acquiring_data("threshold_value")
         if threshold_value < 0:
             raise ParameterTreeError("threshold_value must be positive!")
         self.threshold_value = threshold_value
@@ -1036,6 +1052,16 @@ class HexitecDAQ():
         if image_frequency < 0:
             raise ParameterTreeError("image_frequency must be positive!")
         self.image_frequency = image_frequency
+
+    def check_daq_acquiring_data(self, parameter):
+        """Helper function checking whether mid acquisition.
+
+        Raise Exception if acquiring data.
+        """
+        if self.parent.software_state == "Acquiring":
+            error_message = "{}".format(f"Acquiring: Can't change {parameter}")
+            self.parent.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
 
     def _get_sensors_layout(self):
         return self.sensors_layout
