@@ -184,8 +184,6 @@ function resetButtonClicked() {
 }
 
 function disconnectButtonClicked() {
-    // Disconnect will automatically turn HV off, so signal "off" to Software
-    hvOffButtonClicked();
     setTimeout(function () {
         hexitec_endpoint.put({"disconnect_hardware": ""}, 'detector')
         .then(result => {
@@ -618,12 +616,14 @@ function poll_fem() {
                                 document.querySelector('#cancelButton').disabled = false;
                                 document.querySelector('#hdf-file-path-text').disabled = true;
                                 document.querySelector('#hdf-file-name-text').disabled = true;
+                                document.querySelector('#disconnectButton').disabled = true;
                             }
                             else {
                                 // Disable cancelButton but enable changing file[path]
                                 document.querySelector('#cancelButton').disabled = true;
                                 document.querySelector('#hdf-file-path-text').disabled = false;
                                 document.querySelector('#hdf-file-name-text').disabled = false;
+                                document.querySelector('#disconnectButton').disabled = false;
                             }
                         }
                         else {

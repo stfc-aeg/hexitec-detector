@@ -723,14 +723,13 @@ class HexitecFem():
                 raise HexitecFemError("No connection to disconnect")
             else:
                 self._set_status_error("")
-            # Stop acquisition if it's hung
-            if self.hardware_busy:
-                self.cancel_acquisition = True
             self.hardware_connected = False
             self._set_status_message("Disconnecting camera..")
             self.cam_disconnect()
             self._set_status_message("Camera disconnected")
             self.parent.software_state = "Disconnected"
+            # Disconnecting hardware automatically disables HV
+            self.hv_bias_enabled = False
         except HexitecFemError as e:
             self.flag_error("Failed to disconnect", str(e))
         except Exception as e:

@@ -593,8 +593,10 @@ class TestFem(unittest.TestCase):
     def test_disconnect_hardware(self):
         """Test the function works ok."""
         self.test_fem.fem.hardware_connected = True
+        self.test_fem.fem.hv_bias_enabled = True
         self.test_fem.fem.disconnect_hardware()
         assert self.test_fem.fem.hardware_connected is False
+        assert self.test_fem.fem.hv_bias_enabled is False
 
     def test_disconnect_hardware_fails_without_connection(self):
         """Test function fails without established hardware connection."""
@@ -602,14 +604,6 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.disconnect_hardware()
         error = "Failed to disconnect: No connection to disconnect"
         assert self.test_fem.fem._get_status_error() == error
-
-    def test_disconnect_hardware_handle_hardware_stuck(self):
-        """Test function can handle if acquisition's stuck."""
-        self.test_fem.fem.hardware_connected = True
-        self.test_fem.fem.hardware_busy = True
-        self.test_fem.fem.cam_disconnect = Mock()
-        self.test_fem.fem.disconnect_hardware()
-        assert self.test_fem.fem.cancel_acquisition is True
 
     def test_disconnect_hardware_handles_exception(self):
         """Test function can handle Exception thrown."""

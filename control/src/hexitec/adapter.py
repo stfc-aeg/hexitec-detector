@@ -523,22 +523,18 @@ class Hexitec():
             self.report_leak_detector_error(error_message)
             raise ParameterTreeError(error_message)
         else:
-            if self.fem.hardware_connected:
-                if self.daq.in_progress:
-                    # Stop hardware if still in acquisition
-                    if self.fem.hardware_busy:
-                        self.stop_acquisition()
-                    # Reset daq
-                    self.shutdown_processing()
-                    # Allow processing to shutdown before disconnecting hardware
-                    IOLoop.instance().call_later(0.2, self.fem.disconnect_hardware)
-                else:
-                    # Nothing in progress, disconnect hardware
-                    self.fem.disconnect_hardware(msg)
-            else:
-                error = "No connection to disconnect"
+            # Prevent disconnect if system busy
+            if self.fem.hardware_busy:
+                error = f"Cannot Disconnect while: {self.software_state}"
                 self.fem.flag_error(error)
                 raise ParameterTreeError(error)
+            else:
+                if self.fem.hardware_connected:
+                    self.fem.disconnect_hardware(msg)
+                else:
+                    error = "No connection to disconnect"
+                    self.fem.flag_error(error)
+                    raise ParameterTreeError(error)
 
     def strip_base_path(self, path, keyword):
         """Remove base path from path.
@@ -742,7 +738,6 @@ class Hexitec():
 
     def await_daq_configuring_fps(self):
         """Wait until DAQ configured frameProcessor plugin chain(s)."""
-        print(f" *** busy configuring FPS: {self.daq.busy_configuring_fps}")
         if (self.daq.busy_configuring_fps):
             IOLoop.instance().call_later(0.05, self.await_daq_configuring_fps)
         else:

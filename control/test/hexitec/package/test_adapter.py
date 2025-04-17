@@ -560,7 +560,8 @@ class TestDetector(unittest.TestCase):
     def test_disconnect_hardware(self):
         """Test function disconnects hardware."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
-        self.test_adapter.detector.daq.in_progress = False
+        self.test_adapter.detector.fem.hardware_busy = False
+        self.test_adapter.detector.fem.hardware_connected = True
         self.test_adapter.detector.fem.disconnect_hardware = Mock()
         # Only change to ensure function working ok:
         self.test_adapter.detector.disconnect_hardware("")
@@ -569,17 +570,14 @@ class TestDetector(unittest.TestCase):
     def test_disconnect_hardware_stalled_daq_and_hardware(self):
         """Test function gracefully handles stalled daq, hardware."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
-        self.test_adapter.detector.daq.in_progress = True
         self.test_adapter.detector.fem.hardware_busy = True
-        with patch("hexitec.adapter.IOLoop") as mock:
-            self.test_adapter.detector.stop_acquisition = Mock()
-            self.test_adapter.detector.shutdown_processing = Mock()
+        self.test_adapter.detector.fem.hardware_connected = True
+        software_state = "Acquiring"
+        self.test_adapter.detector.software_state = software_state
+        error = f"Cannot Disconnect while: {software_state}"
+        with pytest.raises(ParameterTreeError) as exc_info:
             self.test_adapter.detector.disconnect_hardware("")
-            assert self.test_adapter.detector.acquisition_in_progress is False
-            self.test_adapter.detector.stop_acquisition.assert_called()
-            self.test_adapter.detector.shutdown_processing.assert_called()
-            i = mock.instance()
-            i.call_later.assert_called_with(0.2, self.test_adapter.detector.fem.disconnect_hardware)
+        assert exc_info.value.args[0] == error
 
     def test_disconnect_hardware_handles_interlocked(self):
         """Test function prevents disconnecting when interlocked."""
@@ -595,6 +593,8 @@ class TestDetector(unittest.TestCase):
         """Test function prevents disconnecting when connection to disconnect."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.fem.hardware_connected = False
+        self.test_adapter.detector.fem.hardware_busy = False
+        self.test_adapter.detector.software_state = "Disconnected"
         error = "No connection to disconnect"
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_adapter.detector.disconnect_hardware("")
