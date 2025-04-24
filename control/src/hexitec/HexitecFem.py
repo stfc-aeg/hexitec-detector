@@ -497,7 +497,9 @@ class HexitecFem():
         Raise Exception if hardware not connected, or hardware busy.
         """
         if self.hardware_connected is not True:
-            raise ParameterTreeError(f"Can't {action} without a connection")
+            error = f"Can't {action} without a connection"
+            self.flag_error(error, "")
+            raise ParameterTreeError(error)
         if self.hardware_busy:
             error = f"Can't {action}, Hardware busy"
             self.flag_error(error, "")

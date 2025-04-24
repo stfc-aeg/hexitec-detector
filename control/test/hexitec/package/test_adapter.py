@@ -221,6 +221,7 @@ class TestAdapter(unittest.TestCase):
             'number_frames': self.test_adapter.put_data
         }
         self.test_adapter.adapter.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.fem.hardware_busy = False
         response = self.test_adapter.adapter.put(
             self.test_adapter.path,
             self.test_adapter.request)
@@ -643,6 +644,7 @@ class TestDetector(unittest.TestCase):
         config = self.test_adapter.config
         config['duration_enable'] = False
         self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.fem.hardware_busy = False
         self.test_adapter.detector.set_duration_enable = Mock()
         with patch("builtins.open", mock_open(read_data="read_data")):
             with patch("json.load") as mockery:
@@ -653,6 +655,7 @@ class TestDetector(unittest.TestCase):
     def test_load_odin_handles_file_not_found_error(self):
         """Test function handles FileNotFoundError."""
         self.test_adapter.detector.adapters = self.test_adapter.adapters
+        self.test_adapter.detector.fem.hardware_busy = False
         with patch("json.load") as mock_load:
             mock_load.side_effect = FileNotFoundError()
             self.test_adapter.detector.load_odin("")
@@ -680,18 +683,31 @@ class TestDetector(unittest.TestCase):
             m = "Loading default Odin values"
             self.test_adapter.detector.fem.flag_error.assert_called_with(m, "")
 
-    def test_set_duration_enable_true(self):
+    def test_set_duration_enable_to_true(self):
         """Test function can update duration enable to True."""
+        self.test_adapter.detector.fem.hardware_busy = False
         self.test_adapter.detector.set_duration_enable(True)
         assert self.test_adapter.detector.duration_enable is True
 
-    def test_set_duration_enable_False(self):
+    def test_set_duration_enable_to_false(self):
         """Test function can update duration enable to False."""
+        self.test_adapter.detector.fem.hardware_busy = False
         self.test_adapter.detector.set_duration_enable(False)
         assert self.test_adapter.detector.duration_enable is False
 
+    def test_set_duration_enable_handles_interlocked(self):
+        """Test function prevents updating duration enabled when interlocked."""
+        self.test_adapter.detector.software_state = "Interlocked"
+        self.test_adapter.detector.fem.hardware_busy = False
+        error = "Interlocked: Can't update duration enable"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=error)
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_adapter.detector.set_duration_enable(False)
+        assert exc_info.value.args[0] == error
+
     def test_set_number_frames(self):
         """Test function sets number of frames."""
+        self.test_adapter.detector.fem.hardware_busy = False
         frames = 12
         self.test_adapter.detector.set_number_frames(frames)
         assert self.test_adapter.detector.number_frames == frames
@@ -699,8 +715,25 @@ class TestDetector(unittest.TestCase):
         with pytest.raises(ParameterTreeError, match="frames must be above 0!"):
             self.test_adapter.detector.set_number_frames(-1)
 
+    def test_set_number_frames_blocked_while_busy(self):
+        """Test function cannot set number of frames while hardware busy."""
+        self.test_adapter.detector.fem.hardware_busy = True
+        with pytest.raises(ParameterTreeError, match="Cannot update number of frames while: Cold"):
+            self.test_adapter.detector.set_number_frames(8)
+
+    def test_set_number_frames_handles_interlocked(self):
+        """Test function prevents updating number of frames when interlocked."""
+        self.test_adapter.detector.software_state = "Interlocked"
+        self.test_adapter.detector.fem.hardware_busy = False
+        error = "Interlocked: Can't update number frames"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=error)
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_adapter.detector.set_number_frames(False)
+        assert exc_info.value.args[0] == error
+
     def test_set_duration(self):
-        """Test function sets collection duration."""
+        """Test function sets acquisition duration."""
+        self.test_adapter.detector.fem.hardware_busy = False
         duration = 2
         self.test_adapter.detector.set_duration(duration)
         assert self.test_adapter.detector.duration == duration
@@ -708,11 +741,45 @@ class TestDetector(unittest.TestCase):
         with pytest.raises(ParameterTreeError, match="duration must be above 0!"):
             self.test_adapter.detector.set_duration(-1)
 
+    def test_set_duration_blocked_while_busy(self):
+        """Test function cannot set acquisition duration while hardware busy."""
+        self.test_adapter.detector.fem.hardware_busy = True
+        with pytest.raises(ParameterTreeError, match="Cannot update duration while: Cold"):
+            self.test_adapter.detector.set_duration(5)
+
+    def test_set_duration_handles_interlocked(self):
+        """Test function prevents updating duration when interlocked."""
+        self.test_adapter.detector.software_state = "Interlocked"
+        self.test_adapter.detector.fem.hardware_busy = False
+        error = "Interlocked: Can't update duration"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=error)
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_adapter.detector.set_duration(5)
+        assert exc_info.value.args[0] == error
+
     def test_set_elog(self):
         """Test function sets elog correctly."""
+        self.test_adapter.detector.fem.hardware_busy = False
         entry = "Captain's log"
         self.test_adapter.detector.set_elog(entry)
         assert self.test_adapter.detector.elog == entry
+
+    def test_set_elog_blocked_while_busy(self):
+        """Test function cannot set elog message while hardware busy."""
+        self.test_adapter.detector.fem.hardware_busy = True
+        entry = "Captain's log"
+        with pytest.raises(ParameterTreeError, match="Cannot update eLog message while: Cold"):
+            self.test_adapter.detector.set_elog(entry)
+
+    def test_set_elog_handles_interlocked(self):
+        """Test function prevents updating elog when interlocked."""
+        self.test_adapter.detector.software_state = "Interlocked"
+        self.test_adapter.detector.fem.hardware_busy = False
+        error = "Interlocked: Can't update eLog message"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=error)
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_adapter.detector.set_elog("different message")
+        assert exc_info.value.args[0] == error
 
     def test_set_number_nodes(self):
         """Test function sets number of nodes."""
@@ -736,6 +803,7 @@ class TestDetector(unittest.TestCase):
 
     def test_detector_set_acq(self):
         """Test function can set number of frames."""
+        self.test_adapter.detector.fem.hardware_busy = False
         frames = 10
         self.test_adapter.detector.set_number_frames(frames)
         assert self.test_adapter.detector.number_frames == frames

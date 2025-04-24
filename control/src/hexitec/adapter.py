@@ -635,7 +635,15 @@ class Hexitec():
 
     def set_duration_enable(self, duration_enable):
         """Set duration enable, calculating number of frames accordingly."""
-        self.daq.check_daq_acquiring_data("duration enable")
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't update duration enable")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        # Prevent if system busy
+        if self.fem.hardware_busy:
+            error = f"Cannot update duration enable while: {self.software_state}"
+            self.fem.flag_error(error)
+            raise ParameterTreeError(error)
         self.duration_enable = duration_enable
         self.fem.set_duration_enable(duration_enable)
         # Ensure DAQ, FEM have correct duration/number of frames configured
@@ -650,7 +658,15 @@ class Hexitec():
 
     def set_number_frames(self, frames):
         """Set number of frames in DAQ, FEM."""
-        self.daq.check_daq_acquiring_data("number of frames")
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't update number frames")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        # Prevent if system busy
+        if self.fem.hardware_busy:
+            error = f"Cannot update number of frames while: {self.software_state}"
+            self.fem.flag_error(error)
+            raise ParameterTreeError(error)
         # Ensure even number of frames
         if frames % 2:
             frames = self.round_to_even(frames)
@@ -663,7 +679,15 @@ class Hexitec():
 
     def set_duration(self, duration):
         """Set duration, calculate frames from frame rate and update DAQ, FEM."""
-        self.daq.check_daq_acquiring_data("duration")
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't update duration")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        # Prevent if system busy
+        if self.fem.hardware_busy:
+            error = f"Cannot update duration while: {self.software_state}"
+            self.fem.flag_error(error)
+            raise ParameterTreeError(error)
         if duration <= 0:
             raise ParameterTreeError("duration must be above 0!")
         self.duration = duration
@@ -673,7 +697,15 @@ class Hexitec():
 
     def set_elog(self, entry):
         """Set the elog entry provided by the user through the UI."""
-        self.daq.check_daq_acquiring_data("eLog message")
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't update eLog message")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        # Prevent if system busy
+        if self.fem.hardware_busy:
+            error = f"Cannot update eLog message while: {self.software_state}"
+            self.fem.flag_error(error)
+            raise ParameterTreeError(error)
         self.elog = entry
 
     def set_number_nodes(self, number_nodes):
