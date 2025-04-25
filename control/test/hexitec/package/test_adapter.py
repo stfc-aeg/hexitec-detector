@@ -680,7 +680,7 @@ class TestDetector(unittest.TestCase):
         with patch("json.load") as mock_load:
             mock_load.side_effect = Exception()
             self.test_adapter.detector.load_odin("")
-            m = "Loading default Odin values"
+            m = "Loading Odin values"
             self.test_adapter.detector.fem.flag_error.assert_called_with(m, "")
 
     def test_set_duration_enable_to_true(self):

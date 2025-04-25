@@ -594,8 +594,9 @@ class Hexitec():
             with open(self.odin_config_file, "r") as f:
                 config = json.load(f)
                 self.fem.set_hexitec_config(config["fem/hexitec_config"])
-                self.daq.set_file_name(config["daq/file_name"])
+                # Set file directory, then filename
                 self.daq.set_data_dir(config["daq/file_dir"])
+                self.daq.set_file_name(config["daq/file_name"])
                 self.daq._set_addition_enable(config["daq/addition_enable"])
                 self.daq._set_pixel_grid_size(config["daq/pixel_grid_size"])
                 self.daq._set_calibration_enable(config["daq/calibration_enable"])
@@ -631,7 +632,7 @@ class Hexitec():
         except JSONDecodeError as e:
             self.fem.flag_error("Loading Odin config - Bad json?", str(e))
         except Exception as e:
-            self.fem.flag_error("Loading default Odin values", str(e))
+            self.fem.flag_error("Loading Odin values", str(e))
 
     def set_duration_enable(self, duration_enable):
         """Set duration enable, calculating number of frames accordingly."""

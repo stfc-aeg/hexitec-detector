@@ -367,6 +367,16 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq.set_file_name("new_file_name.hdf")
         assert self.test_daq.daq.file_name == "new_file_name.hdf"
 
+    def test_set_file_name_handles_file_already_exists(self):
+        """Test function raises exception if filename already exist."""
+        with patch("os.path.isfile") as mock_isfile:
+            mock_isfile.return_value = True
+            error = "HDF5 filename already exists"
+            with pytest.raises(ParameterTreeError) as exc_info:
+                self.test_daq.daq.set_file_name("file_already_exists")
+            assert exc_info.value.args[0] == error
+            assert exc_info.type is ParameterTreeError
+
     def test_set_file_writing_to_true(self):
         """Test set file writing to True."""
         self.test_daq.daq.set_file_writing(True)
@@ -418,7 +428,7 @@ class TestDAQ(unittest.TestCase):
             instance = mock_loop.instance()
             instance.call_later.assert_called_with(1.3, self.test_daq.daq.acquisition_check_loop)
 
-    def test_start_prepare_odin_fr_disconnected(self):
+    def test_prepare_odin_fr_disconnected(self):
         """Test function raises Exception if fr(s) disconnected."""
         new_fr_data = {
             "not_value": False
@@ -509,6 +519,21 @@ class TestDAQ(unittest.TestCase):
                 patch.dict(self.test_daq.fp_data, new_fp_data, clear=True):
 
             error = "Frame Processor(s) not configured!"
+            with pytest.raises(ParameterTreeError) as exc_info:
+                self.test_daq.daq.prepare_odin()
+            assert exc_info.value.args[0] == error
+            assert exc_info.type is ParameterTreeError
+
+    def test_prepare_odin_fp_hdf_filename_exists(self):
+        """Test function raises Exception if HDF filename already exists."""
+        self.test_daq.daq.get_adapter_status = Mock(return__value=True)
+        self.test_daq.daq.are_processes_connected = Mock(return__value=True)
+        self.test_daq.daq.are_processes_configured = Mock(return__value=True)
+        self.test_daq.daq.are_buffers_available = Mock(return__value=True)
+        with patch("os.path.isfile") as mock_isfile:
+            mock_isfile.return_value = True
+
+            error = "HDF5 filename already exists"
             with pytest.raises(ParameterTreeError) as exc_info:
                 self.test_daq.daq.prepare_odin()
             assert exc_info.value.args[0] == error

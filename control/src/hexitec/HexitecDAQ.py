@@ -333,6 +333,13 @@ class HexitecDAQ():
             raise ParameterTreeError(error)
         else:
             logging.debug("Frame Processor(s) connected and configured")
+        # Check HDF5 filename already exists?
+        full_path = self.file_dir + self.file_name + ".h5"
+        if os.path.isfile(full_path):
+            error = "HDF5 filename already exists"
+            self.parent.fem.flag_error(error, "")
+            self.in_error = True
+            raise ParameterTreeError(error)
         # DAQ is ready if no data collection in progress
         if not self.in_progress:
             self.daq_ready = True
@@ -836,6 +843,9 @@ class HexitecDAQ():
     def set_file_name(self, name):
         """Set processed file name."""
         self.check_daq_acquiring_data("filename")
+        full_path = self.file_dir + name + ".h5"
+        if os.path.isfile(full_path):
+            raise ParameterTreeError("HDF5 filename already exists")
         self.file_name = name
 
     def set_file_writing(self, writing):

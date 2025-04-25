@@ -801,7 +801,7 @@ function poll_fem() {
 
         })
         .catch(error => {
-            document.querySelector('#odin-control-error').innerHTML = "Odin_server unreachable";
+            document.querySelector('#odin-control-error').innerHTML = "Odin_control unreachable";
         });
     if (polling_thread_running === true) {
         window.setTimeout(poll_fem, 850);
