@@ -471,6 +471,10 @@ class Archiver():
                 outshape = (num_frames[index], inshape[index][1-n], inshape[index][2-n])
             # print(f" outshape = {outshape}")
 
+            # In case user tries to add datasets that already exist in destination file
+            d = datetime.now()
+            optional_dataset_prefix = f"{d.hour:02}" + ":" + f"{d.minute:02}" + ":" + f"{d.second:02}" + "/"
+
             layout = h5py.VirtualLayout(shape=outshape, dtype=dtype[index])
 
             try:
@@ -490,7 +494,13 @@ class Archiver():
                             layout[temp_idx:num_frames[index]:num_sources, :, :] = vsource
                         dataset_index[current_index] += 1
                 with h5py.File(dest_file, 'a', libver='latest') as outfile:
-                    outfile.create_virtual_dataset(dataset_names[index], layout)
+                    if dataset_names[index] in outfile.keys():
+                        amended_dataset_name = optional_dataset_prefix + dataset_names[index]
+                        msg = f"Dataset: '{dataset_names[index]}' already exist in HDF5 file"
+                        logging.warning(f"{msg};Amending dataset to '{amended_dataset_name}'")
+                        outfile.create_virtual_dataset(amended_dataset_name, layout)
+                    else:
+                        outfile.create_virtual_dataset(dataset_names[index], layout)
             except ValueError as e:
                 logging.error(f"Couldn't map virtual dataset into {dest_file}: {e}")
                 return -3

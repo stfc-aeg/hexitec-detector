@@ -436,7 +436,14 @@ function toggle_ui_elements(bBool) {
     try {
         document.querySelector('#initialiseButton').disabled = bBool;
         document.querySelector('#acquireButton').disabled = bBool;
-        document.querySelector('#cancelButton').disabled = bBool;
+        if (software_state === "Acquiring")
+        {
+            document.querySelector('#cancelButton').disabled = false;
+        }
+        else
+        {
+            document.querySelector('#cancelButton').disabled = bBool;
+        }
         if (hv_enabled)
             document.querySelector('#hvOffButton').disabled = bBool;
         else
@@ -801,7 +808,7 @@ function poll_fem() {
 
         })
         .catch(error => {
-            document.querySelector('#odin-control-error').innerHTML = "Odin_control unreachable";
+            document.querySelector('#odin-control-error').innerHTML = "Odin_server unreachable";
         });
     if (polling_thread_running === true) {
         window.setTimeout(poll_fem, 850);
