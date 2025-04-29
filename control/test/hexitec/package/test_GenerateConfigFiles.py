@@ -9,7 +9,6 @@ from hexitec.GenerateConfigFiles import GenerateConfigFiles
 import unittest
 import pytest
 import json
-import sys
 
 from unittest.mock import patch, mock_open, Mock
 

@@ -7,7 +7,6 @@ Christian Angelsen, STFC Detector Systems Software Group
 import asyncio
 import unittest
 import pytest
-import sys
 import os
 
 from odin.adapters.parameter_tree import ParameterTreeError
@@ -52,7 +51,7 @@ class FemTestFixture(object):
         }
 
         self.config = {
-                "farm_mode": "/some/config.json"
+            "farm_mode": "/some/config.json"
         }
 
         with patch("hexitec.HexitecDAQ.ParameterTree"):
@@ -92,7 +91,7 @@ class TestFem(unittest.TestCase):
             "farm_target_ip": "10.0.1.2 10.0.1.3",
             "farm_target_mac": "5c:6f:69:f8:57:d0 5c:6f:69:f8:a3:e0",
             "farm_target_port": "61649 61649"
-            }
+        }
         self.test_fem.fem.verify_parameters = False
         with patch("json.load") as mock_load:
             with patch("builtins.open", mock_open(read_data="data")):
@@ -787,7 +786,7 @@ class TestFem(unittest.TestCase):
 
     def test_acquire_data_completed(self):
         """Test function handles normal end of acquisition."""
-        self.test_fem.fem.acquire_start_time = datetime.now(timezone.utc).isoformat()
+        self.test_fem.fem.acquire_start_time = datetime.now(timezone.utc).astimezone().isoformat()
         self.test_fem.fem.parent.software_state = "Cold"
         self.test_fem.fem.acquire_data_completed()
         assert self.test_fem.fem.hardware_busy is False
@@ -1478,7 +1477,7 @@ class TestFem(unittest.TestCase):
 
     def test_create_iso_timestamp(self):
         """Test function works ok."""
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(timezone.utc).astimezone().isoformat()
         ts = self.test_fem.fem.create_iso_timestamp()
         # Omit last 9 characters as microseconds differ (timezone info form final 6 characters)
         assert timestamp[:-9] == ts[:-9]
@@ -1530,7 +1529,7 @@ class TestHexitecFem(unittest.TestCase):
         }
         with self.assertRaises(ParameterTreeError) as context:
             self.test_fem.extract_interface_parameters("eth0")
-        self.assertIn("Control Interface 'eth0' couldn't parse IP from 'None'", str(context.exception))
+        self.assertIn("Control Interface 'eth0' couldn't parse IP from 'None';Check power?", str(context.exception))
 
     @patch("psutil.net_if_addrs")
     def test_extract_interface_parameters_handles_no_mac_address(self, mock_net_if_addrs):
@@ -1541,4 +1540,4 @@ class TestHexitecFem(unittest.TestCase):
         }
         with self.assertRaises(ParameterTreeError) as context:
             self.test_fem.extract_interface_parameters("eth0")
-        self.assertIn("Control Interface 'eth0' couldn't parse MAC from 'None'", str(context.exception))
+        self.assertIn("Control Interface 'eth0' couldn't parse MAC from 'None';Check power?", str(context.exception))

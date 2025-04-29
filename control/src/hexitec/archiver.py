@@ -537,7 +537,7 @@ class Archiver():
 
     def create_timestamp(self):
         """Returns timestamp of now."""
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(timezone.utc).astimezone().isoformat()
 
     def get_log_messages(self, last_message_timestamp):
         """This method gets the log messages that are appended to the log message deque by the

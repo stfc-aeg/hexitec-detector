@@ -121,7 +121,7 @@ class TestArchiver(unittest.TestCase):
             self.assertFalse(bOK)
             self.assertEqual(errors, ['error_line'])
             # self.assertEqual(rc, 0)
-            #AssertionError: <MagicMock name='Popen().returncode' id='140562371779696'> != 0
+            # -> AssertionError: <MagicMock name='Popen().returncode' id='140562371779696'> != 0
 
     def test_parse_rsync_output_sets_filename_transferring(self):
         self.archiver.parse_rsync_output(b'08-11-002_000000.h5')

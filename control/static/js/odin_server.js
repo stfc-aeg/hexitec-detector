@@ -188,6 +188,8 @@ function disconnectButtonClicked() {
         hexitec_endpoint.put({"disconnect_hardware": ""}, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
+            document.querySelector('#hvOffButton').disabled = true;
+            document.querySelector('#hvOnButton').disabled = false;
         })
         .catch(error => {
             document.querySelector('#odin-control-error').innerHTML = error.message;
@@ -795,10 +797,10 @@ function poll_fem() {
                         else {
                             var numErrors = result["value"][i].error.length;
                             document.querySelector('#fp_errors' + (i+1)).innerHTML = numErrors;
-                            for (var j = 0; j < numErrors; j++) {
-                                // Report all nodes error(s)
-                                // console.log(" Node" + i + ", Err line " + j + " : " + result["value"][i].error[j]);
-                            }
+                            // for (var j = 0; j < numErrors; j++) {
+                            //     // Report all nodes error(s)
+                            //     console.log(" Node" + i + ", Err line " + j + " : " + result["value"][i].error[j]);
+                            // }
                         }
                     }
                 })

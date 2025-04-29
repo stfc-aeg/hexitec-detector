@@ -271,11 +271,11 @@ class HexitecFem():
                     if str(interface_param.family) == "AddressFamily.AF_PACKET":
                         mac_address = str(interface_param.address)
         if ip_address is None:
-            error = f"Control Interface '{iface}' couldn't parse IP from '{ip_address}'"
-            raise ParameterTreeError(error)
+            e = f"Control Interface '{iface}' couldn't parse IP from '{ip_address}';Check power?"
+            raise ParameterTreeError(e)
         if mac_address is None:
-            error = f"Control Interface '{iface}' couldn't parse MAC from '{mac_address}'"
-            raise ParameterTreeError(error)
+            e = f"Control Interface '{iface}' couldn't parse MAC from '{mac_address}';Check power?"
+            raise ParameterTreeError(e)
         return ip_address, mac_address
 
     def extract_string_parameters(self, param):
@@ -1665,7 +1665,7 @@ class HexitecFem():
 
     def create_iso_timestamp(self):
         """Returns an ISO formatted timestamp of now."""
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(timezone.utc).astimezone().isoformat()
 
     def get_log_messages(self, last_message_timestamp):
         """This method gets the log messages that are appended to the log message deque by the

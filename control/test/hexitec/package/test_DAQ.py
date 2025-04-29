@@ -11,7 +11,6 @@ import unittest
 import os.path
 import pytest
 import time
-import sys
 
 from odin.adapters.parameter_tree import ParameterTreeError
 
@@ -590,7 +589,7 @@ class TestDAQ(unittest.TestCase):
     @patch('time.time', return_value=time.time()+1)
     def test_calculate_remaining_collection_time(self, mock_time):
         self.test_daq.daq.parent.fem.duration = 10
-        self.test_daq.daq.parent.fem.acquire_start_time = datetime.now(timezone.utc).isoformat()
+        self.test_daq.daq.parent.fem.acquire_start_time = datetime.now(timezone.utc).astimezone().isoformat()
         remaining_time = self.test_daq.daq.calculate_remaining_collection_time()
         self.assertAlmostEqual(remaining_time, self.test_daq.daq.parent.fem.duration, delta=1)
 
@@ -1390,7 +1389,7 @@ class TestDAQ(unittest.TestCase):
     @patch('hexitec.HexitecDAQ.GenerateConfigFiles')
     @patch('hexitec.HexitecDAQ.IOLoop.instance')
     def test_commit_configuration_handles_gcf_throws_exception(self, mock_ioloop_instance,
-                                                mock_generate_config_files):
+                                                               mock_generate_config_files):
         mock_ioloop_instance.return_value = MagicMock()
         mock_generate_config_files.return_value.generate_config_files.side_effect = \
             Exception("Err")
@@ -1408,13 +1407,12 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq.pass_raw = True
         self.test_daq.daq.parent.fem.flag_error = Mock()
 
-        error = Exception("Err")
         self.test_daq.daq.commit_configuration()
 
+#       # error = Exception("Err")
 #         self.test_daq.daq.parent.fem.flag_error.assert_called_with(error)
 # E           Expected: mock(Exception('Err'))
 # E             Actual: mock(Exception('Err'))
-
 
     def test_submit_configuration_hdf_branch(self):
         """Test function handles sample parameter tree ok."""

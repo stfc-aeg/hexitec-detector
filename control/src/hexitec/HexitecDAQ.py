@@ -367,7 +367,7 @@ class HexitecDAQ():
         logging.debug("Starting File Writer")
         self.set_file_writing(True)
         # Diagnostics:
-        self.daq_start_time = datetime.now(timezone.utc).isoformat()
+        self.daq_start_time = datetime.now(timezone.utc).astimezone().isoformat()
         self.fem_not_busy = "0"
         self.daq_stop_time = "0"
         # About to receive fem data, daq therefore now busy
@@ -403,7 +403,7 @@ class HexitecDAQ():
         else:
             # Allow watchdog to interrupt processing if timed out
             self.processing_interruptable = True
-            self.fem_not_busy = datetime.now(timezone.utc).isoformat()
+            self.fem_not_busy = datetime.now(timezone.utc).astimezone().isoformat()
             IOLoop.instance().call_later(0.5, self.processing_check_loop)
 
     def processing_check_loop(self):
@@ -475,7 +475,7 @@ class HexitecDAQ():
             else:
                 self.parent.fem.flag_error("DAQ timed out, file didn't close")
         self.hdf_retry = 0
-        self.daq_stop_time = datetime.now(timezone.utc).isoformat()
+        self.daq_stop_time = datetime.now(timezone.utc).astimezone().isoformat()
         self.set_file_writing(False)
         self.frames_processed = self.get_total_frames_processed(self.last_plugin_configured)
         self.processed_remaining = self.number_frames - self.frames_processed
@@ -632,7 +632,7 @@ class HexitecDAQ():
         # Only write parent's (Hexitec class) parameter tree's config files once
         if metadata_group.name == u'/hexitec':
             # Add additional attribute to record current date
-            metadata_group.attrs['runDate'] = datetime.now(timezone.utc).isoformat()
+            metadata_group.attrs['runDate'] = self.parent.fem.acquire_start_time
             # Write the configuration files into the metadata group
             self.config_ds = {}
             str_type = h5py.special_dtype(vlen=str)

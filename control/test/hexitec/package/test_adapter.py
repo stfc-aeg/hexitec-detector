@@ -10,8 +10,6 @@ from odin.adapters.parameter_tree import ParameterTreeError
 from json.decoder import JSONDecodeError
 import unittest
 import pytest
-import time
-import sys
 import os
 
 from unittest.mock import Mock, MagicMock, patch, mock_open
@@ -376,15 +374,15 @@ class TestDetector(unittest.TestCase):
                     'status': 'OK',
                     'fault': False,
                     'warning': False
-                    }
-                },
+                }
+            },
             'status': {
                 'leak': {
                     'status_code': 200,
                     'error': 'OK'
-                    }
                 }
             }
+        }
         fault, warning = self.test_adapter.detector.parse_leak_detector_response(r)
         assert r["leak"]["system"]["fault"] == fault
         assert r["leak"]["system"]["warning"] == warning
@@ -836,9 +834,9 @@ class TestDetector(unittest.TestCase):
 
         with patch("hexitec.adapter.IOLoop") as mock_loop:
             self.test_adapter.detector.await_daq_configuring_fps()
-            instance = mock_loop.instance()
-            instance.call_later.assert_called_with(0.05, \
-                self.test_adapter.detector.await_daq_configuring_fps)
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(0.05,
+                                            self.test_adapter.detector.await_daq_configuring_fps)
 
     def test_await_daq_configuring_fps_handle_configuring_finished(self):
         """Test function handles daq no longer busy."""

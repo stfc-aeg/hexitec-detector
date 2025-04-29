@@ -594,9 +594,6 @@ class Hexitec():
             with open(self.odin_config_file, "r") as f:
                 config = json.load(f)
                 self.fem.set_hexitec_config(config["fem/hexitec_config"])
-                # Set file directory, then filename
-                self.daq.set_data_dir(config["daq/file_dir"])
-                self.daq.set_file_name(config["daq/file_name"])
                 self.daq._set_addition_enable(config["daq/addition_enable"])
                 self.daq._set_pixel_grid_size(config["daq/pixel_grid_size"])
                 self.daq._set_calibration_enable(config["daq/calibration_enable"])
@@ -627,6 +624,9 @@ class Hexitec():
                 else:
                     self.set_number_frames(config["number_frames"])
                     self.set_duration_enable(config["duration_enable"])
+                # Set file directory, then filename
+                self.daq.set_data_dir(config["daq/file_dir"])
+                self.daq.set_file_name(config["daq/file_name"])
         except FileNotFoundError as e:
             self.fem.flag_error("Loading Odin config - file missing", str(e))
         except JSONDecodeError as e:

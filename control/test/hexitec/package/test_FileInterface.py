@@ -10,7 +10,6 @@ from odin.adapters.parameter_tree import ParameterTreeError
 import unittest
 import pytest
 import time
-import sys
 import os
 
 from unittest.mock import Mock, patch
