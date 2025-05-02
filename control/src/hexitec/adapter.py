@@ -580,6 +580,7 @@ class Hexitec():
         config["duration"] = self.duration
         config["duration_enable"] = self.duration_enable
         config["fem/hexitec_config"] = self.strip_base_path(self.fem.hexitec_config, "control/")
+        config["fem/hardware_triggering"] = self.fem.hardware_triggering
         config["number_frames"] = self.number_frames
         try:
             with open(self.odin_config_file, "w") as f:
@@ -624,6 +625,7 @@ class Hexitec():
                 else:
                     self.set_number_frames(config["number_frames"])
                     self.set_duration_enable(config["duration_enable"])
+                self.fem.set_hardware_triggering(config["fem/hardware_triggering"])
                 # Set file directory, then filename
                 self.daq.set_data_dir(config["daq/file_dir"])
                 self.daq.set_file_name(config["daq/file_name"])
