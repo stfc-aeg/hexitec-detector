@@ -481,6 +481,7 @@ class HexitecFem():
     def connect(self):
         """Set up hardware connection."""
         try:
+            print(" [E conn PRE !")
             self.x10g_rdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
                                      rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
                                      debug=False, uart_offset=0x0)
@@ -489,6 +490,7 @@ class HexitecFem():
             self.vsr_list = []
             self.vsr_list.append(
                 VsrModule(self.x10g_rdma, slot=1, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            print(" [E conn DONE")
             self.vsr_list.append(
                 VsrModule(self.x10g_rdma, slot=2, init_time=0, addr_mapping=self.vsr_addr_mapping))
             self.vsr_list.append(
@@ -556,6 +558,7 @@ class HexitecFem():
                 self.firmware_time = build_time
                 self.firmware_version = fw_version
                 self.read_firmware_version = False
+
             for vsr in self.vsr_list:
                 self.read_temperatures_humidity_values(vsr)
                 self.read_pwr_voltages(vsr)  # pragma: no cover
@@ -688,7 +691,7 @@ class HexitecFem():
             # Switch HV (Power Board) on
             success = self.broadcast_VSRs.hv_enable()
             hv_statuses = self.broadcast_VSRs._get_status(hv=True, all_vsrs=True)
-            logging.debug("HV Status: 0x{}".format(hv_statuses))
+            logging.debug("HV Status: {}".format(hv_statuses))
             if not success:
                 logging.debug("HV Status: {}".format(hv_statuses))
                 message = "VSRs' HV didn't turn on"
@@ -728,7 +731,7 @@ class HexitecFem():
             error = "Data acquisition failed"
             self.flag_error(error, str(e))
             self.hardware_busy = False
-            raise ParameterTreeError(f"{error}: {str(e)}")
+            # End of the line, cannot raise exception beyond current thread
 
     def disconnect_hardware(self, msg=None):
         """Disconnect camera."""
@@ -773,7 +776,7 @@ class HexitecFem():
         """Send commands to disconnect camera."""
         self.hardware_connected = False
         try:
-            self.vsr_list[0].disable_vsr(0xFF)
+            self.vsr_list[0].disable_vsr(0xFF)  # The culprit
             logging.debug("Modules Disabled")
             self.disconnect()
             logging.debug("Camera is Disconnected")
@@ -816,7 +819,8 @@ class HexitecFem():
             error = "Failed to start acquire_data"
             self.flag_error(error, str(e))
             self.hardware_busy = False
-            raise ParameterTreeError(error)
+            self.parent.daq.in_progress = False
+            raise ParameterTreeError(error) from None
 
     def check_acquire_finished(self):
         """Check whether all data transferred, until completed or cancelled by user."""
@@ -1172,6 +1176,13 @@ class HexitecFem():
             for vsr in self.vsr_list:
                 vsr._disable_training()
 
+            # # Testing using synchronisation mode enabled - T1:
+            # self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x2, burst_len=1)
+            # logging.debug("synchronisation mode enabled")
+            # self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x3, burst_len=1)
+            # logging.debug("fpga state machine enabled")
+
+            # Original code:
             self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x1, burst_len=1)
             logging.debug("fpga state machine enabled")
 

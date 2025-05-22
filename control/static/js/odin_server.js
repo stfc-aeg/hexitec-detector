@@ -20,7 +20,7 @@ var polling_thread_running = false;
 var system_health = true;
 var ui_frames = 10;
 var update_js_with_config = true;
-var hv_enabled = false;
+var hv_enabled = false; // Tracks status of HV buttons, or what they should be
 var software_state = "cold";
 // Changing raw, process dataset must force Applying changes
 var force_apply = false;
@@ -87,6 +87,7 @@ function applyButton2Clicked() {
 }
 
 function connectButtonClicked() {
+    hv_enabled = false;
     hexitec_endpoint.put({"connect_hardware": ""}, 'detector')
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
@@ -189,7 +190,7 @@ function disconnectButtonClicked() {
         .then(result => {
             document.querySelector('#odin-control-error').innerHTML = "";
             document.querySelector('#hvOffButton').disabled = true;
-            document.querySelector('#hvOnButton').disabled = false;
+            document.querySelector('#hvOnButton').disabled = true;
         })
         .catch(error => {
             document.querySelector('#odin-control-error').innerHTML = error.message;
