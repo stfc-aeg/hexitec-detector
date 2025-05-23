@@ -559,6 +559,8 @@ class HexitecFem():
 
     def disconnect(self):
         """Disconnect hardware connection."""
+        del self.broadcast_VSRs
+        del self.vsr_list[:]
         self.x10g_rdma.close()
 
     def cleanup(self):
@@ -676,7 +678,7 @@ class HexitecFem():
             # Switch HV (Power Board) on
             success = self.broadcast_VSRs.hv_enable()
             hv_statuses = self.broadcast_VSRs._get_status(hv=True, all_vsrs=True)
-            logging.debug("HV Status: 0x{}".format(hv_statuses))
+            logging.debug("HV Status: {}".format(hv_statuses))
             if not success:
                 logging.debug("HV Status: {}".format(hv_statuses))
                 message = "VSRs' HV didn't turn on"
@@ -691,7 +693,7 @@ class HexitecFem():
             self.flag_error("Power up modules Error", str(e))
             self.hardware_connected = False
             self.hardware_busy = False
-            raise HexitecFemError(e)
+            # End of the line, cannot raise exception beyond scheduled callback function
 
     def initialise_hardware(self, msg=None):
         """Initialise sensors, load enables, etc to initialise both VSR boards."""
@@ -716,7 +718,7 @@ class HexitecFem():
             error = "Data acquisition failed"
             self.flag_error(error, str(e))
             self.hardware_busy = False
-            raise ParameterTreeError(f"{error}: {str(e)}")
+            # End of the line, cannot raise exception beyond scheduled callback function
 
     def disconnect_hardware(self, msg=None):
         """Disconnect camera."""
@@ -761,8 +763,10 @@ class HexitecFem():
         """Send commands to disconnect camera."""
         self.hardware_connected = False
         try:
-            self.vsr_list[0].disable_vsr(0xFF)
-            logging.debug("Modules Disabled")
+            # Only disable VSRs if detector is (still) powered
+            if self.parent.leak_fault_counter == 0:
+                self.vsr_list[0].disable_vsr(0xFF)  # The culprit
+                logging.debug("Modules Disabled")
             self.disconnect()
             logging.debug("Camera is Disconnected")
         except socket_error as e:
@@ -804,7 +808,8 @@ class HexitecFem():
             error = "Failed to start acquire_data"
             self.flag_error(error, str(e))
             self.hardware_busy = False
-            raise ParameterTreeError(error)
+            self.parent.daq.in_progress = False
+            raise ParameterTreeError(error) from None
 
     def check_acquire_finished(self):
         """Check whether all data transferred, until completed or cancelled by user."""

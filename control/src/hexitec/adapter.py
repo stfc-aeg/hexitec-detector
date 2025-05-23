@@ -258,6 +258,7 @@ class Hexitec():
         self.system_health = True
         self.status_message = ""
         self.status_error = ""
+        self.leak_fault_counter = 0
         self.elog = ""
         self.number_nodes = 1
         self.archiver_status = 200
@@ -370,6 +371,7 @@ class Hexitec():
         # Report leak fault to GUI
         self.status_error = error_message
         self._set_leak_error(error_message)
+        self.leak_fault_counter += 1
 
     def get_frames_processed(self):
         """Get number of frames processed across node(s)."""
@@ -493,6 +495,8 @@ class Hexitec():
             self.report_leak_detector_error(error_message)
             raise ParameterTreeError(error_message)
         else:
+            # Reset leak fault counter
+            self.leak_fault_counter = 0
             # Must ensure Odin data configured before connecting
             if self.cold_start:
                 self.prepare_fem_farm_mode()
