@@ -264,6 +264,20 @@ class TestFem(unittest.TestCase):
             assert self.test_fem.fem._get_status_error() == error
         assert self.test_fem.fem.parent.software_state == "Error"
 
+    @patch('hexitec_vsr.VsrModule')
+    def test_disconnect(self, mocked_vsr_module):
+        """Test function working okay."""
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
+        self.test_fem.fem.broadcast_VSRs = mocked_vsr_module
+        self.test_fem.fem.parent.leak_fault_counter = 1
+        self.test_fem.fem.x10g_rdma = Mock()
+
+        self.test_fem.fem.disconnect()
+        self.test_fem.fem.x10g_rdma.close.assert_called()
+        # Cannot test whether set_leak_detector () called because vsr(s) objects deleted
+        # self.test_fem.fem.vsr_list[0].set_leak_detector_fault.assert_called()
+
     def test_cleanup(self):
         """Test cleanup function works ok."""
         self.test_fem.fem.cleanup()

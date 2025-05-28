@@ -559,6 +559,11 @@ class HexitecFem():
 
     def disconnect(self):
         """Disconnect hardware connection."""
+        # Close network socket without hardware interactions if leak fault detected
+        if self.parent.leak_fault_counter > 0:
+            self.broadcast_VSRs.set_leak_detector_fault(True)
+            for vsr in self.vsr_list:
+                vsr.set_leak_detector_fault(True)
         del self.broadcast_VSRs
         del self.vsr_list[:]
         self.x10g_rdma.close()
@@ -765,7 +770,7 @@ class HexitecFem():
         try:
             # Only disable VSRs if detector is (still) powered
             if self.parent.leak_fault_counter == 0:
-                self.vsr_list[0].disable_vsr(0xFF)  # The culprit
+                self.vsr_list[0].disable_vsr(0xFF)
                 logging.debug("Modules Disabled")
             self.disconnect()
             logging.debug("Camera is Disconnected")
