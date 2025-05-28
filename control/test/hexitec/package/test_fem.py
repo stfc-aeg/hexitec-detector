@@ -264,6 +264,20 @@ class TestFem(unittest.TestCase):
             assert self.test_fem.fem._get_status_error() == error
         assert self.test_fem.fem.parent.software_state == "Error"
 
+    @patch('hexitec_vsr.VsrModule')
+    def test_disconnect(self, mocked_vsr_module):
+        """Test function working okay."""
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
+        self.test_fem.fem.broadcast_VSRs = mocked_vsr_module
+        self.test_fem.fem.parent.leak_fault_counter = 1
+        self.test_fem.fem.x10g_rdma = Mock()
+
+        self.test_fem.fem.disconnect()
+        self.test_fem.fem.x10g_rdma.close.assert_called()
+        # Cannot test whether set_leak_detector () called because vsr(s) objects deleted
+        # self.test_fem.fem.vsr_list[0].set_leak_detector_fault.assert_called()
+
     def test_cleanup(self):
         """Test cleanup function works ok."""
         self.test_fem.fem.cleanup()
@@ -555,12 +569,13 @@ class TestFem(unittest.TestCase):
         """Test function will handle if not all of selected HVs are powered on."""
         self.test_fem.fem.data_path_reset = Mock()
         self.test_fem.fem.data_path_reset.side_effect = socket_error()
+        self.test_fem.fem.flag_error = Mock()
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.hardware_busy = True
 
-        with pytest.raises(HexitecFemError) as exc_info:
-            self.test_fem.fem.power_up_modules()
-        assert exc_info.type is HexitecFemError
+        error = "Power up modules Error"
+        self.test_fem.fem.power_up_modules()
+        self.test_fem.fem.flag_error.assert_called_with(error, "")
         assert self.test_fem.fem.hardware_connected is False
         assert self.test_fem.fem.hardware_busy is False
 
@@ -571,10 +586,10 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.hardware_busy = False
         self.test_fem.fem.acquire_data = Mock()
         self.test_fem.fem.acquire_data.side_effect = AttributeError()
-        error = "Data acquisition failed: "
-        with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_fem.fem.collect_data()
-        assert exc_info.value.args[0] == error
+        error = "Data acquisition failed"
+        self.test_fem.fem.flag_error = Mock()
+        self.test_fem.fem.collect_data()
+        self.test_fem.fem.flag_error.assert_called_with(error, "")
 
     def test_collect_data_works(self):
         """Test function works all right."""
@@ -651,24 +666,20 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.cam_disconnect()
         assert self.test_fem.fem.system_initialised is False
 
-    @patch('hexitec_vsr.VsrModule')
-    def test_cam_disconnect_fails_network_error(self, mocked_vsr_module):
+    def test_cam_disconnect_fails_network_error(self):
         """Test function handles socket error."""
-        vsr_list = [mocked_vsr_module]
-        self.test_fem.fem.vsr_list = vsr_list
-        self.test_fem.fem.vsr_list[0].disable_vsr.side_effect = socket_error()
+        self.test_fem.fem.disconnect = Mock()
+        self.test_fem.fem.disconnect.side_effect = socket_error()
 
         with pytest.raises(HexitecFemError) as exc_info:
             self.test_fem.fem.cam_disconnect()
         assert exc_info.type is HexitecFemError
         assert self.test_fem.fem.hardware_connected is False
 
-    @patch('hexitec_vsr.VsrModule')
-    def test_cam_disconnect_fails_attribute_error(self, mocked_vsr_module):
+    def test_cam_disconnect_fails_attribute_error(self):
         """Test function handles attribute error."""
-        vsr_list = [mocked_vsr_module]
-        self.test_fem.fem.vsr_list = vsr_list
-        self.test_fem.fem.vsr_list[0].disable_vsr.side_effect = AttributeError()
+        self.test_fem.fem.disconnect = Mock()
+        self.test_fem.fem.disconnect.side_effect = AttributeError()
 
         with pytest.raises(HexitecFemError) as exc_info:
             self.test_fem.fem.cam_disconnect()
