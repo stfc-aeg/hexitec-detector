@@ -881,6 +881,30 @@ function threshold_mode_changed() {
     threshold_filename_changed();
 }
 
+function triggering_mode_changed() {
+    var triggering_mode = document.querySelector('#triggering-mode-text').value;
+    hexitec_endpoint.put(triggering_mode, 'detector/fem/triggering/triggering_mode')
+        .then(result => {
+            document.querySelector('#triggering-mode-warning').innerHTML = "";
+        })
+        .catch(error => {
+            document.querySelector('#triggering-mode-warning').innerHTML = error.message;
+        });
+}
+
+function triggering_frames_changed() {
+    var triggering_frames = document.querySelector('#triggering-frames-text');
+    hexitec_endpoint.put(parseInt(triggering_frames.value), 'detector/fem/triggering/triggering_frames')
+        .then(result => {
+            triggering_frames.classList.remove('alert-danger');
+        })
+        .catch(error => {
+            triggering_frames.setCustomValidity(error.message);
+            triggering_frames.reportValidity();
+            triggering_frames.classList.add('alert-danger');
+        });
+}
+
 function gradients_filename_changed() {
     // Only check/update gradients filename if calibration is enabled
     if (calibration_enable === true) {

@@ -49,8 +49,7 @@ class HexitecFem():
 
     DAC_SCALE_FACTOR = 0.732
 
-    # Define timestamp format
-    DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
+    TRIGGERINGOPTIONS = ["trigger_t2_t3", "sync_trigger", "none", "trigger_t1"]
 
     def __init__(self, parent, config):
         """
@@ -161,10 +160,12 @@ class HexitecFem():
         self.all_data_sent = 0
 
         # Support hardware triggering
-        self.hardware_triggering = True
         self.start_trigger = False
         self.enable_trigger_mode = False
         self.enable_trigger_input = False
+        self.triggering_mode = "none"
+        self.triggering_frames = 10
+        self.synchronisation_mode_enable = False
 
         param_tree_dict = {
             "diagnostics": {
@@ -192,10 +193,11 @@ class HexitecFem():
             "hardware_connected": (lambda: self.hardware_connected, None),
             "hardware_busy": (lambda: self.hardware_busy, None),
             "triggering": {
-                "hardware_triggering": (lambda: self.hardware_triggering, self.set_hardware_triggering),
                 "start_trigger": (lambda: self.start_trigger, self.set_start_trigger),
                 "enable_trigger_mode": (lambda: self.enable_trigger_mode, self.set_enable_trigger_mode),
                 "enable_trigger_input": (lambda: self.enable_trigger_input, self.set_enable_trigger_input),
+                "triggering_mode": (lambda: self.triggering_mode, self.set_triggering_mode),
+                "triggering_frames": (lambda: self.triggering_frames, self.set_triggering_frames)
             },
             "system_initialised": (lambda: self.system_initialised, None),
             "firmware_date": (lambda: self.firmware_date, None),
@@ -1110,6 +1112,11 @@ class HexitecFem():
         Initialise, load enables, set up state machine, write to DAC and enable ADCs.
         """
         try:
+            # 2. Stop the state machine
+            self.stop_sm()
+            # 4. Start the state machine
+            self.start_sm()
+
             expected_duration = 8192 / self.frame_rate
             timeout = (expected_duration * 1.2) + 1
             self.hardware_busy = True
@@ -1176,62 +1183,14 @@ class HexitecFem():
             for vsr in self.vsr_list:
                 vsr._disable_training()
 
-            # # Testing using synchronisation mode enabled - T1:
-            # self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x2, burst_len=1)
-            # logging.debug("synchronisation mode enabled")
-            # self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x3, burst_len=1)
-            # logging.debug("fpga state machine enabled")
-
-            # Original code:
-            self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x1, burst_len=1)
-            logging.debug("fpga state machine enabled")
-
-            for vsr in self.vsr_list:
-                # Configure for hardware triggering if selected
-                if self.hardware_triggering:
-                    # val = vsr.read_rows1_clock()
-                    # self.display_debugging(f"DBG,read_rows1_clock -> {val}")
-                    # Testing them all
-                    vsr.set_trigger_mode_number_frames(1589)
-                    #vsr.set_trigger_mode_number_frames(self.number_frames)
-                    vsr.write_trigger_mode_number_frames()
-                    if vsr.addr == 0x90:
-                        number_trigger_frames = vsr.read_trigger_mode_number_frames()
-                        self.display_debugging("--------------------------")
-                        self.display_debugging(f" -> number_trigger_frames: {number_trigger_frames}")
-
-                    if self.enable_trigger_mode:
-                        vsr.enable_trigger_mode_trigger_two_and_three()
-                        if vsr.addr == 0x90:
-                            self.display_debugging("Executing: enable_trigger_mode_trigger_two_and_three")
-                    else:
-                        vsr.disable_trigger_mode_trigger_two_and_three()
-                        if vsr.addr == 0x90:
-                            self.display_debugging("Executing: disable_trigger_mode_trigger_two_and_three")
-
-                    if self.enable_trigger_input:
-                        vsr.enable_trigger_input_two_and_three()
-                        if vsr.addr == 0x90:
-                            self.display_debugging("Executing: enable_trigger_input_two_and_three")
-                    else:
-                        vsr.disable_trigger_input_two_and_three()
-                        if vsr.addr == 0x90:
-                            self.display_debugging("Executing: disable_trigger_input_two_and_three")
-
-                    if self.start_trigger:
-                        vsr.start_trigger_sm()
-                        if vsr.addr == 0x90:
-                            self.display_debugging("Executing: start_trigger_sm")
-                    else:
-                        vsr.stop_trigger_sm()
-                        if vsr.addr == 0x90:
-                            self.display_debugging("Executing: stop_trigger_sm")
-                    if vsr.addr == 0x90:
-                        reg10_val = vsr.read_register_10()
-                        self.display_debugging(f"Reg 10: {reg10_val}")
-                else:
-                    print("\n SOFTWARE triggering")
-                #
+            if self.synchronisation_mode_enable:
+                self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x2, burst_len=1)
+                logging.debug("synchronisation mode enabled")
+                self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x3, burst_len=1)
+                logging.debug("fpga state machine enabled")
+            else:
+                self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x1, burst_len=1)
+                logging.debug("fpga state machine enabled")
 
             self._set_status_message("Initialisation completed. VSRs configured.")
             self.parent.software_state = "Ready"
@@ -1307,6 +1266,53 @@ class HexitecFem():
 
         logging.debug("Writing config to VSR..")
         vsr.initialise()
+
+    def configure_hardware_triggerig(self):
+        """Configures (no) hardware triggering."""
+        try:
+            # print("\n [E executing configuring_hardware_triggering");time.sleep(0.2)
+            for vsr in self.vsr_list:
+                # Testing them all
+                vsr.set_trigger_mode_number_frames(self.triggering_frames)
+                #vsr.set_trigger_mode_number_frames(self.number_frames)
+                vsr.write_trigger_mode_number_frames()
+                if vsr.addr == 0x90:
+                    number_trigger_frames = vsr.read_trigger_mode_number_frames()
+                    self.display_debugging("--------------------------")
+                    self.display_debugging(f" -> number_trigger_frames: {number_trigger_frames}")
+                    # print(" [E printing staff to logging.")
+
+                if self.enable_trigger_mode:
+                    vsr.enable_trigger_mode_trigger_two_and_three()
+                    if vsr.addr == 0x90:
+                        self.display_debugging("Executing: enable_trigger_mode_trigger_two_and_three")
+                else:
+                    vsr.disable_trigger_mode_trigger_two_and_three()
+                    if vsr.addr == 0x90:
+                        self.display_debugging("Executing: disable_trigger_mode_trigger_two_and_three")
+
+                if self.enable_trigger_input:
+                    vsr.enable_trigger_input_two_and_three()
+                    if vsr.addr == 0x90:
+                        self.display_debugging("Executing: enable_trigger_input_two_and_three")
+                else:
+                    vsr.disable_trigger_input_two_and_three()
+                    if vsr.addr == 0x90:
+                        self.display_debugging("Executing: disable_trigger_input_two_and_three")
+
+                if self.start_trigger:
+                    vsr.start_trigger_sm()
+                    if vsr.addr == 0x90:
+                        self.display_debugging("Executing: start_trigger_sm")
+                else:
+                    vsr.stop_trigger_sm()
+                    if vsr.addr == 0x90:
+                        self.display_debugging("Executing: stop_trigger_sm")
+                if vsr.addr == 0x90:
+                    reg10_val = vsr.read_register_10()
+                    self.display_debugging(f"Reg 10: {reg10_val}")
+        except Exception as e:
+            self.flag_error("Configure hardware triggering Error", str(e))
 
     def display_debugging(self, message):
         timestamp = self.create_iso_timestamp()
@@ -1467,13 +1473,6 @@ class HexitecFem():
         # Returning mapping for debugging purposes only, not necessary
         return self.vsr_addr_mapping
 
-    def set_hardware_triggering(self, triggering):
-        """THIS FUNCTION WILL BECOME REDUNDANT.
-
-        It's the following three functions that matter.
-        """
-        self.hardware_triggering = triggering
-
     def set_start_trigger(self, start_trigger):
         self.start_trigger = start_trigger
 
@@ -1482,6 +1481,65 @@ class HexitecFem():
 
     def set_enable_trigger_input(self, enable_trigger_input):
         self.enable_trigger_input = enable_trigger_input
+
+    def set_triggering_mode(self, triggering_mode):
+        #self.check_daq_acquiring_data("triggering mode")
+        triggering_mode = triggering_mode.lower()
+        if (triggering_mode in self.TRIGGERINGOPTIONS):
+            # print(f" [E {triggering_mode} = tm")#; time.sleep(0.7)
+            self.triggering_mode = triggering_mode
+        else:
+            # DEBUGGING: Temporarily(?) also allowing trigger_t1..
+            raise ParameterTreeError("Must be one of: value, filename or none")
+        # Crude, but calling configure hardware triggering here, for now
+        if self.triggering_mode == "none":
+            print(f" [E none = tm"); #time.sleep(0.7)
+            self.synchronisation_mode_enable = False
+            self.enable_trigger_input = False
+            self.enable_trigger_mode = False
+            self.start_trigger = False
+        elif self.triggering_mode == "trigger_t2_t3":
+            print(f" [E trigger_t2_t3 = tm"); #time.sleep(0.7)
+            self.synchronisation_mode_enable = False
+            self.enable_trigger_input = True
+            self.enable_trigger_mode = True
+            self.start_trigger = False
+        elif self.triggering_mode == "sync_trigger":
+            self.synchronisation_mode_enable = True
+            print(f" [E sync_trigger = tm"); #time.sleep(0.7)
+            self.enable_trigger_input = True
+            self.enable_trigger_mode = True
+            self.start_trigger = False
+        elif self.triggering_mode == "trigger_t1":
+            self.synchronisation_mode_enable = True
+            print(f" [E trigger_t1 = tm"); #time.sleep(0.7)
+            self.enable_trigger_input = False
+            self.enable_trigger_mode = False
+            self.start_trigger = True
+
+        # Set synchronisation mode enable
+        if self.synchronisation_mode_enable:
+            self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x2, burst_len=1)
+            logging.debug("synchronisation mode enabled")
+            self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x3, burst_len=1)
+            logging.debug("fpga state machine enabled")
+        else:
+            self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x1, burst_len=1)
+            logging.debug("fpga state machine enabled")
+
+        self.configure_hardware_triggerig()
+
+    def set_triggering_frames(self, triggering_frames):
+        """Sets the number of hardware frames when running in triggering mode."""
+        #self.check_daq_acquiring_data("triggering frames")
+        if isinstance(triggering_frames, int):
+            self.triggering_frames = triggering_frames
+            print(f" [E {triggering_frames} trig_frames");#time.sleep(0.7)
+        else:
+            print(f" [E NOT INT: {triggering_frames} trig_frames");#time.sleep(0.7)
+            raise ParameterTreeError("Not an integer!")
+        # Crude, but calling configure hardware triggering here, for now
+        self.configure_hardware_triggerig()
 
     def convert_string_exponential_to_integer(self, exponent):
         """Convert aspect format to fit dac format.

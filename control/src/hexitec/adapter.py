@@ -625,7 +625,6 @@ class Hexitec():
                 else:
                     self.set_number_frames(config["number_frames"])
                     self.set_duration_enable(config["duration_enable"])
-                self.fem.set_hardware_triggering(config["fem/hardware_triggering"])
                 # Set file directory, then filename
                 self.daq.set_data_dir(config["daq/file_dir"])
                 self.daq.set_file_name(config["daq/file_name"])
