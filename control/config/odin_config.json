@@ -7,7 +7,7 @@
   "daq/compression_type": "none",
   "daq/discrimination_enable": false,
   "daq/file_dir": "/data/hexitec/",
-  "daq/file_name": "04-02-000",
+  "daq/file_name": "09-06-000",
   "daq/gradients_filename": "m.txt",
   "daq/image_frequency": 0,
   "daq/intercepts_filename": "c.txt",
@@ -28,5 +28,7 @@
   "duration": 1,
   "duration_enable": false,
   "fem/hexitec_config": "hexitec_2x6.ini",
+  "fem/triggering_frames": 10,
+  "fem/triggering_mode": "none",
   "number_frames": 12
 }

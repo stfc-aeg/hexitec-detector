@@ -1057,7 +1057,7 @@ class TestDetector(unittest.TestCase):
         e = "Error"
         self.test_adapter.detector.fem.prepare_farm_mode = Mock()
         self.test_adapter.detector.fem.prepare_farm_mode.side_effect = Exception(e)
-        error = f"Commit configuration: {e}"
+        error = f"Prepare fem farm mode: {e}"
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_adapter.detector.prepare_fem_farm_mode("")
         assert exc_info.value.args[0] == error

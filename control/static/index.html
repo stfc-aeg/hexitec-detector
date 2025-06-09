@@ -153,6 +153,31 @@
                     </td>
                   </tr>
                   <tr>
+                    <td>
+                      Trigger Mode:&nbsp;
+                    </td>
+                    <td>
+                      <select class="double-width" id="triggering-mode-text" onchange="triggering_mode_changed(this.value)">
+                        <option selected="selected" value="none">None</option>
+                        <option value="triggered">Triggered</option>
+                      </select>
+                    </td>
+                    <td></td> <!-- Leave column blank-->
+                    <td>
+                      &nbsp;<span id="triggering-mode-warning">&nbsp;</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Trigger Frames:&nbsp;
+                    </td>
+                    <td>
+                      <div class="text-integer">
+                        <input type="text" id="triggering-frames-text" onChange='triggering_frames_changed()' size="3">
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
                     <td></td>
                     <td>
                       <input type="button" onclick="applyButton2Clicked()" class="btn btn-primary double-width" id='applyButton2' data-size="small" value="Apply">
@@ -441,38 +466,6 @@
         <div class="container-fluid">
           <div class="row contflex">
             <table class="overall-table">
-              <tr>
-                <th>Triggering&nbsp;</th>
-              </tr>
-              <tr>
-                <td></td>
-                <td>
-                  Mode:&nbsp;
-                </td>
-                <td>
-                  <select class="double-width" id="triggering-mode-text" onchange="triggering_mode_changed(this.value)">
-                    <option selected="selected" value="none">none</option>
-                    <option value="trigger_t2_t3">trigger_t2_t3</option>
-                    <option value="trigger_t1">trigger_t1</option>
-                    <option value="sync_trigger">sync_trigger</option>
-                  </select>
-                </td>
-                <td></td> <!-- Leave column blank-->
-                <td>
-                  &nbsp;<span id="triggering-mode-warning">&nbsp;</span>
-                </td>
-              </tr>
-              <tr>
-                <td></td>
-                <td>
-                  Triggering Frames:&nbsp;
-                </td>
-                <td>
-                  <div class="text-integer">
-                    <input type="text" id="triggering-frames-text" onChange='triggering_frames_changed()' size="3">
-                  </div>
-                </td>
-              </tr>
 
               <tr>
                 <th>File Options&nbsp;</th>

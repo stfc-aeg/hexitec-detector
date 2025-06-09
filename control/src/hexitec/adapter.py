@@ -504,6 +504,8 @@ class Hexitec():
         """Apply configuration to Odin and VSR Hardware."""
         self.prepare_fem_farm_mode()
         self.fem.set_hexitec_config("")
+        self.daq.commit_configuration()
+        self.daq.update_fp_configuration = False
 
     def initialise_hardware(self, msg=None):
         """Initialise hardware."""
@@ -580,7 +582,8 @@ class Hexitec():
         config["duration"] = self.duration
         config["duration_enable"] = self.duration_enable
         config["fem/hexitec_config"] = self.strip_base_path(self.fem.hexitec_config, "control/")
-        config["fem/hardware_triggering"] = self.fem.hardware_triggering
+        config["fem/triggering_mode"] = self.fem.triggering_mode
+        config["fem/triggering_frames"] = self.fem.triggering_frames
         config["number_frames"] = self.number_frames
         try:
             with open(self.odin_config_file, "w") as f:
@@ -625,6 +628,8 @@ class Hexitec():
                 else:
                     self.set_number_frames(config["number_frames"])
                     self.set_duration_enable(config["duration_enable"])
+                self.fem.set_triggering_frames(config["fem/triggering_frames"])
+                self.fem.set_triggering_mode(config["fem/triggering_mode"])
                 # Set file directory, then filename
                 self.daq.set_data_dir(config["daq/file_dir"])
                 self.daq.set_file_name(config["daq/file_name"])
@@ -726,9 +731,8 @@ class Hexitec():
             self.fem.check_hardware_ready("acquire data")
             self.fem.check_system_initialised("acquire data")
 
-            # if self.daq.commit_config_before_acquire:
-            #     self.daq.commit_config_before_acquire = False
-            self.daq.commit_configuration()
+            if self.daq.update_fp_configuration:
+                self.daq.commit_configuration()
 
             # Clear (any previous) daq error
             self.daq.in_error = False
@@ -865,7 +869,7 @@ class Hexitec():
             try:
                 self.fem.prepare_farm_mode()
             except Exception as e:
-                error = f"Commit configuration: {str(e)}"
+                error = f"Prepare fem farm mode: {str(e)}"
                 self.fem.flag_error(error)
                 raise ParameterTreeError(error)
 

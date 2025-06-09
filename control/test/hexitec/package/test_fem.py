@@ -1035,20 +1035,26 @@ class TestFem(unittest.TestCase):
             await self.test_fem.fem.initialise_system()
             mock_log.assert_called_with('VSR1 Error: Incomplete lock (0xF0)')
 
+    @patch('hexitec_vsr.VsrModule')
     @async_test
-    async def test_initialise_system_handles_HexitecFemError(self):
+    async def test_initialise_system_handles_HexitecFemError(self, mocked_vsr_module):
         """Test function handles HexitecFemError."""
-        self.test_fem.fem.initialise_vsr = Mock()
-        self.test_fem.fem.initialise_vsr.side_effect = HexitecFemError("E")
+        mocked_vsr_module.stop_trigger_sm = Mock()
+        mocked_vsr_module.stop_trigger_sm.side_effect = HexitecFemError("E")
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
         await self.test_fem.fem.initialise_system()
         assert self.test_fem.fem.status_error == "Failed to initialise camera: {}".format("E")
         assert self.test_fem.fem.parent.software_state == "Error"
 
+    @patch('hexitec_vsr.VsrModule')
     @async_test
-    async def test_initialise_system_handles_Exception(self):
+    async def test_initialise_system_handles_Exception(self, mocked_vsr_module):
         """Test function handles Exception."""
-        self.test_fem.fem.initialise_vsr = Mock()
-        self.test_fem.fem.initialise_vsr.side_effect = Exception("E")
+        mocked_vsr_module.stop_trigger_sm = Mock()
+        mocked_vsr_module.stop_trigger_sm.side_effect = Exception("E")
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
         await self.test_fem.fem.initialise_system()
         assert self.test_fem.fem.status_error == "Camera initialisation failed: {}".format("E")
         assert self.test_fem.fem.parent.software_state == "Error"
