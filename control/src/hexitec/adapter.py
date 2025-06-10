@@ -717,6 +717,7 @@ class Hexitec():
 
     def set_number_nodes(self, number_nodes):
         """Set number of nodes."""
+        # Function called by fem.verify_farm_mode_parameters(), which determines how many nodes
         self.number_nodes = number_nodes
         self.daq.set_number_nodes(self.number_nodes)
 

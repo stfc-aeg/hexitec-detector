@@ -672,7 +672,7 @@ class HexitecFem():
         try:
             self.data_path_reset()
             self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
-                                          data=0x0,  burst_len=1)
+                                          data=0x0, burst_len=1)
             self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
                                           data=0x1, burst_len=1)
 
@@ -1274,7 +1274,6 @@ class HexitecFem():
             for vsr in self.vsr_list:
                 # Testing them all
                 vsr.set_trigger_mode_number_frames(self.triggering_frames)
-                #vsr.set_trigger_mode_number_frames(self.number_frames)
                 vsr.write_trigger_mode_number_frames()
                 if vsr.addr == 0x90:
                     number_trigger_frames = vsr.read_trigger_mode_number_frames()
@@ -1573,7 +1572,7 @@ class HexitecFem():
                 pass
             else:
                 error = "Error parsing parameter %s, got: %s but valid range: %s-%s" % \
-                              (descriptor, setting, valid_range[0], valid_range[1])
+                        (descriptor, setting, valid_range[0], valid_range[1])
                 logging.error(error)
                 self.flag_error(error)
                 setting = -1
