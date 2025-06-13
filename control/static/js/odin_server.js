@@ -39,8 +39,8 @@ var disconnectButton = document.querySelector('#disconnectButton').disabled;
 var durationText = document.querySelector('#duration-text').disabled;
 var environsButton = document.querySelector('#environsButton').disabled;
 var framesText = document.querySelector('#frames-text').disabled;
-var modeRadio1 = document.querySelector('#mode_radio1').disabled;
-var modeRadio2 = document.querySelector('#mode_radio2').disabled;
+var modeRadio1 = document.querySelector('#camera-mode-radio1').disabled;
+var modeRadio2 = document.querySelector('#camera-mode-radio2').disabled;
 var hdfFilePathText = document.querySelector('#hdf-file-path-text').disabled;
 var hdfFileNameText = document.querySelector('#hdf-file-name-text').disabled;
 var hexitecConfigText = document.querySelector('#hexitec-config-text').disabled;
@@ -367,8 +367,8 @@ function lock_ui_components() {
     document.querySelector('#initialiseButton').disabled = true;
     document.querySelector('#lv_dataset_select').disabled = true;
     document.querySelector('#offsetsButton').disabled = true;
-    document.querySelector('#mode_radio1').disabled = true;
-    document.querySelector('#mode_radio2').disabled = true;
+    document.querySelector('#camera-mode-radio1').disabled = true;
+    document.querySelector('#camera-mode-radio2').disabled = true;
     if (duration_enable)
         document.querySelector('#duration-text').disabled = true;
     else
@@ -414,8 +414,8 @@ function interlock_restored_unlock_ui() {
     document.querySelector('#initialiseButton').disabled = initialiseButton;
     document.querySelector('#lv_dataset_select').disabled = lvDatasetSelect;
     document.querySelector('#offsetsButton').disabled = offsetsButton;
-    document.querySelector('#mode_radio1').disabled = false;
-    document.querySelector('#mode_radio2').disabled = false;
+    document.querySelector('#camera-mode-radio1').disabled = false;
+    document.querySelector('#camera-mode-radio2').disabled = false;
     // Additional elements to unlock
     document.querySelector('#elog-text').disabled = false;
     document.querySelector('#noneButton').disabled = false;
@@ -462,12 +462,14 @@ function toggle_ui_elements(bBool) {
         document.querySelector('#hdf-file-name-text').disabled = bBool;
         document.querySelector('#hexitec-config-text').disabled = bBool;
         document.querySelector('#lv_dataset_select').disabled = bBool;
-        document.querySelector('#mode_radio1').disabled = bBool;
-        document.querySelector('#mode_radio2').disabled = bBool;
+        document.querySelector('#camera-mode-radio1').disabled = bBool;
+        document.querySelector('#camera-mode-radio2').disabled = bBool;
         if (duration_enable)
             document.querySelector('#duration-text').disabled = bBool;
         else
             document.querySelector('#frames-text').disabled = bBool;
+        document.querySelector('#triggering-mode-text').disabled = bBool;
+        document.querySelector('#triggering-frames-text').disabled = bBool;
     } catch(error) {
         console.log("toggle_ui_elements() Error: " + error);
     }
@@ -909,12 +911,13 @@ function lock_untriggered_options() {
     // Lock options that are not available in triggered mode
     framesText = document.querySelector('#frames-text').disabled;
     durationText = document.querySelector('#duration-text').disabled;
-    modeRadio1 = document.querySelector('#mode_radio1').disabled;
-    modeRadio2 = document.querySelector('#mode_radio2').disabled;
+    modeRadio1 = document.querySelector('#camera-mode-radio1').disabled;
+    modeRadio2 = document.querySelector('#camera-mode-radio2').disabled;
     document.querySelector('#frames-text').disabled = true;
     document.querySelector('#duration-text').disabled = true;
-    document.querySelector('#mode_radio1').disabled = true;
-    document.querySelector('#mode_radio2').disabled = true;
+    document.querySelector('#camera-mode-radio1').disabled = true;
+    document.querySelector('#camera-mode-radio2').disabled = true;
+    // Set number of software frames to infinity: ?
     document.querySelector('#frames-text').value = 555;
     frames_changed();
 }
@@ -923,8 +926,9 @@ function unlock_untriggered_options() {
     // Unlock options that are available in untriggered mode
     document.querySelector('#frames-text').disabled = framesText;
     document.querySelector('#duration-text').disabled = durationText;
-    document.querySelector('#mode_radio1').disabled = modeRadio1;
-    document.querySelector('#mode_radio2').disabled = modeRadio2;
+    document.querySelector('#camera-mode-radio1').disabled = modeRadio1;
+    document.querySelector('#camera-mode-radio2').disabled = modeRadio2;
+    // Set number of software frames to infinity: ?
     document.querySelector('#frames-text').value = 777;
     frames_changed();
 }
@@ -1054,7 +1058,7 @@ function bin_width_changed() {
 
 // Change (Duration) mode, true if Seconds selected, false = Frames selected
 function changeModeEnable() {
-    duration_enable = document.getElementById('mode_radio1').checked;
+    duration_enable = document.getElementById('camera-mode-radio1').checked;
 
     hexitec_endpoint.put(duration_enable, 'detector/acquisition/duration_enable')
         .catch(error => {
@@ -1382,10 +1386,10 @@ function update_ui_with_odin_settings() {
 
             duration_enable = acquisition.duration_enable;
             if (duration_enable === true) {
-                document.querySelector('#mode_radio1').checked = true;	// Seconds
+                document.querySelector('#camera-mode-radio1').checked = true;	// Seconds
             }
             else {
-                document.querySelector('#mode_radio2').checked = true;	// Frames
+                document.querySelector('#camera-mode-radio2').checked = true;	// Frames
             }
             configure_duration(duration_enable);
 

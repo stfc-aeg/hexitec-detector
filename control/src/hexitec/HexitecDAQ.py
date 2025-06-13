@@ -840,12 +840,16 @@ class HexitecDAQ():
         """Set number of nodes."""
         self.number_nodes = nodes
 
-    def set_file_name(self, name):
-        """Set processed file name."""
+    def set_file_name(self, name, skip_hw_check=False):
+        """Set processed file name.
+
+        :param name: Name of the file to be created.
+        :param skip_hw_check: If True, skips hardware checks before setting filename."""
         self.check_daq_acquiring_data("filename")
         full_path = self.file_dir + name + ".h5"
-        if os.path.isfile(full_path):
-            raise ParameterTreeError("HDF5 filename already exists")
+        if not skip_hw_check:
+            if os.path.isfile(full_path):
+                raise ParameterTreeError("HDF5 filename already exists")
         self.file_name = name
 
     def set_file_writing(self, writing):
@@ -1233,19 +1237,6 @@ class HexitecDAQ():
         command = "config/hdf/dataset/" + "summed_spectra"
         request = ApiAdapterRequest(str(payload), content_type="application/json")
         self.adapters["fp"].put(command, request)
-
-        # # All frames for each FP into that FP's single file, unless hardware triggering selected
-        # # then 'blocks_per_file' frame(s) written per file, per FP
-        # blocks_per_file = 0
-        # if self.parent.fem.triggering_mode != "none":
-        #     blocks_per_file = self.parent.fem.triggering_frames
-        # command = "config/hdf/process/blocks_per_file"
-        # request = ApiAdapterRequest(str(blocks_per_file), content_type="application/json")
-        # response = self.adapters["fp"].put(command, request)
-        # status_code = response.status_code
-        # if (status_code != 200):
-        #     error = "Error {} changing blocks_per_file in fp adapter".format(status_code)
-        #     self.parent.fem.flag_error(error)
 
         # Allow FP time to process above PUT requests before configuring plugin settings
         IOLoop.instance().call_later(0.04, self.submit_configuration)

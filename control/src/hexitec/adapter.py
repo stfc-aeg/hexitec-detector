@@ -628,11 +628,11 @@ class Hexitec():
                 else:
                     self.set_number_frames(config["number_frames"])
                     self.set_duration_enable(config["duration_enable"])
-                self.fem.set_triggering_frames(config["fem/triggering_frames"])
-                self.fem.set_triggering_mode(config["fem/triggering_mode"])
+                self.fem.set_triggering_frames(config["fem/triggering_frames"], skip_hw_check=True)
+                self.fem.set_triggering_mode(config["fem/triggering_mode"], skip_hw_check=True)
                 # Set file directory, then filename
                 self.daq.set_data_dir(config["daq/file_dir"])
-                self.daq.set_file_name(config["daq/file_name"])
+                self.daq.set_file_name(config["daq/file_name"], skip_hw_check=True)
         except FileNotFoundError as e:
             self.fem.flag_error("Loading Odin config - file missing", str(e))
         except JSONDecodeError as e:

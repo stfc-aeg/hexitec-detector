@@ -144,7 +144,8 @@ class DetectorAdapterTestFixture(object):
              'daq/pixel_grid_size': 5, 'daq/threshold_filename': 'thresh_2x6.txt',
              'daq/threshold_lower': 0, 'daq/threshold_mode': 'filename',
              'daq/threshold_upper': 4400, 'daq/threshold_value': 120, 'duration': 60,
-             'duration_enable': True, 'fem/hexitec_config': 'hexitec_2x6.ini', 'number_frames': 8}
+             'duration_enable': True, 'fem/hexitec_config': 'hexitec_2x6.ini', 'number_frames': 8,
+             'fem/triggering_frames': 1, 'fem/triggering_mode': 'triggered'}
 
 
 class TestAdapter(unittest.TestCase):
