@@ -1047,20 +1047,26 @@ class TestFem(unittest.TestCase):
             await self.test_fem.fem.initialise_system()
             mock_log.assert_called_with('VSR1 Error: Incomplete lock (0xF0)')
 
+    @patch('hexitec_vsr.VsrModule')
     @async_test
-    async def test_initialise_system_handles_HexitecFemError(self):
+    async def test_initialise_system_handles_HexitecFemError(self, mocked_vsr_module):
         """Test function handles HexitecFemError."""
-        self.test_fem.fem.initialise_vsr = Mock()
-        self.test_fem.fem.initialise_vsr.side_effect = HexitecFemError("E")
+        mocked_vsr_module.stop_trigger_sm = Mock()
+        mocked_vsr_module.stop_trigger_sm.side_effect = HexitecFemError("E")
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
         await self.test_fem.fem.initialise_system()
         assert self.test_fem.fem.status_error == "Failed to initialise camera: {}".format("E")
         assert self.test_fem.fem.parent.software_state == "Error"
 
+    @patch('hexitec_vsr.VsrModule')
     @async_test
-    async def test_initialise_system_handles_Exception(self):
+    async def test_initialise_system_handles_Exception(self, mocked_vsr_module):
         """Test function handles Exception."""
-        self.test_fem.fem.initialise_vsr = Mock()
-        self.test_fem.fem.initialise_vsr.side_effect = Exception("E")
+        mocked_vsr_module.stop_trigger_sm = Mock()
+        mocked_vsr_module.stop_trigger_sm.side_effect = Exception("E")
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
         await self.test_fem.fem.initialise_system()
         assert self.test_fem.fem.status_error == "Camera initialisation failed: {}".format("E")
         assert self.test_fem.fem.parent.software_state == "Error"
@@ -1125,6 +1131,63 @@ class TestFem(unittest.TestCase):
         mock_load_pwr_cal_read_enables.assert_called_once_with(vsr)
         mock_write_dac_values.assert_called_once_with(vsr)
         vsr.initialise.assert_called_once()
+
+    @patch('hexitec_vsr.VsrModule')
+    def test_configure_hardware_triggering_triggered_mode(self, mocked_vsr_module):
+        """Test function working okay."""
+        mocked_vsr_module.set_trigger_mode_number_frames = Mock()
+        mocked_vsr_module.write_trigger_mode_number_frames = Mock()
+        mocked_vsr_module.enable_trigger_mode_trigger_two_and_three = Mock()
+        mocked_vsr_module.enable_trigger_input_two_and_three = Mock()
+        mocked_vsr_module.start_trigger_sm = Mock()
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
+        self.test_fem.fem.triggering_frames = 15
+        self.test_fem.fem.enable_trigger_mode = True
+        self.test_fem.fem.enable_trigger_input = True
+        self.test_fem.fem.start_trigger = True
+
+        self.test_fem.fem.configure_hardware_triggering()
+        self.test_fem.fem.vsr_list[0].set_trigger_mode_number_frames.assert_called_with(15)
+        self.test_fem.fem.vsr_list[0].write_trigger_mode_number_frames.assert_called()
+        self.test_fem.fem.vsr_list[0].enable_trigger_mode_trigger_two_and_three.assert_called()
+        self.test_fem.fem.vsr_list[0].enable_trigger_input_two_and_three.assert_called()
+        self.test_fem.fem.vsr_list[0].start_trigger_sm.assert_called()
+
+    @patch('hexitec_vsr.VsrModule')
+    def test_configure_hardware_triggering_all_enabled_no_mode(self, mocked_vsr_module):
+        """Test function working okay."""
+        mocked_vsr_module.set_trigger_mode_number_frames = Mock()
+        mocked_vsr_module.write_trigger_mode_number_frames = Mock()
+        mocked_vsr_module.disable_trigger_mode_trigger_two_and_three = Mock()
+        mocked_vsr_module.disable_trigger_input_two_and_three = Mock()
+        mocked_vsr_module.stop_trigger_sm = Mock()
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
+        self.test_fem.fem.triggering_frames = 8
+        self.test_fem.fem.enable_trigger_mode = False
+        self.test_fem.fem.enable_trigger_input = False
+        self.test_fem.fem.start_trigger = False
+
+        self.test_fem.fem.configure_hardware_triggering()
+        self.test_fem.fem.vsr_list[0].set_trigger_mode_number_frames.assert_called_with(8)
+        self.test_fem.fem.vsr_list[0].write_trigger_mode_number_frames.assert_called()
+        self.test_fem.fem.vsr_list[0].disable_trigger_mode_trigger_two_and_three.assert_called()
+        self.test_fem.fem.vsr_list[0].disable_trigger_input_two_and_three.assert_called()
+        self.test_fem.fem.vsr_list[0].stop_trigger_sm.assert_called()
+
+    @patch('hexitec_vsr.VsrModule')
+    def test_configure_hardware_triggering_handles_Exception(self, mocked_vsr_module):
+        """Test function working okay."""
+        mocked_vsr_module.set_trigger_mode_number_frames = Mock()
+        mocked_vsr_module.set_trigger_mode_number_frames.side_effect = Exception("Test Exception")
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
+        self.test_fem.fem.flag_error = Mock()
+
+        self.test_fem.fem.configure_hardware_triggering()
+        error = "Configure hardware triggering Error"
+        self.test_fem.fem.flag_error(error)
 
     def test_calculate_frame_rate(self):
         """Test calculate_frame_rate works."""
@@ -1222,6 +1285,84 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem._extract_integer.side_effect = HexitecFemError(error[20:])
         self.test_fem.fem.set_hexitec_config(filename)
         assert self.test_fem.fem.status_error == error
+
+    def test_set_start_trigger(self):
+        """Test function sets start trigger ok."""
+        self.test_fem.fem.start_trigger = False
+        self.test_fem.fem.set_start_trigger(True)
+        assert self.test_fem.fem.start_trigger is True
+
+    def test_set_enable_trigger_mode(self):
+        """Test function sets enable trigger mode ok."""
+        self.test_fem.fem.enable_trigger_mode = False
+        self.test_fem.fem.set_enable_trigger_mode(True)
+        assert self.test_fem.fem.enable_trigger_mode is True
+
+    def test_set_enable_trigger_input(self):
+        """Test function sets enable trigger input ok."""
+        self.test_fem.fem.enable_trigger_input = False
+        self.test_fem.fem.set_enable_trigger_input(True)
+        assert self.test_fem.fem.enable_trigger_input is True
+
+    def test_set_triggering_mode_triggered_selected(self):
+        """Test function sets triggering mode ok."""
+        self.test_fem.fem.parent.daq.check_daq_acquiring_data = Mock()
+        self.test_fem.fem.system_initialised = True
+        self.test_fem.fem.triggering_mode = "none"
+        self.test_fem.fem.set_triggering_mode("triggered")
+
+        self.test_fem.fem.parent.daq.check_daq_acquiring_data.assert_called_with("trigger mode")
+        assert self.test_fem.fem.triggering_mode == "triggered"
+        assert self.test_fem.fem.enable_trigger_input is True
+        assert self.test_fem.fem.enable_trigger_mode is True
+        assert self.test_fem.fem.system_initialised is False
+
+    def test_set_triggering_mode_none_selected(self):
+        """Test function sets triggering mode ok."""
+        self.test_fem.fem.parent.daq.check_daq_acquiring_data = Mock()
+        self.test_fem.fem.system_initialised = True
+        self.test_fem.fem.triggering_mode = "triggered"
+        self.test_fem.fem.set_triggering_mode("none")
+
+        self.test_fem.fem.parent.daq.check_daq_acquiring_data.assert_called_with("trigger mode")
+        assert self.test_fem.fem.triggering_mode == "none"
+        assert self.test_fem.fem.enable_trigger_input is False
+        assert self.test_fem.fem.enable_trigger_mode is False
+        assert self.test_fem.fem.system_initialised is False
+
+    def test_set_triggering_mode_handles_undefined_mode(self):
+        """Test function sets triggering mode ok."""
+        self.test_fem.fem.parent.daq.check_daq_acquiring_data = Mock()
+        self.test_fem.fem.system_initialised = True
+        self.test_fem.fem.triggering_mode = "none"
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_fem.fem.set_triggering_mode("made_up")
+        assert exc_info.type is ParameterTreeError
+        assert exc_info.value.args[0] == "Must be one of: triggered or none"
+        assert self.test_fem.fem.system_initialised is True
+
+    def test_set_triggering_frames(self):
+        """Test function sets triggering frames ok."""
+        self.test_fem.fem.parent.daq.check_daq_acquiring_data = Mock()
+        self.test_fem.fem.triggering_frames = 0
+
+        self.test_fem.fem.set_triggering_frames(10)
+        self.test_fem.fem.parent.daq.check_daq_acquiring_data.assert_called_with("trigger frames")
+        assert self.test_fem.fem.triggering_frames == 10
+
+    def test_set_triggering_frames_handles_wrong_type(self):
+        """Test function sets triggering frames ok."""
+        self.test_fem.fem.parent.daq.check_daq_acquiring_data = Mock()
+        self.test_fem.fem.system_initialised = True
+        self.test_fem.fem.triggering_frames = 0
+        wrong_type = "Hello?"
+
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_fem.fem.set_triggering_frames(wrong_type)
+        self.test_fem.fem.parent.daq.check_daq_acquiring_data.assert_called_with("trigger frames")
+        assert exc_info.type is ParameterTreeError
+        assert exc_info.value.args[0] == "Not an integer!"
+        assert self.test_fem.fem.system_initialised is True
 
     def test_extract_exponential(self):
         """Test function works ok."""

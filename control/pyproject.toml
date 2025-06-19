@@ -39,11 +39,12 @@ dependencies = [
     "pytest",
     "pytest-cov",
     "pytest_asyncio",
+    "pygments",
     "pyzmq",
     "requests",
     "tox",
     "typing_extensions",
-    "urllib3==1.26.14",
+    "urllib3==1.26.19",
     "xmltodict"
 ]
 

@@ -398,15 +398,15 @@ class TestDAQ(unittest.TestCase):
 
     def test_check_hdf_reset_calls_itself(self):
         """Test function calls itself if total frames processed non-zero."""
-        self.test_daq.daq.get_total_frames_processed = Mock(return_value=1)
+        self.test_daq.daq.check_hdf_writing_true = Mock(return_value=False)
         with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop:
             self.test_daq.daq.check_hdf_reset()
             instance = mock_loop.instance()
-            instance.call_later.assert_called_with(0.1, self.test_daq.daq.check_hdf_reset)
+            instance.call_later.assert_called_with(0.01, self.test_daq.daq.check_hdf_reset)
 
     def test_check_hdf_reset_works(self):
         """Test function flags hdf reset correctly."""
-        self.test_daq.daq.get_total_frames_processed = Mock(return_value=0)
+        self.test_daq.daq.check_hdf_writing_true = Mock(return_value=True)
         self.test_daq.daq.hdf_is_reset = False
         self.test_daq.daq.check_hdf_reset()
         assert self.test_daq.daq.hdf_is_reset is True
@@ -425,7 +425,7 @@ class TestDAQ(unittest.TestCase):
             assert self.test_daq.daq.file_writing is True
 
             instance = mock_loop.instance()
-            instance.call_later.assert_called_with(1.3, self.test_daq.daq.acquisition_check_loop)
+            instance.call_later.assert_called_with(0.3, self.test_daq.daq.acquisition_check_loop)
 
     def test_prepare_odin_fr_disconnected(self):
         """Test function raises Exception if fr(s) disconnected."""
@@ -652,7 +652,7 @@ class TestDAQ(unittest.TestCase):
 
     def test_stop_acquisition_handles_file_shut(self):
         """Test function wraps up acquisition if file shut."""
-        self.test_daq.daq.check_hdf_write_statuses = Mock(return_value=False)
+        self.test_daq.daq.check_hdf_writing_true = Mock(return_value=False)
         self.test_daq.daq.set_file_writing = Mock()
         self.test_daq.daq.hdf_retry = 3
         self.test_daq.daq.stop_acquisition()
@@ -1353,6 +1353,7 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq.odin_path = "/odin"
         self.test_daq.daq.pass_processed = True
         self.test_daq.daq.pass_raw = False
+        self.test_daq.daq.parent.fem.triggering_mode = "trigger_t1"
 
         self.test_daq.daq.commit_configuration()
 

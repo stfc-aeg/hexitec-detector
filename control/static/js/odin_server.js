@@ -6,6 +6,7 @@ api_version = '0.1';
 const hexitec_url = '/api/' + api_version + '/hexitec/';
 
 let hexitec_endpoint;
+let livehisto_endpoint;
 let last_message_timestamp = '';
 
 // Vars added for Odin-Data
@@ -46,6 +47,15 @@ var hvOnButton = document.querySelector('#hvOnButton').disabled;
 var initialiseButton = document.querySelector('#initialiseButton').disabled;
 var lvDatasetSelect = document.querySelector('#lv_dataset_select').disabled;
 var offsetsButton = document.querySelector('#offsetsButton').disabled;
+var modeRadio1 = document.querySelector('#camera-mode-radio1').disabled;
+var modeRadio2 = document.querySelector('#camera-mode-radio2').disabled;
+
+var framesTextStateUnlocked;
+var durationTextStateUnlocked;
+var modeRadio1StateUnlocked;
+var modeRadio2StateUnlocked;
+
+var triggered_mode_selected = false;
 
 // Called once, when page 1st loaded
 document.addEventListener("DOMContentLoaded", function () {
@@ -309,6 +319,8 @@ function display_ui_states() {
     console.log("connectButton = " + document.querySelector('#connectButton').disabled);
     console.log("disconnectButton = " + document.querySelector('#disconnectButton').disabled);
     console.log("durationText = " + document.querySelector('#duration-text').disabled);
+    console.log("modeRadio1 = " + document.querySelector('#camera-mode-radio1').disabled);
+    console.log("modeRadio2 = " + document.querySelector('#camera-mode-radio2').disabled);
     console.log("environsButton = " + document.querySelector('#environsButton').disabled);
     console.log("framesText = " + document.querySelector('#frames-text').disabled);
     console.log("hdfFilePathText = " + document.querySelector('#hdf-file-path-text').disabled);
@@ -332,6 +344,8 @@ function interlock_tripped_lock_ui() {
     disconnectButton = document.querySelector('#disconnectButton').disabled;
     durationText = document.querySelector('#duration-text').disabled;
     environsButton = document.querySelector('#environsButton').disabled;
+    modeRadio1 = document.querySelector('#camera-mode-radio1').disabled;
+    modeRadio2 = document.querySelector('#camera-mode-radio2').disabled;
     framesText = document.querySelector('#frames-text').disabled;
     hdfFilePathText = document.querySelector('#hdf-file-path-text').disabled;
     hdfFileNameText = document.querySelector('#hdf-file-name-text').disabled;
@@ -364,8 +378,8 @@ function lock_ui_components() {
     document.querySelector('#initialiseButton').disabled = true;
     document.querySelector('#lv_dataset_select').disabled = true;
     document.querySelector('#offsetsButton').disabled = true;
-    document.querySelector('#mode_radio1').disabled = true;
-    document.querySelector('#mode_radio2').disabled = true;
+    document.querySelector('#camera-mode-radio1').disabled = true;
+    document.querySelector('#camera-mode-radio2').disabled = true;
     if (duration_enable)
         document.querySelector('#duration-text').disabled = true;
     else
@@ -402,6 +416,8 @@ function interlock_restored_unlock_ui() {
     document.querySelector('#disconnectButton').disabled = disconnectButton;
     document.querySelector('#duration-text').disabled = durationText;
     document.querySelector('#environsButton').disabled = environsButton;
+    document.querySelector('#camera-mode-radio1').disabled = modeRadio1;
+    document.querySelector('#camera-mode-radio2').disabled = modeRadio2;
     document.querySelector('#frames-text').disabled = framesText;
     document.querySelector('#hdf-file-path-text').disabled = hdfFilePathText;
     document.querySelector('#hdf-file-name-text').disabled = hdfFileNameText;
@@ -411,8 +427,8 @@ function interlock_restored_unlock_ui() {
     document.querySelector('#initialiseButton').disabled = initialiseButton;
     document.querySelector('#lv_dataset_select').disabled = lvDatasetSelect;
     document.querySelector('#offsetsButton').disabled = offsetsButton;
-    document.querySelector('#mode_radio1').disabled = false;
-    document.querySelector('#mode_radio2').disabled = false;
+    document.querySelector('#camera-mode-radio1').disabled = false;
+    document.querySelector('#camera-mode-radio2').disabled = false;
     // Additional elements to unlock
     document.querySelector('#elog-text').disabled = false;
     document.querySelector('#noneButton').disabled = false;
@@ -459,16 +475,27 @@ function toggle_ui_elements(bBool) {
         document.querySelector('#hdf-file-name-text').disabled = bBool;
         document.querySelector('#hexitec-config-text').disabled = bBool;
         document.querySelector('#lv_dataset_select').disabled = bBool;
-        document.querySelector('#mode_radio1').disabled = bBool;
-        document.querySelector('#mode_radio2').disabled = bBool;
-        if (duration_enable)
-            document.querySelector('#duration-text').disabled = bBool;
-        else
-            document.querySelector('#frames-text').disabled = bBool;
+        // Only update camera mode options if not in triggered mode
+        if (triggered_mode_selected === false)
+        {
+            document.querySelector('#camera-mode-radio1').disabled = bBool;
+            document.querySelector('#camera-mode-radio2').disabled = bBool;
+            if (duration_enable)
+                document.querySelector('#duration-text').disabled = bBool;
+            else
+                document.querySelector('#frames-text').disabled = bBool;
+        }
+        document.querySelector('#triggering-mode-text').disabled = bBool;
+        document.querySelector('#triggering-frames-text').disabled = bBool;
     } catch(error) {
         console.log("toggle_ui_elements() Error: " + error);
     }
 }
+    framesTextStateUnlocked = document.querySelector('#frames-text').disabled;
+    durationTextStateUnlocked = document.querySelector('#duration-text').disabled;
+    modeRadio1StateUnlocked = document.querySelector('#camera-mode-radio1').disabled;
+    modeRadio2StateUnlocked = document.querySelector('#camera-mode-radio2').disabled;
+
 
 function update_ui_with_leak_detector_settings(result) {
     // var results = result["value"];
@@ -540,25 +567,19 @@ function poll_fem() {
             hexitec_endpoint.get_url(hexitec_url + 'detector')
                 .then(result => {
 
-                    hexitec_endpoint.get_url(hexitec_url + 'detector')
-                    .then(result => {
-                        // Note software state
-                        const new_software_state = result["detector"]["software_state"];
-                        // console.log("SW State was: " + software_state + " now is: " + new_software_state);
-                        if (new_software_state !== software_state)
-                        {
-                            // If state just became Interlocked or Acquiring, lock GUI processing options/buttons
-                            if ((new_software_state === "Interlocked") || (new_software_state === "Acquiring"))
-                                interlock_tripped_lock_ui();
-                            // If state no longer neither Interlocked nor Acquiring, unlock GUI ditto
-                            if ((software_state === "Interlocked") || (software_state === "Acquiring"))
-                                interlock_restored_unlock_ui();
-                            software_state = new_software_state;
-                        }
-                    })
-                    .catch(error => {
-                        document.querySelector('#odin-control-error').innerHTML = "Polling Software States: " + error.message;
-                    });
+                    // Note software state
+                    const new_software_state = result["detector"]["software_state"];
+                    // console.log("SW State was: " + software_state + " now is: " + new_software_state);
+                    if (new_software_state !== software_state)
+                    {
+                        // If state just became Interlocked or Acquiring, lock GUI processing options/buttons
+                        if ((new_software_state === "Interlocked") || (new_software_state === "Acquiring"))
+                            interlock_tripped_lock_ui();
+                        // If state no longer neither Interlocked nor Acquiring, unlock GUI ditto
+                        if ((software_state === "Interlocked") || (software_state === "Acquiring"))
+                            interlock_restored_unlock_ui();
+                        software_state = new_software_state;
+                    }
 
                     var adapter_leak = result["detector"]["status"]["leak"];
                     adapter_leak_fault = adapter_leak["fault"];
@@ -576,7 +597,7 @@ function poll_fem() {
                     const frames_expected = result["detector"]["daq"]["status"]["frames_expected"];
                     const frames_received = result["detector"]["daq"]["status"]["frames_received"];
                     const frames_processed = result["detector"]["daq"]["status"]["frames_processed"];
-                    const processed_remaining = result["detector"]["daq"]["status"]["processed_remaining"];
+                    // const processed_remaining = result["detector"]["daq"]["status"]["processed_remaining"];
                     const collection_time_remaining = result["detector"]["daq"]["status"]["collection_time_remaining"];
                     document.querySelector('#collection_time_remaining').innerHTML = collection_time_remaining.toFixed(1);
                     const fraction_received = (frames_received / frames_expected).toFixed(2);
@@ -627,6 +648,8 @@ function poll_fem() {
                                 document.querySelector('#hdf-file-path-text').disabled = true;
                                 document.querySelector('#hdf-file-name-text').disabled = true;
                                 document.querySelector('#disconnectButton').disabled = true;
+                                // Ensure load button disabled during acquisition
+                                document.querySelector('#loadOdinButton').disabled = true;
                             }
                             else {
                                 // Disable cancelButton but enable changing file[path]
@@ -634,6 +657,8 @@ function poll_fem() {
                                 document.querySelector('#hdf-file-path-text').disabled = false;
                                 document.querySelector('#hdf-file-name-text').disabled = false;
                                 document.querySelector('#disconnectButton').disabled = false;
+                                // Insured load button (re-)enabled after acquisition
+                                document.querySelector('#loadOdinButton').disabled = false;
                             }
                         }
                         else {
@@ -747,16 +772,20 @@ function poll_fem() {
             // Polls the fem(s) for hardware status, environmental data, etc
             hexitec_endpoint.get_url(hexitec_url + 'fr/status/')
                 .then(result => {
-                    var numNodes = result["value"].length;
-                    for (var i = 0; i < numNodes; i++) {
-                        const frames = result["value"][i].frames;
-                        const decoder = result["value"][i].decoder;
-                        const buffers = result["value"][i].buffers;
-                        document.querySelector('#frames_dropped' + (i+1)).innerHTML = frames.dropped;
-                        document.querySelector('#frames_timedout' + (i+1)).innerHTML = frames.timedout;
-                        document.querySelector('#packets_lost' + (i+1)).innerHTML = decoder.packets_lost;
-                        document.querySelector('#buffers_empty' + (i+1)).innerHTML = buffers.empty;
-                        document.querySelector('#buffers_mapped' + (i+1)).innerHTML = buffers.mapped;
+                    if (Array.isArray(result["value"])) {
+                        var numNodes = result["value"].length;
+                        for (var i = 0; i < numNodes; i++) {
+                            const frames = result["value"][i].frames;
+                            const decoder = result["value"][i].decoder;
+                            const buffers = result["value"][i].buffers;
+                            document.querySelector('#frames_dropped' + (i+1)).innerHTML = frames.dropped;
+                            document.querySelector('#frames_timedout' + (i+1)).innerHTML = frames.timedout;
+                            document.querySelector('#packets_lost' + (i+1)).innerHTML = decoder.packets_lost;
+                            document.querySelector('#buffers_empty' + (i+1)).innerHTML = buffers.empty;
+                            document.querySelector('#buffers_mapped' + (i+1)).innerHTML = buffers.mapped;
+                        }
+                    } else {
+                        // Optionally raise alarm to notify user?
                     }
                 })
                 .catch(error => {
@@ -881,6 +910,76 @@ function threshold_mode_changed() {
     threshold_filename_changed();
 }
 
+function toggle_camera_controls_to_frames(duration_enable) {
+    // Toggle camera controls to Frames or Seconds
+    //  duration_enable = true: Seconds, false: Frames
+    if (duration_enable === true) {
+        document.querySelector('#camera-mode-radio1').checked = true;	// Seconds
+        document.querySelector('#duration-text').disabled = false;
+        document.querySelector('#frames-text').disabled = true;
+    }
+    else {
+        document.querySelector('#camera-mode-radio2').checked = true;	// Frames
+        document.querySelector('#duration-text').disabled = true;
+        document.querySelector('#frames-text').disabled = false;
+    }
+}
+
+function triggering_mode_changed() {
+    var triggering_mode = document.querySelector('#triggering-mode-text').value;
+    if (triggering_mode === "none") {
+        unlock_untriggered_options();
+        toggle_camera_controls_to_frames(duration_enable);
+    } else if (triggering_mode === "triggered") {
+        lock_untriggered_options();
+        // Set frames to near maximum value
+        document.querySelector('#frames-text').value = 4294967290;
+        duration_enable = false;
+    }
+    hexitec_endpoint.put(triggering_mode, 'detector/triggering_mode')
+        .then(result => {
+            document.querySelector('#triggering-mode-warning').innerHTML = "";
+        })
+        .catch(error => {
+            document.querySelector('#triggering-mode-warning').innerHTML = error.message;
+        });
+}
+
+function lock_untriggered_options() {
+    // Lock options that are not available in triggered mode
+    framesTextStateUnlocked = document.querySelector('#frames-text').disabled;
+    durationTextStateUnlocked = document.querySelector('#duration-text').disabled;
+    modeRadio1StateUnlocked = document.querySelector('#camera-mode-radio1').disabled;
+    modeRadio2StateUnlocked = document.querySelector('#camera-mode-radio2').disabled;
+    document.querySelector('#frames-text').disabled = true;
+    document.querySelector('#duration-text').disabled = true;
+    document.querySelector('#camera-mode-radio1').disabled = true;
+    document.querySelector('#camera-mode-radio2').disabled = true;
+    triggered_mode_selected = true;
+}
+
+function unlock_untriggered_options() {
+    // Unlock options that are available in untriggered mode
+    document.querySelector('#frames-text').disabled = framesTextStateUnlocked;
+    document.querySelector('#duration-text').disabled = durationTextStateUnlocked;
+    document.querySelector('#camera-mode-radio1').disabled = modeRadio1StateUnlocked;
+    document.querySelector('#camera-mode-radio2').disabled = modeRadio2StateUnlocked;
+    triggered_mode_selected = false;
+}
+
+function triggering_frames_changed() {
+    var triggering_frames = document.querySelector('#triggering-frames-text');
+    hexitec_endpoint.put(parseInt(triggering_frames.value), 'detector/triggering_frames')
+        .then(result => {
+            triggering_frames.classList.remove('alert-danger');
+        })
+        .catch(error => {
+            triggering_frames.setCustomValidity(error.message);
+            triggering_frames.reportValidity();
+            triggering_frames.classList.add('alert-danger');
+        });
+}
+
 function gradients_filename_changed() {
     // Only check/update gradients filename if calibration is enabled
     if (calibration_enable === true) {
@@ -993,7 +1092,7 @@ function bin_width_changed() {
 
 // Change (Duration) mode, true if Seconds selected, false = Frames selected
 function changeModeEnable() {
-    duration_enable = document.getElementById('mode_radio1').checked;
+    duration_enable = document.getElementById('camera-mode-radio1').checked;
 
     hexitec_endpoint.put(duration_enable, 'detector/acquisition/duration_enable')
         .catch(error => {
@@ -1317,10 +1416,10 @@ function update_ui_with_odin_settings() {
 
             duration_enable = acquisition.duration_enable;
             if (duration_enable === true) {
-                document.querySelector('#mode_radio1').checked = true;	// Seconds
+                document.querySelector('#camera-mode-radio1').checked = true;	// Seconds
             }
             else {
-                document.querySelector('#mode_radio2').checked = true;	// Frames
+                document.querySelector('#camera-mode-radio2').checked = true;	// Frames
             }
             configure_duration(duration_enable);
 
@@ -1364,6 +1463,12 @@ function update_ui_with_odin_settings() {
             document.querySelector('#elog-text').value = elog;
             const dataset_name = daq_config.lvframes.dataset_name;
             document.querySelector('#lv_dataset_select').value = dataset_name;
+
+            const fem = result["detector"]["fem"];
+            const triggering_mode = fem.triggering.triggering_mode;
+            const triggering_frames = fem.triggering.triggering_frames;
+            document.querySelector('#triggering-mode-text').value = triggering_mode;
+            document.querySelector('#triggering-frames-text').value = triggering_frames;
         })
         .catch(error => {
             console.log("update_ui_with_odin_settings() detector ERROR: " + error.message);

@@ -157,7 +157,8 @@ class Archiver():
         self.errors_history = []
         timestamp = self.create_timestamp()
         self.last_message_timestamp = ''
-        self.log_messages = [timestamp, "initialised OK"]
+        self.log_messages = []
+        self.log_messages.append([timestamp, "initialised OK"])
         # File transfer information
         self.status = "Initialised"
         self.filename_transferring = ""

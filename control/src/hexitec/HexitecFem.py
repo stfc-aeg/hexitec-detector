@@ -49,8 +49,7 @@ class HexitecFem():
 
     DAC_SCALE_FACTOR = 0.732
 
-    # Define timestamp format
-    DATE_FORMAT = '%Y%m%d_%H%M%S.%f'
+    TRIGGERINGOPTIONS = ["triggered", "none"]
 
     def __init__(self, parent, config):
         """
@@ -160,6 +159,14 @@ class HexitecFem():
         # Did Hardware finish sending data?
         self.all_data_sent = 0
 
+        # Support hardware triggering
+        self.start_trigger = False
+        self.enable_trigger_mode = False
+        self.enable_trigger_input = False
+        self.triggering_mode = "none"
+        self.triggering_frames = 10
+        self.synchronisation_mode_enable = False
+
         param_tree_dict = {
             "diagnostics": {
                 "acquire_start_time": (lambda: self.acquire_start_time, None),
@@ -185,6 +192,13 @@ class HexitecFem():
             "environs_in_progress": (lambda: self.environs_in_progress, None),
             "hardware_connected": (lambda: self.hardware_connected, None),
             "hardware_busy": (lambda: self.hardware_busy, None),
+            "triggering": {
+                "start_trigger": (lambda: self.start_trigger, self.set_start_trigger),
+                "enable_trigger_mode": (lambda: self.enable_trigger_mode, self.set_enable_trigger_mode),
+                "enable_trigger_input": (lambda: self.enable_trigger_input, self.set_enable_trigger_input),
+                "triggering_mode": (lambda: self.triggering_mode, self.set_triggering_mode),
+                "triggering_frames": (lambda: self.triggering_frames, self.set_triggering_frames)
+            },
             "system_initialised": (lambda: self.system_initialised, None),
             "firmware_date": (lambda: self.firmware_date, None),
             "firmware_time": (lambda: self.firmware_time, None),
@@ -469,6 +483,7 @@ class HexitecFem():
     def connect(self):
         """Set up hardware connection."""
         try:
+            print(" [E conn PRE !")
             self.x10g_rdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
                                      rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
                                      debug=False, uart_offset=0x0)
@@ -477,6 +492,7 @@ class HexitecFem():
             self.vsr_list = []
             self.vsr_list.append(
                 VsrModule(self.x10g_rdma, slot=1, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            print(" [E conn DONE")
             self.vsr_list.append(
                 VsrModule(self.x10g_rdma, slot=2, init_time=0, addr_mapping=self.vsr_addr_mapping))
             self.vsr_list.append(
@@ -544,6 +560,7 @@ class HexitecFem():
                 self.firmware_time = build_time
                 self.firmware_version = fw_version
                 self.read_firmware_version = False
+
             for vsr in self.vsr_list:
                 self.read_temperatures_humidity_values(vsr)
                 self.read_pwr_voltages(vsr)  # pragma: no cover
@@ -662,7 +679,7 @@ class HexitecFem():
         try:
             self.data_path_reset()
             self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
-                                          data=0x0,  burst_len=1)
+                                          data=0x0, burst_len=1)
             self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
                                           data=0x1, burst_len=1)
 
@@ -934,7 +951,8 @@ class HexitecFem():
             # Timestamp when offsets collected
             self.offsets_timestamp = self.create_iso_timestamp()
             # ending = time.time()
-            # print("     collect_offsets took: {}".format(ending-beginning))
+            # # print(" {} seconds, did:    collect_offsets ".format(ending-beginning));time.sleep(0.9)
+            # self.display_debugging(f"offsets took: {ending-beginning}")
         except Exception as e:
             self.flag_error("Failed to collect offsets", str(e))
         self.hardware_busy = False
@@ -942,6 +960,8 @@ class HexitecFem():
     def stop_sm(self):
         """Stop the state machine in VSRs."""
         for vsr in self.vsr_list:
+            # Stop trigger state machine - Otherwise VSRs collect dark currents too quickly
+            vsr.stop_trigger_sm()
             vsr.disable_sm()
 
     def set_dc_controls(self, capt_avg_pict, spectroscopic_mode_en):
@@ -958,6 +978,8 @@ class HexitecFem():
         """Start the state machine in VSRs."""
         for vsr in self.vsr_list:
             vsr.enable_sm()
+            # Restart trigger state machine
+            vsr.start_trigger_sm()
 
     def await_dc_captured(self):
         """Wait for the Dark Correction frames to be collected."""
@@ -1111,6 +1133,8 @@ class HexitecFem():
             for vsr in self.vsr_list:
                 index = vsr.addr - self.vsr_base_address
                 self.sync_list[index] = 0
+                # Stop trigger state machine - Otherwise VSRs will not initialise/updated
+                vsr.stop_trigger_sm()
 
             for vsr in self.vsr_list:
                 vsr_id = vsr.addr-143
@@ -1169,6 +1193,10 @@ class HexitecFem():
             logging.debug("Disabling training for vsr(s)..")
             for vsr in self.vsr_list:
                 vsr._disable_training()
+
+            self.start_trigger = True
+
+            self.configure_hardware_triggering()
 
             self.x10g_rdma.udp_rdma_write(address=0x1c, data=0x1, burst_len=1)
             logging.debug("fpga state machine enabled")
@@ -1247,6 +1275,41 @@ class HexitecFem():
 
         logging.debug("Writing config to VSR..")
         vsr.initialise()
+
+    def configure_hardware_triggering(self):
+        """Configures hardware triggering options."""
+        try:
+            for vsr in self.vsr_list:
+                vsr.set_trigger_mode_number_frames(self.triggering_frames)
+                vsr.write_trigger_mode_number_frames()
+
+                if self.enable_trigger_mode:
+                    vsr.enable_trigger_mode_trigger_two_and_three()
+                else:
+                    vsr.disable_trigger_mode_trigger_two_and_three()
+
+                if self.enable_trigger_input:
+                    vsr.enable_trigger_input_two_and_three()
+                else:
+                    vsr.disable_trigger_input_two_and_three()
+
+                if self.start_trigger:
+                    vsr.start_trigger_sm()
+                else:
+                    vsr.stop_trigger_sm()
+                # if vsr.addr == 0x90:
+                #     number_trigger_frames = vsr.read_trigger_mode_number_frames()
+                #     # self.display_debugging("--------------------------")
+                #     # self.display_debugging(f" -> number_trigger_frames: {number_trigger_frames}")
+                #     reg10_val = vsr.read_register_10()
+                #     self.display_debugging(f"Reg 10: {reg10_val}")
+        except Exception as e:
+            self.flag_error("Configure hardware triggering Error", str(e))
+
+    def display_debugging(self, message):  # pragma: no cover
+        timestamp = self.create_iso_timestamp()
+        # Append to errors_history list, nested list of timestamp, error message
+        self.errors_history.append([timestamp, message])
 
     def write_dac_values(self, vsr):
         """Update DAC values, provided by hexitec file."""
@@ -1402,6 +1465,51 @@ class HexitecFem():
         # Returning mapping for debugging purposes only, not necessary
         return self.vsr_addr_mapping
 
+    def set_start_trigger(self, start_trigger):
+        self.start_trigger = start_trigger
+
+    def set_enable_trigger_mode(self, enable_trigger_mode):
+        self.enable_trigger_mode = enable_trigger_mode
+
+    def set_enable_trigger_input(self, enable_trigger_input):
+        self.enable_trigger_input = enable_trigger_input
+
+    def set_triggering_mode(self, triggering_mode):
+        """Sets the triggering mode.
+
+        :param triggering_mode: 'triggered' or 'none'
+        """
+        self.parent.daq.check_daq_acquiring_data("trigger mode")
+        triggering_mode = triggering_mode.lower()
+        if (triggering_mode not in self.TRIGGERINGOPTIONS):
+            raise ParameterTreeError("Must be one of: triggered or none")
+
+        if triggering_mode == "none":
+            self.enable_trigger_input = False
+            self.enable_trigger_mode = False
+        elif triggering_mode == "triggered":
+            self.enable_trigger_input = True
+            self.enable_trigger_mode = True
+            # Number of Frames to near infinity (>5 days of acquisition)
+            self.parent.set_number_frames(4294967290)
+            self.parent.set_duration_enable(False)
+        # Triggering mode changed, must reinitialise system
+        self.system_initialised = False
+        self.triggering_mode = triggering_mode
+
+    def set_triggering_frames(self, triggering_frames):
+        """Sets the number of hardware frames when running in triggering mode.
+
+        :param triggering_frames: Number of frames to trigger on.
+        """
+        self.parent.daq.check_daq_acquiring_data("trigger frames")
+        if isinstance(triggering_frames, int):
+            self.triggering_frames = triggering_frames
+        else:
+            raise ParameterTreeError("Not an integer!")
+        # Triggering mode changed, must reinitialise system
+        self.system_initialised = False
+
     def convert_string_exponential_to_integer(self, exponent):
         """Convert aspect format to fit dac format.
 
@@ -1469,8 +1577,10 @@ class HexitecFem():
             if setting >= valid_range[0] and setting <= valid_range[1]:
                 pass
             else:
-                logging.error("Error parsing parameter %s, got: %s but valid range: %s-%s" %
-                              (descriptor, setting, valid_range[0], valid_range[1]))
+                error = "Error parsing parameter %s, got: %s but valid range: %s-%s" % \
+                        (descriptor, setting, valid_range[0], valid_range[1])
+                logging.error(error)
+                self.flag_error(error)
                 setting = -1
         except KeyError:
             raise HexitecFemError("Missing Key: '%s'" % descriptor)

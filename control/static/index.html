@@ -120,10 +120,10 @@
                       <div class="row sidebar-row vertical-align">
                         <div class="col-xs-7">
                           <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                            <input type="radio" class="btn-check" name="mode_radio" id="mode_radio1" autocomplete="off" onclick="changeModeEnable()">
-                            <label class="btn btn-outline-primary" for="mode_radio1">Seconds</label>
-                            <input type="radio" class="btn-check" name="mode_radio" id="mode_radio2" autocomplete="off" onclick="changeModeEnable()" checked>
-                            <label class="btn btn-outline-primary" for="mode_radio2">Frames</label>
+                            <input type="radio" class="btn-check" name="camera-mode-radio" id="camera-mode-radio1" autocomplete="off" onclick="changeModeEnable()">
+                            <label class="btn btn-outline-primary" for="camera-mode-radio1">Seconds</label>
+                            <input type="radio" class="btn-check" name="camera-mode-radio" id="camera-mode-radio2" autocomplete="off" onclick="changeModeEnable()" checked>
+                            <label class="btn btn-outline-primary" for="camera-mode-radio2">Frames</label>
                           </div>
                         </div>
                       </div>
@@ -150,6 +150,31 @@
                     </td>
                     <td>
                       &nbsp;<td><span id="duration-warning">&nbsp;</span></td>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Trigger Mode:&nbsp;
+                    </td>
+                    <td>
+                      <select class="double-width" id="triggering-mode-text" onchange="triggering_mode_changed(this.value)">
+                        <option selected="selected" value="none">None</option>
+                        <option value="triggered">Triggered</option>
+                      </select>
+                    </td>
+                    <td></td> <!-- Leave column blank-->
+                    <td>
+                      &nbsp;<span id="triggering-mode-warning">&nbsp;</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Trigger Frames:&nbsp;
+                    </td>
+                    <td>
+                      <div class="text-integer">
+                        <input type="text" id="triggering-frames-text" onChange='triggering_frames_changed()' size="3">
+                      </div>
                     </td>
                   </tr>
                   <tr>
@@ -441,6 +466,7 @@
         <div class="container-fluid">
           <div class="row contflex">
             <table class="overall-table">
+
               <tr>
                 <th>File Options&nbsp;</th>
               </tr>

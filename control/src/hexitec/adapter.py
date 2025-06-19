@@ -303,7 +303,9 @@ class Hexitec():
                     "warning": (lambda: bool(self.leak_warning), None),
                     "leak_error": (self._get_leak_error, None)
                 }
-            }
+            },
+            "triggering_frames": (lambda: self.fem.triggering_frames, self.set_triggering_frames),
+            "triggering_mode": (lambda: self.fem.triggering_mode, self.set_triggering_mode)
         })
 
         self.system_info = SystemInfo()
@@ -508,6 +510,8 @@ class Hexitec():
         """Apply configuration to Odin and VSR Hardware."""
         self.prepare_fem_farm_mode()
         self.fem.set_hexitec_config("")
+        self.daq.commit_configuration()
+        self.daq.update_fp_configuration = False
 
     def initialise_hardware(self, msg=None):
         """Initialise hardware."""
@@ -584,6 +588,8 @@ class Hexitec():
         config["duration"] = self.duration
         config["duration_enable"] = self.duration_enable
         config["fem/hexitec_config"] = self.strip_base_path(self.fem.hexitec_config, "control/")
+        config["fem/triggering_mode"] = self.fem.triggering_mode
+        config["fem/triggering_frames"] = self.fem.triggering_frames
         config["number_frames"] = self.number_frames
         try:
             with open(self.odin_config_file, "w") as f:
@@ -628,9 +634,11 @@ class Hexitec():
                 else:
                     self.set_number_frames(config["number_frames"])
                     self.set_duration_enable(config["duration_enable"])
+                self.fem.set_triggering_frames(config["fem/triggering_frames"])
+                self.fem.set_triggering_mode(config["fem/triggering_mode"])
                 # Set file directory, then filename
                 self.daq.set_data_dir(config["daq/file_dir"])
-                self.daq.set_file_name(config["daq/file_name"])
+                self.daq.set_file_name(config["daq/file_name"], skip_hw_check=True)
         except FileNotFoundError as e:
             self.fem.flag_error("Loading Odin config - file missing", str(e))
         except JSONDecodeError as e:
@@ -647,6 +655,10 @@ class Hexitec():
         # Prevent if system busy
         if self.fem.hardware_busy:
             error = f"Cannot update duration enable while: {self.software_state}"
+            self.fem.flag_error(error)
+            raise ParameterTreeError(error)
+        if self.fem.triggering_mode == "triggered":
+            error = "Cannot set duration enable in triggered mode"
             self.fem.flag_error(error)
             raise ParameterTreeError(error)
         self.duration_enable = duration_enable
@@ -672,15 +684,46 @@ class Hexitec():
             error = f"Cannot update number of frames while: {self.software_state}"
             self.fem.flag_error(error)
             raise ParameterTreeError(error)
+        if self.fem.triggering_mode == "triggered":
+            error = "Cannot set number of frames in triggered mode"
+            self.fem.flag_error(error)
+            raise ParameterTreeError(error)
         # Ensure even number of frames
         if frames % 2:
             frames = self.round_to_even(frames)
         if frames <= 0:
             raise ParameterTreeError("frames must be above 0!")
+        print(" [E ADP frames: {}".format(frames))
         self.number_frames = frames
         # Update number of frames in Hardware, and (via DAQ) in histogram and hdf plugins
         self.fem.set_number_frames(self.number_frames)
         self.daq.set_number_frames(self.number_frames)
+
+    def set_triggering_mode(self, triggering_mode):
+        """Set triggering mode in FEM."""
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't update triggering mode")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        # Prevent if system busy
+        if self.fem.hardware_busy:
+            error = f"Cannot update triggering mode while: {self.software_state}"
+            self.fem.flag_error(error)
+            raise ParameterTreeError(error)
+        self.fem.set_triggering_mode(triggering_mode)
+
+    def set_triggering_frames(self, triggering_frames):
+        """Set triggering frames in FEM."""
+        if self.software_state == "Interlocked":
+            error_message = "{}".format("Interlocked: Can't update triggering frames")
+            self.report_leak_detector_error(error_message)
+            raise ParameterTreeError(error_message)
+        # Prevent if system busy
+        if self.fem.hardware_busy:
+            error = f"Cannot update triggering frames while: {self.software_state}"
+            self.fem.flag_error(error)
+            raise ParameterTreeError(error)
+        self.fem.set_triggering_frames(triggering_frames)
 
     def set_duration(self, duration):
         """Set duration, calculate frames from frame rate and update DAQ, FEM."""
@@ -691,6 +734,10 @@ class Hexitec():
         # Prevent if system busy
         if self.fem.hardware_busy:
             error = f"Cannot update duration while: {self.software_state}"
+            self.fem.flag_error(error)
+            raise ParameterTreeError(error)
+        if self.fem.triggering_mode == "triggered":
+            error = "Cannot set duration in triggered mode"
             self.fem.flag_error(error)
             raise ParameterTreeError(error)
         if duration <= 0:
@@ -715,6 +762,7 @@ class Hexitec():
 
     def set_number_nodes(self, number_nodes):
         """Set number of nodes."""
+        # Function called by fem.verify_farm_mode_parameters(), which determines how many nodes
         self.number_nodes = number_nodes
         self.daq.set_number_nodes(self.number_nodes)
 
@@ -729,9 +777,8 @@ class Hexitec():
             self.fem.check_hardware_ready("acquire data")
             self.fem.check_system_initialised("acquire data")
 
-            # if self.daq.commit_config_before_acquire:
-            #     self.daq.commit_config_before_acquire = False
-            self.daq.commit_configuration()
+            if self.daq.update_fp_configuration:
+                self.daq.commit_configuration()
 
             # Clear (any previous) daq error
             self.daq.in_error = False
@@ -868,7 +915,7 @@ class Hexitec():
             try:
                 self.fem.prepare_farm_mode()
             except Exception as e:
-                error = f"Commit configuration: {str(e)}"
+                error = f"Prepare fem farm mode: {str(e)}"
                 self.fem.flag_error(error)
                 raise ParameterTreeError(error)
 

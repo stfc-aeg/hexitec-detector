@@ -249,7 +249,7 @@ class HexitecDAQ():
             "compression_type": (self._get_compression_type, self._set_compression_type),
             "sensors_layout": (self._get_sensors_layout, self._set_sensors_layout)
         })
-        self.commit_config_before_acquire = False
+        self.update_fp_configuration = True
         self.update_rows_columns_pixels()
         # Placeholder for GenerateConfigFiles instance generating json files
         self.gcf = None
@@ -373,7 +373,7 @@ class HexitecDAQ():
         # About to receive fem data, daq therefore now busy
         self.daq_ready = False
         # Wait while fem finish sending data
-        IOLoop.instance().call_later(1.3, self.acquisition_check_loop)
+        IOLoop.instance().call_later(0.3, self.acquisition_check_loop)
 
     def calculate_remaining_collection_time(self):
         """Calculate time remaining of current collection."""
@@ -466,7 +466,7 @@ class HexitecDAQ():
 
     def stop_acquisition(self):
         """Disable file writing so processing can add local Meta data to file."""
-        if self.check_hdf_write_statuses():
+        if self.check_hdf_writing_true():
             # hdf file still open
             if self.hdf_retry < 5:
                 IOLoop.instance().call_later(1.0, self.stop_acquisition)
@@ -483,8 +483,8 @@ class HexitecDAQ():
         #     self.frames_received, self.frames_processed,
         #     self.processed_remaining))
 
-    def check_hdf_write_statuses(self):
-        """Check hdf node(s) statuses, return True if all finished writing."""
+    def check_hdf_writing_true(self):
+        """Check hdf node(s) statuses, return True if all FP(s) writing status' True."""
         fp_statuses = self.get_adapter_status("fp")
         hdf_status = False
         for status in fp_statuses:
@@ -496,7 +496,7 @@ class HexitecDAQ():
 
     def hdf_closing_loop(self):
         """Wait for processing to complete but don't block, before prep to write meta data."""
-        if self.check_hdf_write_statuses():
+        if self.check_hdf_writing_true():
             IOLoop.instance().call_later(0.5, self.hdf_closing_loop)
         else:
             self.frames_received = self.get_total_frames_received()
@@ -840,12 +840,16 @@ class HexitecDAQ():
         """Set number of nodes."""
         self.number_nodes = nodes
 
-    def set_file_name(self, name):
-        """Set processed file name."""
+    def set_file_name(self, name, skip_hw_check=False):
+        """Set processed file name.
+
+        :param name: Name of the file to be created.
+        :param skip_hw_check: If True, skips hardware checks before setting filename."""
         self.check_daq_acquiring_data("filename")
         full_path = self.file_dir + name + ".h5"
-        if os.path.isfile(full_path):
-            raise ParameterTreeError("HDF5 filename already exists")
+        if not skip_hw_check:
+            if os.path.isfile(full_path):
+                raise ParameterTreeError("HDF5 filename already exists")
         self.file_name = name
 
     def set_file_writing(self, writing):
@@ -875,19 +879,19 @@ class HexitecDAQ():
         request.body = "{}".format(self.max_frames_received)
         self.adapters["fp"].put(command, request)
 
-        # Finally, update own file_writing so FEM(s) know the status
+        # Finally, update own file_writing status (No one checks this?)
         self.file_writing = writing
 
         # If enabling writing, check that hdf plugin has reset
         if writing:
-            IOLoop.instance().call_later(0.1, self.check_hdf_reset)
+            IOLoop.instance().call_later(0.01, self.check_hdf_reset)
         else:
             self.hdf_is_reset = False
 
     def check_hdf_reset(self):
         """Wait for hdf plugin to reset."""
-        if self.get_total_frames_processed('hdf'):
-            IOLoop.instance().call_later(0.1, self.check_hdf_reset)
+        if not self.check_hdf_writing_true():
+            IOLoop.instance().call_later(0.01, self.check_hdf_reset)
         else:
             self.hdf_is_reset = True
 
@@ -904,6 +908,7 @@ class HexitecDAQ():
     def _set_addition_enable(self, addition_enable):
         self.check_daq_acquiring_data("addition")
         self.addition_enable = addition_enable
+        self.update_fp_configuration = True
 
     def _set_calibration_enable(self, calibration_enable):
         self.check_daq_acquiring_data("calibration")
@@ -916,42 +921,52 @@ class HexitecDAQ():
             self._set_bin_start(0)
             self._set_bin_end(8000)
             self._set_bin_width(10)
+        self.update_fp_configuration = True
 
     def _set_discrimination_enable(self, discrimination_enable):
         self.check_daq_acquiring_data("discrimination")
         self.discrimination_enable = discrimination_enable
+        self.update_fp_configuration = True
 
     def _set_lvframes_dataset_name(self, lvframes_dataset_name):
         self.lvframes_dataset_name = lvframes_dataset_name
+        self.update_fp_configuration = True
 
     def _set_lvframes_frequency(self, lvframes_frequency):
         if lvframes_frequency < 0:
             raise ParameterTreeError("lvframes_frequency must be positive!")
         self.lvframes_frequency = lvframes_frequency
+        self.update_fp_configuration = True
 
     def _set_lvframes_socket_addr(self, socket_addr):
         self.lvframes_socket_addr = socket_addr
+        self.update_fp_configuration = True
 
     def _set_lvframes_per_second(self, lvframes_per_second):
         if lvframes_per_second < 0:
             raise ParameterTreeError("lvframes_per_second must be positive!")
         self.lvframes_per_second = lvframes_per_second
+        self.update_fp_configuration = True
 
     def _set_lvspectra_dataset_name(self, lvspectra_dataset_name):
         self.lvspectra_dataset_name = lvspectra_dataset_name
+        self.update_fp_configuration = True
 
     def _set_lvspectra_frequency(self, lvspectra_frequency):
         if lvspectra_frequency < 0:
             raise ParameterTreeError("lvspectra_frequency must be positive!")
         self.lvspectra_frequency = lvspectra_frequency
+        self.update_fp_configuration = True
 
     def _set_lvspectra_socket_addr(self, socket_addr):
         self.lvspectra_socket_addr = socket_addr
+        self.update_fp_configuration = True
 
     def _set_lvspectra_per_second(self, lvspectra_per_second):
         if lvspectra_per_second < 0:
             raise ParameterTreeError("lvspectra_per_second must be positive!")
         self.lvspectra_per_second = lvspectra_per_second
+        self.update_fp_configuration = True
 
     def _set_pixel_grid_size(self, size):
         self.check_daq_acquiring_data("pixel grid size")
@@ -959,6 +974,7 @@ class HexitecDAQ():
             self.pixel_grid_size = size
         else:
             raise ParameterTreeError("Must be either 3 or 5")
+        self.update_fp_configuration = True
 
     def _set_gradients_filename(self, gradients_filename):
         self.check_daq_acquiring_data("gradients filename")
@@ -966,6 +982,7 @@ class HexitecDAQ():
         if (os.path.isfile(gradients_filename) is False):
             raise ParameterTreeError("Gradients file doesn't exist")
         self.gradients_filename = gradients_filename
+        self.update_fp_configuration = True
 
     def _set_intercepts_filename(self, intercepts_filename):
         self.check_daq_acquiring_data("intercepts filename")
@@ -973,6 +990,7 @@ class HexitecDAQ():
         if (os.path.isfile(intercepts_filename) is False):
             raise ParameterTreeError("Intercepts file doesn't exist")
         self.intercepts_filename = intercepts_filename
+        self.update_fp_configuration = True
 
     def _set_bin_end(self, bin_end):
         """Update bin_end and datasets' histograms' dimensions."""
@@ -981,6 +999,7 @@ class HexitecDAQ():
             raise ParameterTreeError("bin_end must be positive!")
         self.bin_end = bin_end
         self.update_number_histograms()
+        self.update_fp_configuration = True
 
     def _set_bin_start(self, bin_start):
         """Update bin_start and datasets' histograms' dimensions."""
@@ -989,6 +1008,7 @@ class HexitecDAQ():
             raise ParameterTreeError("bin_start must be positive!")
         self.bin_start = bin_start
         self.update_number_histograms()
+        self.update_fp_configuration = True
 
     def _set_bin_width(self, bin_width):
         """Update bin_width and datasets' histograms' dimensions."""
@@ -997,6 +1017,7 @@ class HexitecDAQ():
             raise ParameterTreeError("bin_width must be positive!")
         self.bin_width = bin_width
         self.update_number_histograms()
+        self.update_fp_configuration = True
 
     def update_datasets_frame_dimensions(self):
         """Update frames' datasets' dimensions."""
@@ -1012,20 +1033,21 @@ class HexitecDAQ():
 
     def _set_max_frames_received(self, max_frames_received):
         self.max_frames_received = max_frames_received
+        self.update_fp_configuration = True
 
     def _set_pass_processed(self, pass_processed=None):
         """Toggle passing processed dataset on/off."""
         self.check_daq_acquiring_data("processed dataset")
         if pass_processed is not None:
             self.pass_processed = pass_processed
-        self.commit_config_before_acquire = True 
+        self.update_fp_configuration = True
 
     def _set_pass_raw(self, pass_raw=None):
         """Toggle passing raw dataset on/off."""
         self.check_daq_acquiring_data("raw dataset")
         if pass_raw is not None:
             self.pass_raw = pass_raw
-        self.commit_config_before_acquire = True
+        self.update_fp_configuration = True
 
     def _set_threshold_filename(self, threshold_filename):
         self.check_daq_acquiring_data("threshold filename")
@@ -1033,6 +1055,7 @@ class HexitecDAQ():
         if (os.path.isfile(threshold_filename) is False):
             raise ParameterTreeError("Threshold file doesn't exist")
         self.threshold_filename = threshold_filename
+        self.update_fp_configuration = True
 
     def _set_threshold_mode(self, threshold_mode):
         self.check_daq_acquiring_data("threshold mode")
@@ -1041,27 +1064,32 @@ class HexitecDAQ():
             self.threshold_mode = threshold_mode
         else:
             raise ParameterTreeError("Must be one of: value, filename or none")
+        self.update_fp_configuration = True
 
     def _set_threshold_value(self, threshold_value):
         self.check_daq_acquiring_data("threshold_value")
         if threshold_value < 0:
             raise ParameterTreeError("threshold_value must be positive!")
         self.threshold_value = threshold_value
+        self.update_fp_configuration = True
 
     def _set_threshold_lower(self, threshold_lower):
         if threshold_lower < 0:
             raise ParameterTreeError("threshold_lower must be positive!")
         self.threshold_lower = threshold_lower
+        self.update_fp_configuration = True
 
     def _set_threshold_upper(self, threshold_upper):
         if threshold_upper < 0:
             raise ParameterTreeError("threshold_upper must be positive!")
         self.threshold_upper = threshold_upper
+        self.update_fp_configuration = True
 
     def _set_image_frequency(self, image_frequency):
         if image_frequency < 0:
             raise ParameterTreeError("image_frequency must be positive!")
         self.image_frequency = image_frequency
+        self.update_fp_configuration = True
 
     def check_daq_acquiring_data(self, parameter):
         """Helper function checking whether mid acquisition.
@@ -1096,6 +1124,7 @@ class HexitecDAQ():
         self.update_rows_columns_pixels()
         self.update_datasets_frame_dimensions()
         self.update_number_histograms()
+        self.update_fp_configuration = True
 
     def _get_compression_type(self):
         return self.compression_type
@@ -1106,6 +1135,7 @@ class HexitecDAQ():
         else:
             error = "Invalid compression type; Valid options: {}".format(self.COMPRESSIONOPTIONS)
             raise ParameterTreeError(error)
+        self.update_fp_configuration = True
 
     def commit_configuration(self):
         """Generate and sends the FP config files."""
@@ -1209,7 +1239,7 @@ class HexitecDAQ():
         self.adapters["fp"].put(command, request)
 
         # Allow FP time to process above PUT requests before configuring plugin settings
-        IOLoop.instance().call_later(0.4, self.submit_configuration)
+        IOLoop.instance().call_later(0.04, self.submit_configuration)
 
     def submit_configuration(self):
         """Send each ParameterTree value to the corresponding FP plugin."""
