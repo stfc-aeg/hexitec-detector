@@ -704,6 +704,23 @@ class TestDetector(unittest.TestCase):
             self.test_adapter.detector.set_duration_enable(False)
         assert exc_info.value.args[0] == error
 
+    def test_set_duration_enable_blocked_while_busy(self):
+        """Test function cannot set duration enable while hardware busy."""
+        self.test_adapter.detector.fem.hardware_busy = True
+        error = "Cannot update duration enable while: Cold"
+        with pytest.raises(ParameterTreeError, match=error):
+            self.test_adapter.detector.set_duration_enable(True)
+
+    def test_set_duration_enable_blocked_in_triggered_mode(self):
+        """Test function cannot set duration enable in triggered mode."""
+        self.test_adapter.detector.fem.triggering_mode = "triggered"
+        self.test_adapter.detector.fem.hardware_busy = False
+        error = "Cannot set duration enable in triggered mode"
+        with pytest.raises(ParameterTreeError, match=error) as exc_info:
+            self.test_adapter.detector.set_duration_enable(True)
+        assert exc_info.value.args[0] == error
+        self.test_adapter.detector.fem.flag_error.called_with(error)
+
     def test_set_number_frames(self):
         """Test function sets number of frames."""
         self.test_adapter.detector.fem.hardware_busy = False
@@ -714,10 +731,22 @@ class TestDetector(unittest.TestCase):
         with pytest.raises(ParameterTreeError, match="frames must be above 0!"):
             self.test_adapter.detector.set_number_frames(-1)
 
+    def test_set_number_frames_blocked_in_triggered_mode(self):
+        """Test function cannot set number of frames in triggered mode."""
+        self.test_adapter.detector.fem.triggering_mode = "triggered"
+        self.test_adapter.detector.fem.hardware_busy = False
+        error = "Cannot set number of frames in triggered mode"
+        with pytest.raises(ParameterTreeError, match=error) as exc_info:
+            self.test_adapter.detector.set_number_frames(8)
+        assert exc_info.value.args[0] == error
+        self.test_adapter.detector.fem.flag_error.called_with(error)
+
     def test_set_number_frames_blocked_while_busy(self):
         """Test function cannot set number of frames while hardware busy."""
+        self.test_adapter.detector.software_state = "Cold"
         self.test_adapter.detector.fem.hardware_busy = True
-        with pytest.raises(ParameterTreeError, match="Cannot update number of frames while: Cold"):
+        error = "Cannot update number of frames while: Cold"
+        with pytest.raises(ParameterTreeError, match=error):
             self.test_adapter.detector.set_number_frames(8)
 
     def test_set_number_frames_handles_interlocked(self):
@@ -729,6 +758,61 @@ class TestDetector(unittest.TestCase):
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_adapter.detector.set_number_frames(False)
         assert exc_info.value.args[0] == error
+
+    def test_set_triggering_mode(self):
+        """Test function sets triggering mode."""
+        self.test_adapter.detector.software_state = "Idle"
+        self.test_adapter.detector.fem.hardware_busy = False
+        triggering_mode = "triggered"
+        self.test_adapter.detector.set_triggering_mode(triggering_mode)
+        assert self.test_adapter.detector.fem.set_triggering_mode.called_with(triggering_mode)
+
+    def test_set_triggering_mode_handles_interlocked(self):
+        """Test function prevents updating triggering mode when interlocked."""
+        self.test_adapter.detector.software_state = "Interlocked"
+        self.test_adapter.detector.fem.hardware_busy = False
+        error = "Interlocked: Can't update triggering mode"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=error)
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_adapter.detector.set_triggering_mode("triggered")
+        assert exc_info.value.args[0] == error
+        self.test_adapter.detector.report_leak_detector_error.assert_called_with(error)
+
+    def test_set_triggering_mode_handles_hardware_busy(self):
+        """Test function prevents updating triggering mode when hardware busy."""
+        self.test_adapter.detector.software_state = "Idle"
+        self.test_adapter.detector.fem.hardware_busy = True
+        error = "Cannot update triggering mode while: Idle"
+        with pytest.raises(ParameterTreeError, match=error) as exc_info:
+            self.test_adapter.detector.set_triggering_mode("mode")
+        assert exc_info.value.args[0] == error
+        self.test_adapter.detector.fem.flag_error.assert_called_with(error)
+
+    def test_set_triggering_frames(self):
+        """Test function sets triggering frames."""
+        self.test_adapter.detector.software_state = "Idle"
+        self.test_adapter.detector.fem.hardware_busy = False
+        frames = 5
+        self.test_adapter.detector.set_triggering_frames(frames)
+        assert self.test_adapter.detector.fem.set_triggering_frames.called
+        self.test_adapter.detector.fem.set_triggering_frames.assert_called_with(frames)
+
+    def test_set_triggering_frames_handles_interlocked(self):
+        """Test function prevents updating triggering frames when interlocked."""
+        self.test_adapter.detector.software_state = "Interlocked"
+        self.test_adapter.detector.fem.hardware_busy = False
+        error = "Interlocked: Can't update triggering frames"
+        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=error)
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_adapter.detector.set_triggering_frames(5)
+        assert exc_info.value.args[0] == error
+
+    def test_set_triggering_frames_blocked_while_busy(self):
+        """Test function cannot set triggering frames while hardware busy."""
+        self.test_adapter.detector.fem.hardware_busy = True
+        error = "Cannot update triggering frames while: Cold"
+        with pytest.raises(ParameterTreeError, match=error):
+            self.test_adapter.detector.set_triggering_frames(8)
 
     def test_set_duration(self):
         """Test function sets acquisition duration."""
@@ -752,6 +836,15 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.fem.hardware_busy = False
         error = "Interlocked: Can't update duration"
         self.test_adapter.detector.report_leak_detector_error = Mock(return_value=error)
+        with pytest.raises(ParameterTreeError) as exc_info:
+            self.test_adapter.detector.set_duration(5)
+        assert exc_info.value.args[0] == error
+
+    def test_set_duration_handles_triggered_mode(self):
+        """Test function prevents updating duration during triggered mode."""
+        self.test_adapter.detector.fem.triggering_mode = "triggered"
+        self.test_adapter.detector.fem.hardware_busy = False
+        error = "Cannot set duration in triggered mode"
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_adapter.detector.set_duration(5)
         assert exc_info.value.args[0] == error

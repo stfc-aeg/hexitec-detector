@@ -1465,39 +1465,35 @@ class HexitecFem():
     def set_enable_trigger_input(self, enable_trigger_input):
         self.enable_trigger_input = enable_trigger_input
 
-    def set_triggering_mode(self, triggering_mode, skip_hw_check=False):
+    def set_triggering_mode(self, triggering_mode):
         """Sets the triggering mode.
 
         :param triggering_mode: 'triggered' or 'none'
-        :param skip_hw_check: If True, skips hardware checks before changing mode.
         """
         self.parent.daq.check_daq_acquiring_data("trigger mode")
-        if not skip_hw_check:
-            self.check_hardware_ready("change trigger mode")
         triggering_mode = triggering_mode.lower()
-        if (triggering_mode in self.TRIGGERINGOPTIONS):
-            self.triggering_mode = triggering_mode
-        else:
+        if (triggering_mode not in self.TRIGGERINGOPTIONS):
             raise ParameterTreeError("Must be one of: triggered or none")
 
-        if self.triggering_mode == "none":
+        if triggering_mode == "none":
             self.enable_trigger_input = False
             self.enable_trigger_mode = False
-        elif self.triggering_mode == "triggered":
+        elif triggering_mode == "triggered":
             self.enable_trigger_input = True
             self.enable_trigger_mode = True
+            # Number of Frames to near infinity (>5 days of acquisition)
+            self.parent.set_number_frames(4294967290)
+            self.parent.set_duration_enable(False)
         # Triggering mode changed, must reinitialise system
         self.system_initialised = False
+        self.triggering_mode = triggering_mode
 
-    def set_triggering_frames(self, triggering_frames, skip_hw_check=False):
+    def set_triggering_frames(self, triggering_frames):
         """Sets the number of hardware frames when running in triggering mode.
 
         :param triggering_frames: Number of frames to trigger on.
-        :param skip_hw_check: If True, skips hardware checks before changing frames.
         """
         self.parent.daq.check_daq_acquiring_data("trigger frames")
-        if not skip_hw_check:
-            self.check_hardware_ready("change trigger frames")
         if isinstance(triggering_frames, int):
             self.triggering_frames = triggering_frames
         else:

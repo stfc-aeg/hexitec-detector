@@ -1292,13 +1292,11 @@ class TestFem(unittest.TestCase):
     def test_set_triggering_mode_triggered_selected(self):
         """Test function sets triggering mode ok."""
         self.test_fem.fem.parent.daq.check_daq_acquiring_data = Mock()
-        self.test_fem.fem.check_hardware_ready = Mock()
         self.test_fem.fem.system_initialised = True
         self.test_fem.fem.triggering_mode = "none"
-        self.test_fem.fem.set_triggering_mode("triggered", skip_hw_check=False)
+        self.test_fem.fem.set_triggering_mode("triggered")
 
         self.test_fem.fem.parent.daq.check_daq_acquiring_data.assert_called_with("trigger mode")
-        self.test_fem.fem.check_hardware_ready.assert_called_with("change trigger mode")
         assert self.test_fem.fem.triggering_mode == "triggered"
         assert self.test_fem.fem.enable_trigger_input is True
         assert self.test_fem.fem.enable_trigger_mode is True
@@ -1307,13 +1305,11 @@ class TestFem(unittest.TestCase):
     def test_set_triggering_mode_none_selected(self):
         """Test function sets triggering mode ok."""
         self.test_fem.fem.parent.daq.check_daq_acquiring_data = Mock()
-        self.test_fem.fem.check_hardware_ready = Mock()
         self.test_fem.fem.system_initialised = True
         self.test_fem.fem.triggering_mode = "triggered"
-        self.test_fem.fem.set_triggering_mode("none", skip_hw_check=False)
+        self.test_fem.fem.set_triggering_mode("none")
 
         self.test_fem.fem.parent.daq.check_daq_acquiring_data.assert_called_with("trigger mode")
-        self.test_fem.fem.check_hardware_ready.assert_called_with("change trigger mode")
         assert self.test_fem.fem.triggering_mode == "none"
         assert self.test_fem.fem.enable_trigger_input is False
         assert self.test_fem.fem.enable_trigger_mode is False
@@ -1322,11 +1318,10 @@ class TestFem(unittest.TestCase):
     def test_set_triggering_mode_handles_undefined_mode(self):
         """Test function sets triggering mode ok."""
         self.test_fem.fem.parent.daq.check_daq_acquiring_data = Mock()
-        self.test_fem.fem.check_hardware_ready = Mock()
         self.test_fem.fem.system_initialised = True
         self.test_fem.fem.triggering_mode = "none"
         with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_fem.fem.set_triggering_mode("made_up", skip_hw_check=False)
+            self.test_fem.fem.set_triggering_mode("made_up")
         assert exc_info.type is ParameterTreeError
         assert exc_info.value.args[0] == "Must be one of: triggered or none"
         assert self.test_fem.fem.system_initialised is True
@@ -1334,26 +1329,22 @@ class TestFem(unittest.TestCase):
     def test_set_triggering_frames(self):
         """Test function sets triggering frames ok."""
         self.test_fem.fem.parent.daq.check_daq_acquiring_data = Mock()
-        self.test_fem.fem.check_hardware_ready = Mock()
         self.test_fem.fem.triggering_frames = 0
 
-        self.test_fem.fem.set_triggering_frames(10, skip_hw_check=False)
+        self.test_fem.fem.set_triggering_frames(10)
         self.test_fem.fem.parent.daq.check_daq_acquiring_data.assert_called_with("trigger frames")
-        self.test_fem.fem.check_hardware_ready.assert_called_with("change trigger frames")
         assert self.test_fem.fem.triggering_frames == 10
 
     def test_set_triggering_frames_handles_wrong_type(self):
         """Test function sets triggering frames ok."""
         self.test_fem.fem.parent.daq.check_daq_acquiring_data = Mock()
-        self.test_fem.fem.check_hardware_ready = Mock()
         self.test_fem.fem.system_initialised = True
         self.test_fem.fem.triggering_frames = 0
         wrong_type = "Hello?"
 
         with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_fem.fem.set_triggering_frames(wrong_type, skip_hw_check=False)
+            self.test_fem.fem.set_triggering_frames(wrong_type)
         self.test_fem.fem.parent.daq.check_daq_acquiring_data.assert_called_with("trigger frames")
-        self.test_fem.fem.check_hardware_ready.assert_called_with("change trigger frames")
         assert exc_info.type is ParameterTreeError
         assert exc_info.value.args[0] == "Not an integer!"
         assert self.test_fem.fem.system_initialised is True
