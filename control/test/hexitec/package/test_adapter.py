@@ -312,9 +312,18 @@ class TestDetector(unittest.TestCase):
         with patch("hexitec.adapter.IOLoop") as mock_loop:
             self.test_adapter.detector.start_polling()
             i = mock_loop.instance()
-            # Patching only recognises last (delayed) function called
-            # i.call_later.assert_called_with(1.0, self.test_adapter.detector.load_odin)
             i.call_later.assert_called_with(2.0, self.test_adapter.detector.polling)
+
+    def test_polling(self):
+        """Test start polling works."""
+        self.test_adapter.detector.poll_fem = Mock()
+        self.test_adapter.detector.archiver_configured = True
+        self.test_adapter.detector.check_archiver_running = Mock()
+        with patch("hexitec.adapter.IOLoop") as mock_loop:
+            self.test_adapter.detector.polling()
+            self.test_adapter.detector.check_archiver_running.assert_called()
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(1.0, self.test_adapter.detector.polling)
 
     def test_update_meta(self):
         """Test update meta works."""
@@ -881,6 +890,7 @@ class TestDetector(unittest.TestCase):
 
     def test_detector_initialize(self):
         """Test function can initialise adapters."""
+        self.test_adapter.adapter.archiver_configured = True
         adapters = {
             "proxy": Mock(),
             "file_interface": Mock(),
@@ -892,6 +902,22 @@ class TestDetector(unittest.TestCase):
 
         assert adapters == self.test_adapter.detector.adapters
         self.test_adapter.detector.daq.initialize.assert_called_with(adapters)
+        assert self.test_adapter.detector.archiver_configured is False
+
+    def test_detector_initialize_archiver_also(self):
+        """Test function can initialise adapters, including archiver."""
+        self.test_adapter.adapter.archiver_configured = False
+        adapters = {
+            "proxy": Mock(),
+            "file_interface": Mock(),
+            "fp": Mock(),
+            "fr": Mock(),
+            "archiver": Mock(),
+        }
+        self.test_adapter.adapter.initialize(adapters)
+        assert adapters == self.test_adapter.detector.adapters
+        self.test_adapter.detector.daq.initialize.assert_called_with(adapters)
+        assert self.test_adapter.detector.archiver_configured is True
 
     def test_detector_set_acq(self):
         """Test function can set number of frames."""

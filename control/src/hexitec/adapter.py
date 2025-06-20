@@ -261,6 +261,7 @@ class Hexitec():
         self.leak_fault_counter = 0
         self.elog = ""
         self.number_nodes = 1
+        self.archiver_configured = False
         self.archiver_status = 200
         # Software states in alphabetical order:
         #  Acquiring, Cleared, Cold, Connecting, Disconnected, Environs,
@@ -328,6 +329,10 @@ class Hexitec():
         """Get references to adapters, and pass these to the classes that need to use them."""
         self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
         self.daq.initialize(self.adapters)
+        if "archiver" in self.adapters:
+            self.archiver_configured = True
+        else:
+            self.archiver_configured = False
 
     def update_meta(self, meta):
         """Save to parameter tree meta data PUT by Manchester."""
@@ -348,8 +353,9 @@ class Hexitec():
         # Poll FEM acquisition & health status
         self.poll_fem()
 
-        # Check archiver running?
-        self.check_archiver_running()
+        if self.archiver_configured:
+            # Check archiver running?
+            self.check_archiver_running()
 
         IOLoop.instance().call_later(1.0, self.polling)
 
@@ -693,7 +699,6 @@ class Hexitec():
             frames = self.round_to_even(frames)
         if frames <= 0:
             raise ParameterTreeError("frames must be above 0!")
-        print(" [E ADP frames: {}".format(frames))
         self.number_frames = frames
         # Update number of frames in Hardware, and (via DAQ) in histogram and hdf plugins
         self.fem.set_number_frames(self.number_frames)

@@ -846,13 +846,16 @@ class TestDAQ(unittest.TestCase):
         """Test that function prepares processed file."""
         with patch("hexitec.HexitecDAQ.IOLoop"), patch("h5py.File"):
             self.test_daq.daq.in_progress = True
+            self.test_daq.daq.parent.archiver_configured = True
             self.test_daq.daq.write_metadata = Mock(return_value=0)
+            self.test_daq.daq.signal_archiver = Mock()
             self.test_daq.daq.prepare_hdf_file()
 
             assert self.test_daq.daq.hdf_retry == 0
             assert self.test_daq.daq.in_progress is False
             assert self.test_daq.daq.parent.fem.status_message == "Meta data added to "
             assert self.test_daq.daq.parent.software_state == "Ready"
+            self.test_daq.daq.signal_archiver.assert_called()
 
     def test_prepare_hdf_file_fails_inaccessible_config_files(self):
         """Test that function flags if a config file is inaccessible to write_metadata."""

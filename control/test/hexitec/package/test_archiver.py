@@ -137,8 +137,28 @@ class TestArchiver(unittest.TestCase):
         # ["2025-02-12T11:31:25.208396+00:00", "Copied pc:/path/to/12-02-000_000000.h5 to /tmp"],
         # ["2025-02-12T11:31:28.366037+00:00", "Copied pc:/path/to/12-02-000_000001.h5 to /tmp"],
         # ["2025-02-12T11:31:29.093050+00:00", "Copied pc:/path/to/12-02-000.h5 to /tmp"]]
+        self.archiver.limit_number_log_messages = Mock()
         self.archiver.flag_ok('Test ok')
         self.assertIn('Test ok', self.archiver.log_messages[-1][-1])
+        self.archiver.limit_number_log_messages.assert_called_once()
+
+    def test_limit_number_log_messages_leaves_40_messages(self):
+        self.archiver.log_messages = [
+            ['2025-02-12T11:10:39.140740+00:00', 'initialised OK'],
+            ['1', 'tmp'], ['2', 'tmp'], ['3', 'tmp'], ['4', 'tmp'],
+            ['5', 'tmp'], ['6', 'tmp'], ['7', 'tmp'], ['8', 'tmp'],
+            ['9', 'tmp'], ['10', 'tmp'], ['11', 'tmp'], ['12', 'tmp'],
+            ['13', 'tmp'], ['14', 'tmp'], ['15', 'tmp'], 
+            ['16', 'tmp'], ['17', 'tmp'], ['18', 'tmp'], ['19', 'tmp'],
+            ['20', 'tmp'], ['21', 'tmp'], ['22', 'tmp'], ['23', 'tmp'],
+            ['24', 'tmp'], ['25', 'tmp'], ['26', 'tmp'], ['27', 'tmp'],
+            ['28', 'tmp'], ['29', 'tmp'], ['30', 'tmp'],
+            ['31', 'tmp'], ['32', 'tmp'], ['33', 'tmp'], ['34', 'tmp'],
+            ['35', 'tmp'], ['36', 'tmp'], ['37', 'tmp'], ['38', 'tmp'],
+            ['39', 'tmp'], ['40', 'tmp'], ['41', 'tmp'], ['42', 'tmp']]
+        self.archiver.limit_number_log_messages()
+        # Check that the log messages are limited to 40
+        assert 40 == len(self.archiver.log_messages)
 
     def test_get_server_uptime(self):
         uptime = self.archiver.get_server_uptime()

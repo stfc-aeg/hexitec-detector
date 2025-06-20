@@ -550,7 +550,9 @@ class HexitecDAQ():
         self.processing_interruptable = False
         self.in_progress = False
         self.daq_ready = True
-        self.signal_archiver()
+        if self.parent.archiver_configured:
+            # Signal archiver to archive data files
+            self.signal_archiver()
 
     def signal_archiver(self):  # pragma: no cover
         """Signal data files to archive."""

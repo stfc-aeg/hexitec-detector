@@ -339,7 +339,6 @@ class Archiver():
 
     def execute_rsync_command(self, cmd):
         """Execute rsync command through subprocess."""
-
         errors = []
         bOK = True
         rc = 0
@@ -535,6 +534,7 @@ class Archiver():
         timestamp = self.create_timestamp()
         # Append to log_messages list, nested list of timestamp, log message
         self.log_messages.append([timestamp, ok_message])
+        self.limit_number_log_messages()
 
     def create_timestamp(self):
         """Returns timestamp of now."""
@@ -558,6 +558,12 @@ class Archiver():
             self.last_message_timestamp = self.create_timestamp()
 
         self.log_messages = [(str(timestamp), log_message) for timestamp, log_message in logs]
+        self.limit_number_log_messages()
+
+    def limit_number_log_messages(self):
+        """Limit the number of log messages to a maximum of 40."""
+        if len(self.log_messages) > 40:
+            self.log_messages = self.log_messages[-40:]
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.

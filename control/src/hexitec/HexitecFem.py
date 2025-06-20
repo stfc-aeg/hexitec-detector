@@ -483,7 +483,6 @@ class HexitecFem():
     def connect(self):
         """Set up hardware connection."""
         try:
-            print(" [E conn PRE !")
             self.x10g_rdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
                                      rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
                                      debug=False, uart_offset=0x0)
@@ -492,7 +491,6 @@ class HexitecFem():
             self.vsr_list = []
             self.vsr_list.append(
                 VsrModule(self.x10g_rdma, slot=1, init_time=0, addr_mapping=self.vsr_addr_mapping))
-            print(" [E conn DONE")
             self.vsr_list.append(
                 VsrModule(self.x10g_rdma, slot=2, init_time=0, addr_mapping=self.vsr_addr_mapping))
             self.vsr_list.append(
