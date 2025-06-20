@@ -360,9 +360,13 @@ class HexitecFem():
         """Configure Control link's parameters."""
         try:
             ctrl_lane.set_dst_mac(mac=self.server_ctrl_mac, response_check=False)
+            time.sleep(0.001)
             ctrl_lane.set_dst_ip(ip=self.server_ctrl_ip, response_check=False)
+            time.sleep(0.001)
             ctrl_lane.set_src_dst_port(port=self.src_dst_port, response_check=False)
+            time.sleep(0.001)
             ctrl_lane.set_src_mac(mac=self.camera_ctrl_mac, response_check=False)
+            time.sleep(0.001)
             ctrl_lane.set_src_ip(ip=self.camera_ctrl_ip, response_check=False)
 
             # Close multicast connection
@@ -386,7 +390,9 @@ class HexitecFem():
                 UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface,
                         qsfp_idx=self.control_qsfp_idx, lane=self.control_lane)
             ctrl_lane.set_filtering(enable=True, response_check=True)
+            time.sleep(0.001)
             ctrl_lane.set_arp_timeout_length()
+            time.sleep(0.001)
 
             self.data_lane1 = \
                 UdpCore(Hex2x6CtrlRdma, ctrl_flag=False, iface_name=self.data1_interface,
@@ -416,16 +422,26 @@ class HexitecFem():
         # Source = Camera, Destination: PC
         try:
             self.data_lane1.set_dst_ip(ip=self.farm_server_1_ip)
+            time.sleep(0.001)
             self.data_lane1.set_dst_mac(mac=self.farm_server_1_mac)
+            time.sleep(0.001)
             self.data_lane1.set_src_ip(ip=self.farm_camera_1_ip)
+            time.sleep(0.001)
             self.data_lane1.set_src_mac(mac=self.farm_camera_1_mac)
+            time.sleep(0.001)
             self.data_lane1.set_src_dst_port(port=self.src_dst_port)
+            time.sleep(0.001)
 
             self.data_lane2.set_dst_ip(ip=self.farm_server_2_ip)
+            time.sleep(0.001)
             self.data_lane2.set_dst_mac(mac=self.farm_server_2_mac)
+            time.sleep(0.001)
             self.data_lane2.set_src_ip(ip=self.farm_camera_2_ip)
+            time.sleep(0.001)
             self.data_lane2.set_src_mac(mac=self.farm_camera_2_mac)
+            time.sleep(0.001)
             self.data_lane2.set_src_dst_port(port=self.src_dst_port)
+            time.sleep(0.001)
 
             # Configure farm mode node(s), determine how many LUT entries to use
             if (self.number_nodes % 2 == 1):
