@@ -730,6 +730,8 @@ class HexitecFem():
             self.hardware_connected = False
             self.hardware_busy = False
             # End of the line, cannot raise exception beyond scheduled callback function
+            self.parent.leak_fault_counter = 1
+            self.disconnect()
 
     def initialise_hardware(self, msg=None):
         """Initialise sensors, load enables, etc to initialise both VSR boards."""

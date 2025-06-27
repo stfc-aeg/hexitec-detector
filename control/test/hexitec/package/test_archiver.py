@@ -269,3 +269,37 @@ class TestArchiver(unittest.TestCase):
         self.assertEqual(self.archiver.number_files_failed, 1)
         self.assertFalse(self.archiver.archiving_in_progress)
         self.assertEqual(self.archiver.status, "Idle")
+
+    def test_get_log_messages_with_last_message_timestamp(self):
+        # Prepare errors_history with timestamps
+        self.archiver.errors_history = [
+            ['2025-02-12T11:10:39.140740+00:00', 'error1'],
+            ['2025-02-12T11:11:39.140740+00:00', 'error2'],
+            ['2025-02-12T11:12:39.140740+00:00', 'error3'],
+        ]
+        self.archiver.last_message_timestamp = "2025-02-12T11:11:00.000000+00:00"
+        self.archiver.limit_number_log_messages = MagicMock()
+        self.archiver.get_log_messages("2025-02-12T11:11:00.000000+00:00")
+        # Should only include errors after the given timestamp
+        assert self.archiver.log_messages == [
+            ('2025-02-12T11:11:39.140740+00:00', 'error2'),
+            ('2025-02-12T11:12:39.140740+00:00', 'error3'),
+        ]
+        self.archiver.limit_number_log_messages.assert_called_once()
+
+    def test_get_log_messages_without_last_message_timestamp(self):
+        self.archiver.errors_history = [
+            ['2025-02-12T11:10:39.140740+00:00', 'error1'],
+            ['2025-02-12T11:11:39.140740+00:00', 'error2'],
+        ]
+        self.archiver.last_message_timestamp = ""
+        self.archiver.create_timestamp = MagicMock(return_value="2025-02-12T12:00:00.000000+00:00")
+        self.archiver.limit_number_log_messages = MagicMock()
+        self.archiver.get_log_messages("")
+        # Should include all errors
+        assert self.archiver.log_messages == [
+            ('2025-02-12T11:10:39.140740+00:00', 'error1'),
+            ('2025-02-12T11:11:39.140740+00:00', 'error2'),
+        ]
+        assert self.archiver.last_message_timestamp == "2025-02-12T12:00:00.000000+00:00"
+        self.archiver.limit_number_log_messages.assert_called_once()

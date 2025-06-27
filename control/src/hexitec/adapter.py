@@ -823,6 +823,11 @@ class Hexitec():
             request = ApiAdapterRequest("", content_type="application/json")
             self.adapters["fr"].put(command, request)
 
+            # Reset FP(s) statistics
+            command = "command/reset_statistics"
+            request = ApiAdapterRequest("", content_type="application/json")
+            self.adapters["fp"].put(command, request)
+
             IOLoop.instance().add_callback(self.await_daq_configuring_fps)
 
     def await_daq_configuring_fps(self):
