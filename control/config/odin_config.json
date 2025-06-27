@@ -7,7 +7,7 @@
   "daq/compression_type": "none",
   "daq/discrimination_enable": false,
   "daq/file_dir": "/data/hexitec/",
-  "daq/file_name": "20-06-000",
+  "daq/file_name": "27-06-000",
   "daq/gradients_filename": "m.txt",
   "daq/image_frequency": 0,
   "daq/intercepts_filename": "c.txt",
@@ -27,7 +27,7 @@
   "daq/threshold_value": 100,
   "duration": 1,
   "duration_enable": false,
-  "fem/hexitec_config": "hexitec_unified_CSD__performance.ini",
+  "fem/hexitec_config": "hexitec_2x6.ini",
   "fem/triggering_mode": "none",
   "fem/triggering_frames": 10,
   "number_frames": 10
