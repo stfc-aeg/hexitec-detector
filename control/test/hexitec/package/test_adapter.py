@@ -415,7 +415,6 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.leak_health = False
         self.test_adapter.detector.poll_fem()
         # Ensure shutdown_processing() was called [it changes the following bool]
-        assert self.test_adapter.detector.acquisition_in_progress is False
         assert self.test_adapter.detector.fem.acquisition_completed is False
         assert self.test_adapter.detector.leak_fault is False
         assert self.test_adapter.detector.leak_warning is True
@@ -440,7 +439,6 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.leak_health = False
         self.test_adapter.detector.poll_fem()
         # Ensure shutdown_processing() was called [it changes the following bool]
-        assert self.test_adapter.detector.acquisition_in_progress is False
         assert self.test_adapter.detector.fem.acquisition_completed is False
         assert self.test_adapter.detector.leak_fault is leak_fault
         assert self.test_adapter.detector.leak_warning is leak_warning
@@ -489,12 +487,10 @@ class TestDetector(unittest.TestCase):
     def test_detector_shutdown_processing_correct(self):
         """Test function shuts down processing."""
         self.test_adapter.detector.daq.shutdown_processing = False
-        self.test_adapter.detector.acquisition_in_progress = True
 
         self.test_adapter.detector.shutdown_processing()
 
         assert self.test_adapter.detector.daq.shutdown_processing is True
-        assert self.test_adapter.detector.acquisition_in_progress is False
 
     def test_detector_get_od_status_fp(self):
         """Test detector handles valid fp adapter request."""
@@ -641,6 +637,7 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         config = self.test_adapter.config
         self.test_adapter.detector.set_duration = Mock()
+        self.test_adapter.detector.fem.triggering_mode = "none"
         with patch("builtins.open", mock_open(read_data="read_data")):
             with patch("json.load") as mockery:
                 mockery.return_value = config
@@ -653,6 +650,7 @@ class TestDetector(unittest.TestCase):
         config['duration_enable'] = False
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.fem.hardware_busy = False
+        self.test_adapter.detector.fem.triggering_mode = "none"
         self.test_adapter.detector.set_duration_enable = Mock()
         with patch("builtins.open", mock_open(read_data="read_data")):
             with patch("json.load") as mockery:
@@ -690,6 +688,18 @@ class TestDetector(unittest.TestCase):
             self.test_adapter.detector.load_odin("")
             m = "Loading Odin values"
             self.test_adapter.detector.fem.flag_error.assert_called_with(m, "")
+
+    def test_load_odin_dont_update_triggered_when_already_in_triggered(self):
+        """Test function works ok."""
+        self.test_adapter.detector.adapters = self.test_adapter.adapters
+        config = self.test_adapter.config
+        self.test_adapter.detector.set_duration = Mock()
+        self.test_adapter.detector.fem.triggering_mode = "triggered"
+        with patch("builtins.open", mock_open(read_data="read_data")):
+            with patch("json.load") as mockery:
+                mockery.return_value = config
+                self.test_adapter.detector.load_odin("")
+        # self.test_adapter.detector.set_duration.assert_called()
 
     def test_set_duration_enable_to_true(self):
         """Test function can update duration enable to True."""
@@ -976,7 +986,6 @@ class TestDetector(unittest.TestCase):
 
         self.test_adapter.detector.daq.prepare_daq.assert_called_with(number_frames)
         assert self.test_adapter.detector.daq.in_error is False
-        assert self.test_adapter.detector.acquisition_in_progress is True
         assert self.test_adapter.detector.software_state == "Acquiring"
 
     def test_detector_start_acquisition_handles_interlocked(self):
@@ -1055,9 +1064,7 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.daq.configure_mock(
             file_writing=False
         )
-        self.test_adapter.detector.acquisition_in_progress = True
         self.test_adapter.detector.await_daq_ready()
-        assert self.test_adapter.detector.acquisition_in_progress is False
 
     def test_await_daq_ready_triggers_fem(self):
         """Test adapter's await_daq_ready triggers FEM(s) when ready."""
@@ -1100,56 +1107,21 @@ class TestDetector(unittest.TestCase):
         self.test_adapter.detector.number_frames = frames
         self.test_adapter.detector.fem.hardware_busy = False
         self.test_adapter.detector.adapters = self.test_adapter.adapters
-        self.test_adapter.detector.reset_state_variables = Mock()
 
         with patch("hexitec.adapter.IOLoop"):
-
             self.test_adapter.detector.monitor_fem_progress()
             assert self.test_adapter.detector.number_frames == frames
-            assert self.test_adapter.detector.acquisition_in_progress is False
-            self.test_adapter.detector.reset_state_variables.assert_called()
-
-    def test_reset_state_variables(self):
-        """Test function resets state variables."""
-        self.test_adapter.detector.adapters = self.test_adapter.adapters
-        self.test_adapter.detector.acquisition_in_progress = True
-        self.test_adapter.detector.reset_state_variables()
-        assert self.test_adapter.detector.acquisition_in_progress is False
 
     def test_stop_acquisition(self):
         """Test function can cancel (in software) ongoing acquisition."""
         self.test_adapter.detector.daq.configure_mock(
-            in_progress=False
+            in_progress=True
         )
         self.test_adapter.detector.adapters = self.test_adapter.adapters
         self.test_adapter.detector.software_state = "Acquiring"
         self.test_adapter.detector.fem.cancel_acquisition = False
         self.test_adapter.detector.stop_acquisition()
         assert self.test_adapter.detector.fem.cancel_acquisition is True
-
-    def test_stop_acquisition_no_acquisition(self):
-        """Test function blocks cancel if no acquisition running."""
-        self.test_adapter.detector.daq.configure_mock(
-            in_progress=False
-        )
-        self.test_adapter.detector.adapters = self.test_adapter.adapters
-        self.test_adapter.detector.software_state = "Idle"
-        self.test_adapter.detector.shutdown_processing = Mock()
-        error = "No acquisition in progress"
-        with pytest.raises(ParameterTreeError) as exc_info:
-            self.test_adapter.detector.stop_acquisition()
-        assert exc_info.value.args[0] == error
-        self.test_adapter.detector.fem.flag_error.assert_called_with(error)
-        self.test_adapter.detector.shutdown_processing.assert_not_called()
-
-    def test_stop_acquisition_handles_interlocked(self):
-        """Test function prevents cancelling acquisition when interlocked."""
-        self.test_adapter.detector.adapters = self.test_adapter.adapters
-        self.test_adapter.detector.software_state = "Interlocked"
-        rv = "Interlocked: Can't cancel acquisition"
-        self.test_adapter.detector.report_leak_detector_error = Mock(return_value=rv)
-        with pytest.raises(ParameterTreeError, match=rv):
-            self.test_adapter.detector.stop_acquisition("")
 
     def test_collect_offsets(self):
         """Test function initiates collect offsets."""

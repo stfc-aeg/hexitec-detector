@@ -243,8 +243,6 @@ class Hexitec():
             )
         self.fem_health = True
 
-        self.acquisition_in_progress = False
-
         # Watchdog variables
         self.daq_idle_timeout = 6
 
@@ -482,7 +480,6 @@ class Hexitec():
     def shutdown_processing(self):
         """Stop processing in DAQ."""
         self.daq.shutdown_processing = True
-        self.acquisition_in_progress = False
 
     def _get_od_status(self, adapter):
         """Get status from adapter."""
@@ -607,6 +604,9 @@ class Hexitec():
         """Load Odin's settings from file."""
         self.daq.check_daq_acquiring_data("odin settings")
         try:
+            not_triggered = False
+            if self.fem.triggering_mode == "none":
+                not_triggered = True
             with open(self.odin_config_file, "r") as f:
                 config = json.load(f)
                 self.fem.set_hexitec_config(config["fem/hexitec_config"])
@@ -634,14 +634,20 @@ class Hexitec():
                 self.daq._set_threshold_mode(config["daq/threshold_mode"])
                 self.daq._set_threshold_value(config["daq/threshold_value"])
                 self.daq._set_compression_type(config["daq/compression_type"])
-                if config["duration_enable"]:
-                    self.set_duration(config["duration"])
-                    self.set_duration_enable(config["duration_enable"])
-                else:
-                    self.set_number_frames(config["number_frames"])
-                    self.set_duration_enable(config["duration_enable"])
+                if not_triggered:
+                    if config["duration_enable"]:
+                        self.set_duration(config["duration"])
+                        self.set_duration_enable(config["duration_enable"])
+                    else:
+                        self.set_number_frames(config["number_frames"])
+                        self.set_duration_enable(config["duration_enable"])
                 self.fem.set_triggering_frames(config["fem/triggering_frames"])
-                self.fem.set_triggering_mode(config["fem/triggering_mode"])
+                # Are we in 'triggered' mode, changing to 'triggered' mode?
+                if (not_triggered is False) and (config['fem/triggering_mode'] == 'triggered'):
+                    # Yes, don't change triggering mode (causes GUI issues)
+                    pass    # pragma: no cover
+                else:
+                    self.fem.set_triggering_mode(config["fem/triggering_mode"])
                 # Set file directory, then filename
                 self.daq.set_data_dir(config["daq/file_dir"])
                 self.daq.set_file_name(config["daq/file_name"], skip_hw_check=True)
@@ -837,7 +843,6 @@ class Hexitec():
         else:
             self.daq.prepare_daq(self.number_frames)
             # Acquisition starts here
-            self.acquisition_in_progress = True
             self.software_state = "Acquiring"
             # Wait for DAQ (i.e. file writer) to be enabled before FEM told to acquire data
             IOLoop.instance().add_callback(self.await_daq_ready)
@@ -845,8 +850,8 @@ class Hexitec():
     def await_daq_ready(self):
         """Wait until DAQ has configured, enabled file writer."""
         if (self.daq.in_error):
-            # Reset state variables
-            self.reset_state_variables()
+            # DAQ in error, do not proceed
+            pass
         elif (self.daq.hdf_is_reset is False):
             IOLoop.instance().call_later(0.03, self.await_daq_ready)
         else:
@@ -874,37 +879,16 @@ class Hexitec():
             IOLoop.instance().call_later(0.5, self.monitor_fem_progress)
             return
 
-        self.reset_state_variables()
-
-    def reset_state_variables(self):
-        """Reset state variables.
-
-        Utilised by await_daq_ready(), monitor_fem_progress()
-        """
-        self.acquisition_in_progress = False
-
     def stop_acquisition(self, put_data=None):
-        """Cancel ongoing acquisition in Software.
-
-        Not yet possible to stop FEM, mid-acquisition
-        """
-        if self.software_state == "Interlocked":
-            error_message = "{}".format("Interlocked: Can't cancel acquisition")
-            self.report_leak_detector_error(error_message)
-            raise ParameterTreeError(error_message)
-        else:
-            if self.software_state != "Acquiring":
-                error = "No acquisition in progress"
-                self.fem.flag_error(error)
-                raise ParameterTreeError(error)
-            else:
-                self.fem.cancel_acquisition = True
-                # Inject End of Acquisition Frame
-                command = "config/inject_eoa"
-                request = ApiAdapterRequest("", content_type="application/json")
-                self.adapters["fp"].put(command, request)
-                self.shutdown_processing()
-                self.software_state = "Idle"
+        """Cancel ongoing acquisition in Software."""
+        if self.daq.in_progress:
+            self.fem.cancel_acquisition = True
+            # Inject End of Acquisition Frame
+            command = "config/inject_eoa"
+            request = ApiAdapterRequest("", content_type="application/json")
+            self.adapters["fp"].put(command, request)
+            self.shutdown_processing()
+            self.software_state = "Idle"
 
     def collect_offsets(self, msg=None):
         """Instruct FEM to collect offsets."""

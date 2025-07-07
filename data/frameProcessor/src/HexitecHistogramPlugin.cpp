@@ -345,6 +345,11 @@ namespace FrameProcessor
         // Add this frame's contribution onto histograms
         add_frame_data_to_histogram_with_sum(static_cast<float *>(input_ptr));
 
+        LOG4CXX_DEBUG_LEVEL(1, logger_, " *** process_frames, frame " << frame_number << " max_frames_received: "
+          << max_frames_received_ << ", frames_processed: " << frames_processed_ << " write histograms? "
+          << ((max_frames_received_ != 0) &&
+          (((frames_processed_+1) % max_frames_received_) == 0))
+        );
         // Write histograms to disc periodically
         if ( (max_frames_received_ != 0) &&
           (((frames_processed_+1) % max_frames_received_) == 0)

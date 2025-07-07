@@ -56,6 +56,7 @@ var modeRadio1StateUnlocked;
 var modeRadio2StateUnlocked;
 
 var triggered_mode_selected = false;
+var update_adapter = true;
 
 // Called once, when page 1st loaded
 document.addEventListener("DOMContentLoaded", function () {
@@ -775,14 +776,22 @@ function poll_fem() {
                     if (Array.isArray(result["value"])) {
                         var numNodes = result["value"].length;
                         for (var i = 0; i < numNodes; i++) {
-                            const frames = result["value"][i].frames;
-                            const decoder = result["value"][i].decoder;
-                            const buffers = result["value"][i].buffers;
-                            document.querySelector('#frames_dropped' + (i+1)).innerHTML = frames.dropped;
-                            document.querySelector('#frames_timedout' + (i+1)).innerHTML = frames.timedout;
-                            document.querySelector('#packets_lost' + (i+1)).innerHTML = decoder.packets_lost;
-                            document.querySelector('#buffers_empty' + (i+1)).innerHTML = buffers.empty;
-                            document.querySelector('#buffers_mapped' + (i+1)).innerHTML = buffers.mapped;
+                            if (result["value"][i].decoder === undefined)
+                            {
+                                // frameReceiver running but detector not powered or fibre disconnected
+                                document.querySelector('#odin-control-error').innerHTML = "FR" + i + ": Failed to bind receive socket";
+                            }
+                            else
+                            {
+                                const frames = result["value"][i].frames;
+                                const decoder = result["value"][i].decoder;
+                                const buffers = result["value"][i].buffers;
+                                document.querySelector('#frames_dropped' + (i+1)).innerHTML = frames.dropped;
+                                document.querySelector('#frames_timedout' + (i+1)).innerHTML = frames.timedout;
+                                document.querySelector('#packets_lost' + (i+1)).innerHTML = decoder.packets_lost;
+                                document.querySelector('#buffers_empty' + (i+1)).innerHTML = buffers.empty;
+                                document.querySelector('#buffers_mapped' + (i+1)).innerHTML = buffers.mapped;
+                            }
                         }
                     } else {
                         // Optionally raise alarm to notify user?
@@ -1313,15 +1322,17 @@ function frames_changed() {
     ui_frames = document.querySelector('#frames-text');
     frames = 2 * Math.round(ui_frames.value / 2);
     document.querySelector('#frames-text').value = frames;
-    hexitec_endpoint.put(frames, 'detector/acquisition/number_frames')
-        .then(result => {
-            ui_frames.classList.remove('alert-danger');
-        })
-        .catch(error => {
-            ui_frames.setCustomValidity(error.message);
-            ui_frames.reportValidity();
-            ui_frames.classList.add('alert-danger');
-        });
+    if (update_adapter === true) {
+        hexitec_endpoint.put(frames, 'detector/acquisition/number_frames')
+            .then(result => {
+                ui_frames.classList.remove('alert-danger');
+            })
+            .catch(error => {
+                ui_frames.setCustomValidity(error.message);
+                ui_frames.reportValidity();
+                ui_frames.classList.add('alert-danger');
+            });
+    }
 };
 
 function duration_changed() {
@@ -1381,7 +1392,7 @@ function update_ui_with_odin_settings() {
             }
             setCSSelection(selection);
             document.querySelector('#pixel-grid-size-text').value = pixel_grid_size;
-
+            update_adapter = false;
             // Update Threshold
             const threshold_mode = daq_config.threshold.threshold_mode;
             const abs_path = daq_config.threshold.threshold_filename;
@@ -1469,11 +1480,19 @@ function update_ui_with_odin_settings() {
             const triggering_frames = fem.triggering.triggering_frames;
             document.querySelector('#triggering-mode-text').value = triggering_mode;
             document.querySelector('#triggering-frames-text').value = triggering_frames;
+
+            if (triggering_mode === "none") {
+                unlock_untriggered_options();
+                toggle_camera_controls_to_frames(duration_enable);
+            } else if (triggering_mode === "triggered") {
+                lock_untriggered_options();
+            }
         })
         .catch(error => {
             console.log("update_ui_with_odin_settings() detector ERROR: " + error.message);
             console.log(error);
         });
+        update_adapter = true;
 }
 
 function lvframes_frame_frequency_changed() {
