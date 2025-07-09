@@ -989,7 +989,7 @@
               </div>
               <div class="row contflex">
                 <div class="col-md-11">
-                  <table class="table table-striped" style="width=100%">
+                  <table class="table table-striped" id="statistics_table" style="width=100%">
                       <thead>
                         <tr>
                           <th>Measure</th>
@@ -1009,105 +1009,9 @@
                           <td>Average Occupancy</td>
                           <td><span id="average_occupancy" style="float:right">&nbsp;</span></td>
                         </tr>
-                        <tr>
-                          <td>Node1.Buffers empty</td>
-                          <td><span id="buffers_empty1" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node2.Buffers empty</td>
-                          <td><span id="buffers_empty2" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node3.Buffers empty</td>
-                          <td><span id="buffers_empty3" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node4.Buffers empty</td>
-                          <td><span id="buffers_empty4" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node5.Buffers empty</td>
-                          <td><span id="buffers_empty5" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node6.Buffers empty</td>
-                          <td><span id="buffers_empty6" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node7.Buffers empty</td>
-                          <td><span id="buffers_empty7" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node8.Buffers empty</td>
-                          <td><span id="buffers_empty8" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node1.FR packets lost</td>
-                          <td><span id="packets_lost1" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node2.FR packets lost</td>
-                          <td><span id="packets_lost2" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node3.FR packets lost</td>
-                          <td><span id="packets_lost3" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node4.FR packets lost</td>
-                          <td><span id="packets_lost4" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node5.FR packets lost</td>
-                          <td><span id="packets_lost5" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node6.FR packets lost</td>
-                          <td><span id="packets_lost6" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node7.FR packets lost</td>
-                          <td><span id="packets_lost7" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node8.FR packets lost</td>
-                          <td><span id="packets_lost8" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node1.Buffers mapped</td>
-                          <td><span id="buffers_mapped1" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node2.Buffers mapped</td>
-                          <td><span id="buffers_mapped2" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node3.Buffers mapped</td>
-                          <td><span id="buffers_mapped3" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node4.Buffers mapped</td>
-                          <td><span id="buffers_mapped4" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node5.Buffers mapped</td>
-                          <td><span id="buffers_mapped5" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node6.Buffers mapped</td>
-                          <td><span id="buffers_mapped6" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node7.Buffers mapped</td>
-                          <td><span id="buffers_mapped7" style="float:right">&nbsp;</span></td>
-                        </tr>
-                        <tr>
-                          <td>Node8.Buffers mapped</td>
-                          <td><span id="buffers_mapped8" style="float:right">&nbsp;</span></td>
-                        </tr>
                       </tbody>
                   </table>
-                  <table class="table table-striped" style="width=100%">
+                  <table class="table table-striped" id="frame_receiver_table" style="width=100%">
                     <thead>
                       <tr>
                         <th>Frame Receiver</th>
@@ -1126,70 +1030,6 @@
                       <tr>
                         <td>Collection Time Remaining</td>
                         <td><span id="collection_time_remaining" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node1.Dropped</td>
-                        <td><span id="frames_dropped1" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node2.Dropped</td>
-                        <td><span id="frames_dropped2" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node3.Dropped</td>
-                        <td><span id="frames_dropped3" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node4.Dropped</td>
-                        <td><span id="frames_dropped4" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node5.Dropped</td>
-                        <td><span id="frames_dropped5" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node6.Dropped</td>
-                        <td><span id="frames_dropped6" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node7.Dropped</td>
-                        <td><span id="frames_dropped7" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node8.Dropped</td>
-                        <td><span id="frames_dropped8" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node1.Timed out</td>
-                        <td><span id="frames_timedout1" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node2.Timed out</td>
-                        <td><span id="frames_timedout2" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node3.Timed out</td>
-                        <td><span id="frames_timedout3" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node4.Timed out</td>
-                        <td><span id="frames_timedout4" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node5.Timed out</td>
-                        <td><span id="frames_timedout5" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node6.Timed out</td>
-                        <td><span id="frames_timedout6" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node7.Timed out</td>
-                        <td><span id="frames_timedout7" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node8.Timed out</td>
-                        <td><span id="frames_timedout8" style="float:right">&nbsp;</span></td>
                       </tr>
                     </tbody>
                   </table>
@@ -1238,7 +1078,7 @@
                     </tbody>
                   </table>
 
-                  <table class="table table-striped" style="width=100%">
+                  <table class="table table-striped" id="frame_processor_table" style="width=100%">
                     <thead>
                       <tr>
                         <th>Frame Processor</th>
@@ -1246,70 +1086,6 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td>Node1.FP Processed</td>
-                        <td><span id="fp_processed1" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node2.FP Processed</td>
-                        <td><span id="fp_processed2" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node3.FP Processed</td>
-                        <td><span id="fp_processed3" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node4.FP Processed</td>
-                        <td><span id="fp_processed4" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node5.FP Processed</td>
-                        <td><span id="fp_processed5" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node6.FP Processed</td>
-                        <td><span id="fp_processed6" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node7.FP Processed</td>
-                        <td><span id="fp_processed7" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node8.FP Processed</td>
-                        <td><span id="fp_processed8" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node1.FP Errors</td>
-                        <td><span id="fp_errors1" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node2.FP Errors</td>
-                        <td><span id="fp_errors2" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node3.FP Errors</td>
-                        <td><span id="fp_errors3" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node4.FP Errors</td>
-                        <td><span id="fp_errors4" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node5.FP Errors</td>
-                        <td><span id="fp_errors5" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node6.FP Errors</td>
-                        <td><span id="fp_errors6" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node7.FP Errors</td>
-                        <td><span id="fp_errors7" style="float:right">&nbsp;</span></td>
-                      </tr>
-                      <tr>
-                        <td>Node8.FP Errors</td>
-                        <td><span id="fp_errors8" style="float:right">&nbsp;</span></td>
-                      </tr>
                     </tbody>
                   </table>
 

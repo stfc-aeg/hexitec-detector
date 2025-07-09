@@ -396,7 +396,7 @@ class HexitecDAQ():
             self.received_remaining = self.number_frames - self.frames_received
             self.processed_remaining = self.number_frames - self.frames_processed
             self.collection_time_remaining = self.calculate_remaining_collection_time()
-            # print("  {} -> acq_chk_lp\t rxd {} procd {} left: {} processed_t'stamp:{} [X".format(
+            # print(" [E  {} -> acq_chk_lp\t rxd {} procd {} left: {} processed_t'stamp:{} [X".format(
             #       self.debug_timestamp(), self.frames_received, self.frames_processed,
             #       self.processed_remaining, self.processing_timestamp))
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
@@ -414,7 +414,7 @@ class HexitecDAQ():
         self.received_remaining = self.number_frames - self.frames_received
         if self.collection_time_remaining < 0.9:
             self.collection_time_remaining = 0
-        # print("  {} -> proc_chk_lp\t rxd {} procd {} left: {} Frms: {} total procd: {} [X".format(
+        # print(" [E  {} -> proc_chk_lp\t rxd {} procd {} left: {} Frms: {} total procd: {} [X".format(
         #       self.debug_timestamp(), self.frames_received, self.frames_processed,
         #       self.processed_remaining, self.number_frames, total_frames_processed))
         if total_frames_processed == self.number_frames:
@@ -424,7 +424,7 @@ class HexitecDAQ():
             #   selected, wait for hdf file to close
             IOLoop.instance().call_later(0.1, self.hdf_closing_loop)
         else:
-            # print("  {} -> tot_frms_procd ({}) == s.frames_procd ({}). shutdown? {}\n [X".format(
+            # print(" [E  {} -> tot_frms_procd ({}) == s.frames_procd ({}). shutdown? {}\n [X".format(
             #       self.debug_timestamp(), total_frames_processed,
             #       self.frames_processed, self.shutdown_processing))
             # Not all frames processed yet; Check data still in flow
@@ -443,7 +443,7 @@ class HexitecDAQ():
                 self.processing_timestamp = time.time()
                 self.frames_processed = total_frames_processed
                 self.processed_remaining = self.number_frames - self.frames_processed
-                # print("  {} -> Data procg, rxd {} procd {} left: {} s.procg_ts: {}\n [X".format(
+                # print(" [E  {} -> Data procg, rxd {} procd {} left: {} s.procg_ts: {}\n [X".format(
                 #     self.debug_timestamp(), self.frames_received, self.frames_processed,
                 #     self.processed_remaining, self.processing_timestamp))
             # Wait 0.5 seconds and check again
@@ -546,7 +546,7 @@ class HexitecDAQ():
 
         hdf_file.close()
         self.parent.software_state = "Ready"
-        # print("  {} -> DAQ._hdf_file() SW_date = Idle".format(self.debug_timestamp()))
+        # print(" [E  {} -> DAQ._hdf_file() SW_date = Idle".format(self.debug_timestamp()))
         self.processing_interruptable = False
         self.in_progress = False
         self.daq_ready = True

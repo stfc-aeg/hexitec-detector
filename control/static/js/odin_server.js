@@ -57,6 +57,9 @@ var modeRadio2StateUnlocked;
 
 var triggered_mode_selected = false;
 var update_adapter = true;
+var dont_update_number_frames_in_adapter = false; // Flag to override updating number of frames in adapter.py
+
+var populate_gui_with_odin_data_nodes = true; // Flag to populate GUI with Odin data nodes (once)
 
 // Called once, when page 1st loaded
 document.addEventListener("DOMContentLoaded", function () {
@@ -238,6 +241,7 @@ function loadOdinClicked() {
             loadOdinButton.classList.add('alert-danger');
         });
     update_js_with_config = true;
+    dont_update_number_frames_in_adapter = true;
 }
 
 // Set Charged Sharing selection, supporting function
@@ -556,7 +560,39 @@ function update_ui_with_leak_detector_settings(result) {
     }
 }
 
+function populate_odin_data_entries_in_gui(numberNodes) {
+
+    const stats_table_ref = document.getElementById('statistics_table').getElementsByTagName('tbody')[0];
+
+    populate_table_with_entries(stats_table_ref, numberNodes, "Buffers empty", "buffers_empty");
+    populate_table_with_entries(stats_table_ref, numberNodes, "FR packets lost", "packets_lost");
+    populate_table_with_entries(stats_table_ref, numberNodes, "Buffers mapped", "buffers_mapped");
+
+    const fp_table_ref = document.getElementById('frame_processor_table').getElementsByTagName('tbody')[0];
+
+    populate_table_with_entries(fp_table_ref, numberNodes, "FP Processed", "fp_processed");
+    populate_table_with_entries(fp_table_ref, numberNodes, "FP Errors", "fp_errors");
+
+    const fr_table_ref = document.getElementById('frame_receiver_table').getElementsByTagName('tbody')[0];
+
+    populate_table_with_entries(fr_table_ref, numberNodes, "Dropped", "frames_dropped");
+    populate_table_with_entries(fr_table_ref, numberNodes, "Timed out", "frames_timedout");
+}
+
+function populate_table_with_entries(table_ref, numberNodes, entryText, entryId) {
+    for (var i = 0; i < numberNodes; i++)
+    {
+        // Insert a row at the end of table
+        const newCell = table_ref.insertRow();
+        // Append a text node to the row
+        const newText = document.createTextNode('');
+        newCell.appendChild(newText);
+        newCell.innerHTML = `<tr><td>Node${i+1}.${entryText}</td><td><span id="${entryId}${i+1}" style="float:right">&nbsp;</span></td></tr>`
+    }
+}
+
 function poll_fem() {
+
     // Check whether odin_control is running
     hexitec_endpoint.get_url(hexitec_url + 'detector/status/system_health')
         .then(result => {
@@ -774,8 +810,16 @@ function poll_fem() {
             hexitec_endpoint.get_url(hexitec_url + 'fr/status/')
                 .then(result => {
                     if (Array.isArray(result["value"])) {
-                        var numNodes = result["value"].length;
-                        for (var i = 0; i < numNodes; i++) {
+                        var numberFrameReceivers = result["value"].length;
+                        // Populate GUI with Odin data nodes if not done yet
+                        if (populate_gui_with_odin_data_nodes === true)
+                        {
+                            populate_gui_with_odin_data_nodes = false;
+                            populate_odin_data_entries_in_gui(numberFrameReceivers);
+                        }
+
+                        for (var i = 0; i < numberFrameReceivers; i++)
+                        {
                             if (result["value"][i].decoder === undefined)
                             {
                                 // frameReceiver running but detector not powered or fibre disconnected
@@ -817,8 +861,8 @@ function poll_fem() {
 
                     // // Print all errors reported by one FP:
                     // console.log("   ParameterTree: " + JSON.stringify(result["value"].error, null, 4));
-                    var numNodes = result["value"].length;
-                    for (var i = 0; i < numNodes; i++) {
+                    var numberFrameProcessors = result["value"].length;
+                    for (var i = 0; i < numberFrameProcessors; i++) {
 
                         if (result["value"][i].histogram === undefined) {
                             // Current node not configured, clear any previous value(s)
@@ -1318,21 +1362,35 @@ function hexitec_config_changed() {
         });
 };
 
-function frames_changed() {
+function frames_changed(update_adapter = true) {
     ui_frames = document.querySelector('#frames-text');
     frames = 2 * Math.round(ui_frames.value / 2);
     document.querySelector('#frames-text').value = frames;
-    if (update_adapter === true) {
-        hexitec_endpoint.put(frames, 'detector/acquisition/number_frames')
-            .then(result => {
-                ui_frames.classList.remove('alert-danger');
-            })
-            .catch(error => {
-                ui_frames.setCustomValidity(error.message);
-                ui_frames.reportValidity();
-                ui_frames.classList.add('alert-danger');
-            });
+    if (dont_update_number_frames_in_adapter === true)
+    {
+        // "Triggered" mode configured by odin_config.js file, do not update adapter
+        // (avoids surplus Exception - adapter's number of frames already configured)
+        dont_update_number_frames_in_adapter = false;
     }
+    else
+    {
+        if (update_adapter === true)
+        {
+            update_number_frames(frames);
+        }
+    }
+};
+
+function update_number_frames(frames) {
+    hexitec_endpoint.put(frames, 'detector/acquisition/number_frames')
+        .then(result => {
+            ui_frames.classList.remove('alert-danger');
+        })
+        .catch(error => {
+            ui_frames.setCustomValidity(error.message);
+            ui_frames.reportValidity();
+            ui_frames.classList.add('alert-danger');
+        });
 };
 
 function duration_changed() {
@@ -1418,6 +1476,20 @@ function update_ui_with_odin_settings() {
             document.querySelector('#bin-end-text').value = bin_end;
             document.querySelector('#bin-width-text').value = bin_width;
 
+
+            const fem = result["detector"]["fem"];
+            const triggering_mode = fem.triggering.triggering_mode;
+            const triggering_frames = fem.triggering.triggering_frames;
+            document.querySelector('#triggering-mode-text').value = triggering_mode;
+            document.querySelector('#triggering-frames-text').value = triggering_frames;
+
+            if (triggering_mode === "none") {
+                unlock_untriggered_options();
+                toggle_camera_controls_to_frames(duration_enable);
+                dont_update_number_frames_in_adapter = false;
+            } else if (triggering_mode === "triggered") {
+                lock_untriggered_options();
+            }
             const acquisition = result["detector"]["acquisition"];
 
             const duration = acquisition.duration;
@@ -1474,19 +1546,6 @@ function update_ui_with_odin_settings() {
             document.querySelector('#elog-text').value = elog;
             const dataset_name = daq_config.lvframes.dataset_name;
             document.querySelector('#lv_dataset_select').value = dataset_name;
-
-            const fem = result["detector"]["fem"];
-            const triggering_mode = fem.triggering.triggering_mode;
-            const triggering_frames = fem.triggering.triggering_frames;
-            document.querySelector('#triggering-mode-text').value = triggering_mode;
-            document.querySelector('#triggering-frames-text').value = triggering_frames;
-
-            if (triggering_mode === "none") {
-                unlock_untriggered_options();
-                toggle_camera_controls_to_frames(duration_enable);
-            } else if (triggering_mode === "triggered") {
-                lock_untriggered_options();
-            }
         })
         .catch(error => {
             console.log("update_ui_with_odin_settings() detector ERROR: " + error.message);
