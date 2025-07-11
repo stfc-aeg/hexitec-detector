@@ -217,7 +217,7 @@ class HexitecFem():
 
         self.data_lane1 = None
         self.data_lane2 = None
-        self.number_nodes = None
+        self.farm_mode_targets = None
         self.verify_parameters = True
 
     def load_farm_mode_json_parameters(self):
@@ -333,15 +333,13 @@ class HexitecFem():
         self.server_ctrl_ip, self.server_ctrl_mac = self.extract_interface_parameters(iface)
 
         # Check Farm mode configuration not mismatched
-        num_ips = len(self.farm_target_ip)
-        num_macs = len(self.farm_target_mac)
-        num_ports = len(self.farm_target_port)
-        if (num_ips != num_macs) or (num_macs != num_ports):    # pragma: no cover
-            e = f"Farm Mode: IP/MAC/port mismatch ({num_ips}/{num_macs}/{num_ports})"
+        number_ips = len(self.farm_target_ip)
+        number_macs = len(self.farm_target_mac)
+        number_ports = len(self.farm_target_port)
+        if (number_ips != number_macs) or (number_macs != number_ports):    # pragma: no cover
+            e = f"Farm Mode: IP/MAC/port mismatch ({number_ips}/{number_macs}/{number_ports})"
             raise HexitecFemError(e)
-
-        self.number_nodes = num_ips
-        self.parent.set_number_nodes(self.number_nodes)
+        self.farm_mode_targets = number_ips
 
     def configure_camera_interfaces(self):
         """Configure IP, Mac and port parameters for detector's Control and Data interfaces."""
@@ -443,13 +441,13 @@ class HexitecFem():
             self.data_lane2.set_src_dst_port(port=self.src_dst_port)
             time.sleep(0.001)
 
-            # Configure farm mode node(s), determine how many LUT entries to use
-            if (self.number_nodes % 2 == 1):
+            # Configure farm mode target(s), determine how many LUT entries to use
+            if (self.farm_mode_targets % 2 == 1):
                 # Odd number of nodes
-                lut_entries = self.number_nodes
+                lut_entries = self.farm_mode_targets
             else:
                 # Even number of nodes
-                lut_entries = self.number_nodes // 2
+                lut_entries = self.farm_mode_targets // 2
 
             ip_lut1, ip_lut2 = self.populate_lists(self.farm_target_ip)
             mac_lut1, mac_lut2 = self.populate_lists(self.farm_target_mac)
@@ -477,23 +475,24 @@ class HexitecFem():
             self.hardware_busy = False
             self.flag_error("Farm Mode Config failed", str(e))
 
-    def populate_lists(self, nodes):
+    def populate_lists(self, entries):
         """Spread entries of one list into 2 lists, of equal lengths.
 
         I.e. even length: [1, 2, 3, 4] -> [1, 3], [2, 4]
-        or uneven length: [1, 2, 3] -> [1, 3, 2], [2, 1, 3]"""
-        number_nodes = len(nodes)
-        original_number_nodes = number_nodes
-        if number_nodes % 2 == 1:
-            number_nodes = number_nodes * 2
+        or uneven length: [1, 2, 3] -> [1, 3, 2], [2, 1, 3].
+        """
+        number_entries = len(entries)
+        original_number_entries = number_entries
+        if number_entries % 2 == 1:
+            number_entries = number_entries * 2
         lut1 = []
         lut2 = []
-        for index in range(number_nodes):
-            i = index % original_number_nodes
+        for index in range(number_entries):
+            i = index % original_number_entries
             if (index % 2) == 1:  # Odd
-                lut2.append(nodes[i])
+                lut2.append(entries[i])
             else:  # Even (includes 0..)
-                lut1.append(nodes[i])
+                lut1.append(entries[i])
         return lut1, lut2
 
     def connect(self):

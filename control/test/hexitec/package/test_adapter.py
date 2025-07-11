@@ -892,11 +892,11 @@ class TestDetector(unittest.TestCase):
             self.test_adapter.detector.set_elog("different message")
         assert exc_info.value.args[0] == error
 
-    def test_set_number_nodes(self):
-        """Test function sets number of nodes."""
-        number_nodes = 3
-        self.test_adapter.detector.set_number_nodes(number_nodes)
-        assert number_nodes == self.test_adapter.detector.number_nodes
+    def test_set_number_odin_instances(self):
+        """Test function sets number of Odin instances."""
+        number_odin_instances = 3
+        self.test_adapter.detector.set_number_odin_instances(number_odin_instances)
+        assert number_odin_instances == self.test_adapter.detector.number_odin_instances
 
     def test_detector_initialize(self):
         """Test function can initialise adapters."""

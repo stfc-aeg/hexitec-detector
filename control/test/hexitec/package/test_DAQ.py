@@ -238,6 +238,7 @@ class TestDAQ(unittest.TestCase):
     def test_initialize(self):
         """Test initialisation (part 2)."""
         self.test_daq.daq.adapters = {}
+        self.test_daq.daq.parent.set_number_odin_instances(3)
         self.test_daq.daq.initialize(self.test_daq.adapters)
 
         assert self.test_daq.daq.adapters == self.test_daq.adapters
@@ -245,6 +246,7 @@ class TestDAQ(unittest.TestCase):
         assert self.test_daq.daq.config_files['fr'] == ["hexitec_fr.config"]
         assert self.test_daq.daq.config_dir == self.test_daq.fi_data["config_dir"]
         assert self.test_daq.daq.is_initialised is True
+        assert self.test_daq.daq.parent.number_odin_instances == 1
 
     def test_initialize_missing_adapter(self):
         """Test initialisation (part 3)."""
@@ -932,12 +934,6 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq.set_number_frames(number_frames)
         assert number_frames == self.test_daq.daq.number_frames
 
-    def test_set_number_nodes(self):
-        """Test function sets number of nodes."""
-        number_nodes = 3
-        self.test_daq.daq.set_number_nodes(number_nodes)
-        assert number_nodes == self.test_daq.daq.number_nodes
-
     def test_set_addition_enable(self):
         """Test function sets addition bool."""
         addition_enable = True
@@ -1309,7 +1305,7 @@ class TestDAQ(unittest.TestCase):
     #     self.test_daq.daq.param_tree = MagicMock()
     #     self.test_daq.daq.param_tree.get.return_value = {}
     #     self.test_daq.daq.adapters = {"fp": MagicMock(), "live_histogram": MagicMock()}
-    #     self.test_daq.daq.number_nodes = 1
+    #     self.test_daq.daq.number_odin_instances = 1
     #     self.test_daq.daq.number_histograms = 10
     #     self.test_daq.daq.compression_type = "gzip"
     #     self.test_daq.daq.odin_path = "/odin"
@@ -1350,7 +1346,7 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq.param_tree = MagicMock()
         self.test_daq.daq.param_tree.get.return_value = {}
         self.test_daq.daq.adapters = {"fp": MagicMock(), "live_histogram": MagicMock()}
-        self.test_daq.daq.number_nodes = 1
+        self.test_daq.daq.number_odin_instances = 1
         self.test_daq.daq.number_histograms = 10
         self.test_daq.daq.compression_type = "gzip"
         self.test_daq.daq.odin_path = "/odin"
@@ -1377,7 +1373,7 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq.param_tree = MagicMock()
         self.test_daq.daq.param_tree.get.return_value = {}
         self.test_daq.daq.adapters = {"fp": MagicMock(), "live_histogram": MagicMock()}
-        self.test_daq.daq.number_nodes = 1
+        self.test_daq.daq.number_odin_instances = 1
         self.test_daq.daq.number_histograms = 10
         self.test_daq.daq.compression_type = "gzip"
         self.test_daq.daq.odin_path = "/odin"
@@ -1403,7 +1399,7 @@ class TestDAQ(unittest.TestCase):
         self.test_daq.daq.param_tree = MagicMock()
         self.test_daq.daq.param_tree.get.return_value = {}
         self.test_daq.daq.adapters = {"fp": MagicMock(), "live_histogram": MagicMock()}
-        self.test_daq.daq.number_nodes = 1
+        self.test_daq.daq.number_odin_instances = 1
         self.test_daq.daq.number_histograms = 10
         self.test_daq.daq.compression_type = "gzip"
         self.test_daq.daq.odin_path = "/odin"

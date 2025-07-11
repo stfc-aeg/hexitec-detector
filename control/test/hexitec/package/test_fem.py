@@ -428,7 +428,7 @@ class TestFem(unittest.TestCase):
         mac = '00:00:00:00:00:00'
         assert self.test_fem.fem.server_ctrl_ip == ip
         assert self.test_fem.fem.server_ctrl_mac == mac
-        assert self.test_fem.fem.number_nodes == 2
+        assert self.test_fem.fem.farm_mode_targets == 2
 
     # # TODO Cannot set farm_target parameters independently from e_i_p function..
     # def test_verify_farm_mode_parameters_handles_exception(self):

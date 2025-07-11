@@ -137,7 +137,7 @@ class HexitecDAQ():
         self.pixels = self.rows * self.columns
         self.frames_expected = 10
         self.number_frames = 10
-        self.number_nodes = 1
+        self.number_odin_instances = 1
         # Status variables
         self.in_error = False
         self.daq_ready = False
@@ -278,6 +278,9 @@ class HexitecDAQ():
         except KeyError as e:
             logging.error("Live Viewer config error: %s" % e)
         self.is_initialised = True
+        frame_receivers = self.get_adapter_status("fr")
+        self.number_odin_instances = len(frame_receivers)
+        self.parent.set_number_odin_instances(self.number_odin_instances)
 
     def calculate_average_occupancy(self):
         """Get frame occupancy across fp(s) and work out average."""
@@ -565,10 +568,10 @@ class HexitecDAQ():
                 file_names.append(file['hdf']['file_name'])
 
             # Construct <pc>:/path/file.h5
-            number_nodes = len(self.parent.processing_nodes)
+            number_processing_nodes = len(self.parent.processing_nodes)
             files = len(file_names)
             for index in range(files):
-                pc_name = self.parent.processing_nodes[index % number_nodes]
+                pc_name = self.parent.processing_nodes[index % number_processing_nodes]
                 path = self.file_dir
                 file = file_names[index]
                 pc_and_path = f"{pc_name}:{path}{file}"
@@ -837,10 +840,6 @@ class HexitecDAQ():
         self.frames_received = 0
         self.processed_remaining = self.number_frames - self.frames_processed
         self.received_remaining = self.number_frames - self.frames_received
-
-    def set_number_nodes(self, nodes):
-        """Set number of nodes."""
-        self.number_nodes = nodes
 
     def set_file_name(self, name, skip_hw_check=False):
         """Set processed file name.
@@ -1177,10 +1176,10 @@ class HexitecDAQ():
 
         # Enable live view for first node only
         live_view_selected = True
-        logging.debug("Sending configuration to %s FP(s)" % self.number_nodes)
+        logging.debug("Sending configuration to %s FP(s)" % self.number_odin_instances)
 
         # Loop over node(s)
-        for index in range(self.number_nodes):
+        for index in range(self.number_odin_instances):
             self.gcf = GenerateConfigFiles(parameter_tree, self.number_histograms,
                                            compression_type=self.compression_type,
                                            master_dataset=self.master_dataset,

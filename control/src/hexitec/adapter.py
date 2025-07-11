@@ -258,7 +258,7 @@ class Hexitec():
         self.status_error = ""
         self.leak_fault_counter = 0
         self.elog = ""
-        self.number_nodes = 1
+        self.number_odin_instances = 1
         self.archiver_configured = False
         self.archiver_status = 200
         # Software states in alphabetical order:
@@ -296,7 +296,7 @@ class Hexitec():
                 "status_error": (lambda: self.status_error, None),
                 "elog": (lambda: self.elog, self.set_elog),
                 "fem_health": (lambda: self.fem_health, None),
-                "number_nodes": (lambda: self.number_nodes, self.set_number_nodes),
+                "number_odin_instances": (lambda: self.number_odin_instances, self.set_number_odin_instances),
                 "leak": {
                     "fault": (lambda: bool(self.leak_fault), None),
                     "warning": (lambda: bool(self.leak_warning), None),
@@ -771,11 +771,10 @@ class Hexitec():
             raise ParameterTreeError(error)
         self.elog = entry
 
-    def set_number_nodes(self, number_nodes):
+    def set_number_odin_instances(self, number_odin_instances):
         """Set number of nodes."""
-        # Function called by fem.verify_farm_mode_parameters(), which determines how many nodes
-        self.number_nodes = number_nodes
-        self.daq.set_number_nodes(self.number_nodes)
+        # Function called by daq.initialize(), which counts number of odin instances
+        self.number_odin_instances = number_odin_instances
 
     def start_acquisition(self, put_data=None):
         """Instruct DAQ and FEM to acquire data."""

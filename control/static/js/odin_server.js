@@ -1248,28 +1248,6 @@ function configure_bin_labels(calibration_enable) {
     }
 }
 
-// function sensorsLayoutChange(sensors_layout) {
-//     // Sets hardware sensors Configuration; i.e. number of rows and columns of sensors
-//     hexitec_endpoint.put({"sensors_layout": sensors_layout }, 'detector/daq')
-//         .then(result => {
-//             document.querySelector('#sensors-layout-warning').innerHTML = "";
-//         })
-//         .catch(error => {
-//             document.querySelector('#sensors-layout-warning').innerHTML = error.message;
-//         });
-// }
-
-function numberNodesChange(number_nodes) {
-    // Sets number of FR/FP (pair of) nodes
-    hexitec_endpoint.put(parseInt(number_nodes), 'detector/status/number_nodes')
-        .then(result => {
-            document.querySelector('#number-nodes-warning').innerHTML = "";
-        })
-        .catch(error => {
-            document.querySelector('#number-nodes-warning').innerHTML = error.message;
-        });
-}
-
 function compressionChange(compression) {
     // Sets compression on (blosc) or off (none)
     hexitec_endpoint.put({"compression_type": compression }, 'detector/daq')
