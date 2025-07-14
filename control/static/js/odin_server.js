@@ -56,8 +56,6 @@ var modeRadio1StateUnlocked;
 var modeRadio2StateUnlocked;
 
 var triggered_mode_selected = false;
-var update_adapter = true;
-var dont_update_number_frames_in_adapter = false; // Flag to override updating number of frames in adapter.py
 
 var populate_gui_with_odin_data_nodes = true; // Flag to populate GUI with Odin data nodes (once)
 
@@ -241,7 +239,6 @@ function loadOdinClicked() {
             loadOdinButton.classList.add('alert-danger');
         });
     update_js_with_config = true;
-    dont_update_number_frames_in_adapter = true;
 }
 
 // Set Charged Sharing selection, supporting function
@@ -388,7 +385,9 @@ function lock_ui_components() {
     if (duration_enable)
         document.querySelector('#duration-text').disabled = true;
     else
+    {
         document.querySelector('#frames-text').disabled = true;
+    }
     // Additional elements to lock
     document.querySelector('#elog-text').disabled = true;
     document.querySelector('#noneButton').disabled = true;
@@ -1156,15 +1155,18 @@ function changeModeEnable() {
 
 // Helper function, configures duration/frames according to selection
 function configure_duration(duration_enable) {
-    if (duration_enable) {
-        document.querySelector('#duration-text').disabled = false;
-        document.querySelector('#frames-text').disabled = true;
-        duration_changed();
-    }
-    else {
-        document.querySelector('#duration-text').disabled = true;
-        document.querySelector('#frames-text').disabled = false;
-        frames_changed();
+    if (triggered_mode_selected === false)
+    {
+        if (duration_enable) {
+            document.querySelector('#duration-text').disabled = false;
+            document.querySelector('#frames-text').disabled = true;
+            duration_changed();
+        }
+        else {
+            document.querySelector('#duration-text').disabled = true;
+            document.querySelector('#frames-text').disabled = false;
+            frames_changed();
+        }
     }
 };
 
@@ -1340,23 +1342,11 @@ function hexitec_config_changed() {
         });
 };
 
-function frames_changed(update_adapter = true) {
+function frames_changed() {
     ui_frames = document.querySelector('#frames-text');
     frames = 2 * Math.round(ui_frames.value / 2);
     document.querySelector('#frames-text').value = frames;
-    if (dont_update_number_frames_in_adapter === true)
-    {
-        // "Triggered" mode configured by odin_config.js file, do not update adapter
-        // (avoids surplus Exception - adapter's number of frames already configured)
-        dont_update_number_frames_in_adapter = false;
-    }
-    else
-    {
-        if (update_adapter === true)
-        {
-            update_number_frames(frames);
-        }
-    }
+    update_number_frames(frames);
 };
 
 function update_number_frames(frames) {
@@ -1428,7 +1418,7 @@ function update_ui_with_odin_settings() {
             }
             setCSSelection(selection);
             document.querySelector('#pixel-grid-size-text').value = pixel_grid_size;
-            update_adapter = false;
+
             // Update Threshold
             const threshold_mode = daq_config.threshold.threshold_mode;
             const abs_path = daq_config.threshold.threshold_filename;
@@ -1454,7 +1444,6 @@ function update_ui_with_odin_settings() {
             document.querySelector('#bin-end-text').value = bin_end;
             document.querySelector('#bin-width-text').value = bin_width;
 
-
             const fem = result["detector"]["fem"];
             const triggering_mode = fem.triggering.triggering_mode;
             const triggering_frames = fem.triggering.triggering_frames;
@@ -1464,7 +1453,6 @@ function update_ui_with_odin_settings() {
             if (triggering_mode === "none") {
                 unlock_untriggered_options();
                 toggle_camera_controls_to_frames(duration_enable);
-                dont_update_number_frames_in_adapter = false;
             } else if (triggering_mode === "triggered") {
                 lock_untriggered_options();
             }
@@ -1529,7 +1517,6 @@ function update_ui_with_odin_settings() {
             console.log("update_ui_with_odin_settings() detector ERROR: " + error.message);
             console.log(error);
         });
-        update_adapter = true;
 }
 
 function lvframes_frame_frequency_changed() {
