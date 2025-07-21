@@ -1361,9 +1361,19 @@ function update_number_frames(frames) {
         });
 };
 
+function isInt(n) {
+   return n % 1 === 0;
+}
+
 function duration_changed() {
     var duration = document.querySelector('#duration-text');
-    hexitec_endpoint.put(Number(duration.value), 'detector/acquisition/duration')
+    var val = Number(duration.value);
+    if (!isInt(val)) {
+        // If not an integer, round up to next integer
+        val = Math.ceil(val);
+        duration.value = val;
+    }
+    hexitec_endpoint.put(val, 'detector/acquisition/duration')
         .then(result => {
             duration.classList.remove('alert-danger');
         })
