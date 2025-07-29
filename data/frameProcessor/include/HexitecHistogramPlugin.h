@@ -73,6 +73,10 @@ namespace FrameProcessor
       static const std::string CONFIG_PASS_PROCESSED;
       /** Configuration constant for passing raw_frames to hdf **/
       static const std::string CONFIG_PASS_RAW;
+      /** Configuration constant for passing pixel_spectra to hdf **/
+      static const std::string CONFIG_PASS_PIXEL_SPECTRA;
+      /** Configuration constant for rank index **/
+      static const std::string CONFIG_RANK_INDEX;
 
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
       std::string sensors_layout_str_;
@@ -104,8 +108,11 @@ namespace FrameProcessor
       int reset_histograms_;
       int histograms_written_;
       int histogram_index_;
+      /** Rank index, differentiate each histogram if multiple frame processors **/
+      int rank_index_;
       bool pass_processed_;
       bool pass_raw_;
+      bool pass_pixel_spectra_;
 
       int bin_start_;
       int bin_end_;

@@ -763,12 +763,12 @@ std::size_t HexitecFrameDecoder::parse_fem_port_map(const std::string fem_port_m
     // Loop over entries, further splitting into port / fem index pairs
     for (std::vector<std::string>::iterator it = map_entries.begin(); it != map_entries.end(); ++it)
     {
-        if (buf_idx >= 1) {
-          LOG4CXX_WARN(logger_, "Decoder FEM port map configuration contains too many elements, "
-                        << "truncating to maximium number of FEMs allowed ("
-                        << 1 << ")");
-          break;
-        }
+        // if (buf_idx >= 1) {
+        //   LOG4CXX_WARN(logger_, "Decoder FEM port map configuration contains too many elements, "
+        //                 << "truncating to maximium number of FEMs allowed ("
+        //                 << 1 << ")");
+        //   break;
+        // }
 
         std::vector<std::string> entry_elems;
         boost::split(entry_elems, *it, boost::is_any_of(elem_delimiter));

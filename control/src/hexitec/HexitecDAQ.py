@@ -102,6 +102,7 @@ class HexitecDAQ():
         self.number_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
 
         self.max_frames_received = 0
+        self.pass_pixel_spectra = True
         self.pass_processed = False
         self.pass_raw = False
 
@@ -208,8 +209,10 @@ class HexitecDAQ():
                     "bin_width": (lambda: self.bin_width, self._set_bin_width),
                     "max_frames_received": (lambda: self.max_frames_received,
                                             self._set_max_frames_received),
+                    "pass_pixel_spectra": (lambda: self.pass_pixel_spectra,
+                                           self._set_pass_pixel_spectra),
                     "pass_processed": (lambda: self.pass_processed, self._set_pass_processed),
-                    "pass_raw": (lambda: self.pass_raw, self._set_pass_raw)
+                    "pass_raw": (lambda: self.pass_raw, self._set_pass_raw),
                 },
                 "lvframes": {
                     "dataset_name": (lambda: self.lvframes_dataset_name,
@@ -807,6 +810,20 @@ class HexitecDAQ():
         finally:
             return response
 
+    def get_adapter_config(self, adapter):
+        """Get config from adapter."""
+        if not self.is_initialised:
+            return [{"Error": "Adapter {} not initialised with references yet".format(adapter)}]
+        try:
+            request = ApiAdapterRequest(None, content_type="application/json")
+            response = self.adapters[adapter].get("config", request)
+            response = response.data["value"]
+        except KeyError:
+            logging.warning("%s Adapter Not Found" % adapter)
+            response = [{"Error": "Adapter {} not found".format(adapter)}]
+        finally:
+            return response
+
     def get_config_file(self, adapter):
         """Get config file from adapter."""
         if not self.is_initialised:
@@ -1036,9 +1053,17 @@ class HexitecDAQ():
         self.max_frames_received = max_frames_received
         self.update_fp_configuration = True
 
+    def _set_pass_pixel_spectra(self, pass_pixel_spectra=None):
+        """Toggle passing pixel spectra on/off."""
+        self.check_daq_acquiring_data("pixel spectra")
+        if pass_pixel_spectra is not None:
+            self.pass_pixel_spectra = pass_pixel_spectra
+        self.update_fp_configuration = True
+
     def _set_pass_processed(self, pass_processed=None):
         """Toggle passing processed dataset on/off."""
         self.check_daq_acquiring_data("processed dataset")
+        # TODO Default argument and this if statement redundant?
         if pass_processed is not None:
             self.pass_processed = pass_processed
         self.update_fp_configuration = True
@@ -1255,7 +1280,7 @@ class HexitecDAQ():
 
                 # Don't send histogram's pass_raw, pass_processed,
                 #   since Odin Control do not support bool
-                if param_key not in ["pass_processed", "pass_raw"]:
+                if param_key not in ["pass_processed", "pass_raw", "pass_pixel_spectra"]:
 
                     command = "config/%s/%s" % (plugin, param_key)
 
@@ -1268,6 +1293,16 @@ class HexitecDAQ():
             self.last_plugin_configured = "hdf"
         else:
             self.last_plugin_configured = "histogram"
+
+        command = "config/histogram"
+        formatted_string = ('{"pass_pixel_spectra": %s}' % self.pass_pixel_spectra).lower()
+        request = ApiAdapterRequest(formatted_string, content_type="application/json")
+
+        response = self.adapters["fp"].put(command, request)
+        status_code = response.status_code
+        if (status_code != 200):
+            error = "Error {} toggling histogram's pixel spectra setting".format(status_code)
+            self.parent.fem.flag_error(error)
 
         command = "config/histogram"
         formatted_string = ('{"pass_processed": %s}' % self.pass_processed).lower()

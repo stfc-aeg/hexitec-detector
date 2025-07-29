@@ -219,6 +219,8 @@ class HexitecFem():
         self.data_lane2 = None
         self.farm_mode_targets = None
         self.verify_parameters = True
+        ## DEBUGGING; This must be examined  more closely:
+        self.connect_only_once = True
 
     def load_farm_mode_json_parameters(self):
         """Load Farm Mode settings from file."""
@@ -251,6 +253,7 @@ class HexitecFem():
                 self.farm_server_2_mac = config.get("farm_server_2_mac")
                 self.farm_camera_2_ip = config.get("farm_camera_2_ip")
                 self.farm_camera_2_mac = config.get("farm_camera_2_mac")
+                self.display_debugging(f"farm_camera_1_ip: {self.farm_camera_1_ip} farm_camera_2_ip: {self.farm_camera_2_ip}")
 
                 self.farm_target_ip = config.get("farm_target_ip")
                 self.farm_target_mac = config.get("farm_target_mac")
@@ -441,24 +444,63 @@ class HexitecFem():
             self.data_lane2.set_src_dst_port(port=self.src_dst_port)
             time.sleep(0.001)
 
-            # Configure farm mode target(s), determine how many LUT entries to use
-            if (self.farm_mode_targets % 2 == 1):
-                # Odd number of nodes
-                lut_entries = self.farm_mode_targets
+            # # Configure farm mode target(s), determine how many LUT entries to use
+            # if (self.farm_mode_targets % 2 == 1):
+            #     # Odd number of nodes
+            #     lut_entries = self.farm_mode_targets
+            # else:
+            #     # Even number of nodes
+            #     lut_entries = self.farm_mode_targets // 2
+
+            # ip_lut1, ip_lut2 = self.populate_lists(self.farm_target_ip)
+            # mac_lut1, mac_lut2 = self.populate_lists(self.farm_target_mac)
+            # port_lut1, port_lut2 = self.populate_lists(self.farm_target_port)
+            # self.display_debugging(f"ip LUTs: {ip_lut1} | {ip_lut2}")
+            # self.display_debugging(f"mac LUTs: {mac_lut1} | {mac_lut2}")
+            # self.display_debugging(f"port LUTs: {port_lut1} | {port_lut2}")
+            # self.display_debugging(f"Farm Mode: LUT entries: {lut_entries} for {self.farm_mode_targets} targets")
+            # # print(" [E ]");import sys;sys.exit(0)
+
+            # DEBUGGING
+            fr = self.parent.daq.get_adapter_config("fr")
+            addresses, ports = self.extract_frame_receiver_interfaces(fr)
+            # self.display_debugging(f"farm_mode_target: {self.farm_target_ip}")
+            self.display_debugging(f"DPG: addresses:  {addresses} ports: {ports}")
+            self.display_debugging(f"FM; DL0: {self.farm_server_1_ip}, {self.farm_server_1_mac}")
+            self.display_debugging(f"FM; DL1: {self.farm_server_2_ip}, {self.farm_server_2_mac}")
+            # How generate macs?
+            macs = []
+            for i in range(len(addresses)):
+                if self.farm_server_1_ip == addresses[i]:
+                    # Farm Server 1
+                    mac = self.farm_server_1_mac
+                elif self.farm_server_2_ip == addresses[i]:
+                    # Farm Server 2
+                    mac = self.farm_server_2_mac
+                else:
+                    self.flag_error(f"Farm Mode IP {addresses[i]} not in Farm Mode config")
+                macs.append(mac)
+            if (self.triggering_frames % 2) == 0:
+                ips1, ips2, macs1, macs2, ports1, ports2 = self.determine_farm_mode_config_odd_frames(addresses, macs, ports, self.triggering_frames)
             else:
-                # Even number of nodes
-                lut_entries = self.farm_mode_targets // 2
+                ips1, ips2, macs1, macs2, ports1, ports2 = self.determine_farm_mode_config_odd_frames(addresses, macs, ports, self.triggering_frames)
 
-            ip_lut1, ip_lut2 = self.populate_lists(self.farm_target_ip)
-            mac_lut1, mac_lut2 = self.populate_lists(self.farm_target_mac)
-            port_lut1, port_lut2 = self.populate_lists(self.farm_target_port)
+            lut_entries = len(ips1)
+            self.farm_mode_targets = lut_entries * 2
 
-            self.data_lane1.set_lut_mode_ip(ip_lut1)
-            self.data_lane2.set_lut_mode_ip(ip_lut2)
-            self.data_lane1.set_lut_mode_mac(mac_lut1)
-            self.data_lane2.set_lut_mode_mac(mac_lut2)
-            self.data_lane1.set_lut_mode_port(port_lut1)
-            self.data_lane2.set_lut_mode_port(port_lut2)
+            self.display_debugging(f"FM; ips1: {ips1} ips2: {ips2}")
+            self.display_debugging(f"FM; macs1: {macs1} macs2: {macs2}")
+            self.display_debugging(f"FM; ports1: {ports1} ports2: {ports2}")
+            self.display_debugging(f" LUT entries: {lut_entries} for {self.farm_mode_targets} targets")
+            # # print(f"FM; OLD port_lut1: {port_lut1} port_lut2: {port_lut2}")
+            # # print(f"FM; NEW ports1: {ports1} ports2: {ports2}")
+            # # print(" [E ]");import sys;sys.exit(0)
+            self.data_lane1.set_lut_mode_ip(ips1)
+            self.data_lane2.set_lut_mode_ip(ips2)
+            self.data_lane1.set_lut_mode_mac(macs1)
+            self.data_lane2.set_lut_mode_mac(macs2)
+            self.data_lane1.set_lut_mode_port(ports1)
+            self.data_lane2.set_lut_mode_port(ports2)
 
             address = HEX_REGISTERS.HEXITEC_2X6_NOF_LUT_MODE_ENTRIES['addr']
             Hex2x6CtrlRdma.udp_rdma_write(address=address, data=lut_entries, burst_len=1)
@@ -467,13 +509,99 @@ class HexitecFem():
 
             Hex2x6CtrlRdma.__del__()
 
-            self.connect()
-            # Power up the VSRs
-            self.power_up_modules()
+            if self.connect_only_once:
+                self.display_debugging("Farm Mode Completed; connect() & power_up_module() next")
+                self.connect()
+                # Power up the VSRs
+                self.power_up_modules()
+                self.connect_only_once = False
+            else:
+                self.display_debugging("Farm Mode Completed; initialise_system() next")
+                self.initialise_system()
         except socket_error as e:
             self.hardware_connected = False
             self.hardware_busy = False
             self.flag_error("Farm Mode Config failed", str(e))
+
+    def determine_farm_mode_config_odd_frames(self, odin_instances, macs, ports, frames_per_trigger):
+        """Determine Farm Mode configuration, based on Odin instances and frames per trigger"""
+        self.display_debugging(f"Selected ODD frames configuration; {len(odin_instances)//2} Odin pair(s), {frames_per_trigger} frames/trigger")
+        lut_entries = frames_per_trigger * (len(odin_instances) // 2)
+        ip_lut1 = []
+        ip_lut2 = []
+        mac_lut1 = []
+        mac_lut2 = []
+        port_lut1 = []
+        port_lut2 = []
+        frame_count = 0
+        current_instance = 0
+        index = 0
+        offset = 0
+        while index < lut_entries:
+            if (offset % 2) == 0:
+                if (index % 2) == 0:  # Even
+                    print(f"{offset}:{index}: (c_i: {current_instance}) Adding {odin_instances[current_instance]} to ip_lut1")
+                    ip_lut1.append(odin_instances[current_instance])
+                    mac_lut1.append(macs[current_instance])
+                    port_lut1.append(ports[current_instance])
+                else:
+                    print(f"{offset}:{index}: (c_i: {current_instance+1}) Adding {odin_instances[current_instance+1]} to ip_lut2")
+                    ip_lut2.append(odin_instances[current_instance+1])
+                    mac_lut2.append(macs[current_instance+1])
+                    port_lut2.append(ports[current_instance+1])
+            else:
+                if (index % 2) == 0:  # Even
+                    print(f"{offset}:{index}: (c_i: {current_instance+1}) Adding {odin_instances[current_instance+1]} to ip_lut1")
+                    ip_lut1.append(odin_instances[current_instance+1])
+                    mac_lut1.append(macs[current_instance+1])
+                    port_lut1.append(ports[current_instance+1])
+                else:
+                    print(f"{offset}:{index}: (c_i: {current_instance}) Adding {odin_instances[current_instance]} to ip_lut2")
+                    ip_lut2.append(odin_instances[current_instance])
+                    mac_lut2.append(macs[current_instance])
+                    port_lut2.append(ports[current_instance])
+            frame_count += 1
+            if frame_count == frames_per_trigger:
+                print(f"Frame count reached {frames_per_trigger}, c_i becomes: {current_instance + 2}")
+                frame_count = 0
+                current_instance += 2
+                offset += 1
+            index += 1
+        return ip_lut1, ip_lut2, mac_lut1, mac_lut2, port_lut1, port_lut2
+
+    def determine_farm_mode_config_even_frames(self, odin_instances, macs, ports, frames_per_trigger):
+        """Determine Farm Mode configuration, based on Odin instances and frames per trigger"""
+        self.display_debugging(f"Selected EVEN frames configuration; {len(odin_instances)//2} Odin pair(s), {frames_per_trigger} frames/trigger")
+        lut_entries = frames_per_trigger * (len(odin_instances) // 2)
+        ip_lut1 = []
+        ip_lut2 = []
+        mac_lut1 = []
+        mac_lut2 = []
+        port_lut1 = []
+        port_lut2 = []
+        frame_count = 0
+        current_instance = 0
+        index = 0
+        while index < lut_entries:
+            if (index % 2) == 0:  # Even
+                self.display_debugging(f" even entry; {index}: (c_i: {current_instance})")
+                self.display_debugging(f"     Adding; ip_lut1: {odin_instances[current_instance]}. mac_lut1: {macs[current_instance]}. port_lut1: {ports[current_instance]}")
+                ip_lut1.append(odin_instances[current_instance])
+                mac_lut1.append(macs[current_instance])
+                port_lut1.append(ports[current_instance])
+            else:
+                self.display_debugging(f" odd entries; {index}: (c_i: {current_instance+1})")
+                self.display_debugging(f"     Adding; ip_lut2: {odin_instances[current_instance+1]}. mac_lut2: {macs[current_instance+1]}. port_lut2: {ports[current_instance+1]}")
+                ip_lut2.append(odin_instances[current_instance+1])
+                mac_lut2.append(macs[current_instance+1])
+                port_lut2.append(ports[current_instance+1])
+            frame_count += 1
+            if frame_count == frames_per_trigger:
+                self.display_debugging(f"Frame count reached {frames_per_trigger}, c_i becomes: {current_instance + 2}")
+                frame_count = 0
+                current_instance += 2
+            index += 1
+        return ip_lut1, ip_lut2, mac_lut1, mac_lut2, port_lut1, port_lut2
 
     def populate_lists(self, entries):
         """Spread entries of one list into 2 lists, of equal lengths.
@@ -494,6 +622,33 @@ class HexitecFem():
             else:  # Even (includes 0..)
                 lut1.append(entries[i])
         return lut1, lut2
+
+    def extract_frame_receiver_interfaces(self, frame_receivers):
+        """Extract frame receiver addresses and ports from the frame receivers list."""
+        addresses = []
+        ports = []
+        for instance in frame_receivers:
+            if instance is None:
+                continue
+            addresses = self.extract_entries_from_string(instance.get("rx_address_list", None), addresses)
+            ports = self.extract_entries_from_string(instance.get("rx_ports", None), ports)
+        # Convert ports from list of strings, to list of integers
+        ports = list(map(int, ports))
+        return addresses, ports
+
+    def extract_entries_from_string(self, comma_separated_string, list_of_entries):
+        """Extract entries from a comma separated string and append each entry to list of entries.
+
+        For example: comma_separated_string: '10.0.2.1,10.0.1.1'
+        is appended to list_of_entries, that becomes: ['10.0.2.1', '10.0.1.1']
+        """
+        if comma_separated_string is None:
+            # This FR is not connected, return list unchanged
+            return list_of_entries
+        list_of_strings = comma_separated_string.split(",")
+        for entry in list_of_strings:
+            list_of_entries.append(entry.strip(" "))
+        return list_of_entries
 
     def connect(self):
         """Set up hardware connection."""
@@ -642,7 +797,7 @@ class HexitecFem():
             self.calculate_frame_rate()
         self.duration = duration
         frames = self.duration * self.frame_rate
-        # Ensure even number of frames
+        # # Ensure even number of frames
         if frames % 2:
             frames = self.parent.round_to_even(frames)
         self.number_frames = int(round(frames))
@@ -738,7 +893,9 @@ class HexitecFem():
         try:
             self.hardware_busy = True
             self.parent.software_state = "Initialising"
-            self.initialise_system()
+            ## DEBUGGING
+            self.setup_data_lane_1()
+            # self.initialise_system()
         except Exception as e:
             error = "Camera initialisation failed"
             self.flag_error(error, str(e))
@@ -1502,12 +1659,18 @@ class HexitecFem():
         if triggering_mode == "none":
             self.enable_trigger_input = False
             self.enable_trigger_mode = False
+            # TODO Restore this line:
+            # self.parent.daq._set_max_frames_received(0)
+            self.parent.daq._set_max_frames_received(self.triggering_frames)
+            self.parent.daq.pass_pixel_spectra = True
         elif triggering_mode == "triggered":
             self.enable_trigger_input = True
             self.enable_trigger_mode = True
             # Number of Frames to near infinity (>5 days of acquisition)
             self.parent.set_number_frames(4294967290)
             self.parent.set_duration_enable(False)
+            self.parent.daq._set_max_frames_received(self.triggering_frames)
+            self.parent.daq.pass_pixel_spectra = False
         # Triggering mode changed, must reinitialise system
         self.system_initialised = False
         self.triggering_mode = triggering_mode
@@ -1520,6 +1683,7 @@ class HexitecFem():
         self.parent.daq.check_daq_acquiring_data("trigger frames")
         if isinstance(triggering_frames, int):
             self.triggering_frames = triggering_frames
+            self.parent.daq._set_max_frames_received(self.triggering_frames)
         else:
             raise ParameterTreeError("Not an integer!")
         # Triggering mode changed, must reinitialise system
