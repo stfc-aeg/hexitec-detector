@@ -157,6 +157,11 @@ namespace FrameProcessor
 
     LOG4CXX_DEBUG_LEVEL(3, logger_, "Raw frame number: " << hdr_ptr->frame_number);
 
+    LOG4CXX_TRACE(logger_, " frame: " << hdr_ptr->frame_number << " @ Secs: " << hdr_ptr->frame_start_time.tv_sec
+      << ", Nanosecs: " << hdr_ptr->frame_start_time.tv_nsec);
+
+    //std::cout << "Seconds: " << ts.tv_sec << ", Nanoseconds: " << ts.tv_nsec << std::endl;
+
     // Determine the size of the output reordered image
     const std::size_t output_image_size = reordered_image_size();
 
