@@ -77,6 +77,10 @@ namespace FrameProcessor
       static const std::string CONFIG_PASS_PIXEL_SPECTRA;
       /** Configuration constant for rank index **/
       static const std::string CONFIG_RANK_INDEX;
+      /** Configuration constant for rank offset **/
+      static const std::string CONFIG_RANK_OFFSET;
+      /** Configuration constant for frames per trigger */
+      static const std::string CONFIG_FRAMES_PER_TRIGGER;
 
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
       std::string sensors_layout_str_;
@@ -110,6 +114,11 @@ namespace FrameProcessor
       int histogram_index_;
       /** Rank index, differentiate each histogram if multiple frame processors **/
       int rank_index_;
+      int rank_offset_;
+      uint64_t frame_number_;
+      uint64_t raw_frame_number_;
+      uint64_t processed_frame_number_;
+      int frames_per_trigger_;
       bool pass_processed_;
       bool pass_raw_;
       bool pass_pixel_spectra_;

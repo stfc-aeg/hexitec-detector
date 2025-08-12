@@ -1238,9 +1238,33 @@ class HexitecDAQ():
                 error = "Error {} loading plugins config in fp adapter".format(status_code)
                 self.parent.fem.flag_error(error)
             pixel_spectra_params = self.gcf.generate_pixel_spectra_params()
+
+            # Set that unique rank for each fp
+            command = "config/histogram/rank_index/" + str(index)
+            request = ApiAdapterRequest(str(index), content_type="application/json")
+            # self.parent.fem.display_debugging(
+            #     "Setting rank_index for {} to {}".format(index, index))
+
+            response = self.adapters["fp"].put(command, request)
+            status_code = response.status_code
+            if (status_code != 200):
+                error = "Error {} Set rank_index for {}".format(status_code, index)
+                self.parent.fem.flag_error(error)
             # Delete GCF object before next iteration
             del self.gcf
             self.gcf = None
+
+        # Set that unique rank for each fp
+        command = "config/histogram/frames_per_trigger"
+        request = ApiAdapterRequest(str(self.parent.fem.triggering_frames), content_type="application/json")
+        # self.parent.fem.display_debugging(
+        #     "Setting triggering frames to {}".format(self.parent.fem.triggering_frames))
+
+        response = self.adapters["fp"].put(command, request)
+        status_code = response.status_code
+        if (status_code != 200):
+            error = "Error {} setting histogram triggering frames".format(status_code)
+            self.parent.fem.flag_error(error)
 
         # Update dataset dimensions
 
