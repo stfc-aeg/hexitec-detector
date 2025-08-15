@@ -110,6 +110,16 @@ namespace FrameProcessor
     return true;
   }
 
+  /** Process an EndOfAcquisition Frame.
+  *
+  * This method is called when an EndOfAcquisition frame is received.
+  */
+  void HexitecTemplatePlugin::process_end_of_acquisition()
+  {
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "End of acquisition frame received");
+    reset_frames_numbering();
+  }
+
   /**
    * Perform processing on the frame.  For a new plugin, amend this
    *  function process data as intended.

@@ -253,7 +253,7 @@ class HexitecFem():
                 self.farm_server_2_mac = config.get("farm_server_2_mac")
                 self.farm_camera_2_ip = config.get("farm_camera_2_ip")
                 self.farm_camera_2_mac = config.get("farm_camera_2_mac")
-                self.display_debugging(f"farm_camera_1_ip: {self.farm_camera_1_ip} farm_camera_2_ip: {self.farm_camera_2_ip}")
+                # self.display_debugging(f"farm_camera_1_ip: {self.farm_camera_1_ip} farm_camera_2_ip: {self.farm_camera_2_ip}")
 
                 self.farm_target_ip = config.get("farm_target_ip")
                 self.farm_target_mac = config.get("farm_target_mac")
@@ -444,23 +444,6 @@ class HexitecFem():
             self.data_lane2.set_src_dst_port(port=self.src_dst_port)
             time.sleep(0.001)
 
-            # # Configure farm mode target(s), determine how many LUT entries to use
-            # if (self.farm_mode_targets % 2 == 1):
-            #     # Odd number of nodes
-            #     lut_entries = self.farm_mode_targets
-            # else:
-            #     # Even number of nodes
-            #     lut_entries = self.farm_mode_targets // 2
-
-            # ip_lut1, ip_lut2 = self.populate_lists(self.farm_target_ip)
-            # mac_lut1, mac_lut2 = self.populate_lists(self.farm_target_mac)
-            # port_lut1, port_lut2 = self.populate_lists(self.farm_target_port)
-            # self.display_debugging(f"ip LUTs: {ip_lut1} | {ip_lut2}")
-            # self.display_debugging(f"mac LUTs: {mac_lut1} | {mac_lut2}")
-            # self.display_debugging(f"port LUTs: {port_lut1} | {port_lut2}")
-            # self.display_debugging(f"Farm Mode: LUT entries: {lut_entries} for {self.farm_mode_targets} targets")
-            # # print(" [E ]");import sys;sys.exit(0)
-
             # DEBUGGING
             fr = self.parent.daq.get_adapter_config("fr")
             addresses, ports = self.extract_frame_receiver_interfaces(fr)
@@ -480,10 +463,7 @@ class HexitecFem():
                 else:
                     self.flag_error(f"Farm Mode IP {addresses[i]} not in Farm Mode config")
                 macs.append(mac)
-            if (self.triggering_frames % 2) == 0:
-                ips1, ips2, macs1, macs2, ports1, ports2 = self.determine_farm_mode_config_odd_frames(addresses, macs, ports, self.triggering_frames)
-            else:
-                ips1, ips2, macs1, macs2, ports1, ports2 = self.determine_farm_mode_config_odd_frames(addresses, macs, ports, self.triggering_frames)
+            ips1, ips2, macs1, macs2, ports1, ports2 = self.determine_farm_mode_config_odd_frames(addresses, macs, ports, self.triggering_frames)
 
             lut_entries = len(ips1)
             self.farm_mode_targets = lut_entries * 2
@@ -634,6 +614,7 @@ class HexitecFem():
             ports = self.extract_entries_from_string(instance.get("rx_ports", None), ports)
         # Convert ports from list of strings, to list of integers
         ports = list(map(int, ports))
+        
         return addresses, ports
 
     def extract_entries_from_string(self, comma_separated_string, list_of_entries):
@@ -1660,8 +1641,8 @@ class HexitecFem():
             self.enable_trigger_input = False
             self.enable_trigger_mode = False
             # TODO Restore this line:
-            # self.parent.daq._set_max_frames_received(0)
-            self.parent.daq._set_max_frames_received(self.triggering_frames)
+            self.parent.daq._set_max_frames_received(0)
+            # self.parent.daq._set_max_frames_received(self.triggering_frames)
             self.parent.daq.pass_pixel_spectra = True
         elif triggering_mode == "triggered":
             self.enable_trigger_input = True
@@ -1669,7 +1650,8 @@ class HexitecFem():
             # Number of Frames to near infinity (>5 days of acquisition)
             self.parent.set_number_frames(4294967290)
             self.parent.set_duration_enable(False)
-            self.parent.daq._set_max_frames_received(self.triggering_frames)
+            # TODO set_max_frames_received redundant for EPAC configuration?
+            self.parent.daq._set_max_frames_received(0)
             self.parent.daq.pass_pixel_spectra = False
         # Triggering mode changed, must reinitialise system
         self.system_initialised = False
@@ -1681,9 +1663,11 @@ class HexitecFem():
         :param triggering_frames: Number of frames to trigger on.
         """
         self.parent.daq.check_daq_acquiring_data("trigger frames")
+        self.display_debugging("Setting triggering frames to: %s" % triggering_frames)
         if isinstance(triggering_frames, int):
             self.triggering_frames = triggering_frames
-            self.parent.daq._set_max_frames_received(self.triggering_frames)
+            # TODO set_max_frames_received redundant for EPAC configuration?
+            self.parent.daq._set_max_frames_received(0)
         else:
             raise ParameterTreeError("Not an integer!")
         # Triggering mode changed, must reinitialise system

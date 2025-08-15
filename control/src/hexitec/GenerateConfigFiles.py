@@ -182,6 +182,7 @@ class GenerateConfigFiles():
         hexitec_plugins["discrimination"] = ["discrimination", "Discrimination", "Discrimination"]
         hexitec_plugins["histogram"] = ["histogram", "Histogram", "Histogram"]
         hexitec_plugins["summed_image"] = ["summed_image", "SummedImage", "SummedImage"]
+        hexitec_plugins["stacked"] = ["stacked", "Stacked", "Stacked"]
 
         # Plugin path that doesn't follow the same format (as the others)
         # "live_view", "LiveViewPlugin      "install/lib/libLiveViewPlugin.so"
@@ -200,7 +201,7 @@ class GenerateConfigFiles():
 
         # Sort parameter tree dict into R, T, C, A, D, SI, H, LV plugin order
         keyorder = ['reorder', 'threshold', 'calibration', 'addition', 'discrimination',
-                    'summed_image', 'histogram', 'lvframes', 'lvspectra']
+                    'summed_image', 'stacked', 'histogram', 'lvframes', 'lvspectra']
         config = OrderedDict(sorted(d.items(), key=lambda i: keyorder.index(i[0])))
 
         # Determine plugin chain (to configure frameProcessor)
@@ -224,7 +225,7 @@ class GenerateConfigFiles():
                 logging.debug("Plugin %s missing 'enable' setting!" % key)
                 raise Exception("Plugin %s missing 'enable' setting!" % key)
 
-        plugin_chain += ["summed_image", "histogram"]
+        plugin_chain += ["summed_image", "stacked", "histogram"]
         if self.live_view_selected:
             plugin_chain += ["lvframes"]
             plugin_chain += ["lvspectra"]
@@ -395,6 +396,18 @@ class GenerateConfigFiles():
                                 "blosc_shuffle": 0,
                                 "blosc_level": 4''' % self.compression_type
 
+        if 1:
+            # datatype is float for processed_frames, uint16 for raw_frames
+            datatype = "float"
+            dataset = "stacked_frames"
+            store_plugin_config += '''
+                            "%s":''' % dataset + '''
+                            {
+                                "datatype": "%s",''' % (datatype) + '''
+                                "dims": [%s, %s],''' % (self.rows, self.columns) + '''
+                                "chunks": [1, %s, %s],%s''' % (self.rows, self.columns, blosc_settings) + '''
+                            },'''
+
         # extra_datasets contained 0 or more of: [processed_frames, raw_frames]
         for dataset in self.extra_datasets:
             # datatype is float for processed_frames, uint16 for raw_frames
@@ -542,7 +555,7 @@ if __name__ == '__main__':  # pragma: no cover
     # Construct path relative to current working directory
     # -- Must execute from source code directory if run outside of Odin!
     cwd = os.getcwd()
-    base_path_index = cwd.rfind("hexitec-detector")
+    base_path_index = cwd.rfind("src/hexitec-detector")
     odin_path = cwd[:base_path_index - 1]
     gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="none",
                               master_dataset=master_dataset, extra_datasets=extra_datasets,

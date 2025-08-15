@@ -88,7 +88,8 @@ class HexitecAdapter(ApiAdapter):
         return ApiAdapterResponse(response, content_type=content_type,
                                   status_code=status_code)
 
-    @request_types('application/json')
+    @request_types("application/json", "application/vnd.odin-native")
+    # @request_types('application/json')
     @response_types('application/json', default='application/json')
     def put(self, path, request):
         """

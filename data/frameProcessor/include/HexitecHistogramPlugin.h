@@ -73,8 +73,8 @@ namespace FrameProcessor
       static const std::string CONFIG_PASS_PROCESSED;
       /** Configuration constant for passing raw_frames to hdf **/
       static const std::string CONFIG_PASS_RAW;
-      /** Configuration constant for passing pixel_spectra to hdf **/
-      static const std::string CONFIG_PASS_PIXEL_SPECTRA;
+      // /** Configuration constant for passing pixel_spectra to hdf **/
+      // static const std::string CONFIG_PASS_PIXEL_SPECTRA;
       /** Configuration constant for rank index **/
       static const std::string CONFIG_RANK_INDEX;
       /** Configuration constant for rank offset **/
@@ -115,8 +115,6 @@ namespace FrameProcessor
       /** Rank index, differentiate each histogram if multiple frame processors **/
       int rank_index_;
       int rank_offset_;
-      uint64_t frame_number_;
-      uint64_t raw_frame_number_;
       uint64_t processed_frame_number_;
       int frames_per_trigger_;
       bool pass_processed_;

@@ -233,7 +233,7 @@ class HexitecDAQ():
                                               self._set_lvspectra_socket_addr),
                     "per_second": (lambda: self.lvspectra_per_second,
                                    self._set_lvspectra_per_second)
-                },
+                },#"stacked" ?
                 "summed_image": {
                     "threshold_lower": (lambda: self.threshold_lower,
                                         self._set_threshold_lower),
@@ -1221,50 +1221,57 @@ class HexitecDAQ():
             live_view_selected = False
 
             command = "config/store/" + str(index)    # Configure using strings
-            request = ApiAdapterRequest(store_string, content_type="application/json")
-
-            response = self.adapters["fp"].put(command, request)
-            status_code = response.status_code
-            if (status_code != 200):
-                error = "Error {} storing plugins config in fp adapter".format(status_code)
-                self.parent.fem.flag_error(error)
+            error_message = "storing plugins config in fp adapter"
+            self.transmit_adapter_request(command, store_string, error_message)
 
             command = "config/execute/" + str(index)  # Configure using strings
-            request = ApiAdapterRequest(execute_string, content_type="application/json")
+            error_message = "loading plugins config in fp adapter"
+            self.transmit_adapter_request(command, execute_string, error_message)
+            # request = ApiAdapterRequest(execute_string, content_type="application/json")
 
-            response = self.adapters["fp"].put(command, request)
-            status_code = response.status_code
-            if (status_code != 200):
-                error = "Error {} loading plugins config in fp adapter".format(status_code)
-                self.parent.fem.flag_error(error)
             pixel_spectra_params = self.gcf.generate_pixel_spectra_params()
 
-            # Set that unique rank for each fp
+            # Set that unique rank for each fp's histogram plugin
             command = "config/histogram/rank_index/" + str(index)
-            request = ApiAdapterRequest(str(index), content_type="application/json")
-            # self.parent.fem.display_debugging(
-            #     "Setting rank_index for {} to {}".format(index, index))
+            error_message = "Setting Histogram plugin's rank index for FP{}".format(index)
+            self.transmit_adapter_request(command, str(index), error_message)
 
-            response = self.adapters["fp"].put(command, request)
-            status_code = response.status_code
-            if (status_code != 200):
-                error = "Error {} Set rank_index for {}".format(status_code, index)
-                self.parent.fem.flag_error(error)
+            # Set that unique rank for each fp's stacked plugin
+            command = "config/stacked/rank_index/" + str(index)
+            error_message = "Setting Stacked plugin's rank index for FP{}".format(index)
+            self.transmit_adapter_request(command, str(index), error_message)
+            # request = ApiAdapterRequest(str(index), content_type="application/json")
+
             # Delete GCF object before next iteration
             del self.gcf
             self.gcf = None
 
-        # Set that unique rank for each fp
-        command = "config/histogram/frames_per_trigger"
-        request = ApiAdapterRequest(str(self.parent.fem.triggering_frames), content_type="application/json")
-        # self.parent.fem.display_debugging(
-        #     "Setting triggering frames to {}".format(self.parent.fem.triggering_frames))
+        # Set that unique rank for each fp's histogram plugin
+        command = "config/histogram/rank_offset/"
+        error_message = "Setting Histogram plugin's rank offset"
+        self.transmit_adapter_request(command, str(self.number_odin_instances), error_message)
 
-        response = self.adapters["fp"].put(command, request)
-        status_code = response.status_code
-        if (status_code != 200):
-            error = "Error {} setting histogram triggering frames".format(status_code)
-            self.parent.fem.flag_error(error)
+        # Set that unique rank for each fp's stacked plugin
+        command = "config/stacked/rank_offset/"
+        error_message = "Setting Stacked plugin's rank offset"
+        self.transmit_adapter_request(command, str(self.number_odin_instances), error_message)
+
+        triggering_frames = self.parent.fem.triggering_frames
+        # Set frames per trigger in histogram plugin
+        command = "config/histogram/frames_per_trigger"
+        error_message = "Setting Histogram plugin's frames/trigger"
+        self.transmit_adapter_request(command, str(triggering_frames), error_message)
+
+        # Set frames per trigger in stacked plugin
+        command = "config/stacked/frames_per_trigger"
+        error_message = "Setting Stacked plugin's frames/trigger"
+        self.transmit_adapter_request(command, str(triggering_frames), error_message)
+
+        # TODO Only necessary for raw frames?
+        # # Set how many consecutive frames to write to each Odin instance
+        # command = "config/hdf/process/frames_per_block"
+        # error_message = "Setting frames per block in FP(s) {}".format(triggering_frames)
+        # self.transmit_adapter_request(command, str(triggering_frames), error_message)
 
         # Update dataset dimensions
 
@@ -1272,21 +1279,24 @@ class HexitecDAQ():
         payload = '{"dims": [%s], "chunks": [1, %s]}' % \
             (self.number_histograms, self.number_histograms)
         command = "config/hdf/dataset/" + "spectra_bins"
-        request = ApiAdapterRequest(str(payload), content_type="application/json")
-        self.adapters["fp"].put(command, request)
+        error_message = "Setting spectra_bins dataset dimensions"
+        self.transmit_adapter_request(command, payload, error_message)
+        # request = ApiAdapterRequest(str(payload), content_type="application/json")
 
         # pixel_spectra dataset
         payload = '{%s}' % (pixel_spectra_params)
         command = "config/hdf/dataset/" + "pixel_spectra"
-        request = ApiAdapterRequest(str(payload), content_type="application/json")
-        self.adapters["fp"].put(command, request)
+        error_message = "Setting pixel_spectra dataset dimensions"
+        self.transmit_adapter_request(command, payload, error_message)
+        # request = ApiAdapterRequest(str(payload), content_type="application/json")
 
         # summed_spectra dataset
         payload = '{"dims": [%s], "chunks": [1, %s]}' % \
             (self.number_histograms, self.number_histograms)
         command = "config/hdf/dataset/" + "summed_spectra"
-        request = ApiAdapterRequest(str(payload), content_type="application/json")
-        self.adapters["fp"].put(command, request)
+        error_message = "Setting summed_spectra dataset dimensions"
+        self.transmit_adapter_request(command, payload, error_message)
+        # request = ApiAdapterRequest(str(payload), content_type="application/json")
 
         # Allow FP time to process above PUT requests before configuring plugin settings
         IOLoop.instance().call_later(0.04, self.submit_configuration)
@@ -1318,15 +1328,16 @@ class HexitecDAQ():
         else:
             self.last_plugin_configured = "histogram"
 
-        command = "config/histogram"
-        formatted_string = ('{"pass_pixel_spectra": %s}' % self.pass_pixel_spectra).lower()
-        request = ApiAdapterRequest(formatted_string, content_type="application/json")
+        # T0DO: Pass_pixel_spectra to become internal variable only 
+        # # command = "config/histogram"
+        # formatted_string = ('{"pass_pixel_spectra": %s}' % self.pass_pixel_spectra).lower()
+        # request = ApiAdapterRequest(formatted_string, content_type="application/json")
 
-        response = self.adapters["fp"].put(command, request)
-        status_code = response.status_code
-        if (status_code != 200):
-            error = "Error {} toggling histogram's pixel spectra setting".format(status_code)
-            self.parent.fem.flag_error(error)
+        # response = self.adapters["fp"].put(command, request)
+        # status_code = response.status_code
+        # if (status_code != 200):
+        #     error = "Error {} toggling histogram's pixel spectra setting".format(status_code)
+        #     self.parent.fem.flag_error(error)
 
         command = "config/histogram"
         formatted_string = ('{"pass_processed": %s}' % self.pass_processed).lower()
@@ -1355,6 +1366,18 @@ class HexitecDAQ():
         self.adapters["live_histogram"].put(command, request)
 
         self.busy_configuring_fps = False
+
+    def transmit_adapter_request(self, command, request_content, error_message):
+        """Transmit request to adapter."""
+        request = ApiAdapterRequest(request_content, content_type="application/vnd.odin-native")
+        # application/json
+
+        response = self.adapters["fp"].put(command, request)
+        status_code = response.status_code
+        if (status_code != 200):
+            error = "Error {} {}".format(status_code, error_message)
+            self.parent.fem.flag_error(error)
+
 
     def debug_timestamp(self):  # pragma: no cover
         """Debug function returning current timestamp in sub second resolution."""
