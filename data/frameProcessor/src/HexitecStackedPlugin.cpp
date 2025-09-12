@@ -23,7 +23,7 @@ namespace FrameProcessor
       rank_index_(0),
       rank_offset_(2),  // Default rank offset for Hexitec
       frames_per_trigger_(3),
-      processed_frame_number_(0)
+      stacked_frame_number_(0)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecStackedPlugin");
@@ -34,7 +34,6 @@ namespace FrameProcessor
     // Set image_width_, image_height_, image_pixels_
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
-    initialise_stacked_frame();
   }
 
   /**
@@ -77,7 +76,7 @@ namespace FrameProcessor
    */
   void HexitecStackedPlugin::reset_frames_numbering()
   {
-    processed_frame_number_ = rank_index_;
+    stacked_frame_number_ = rank_index_;
   }
 
   void HexitecStackedPlugin::initialise_stacked_frame()
@@ -93,7 +92,7 @@ namespace FrameProcessor
       stacked_meta.set_dimensions(dims);
       stacked_meta.set_compression_type(no_compression);
       stacked_meta.set_data_type(raw_float);
-      stacked_meta.set_frame_number(processed_frame_number_);
+      stacked_meta.set_frame_number(stacked_frame_number_);
 
       // Determine the size of the image
       const std::size_t output_image_size = image_width_ * image_height_ * sizeof(float);
@@ -109,6 +108,8 @@ namespace FrameProcessor
       // Ensure frame is empty
       memset(output_ptr, 0, output_image_size);
 
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Initialised stacked frame, number: " << stacked_frame_number_
+        << " address: " << stacked_frame_);
     }
     catch (const std::exception& e)
     {
@@ -134,22 +135,20 @@ namespace FrameProcessor
     if (config.has_param(HexitecStackedPlugin::CONFIG_FRAMES_PER_TRIGGER))
     {
       frames_per_trigger_ = config.get_param<int>(HexitecStackedPlugin::CONFIG_FRAMES_PER_TRIGGER);
-      LOG4CXX_TRACE(logger_, "Frames per trigger set to: " << frames_per_trigger_);
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Frames per trigger set to: " << frames_per_trigger_);
     }
 
     if (config.has_param(HexitecStackedPlugin::CONFIG_RANK_INDEX))
     {
       rank_index_ = config.get_param<int>(HexitecStackedPlugin::CONFIG_RANK_INDEX);
-      // LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank index set to: " << rank_index_);
-      LOG4CXX_TRACE(logger_, "Rank index set to: " << rank_index_);
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank index set to: " << rank_index_);
       reset_frames_numbering();
     }
 
     if (config.has_param(HexitecStackedPlugin::CONFIG_RANK_OFFSET))
     {
       rank_offset_ = config.get_param<int>(HexitecStackedPlugin::CONFIG_RANK_OFFSET);
-      // LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank offset set to: " << rank_offset_);
-      LOG4CXX_TRACE(logger_, "Rank offset set to: " << rank_offset_);
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank offset set to: " << rank_offset_);
       reset_frames_numbering();
     }
 
@@ -201,13 +200,12 @@ namespace FrameProcessor
   */
   void HexitecStackedPlugin::process_end_of_acquisition()
   {
-    LOG4CXX_DEBUG_LEVEL(2, logger_, "End of acquisition frame received");
-    LOG4CXX_TRACE(logger_, "EoA: Pushing stacked frame, frame number: "
-      << stacked_frame_->get_frame_number() << ", rank index: " << rank_index_);
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "EoA: Pushing stacked frame, number: "
+      << stacked_frame_->get_frame_number() << ", rank: " << rank_index_
+      << " address: " << stacked_frame_);
     this->push(stacked_frame_);
 
     reset_frames_numbering();
-    initialise_stacked_frame();
   }
 
   /**
@@ -219,8 +217,6 @@ namespace FrameProcessor
    */
   void HexitecStackedPlugin::process_frame(boost::shared_ptr<Frame> frame)
   {
-    LOG4CXX_DEBUG_LEVEL(3, logger_, " process_frame("<< frame->get_frame_number() << ")");
-
     // Obtain a pointer to the start of the data in the frame
     const void* data_ptr = static_cast<const void*>(
       static_cast<const char*>(frame->get_data_ptr()));
@@ -237,36 +233,29 @@ namespace FrameProcessor
         void* input_ptr = static_cast<void *>(
           static_cast<char *>(const_cast<void *>(data_ptr)));
 
-        // Get a pointer to the data buffer in the output frame
-        void* output_ptr = stacked_frame_->get_data_ptr();
-
         // First frame of the trigger?
         if (frame->get_frame_number() % frames_per_trigger_ == 0)
         {
           initialise_stacked_frame();
-          LOG4CXX_TRACE(logger_, "S: " << dataset << ", frame_number: " << frame->get_frame_number()
-            << ", changed to: " << processed_frame_number_ << " (rank_index: " << rank_index_ << ")");
         }
-        else
-        {
-          LOG4CXX_TRACE(logger_, "S: " << dataset << ", frame_number: " << frame->get_frame_number()
-            << ", changed to: " << processed_frame_number_ << " (rank_index: " << rank_index_ << ")");
-        }
+
+        // Get a pointer to the data buffer in the output frame
+        void* output_ptr = stacked_frame_->get_data_ptr();
 
         // Add this frame's contribution onto stacked frame
         stack_current_frame(static_cast<float *>(input_ptr), static_cast<float *>(output_ptr));
 
+        LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing processed_frames, number: " << frame->get_frame_number());
+        // Pass on processed_frames dataset unmodified:
+        this->push(frame);
+
         // Final frame of current trigger?
         if (frame->get_frame_number() % frames_per_trigger_ == (frames_per_trigger_ - 1))
         {
-          // Finished with processed_frames
-          this->push(frame);
-
-          LOG4CXX_TRACE(logger_, dataset << " Final frame of T, pushing as frame number: " << processed_frame_number_);
-          //   LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
-          //     << frame->get_frame_number());
+          LOG4CXX_DEBUG_LEVEL(2, logger_, dataset << "Final frame, pushing stacked frame: "
+            << stacked_frame_number_ << " address: " << stacked_frame_);
           this->push(stacked_frame_);
-          processed_frame_number_ += rank_offset_;
+          stacked_frame_number_ += rank_offset_;
         }
       }
       catch (const std::exception& e)
@@ -275,35 +264,33 @@ namespace FrameProcessor
       }
     }
     else
-    // if (dataset.compare(std::string("raw_frames")) == 0)
     {
       LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
                                         << frame->get_frame_number());
       this->push(frame);
     }
-    // else
-    // {
-    //   LOG4CXX_ERROR(logger_, "Unknown dataset encountered: " << dataset);
-    // }
   }
 
   /**
    * Add current frame to stacked frame.
    *
-   * \param[in] in - Pointer to the incoming image data.
+   * \param[in] in - Pointer to the incoming processed frame data.
    * \param[in] out - Pointer to the allocated memory of the stacked image.
    *
    */
   void HexitecStackedPlugin::stack_current_frame(float *in, float *out)
   {
-    float total = 0.0f;
+    float total_in = 0.0f;
+    float total_out = 0.0f;
     for (int i=0; i<image_pixels_; i++)
     {
       out[i] += in[i];
-      total += in[i];
+      total_out += out[i];  // DEBUG
+      total_in += in[i];    // DEBUG
     }
-    LOG4CXX_TRACE(logger_, "* Stacked frame number: " << processed_frame_number_ <<
-      ", total pixel value: " << total);
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "Stacked frame: " << stacked_frame_number_
+      << " stacked_frame total: " << total_out << " of which processed_frames added: "
+      << total_in << " stacked_frame address: " << out);
   }
 
   /**

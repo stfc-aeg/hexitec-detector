@@ -78,7 +78,7 @@ namespace FrameProcessor
       /** Rank index, differentiate each histogram if multiple frame processors **/
       int rank_index_;
       int rank_offset_;
-      uint64_t processed_frame_number_;
+      uint64_t stacked_frame_number_;
       int frames_per_trigger_;
 
       void reset_frames_numbering();
