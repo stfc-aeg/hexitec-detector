@@ -120,11 +120,13 @@ namespace FrameProcessor
       bool pass_processed_;
       bool pass_raw_;
       bool pass_pixel_spectra_;
+      bool initialise_pixel_spectra_;
 
       int bin_start_;
       int bin_end_;
       double bin_width_;
       long long number_bins_;
+      void reset_histogram_numbering();
       void initialiseHistograms();
       void writeHistogramsToDisk();
       bool end_of_acquisition_processed_;

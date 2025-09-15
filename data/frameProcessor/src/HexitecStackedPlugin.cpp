@@ -70,7 +70,7 @@ namespace FrameProcessor
   }
 
   /**
-   * Reset the frame numbers for the histograms.
+   * Reset the frame number for the stacked frame dataset.
    * 
    * The first frame of each trigger will increment frame number by rank offset.
    */
@@ -149,7 +149,6 @@ namespace FrameProcessor
     {
       rank_offset_ = config.get_param<int>(HexitecStackedPlugin::CONFIG_RANK_OFFSET);
       LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank offset set to: " << rank_offset_);
-      reset_frames_numbering();
     }
 
     if (config.has_param(HexitecStackedPlugin::CONFIG_SENSORS_LAYOUT))
@@ -200,9 +199,10 @@ namespace FrameProcessor
   */
   void HexitecStackedPlugin::process_end_of_acquisition()
   {
-    LOG4CXX_DEBUG_LEVEL(2, logger_, "EoA: Pushing stacked frame, number: "
-      << stacked_frame_->get_frame_number() << ", rank: " << rank_index_
-      << " address: " << stacked_frame_);
+    // LOG4CXX_DEBUG_LEVEL(2, 
+    // LOG4CXX_TRACE(logger_, "EoA: Pushing stacked frame, number: "
+    //   << stacked_frame_->get_frame_number() << ", rank: " << rank_index_
+    //   << " address: " << stacked_frame_);
     this->push(stacked_frame_);
 
     reset_frames_numbering();
@@ -252,7 +252,7 @@ namespace FrameProcessor
         // Final frame of current trigger?
         if (frame->get_frame_number() % frames_per_trigger_ == (frames_per_trigger_ - 1))
         {
-          LOG4CXX_DEBUG_LEVEL(2, logger_, dataset << "Final frame, pushing stacked frame: "
+          LOG4CXX_DEBUG_LEVEL(2, logger_, dataset << " Final frame, pushing stacked frame: "
             << stacked_frame_number_ << " address: " << stacked_frame_);
           this->push(stacked_frame_);
           stacked_frame_number_ += rank_offset_;
