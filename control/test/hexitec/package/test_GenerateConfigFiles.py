@@ -203,53 +203,57 @@ class TestObject(unittest.TestCase):
             assert d['value'][2]['plugin']['load']['index'] == 'calibration'
             assert d['value'][3]['plugin']['load']['index'] == 'addition'
             assert d['value'][4]['plugin']['load']['index'] == 'summed_image'
-            assert d['value'][5]['plugin']['load']['index'] == 'histogram'
-            assert d['value'][6]['plugin']['load']['index'] == 'lvframes'
-            assert d['value'][7]['plugin']['load']['index'] == 'lvspectra'
-            assert d['value'][8]['plugin']['load']['index'] == 'blosc'
-            assert d['value'][9]['plugin']['load']['index'] == 'hdf'
-            assert d['value'][10]['plugin'] == {'connect': {'index': 'lvframes',
+            assert d['value'][5]['plugin']['load']['index'] == 'stacked'
+            assert d['value'][6]['plugin']['load']['index'] == 'histogram'
+            assert d['value'][7]['plugin']['load']['index'] == 'lvframes'
+            assert d['value'][8]['plugin']['load']['index'] == 'lvspectra'
+            assert d['value'][9]['plugin']['load']['index'] == 'blosc'
+            assert d['value'][10]['plugin']['load']['index'] == 'hdf'
+            assert d['value'][11]['plugin'] == {'connect': {'index': 'lvframes',
                                                 'connection': 'histogram'}}
-            assert d['value'][11]['plugin'] == {'connect': {'index': 'lvspectra',
+            assert d['value'][12]['plugin'] == {'connect': {'index': 'lvspectra',
                                                 'connection': 'histogram'}}
-            assert d['value'][12]['plugin'] == {'connect': {'index': 'reorder',
+            assert d['value'][13]['plugin'] == {'connect': {'index': 'reorder',
                                                 'connection': 'frame_receiver'}}
-            assert d['value'][13]['plugin'] == {'connect':
-                                                {'index': 'threshold', 'connection': 'reorder'}}
             assert d['value'][14]['plugin'] == {'connect':
-                                                {'index': 'calibration', 'connection': 'threshold'}}
+                                                {'index': 'threshold', 'connection': 'reorder'}}
             assert d['value'][15]['plugin'] == {'connect':
-                                                {'index': 'addition', 'connection': 'calibration'}}
+                                                {'index': 'calibration', 'connection': 'threshold'}}
             assert d['value'][16]['plugin'] == {'connect':
-                                                {'index': 'summed_image', 'connection': 'addition'}}
+                                                {'index': 'addition', 'connection': 'calibration'}}
             assert d['value'][17]['plugin'] == {'connect':
-                                                {'index': 'histogram',
-                                                 'connection': 'summed_image'}}
+                                                {'index': 'summed_image', 'connection': 'addition'}}
             assert d['value'][18]['plugin'] == {'connect':
-                                                {'index': 'blosc', 'connection': 'histogram'}}
-            assert d['value'][19]['plugin'] == {'connect': {'index': 'hdf', 'connection': 'blosc'}}
-            assert d['value'][20] == {'reorder': sl_dic}
-            assert d['value'][21] == {'threshold':
+                                                {'index': 'stacked',
+                                                 'connection': 'summed_image'}}
+            assert d['value'][19]['plugin'] == {'connect':
+                                                {'index': 'histogram', 'connection': 'stacked'}}
+            assert d['value'][20]['plugin'] == {'connect': {'index': 'blosc', 'connection': 'histogram'}}
+            assert d['value'][21]['plugin'] == {'connect': {'connection': 'blosc','index': 'hdf'}}
+
+            assert d['value'][22] == {'reorder': sl_dic}
+            assert d['value'][23] == {'threshold':
                                       {'threshold_file': '', 'threshold_value': 99,
                                        'threshold_mode': 'none', 'sensors_layout': sl_value}}
-            assert d['value'][22] == {'calibration':
+            assert d['value'][24] == {'calibration':
                                       {'gradients_file': '', 'intercepts_file': '',
                                        'sensors_layout': sl_value}}
-            assert d['value'][23] == {'addition': {'pixel_grid_size': 3,
+            assert d['value'][25] == {'addition': {'pixel_grid_size': 3,
                                                    'sensors_layout': sl_value}}
-            assert d['value'][24] == {'summed_image':
+            assert d['value'][26] == {'summed_image':
                                       {'threshold_lower': 120, 'threshold_upper': 4800,
                                        'sensors_layout': sl_value}}
-            assert d['value'][25] == {'histogram':
+            assert d['value'][27] == {'stacked': {'sensors_layout': '2x6'}}
+            assert d['value'][28] == {'histogram':
                                       {'bin_start': 0, 'bin_end': 8000, 'bin_width': 10.0,
                                        'max_frames_received': 10, 'pass_processed': True,
                                        'pass_raw': True, 'sensors_layout': sl_value}}
-            assert d['value'][26] == {'blosc': sl_dic}
-            assert d['value'][27] == {'lvframes':
+            assert d['value'][29] == {'blosc': sl_dic}
+            assert d['value'][30] == {'lvframes':
                                       {'frame_frequency': 0, 'per_second': 2,
                                        'live_view_socket_addr': 'tcp://127.0.0.1:5020',
                                        'dataset_name': 'raw_frames'}}
-            assert d['value'][28] == {'lvspectra':
+            assert d['value'][31] == {'lvspectra':
                                       {'frame_frequency': 0, 'per_second': 1,
                                        'live_view_socket_addr': 'tcp://127.0.0.1:5021',
                                        'dataset_name': 'summed_spectra'}}

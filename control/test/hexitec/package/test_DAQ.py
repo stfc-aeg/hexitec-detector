@@ -928,6 +928,58 @@ class TestDAQ(unittest.TestCase):
         error = [{"Error": "Adapter {} not initialised with references yet".format(adapter)}]
         assert return_value == error
 
+    def test_get_adapter_config(self):
+        """Test function working ok."""
+        adapter = "fp"
+        self.test_daq.daq.is_initialised = True
+        return_value = self.test_daq.daq.get_adapter_config(adapter)
+        config = [{"connected": True,
+                    "plugins": {
+                        "names": [
+                            "correction",
+                            "hdf",
+                            "view"
+                        ]
+                    },
+                    "hdf": {
+                        "file_name": "test.h5",
+                        "frames_written": 0,
+                        "frames_processed": 0,
+                        "writing": True
+                    },
+                    "histogram": {
+                        "sensors_layout": "2x6",
+                        "max_frames_received": 10,
+                        "bin_start": 0,
+                        "bin_end": 8000,
+                        "bin_width": 10.0,
+                        "frames_processed": 0,
+                        "histograms_written": 0,
+                        "histogram_index": 1000,
+                        "pass_processed": False,
+                        "pass_raw": False,
+                        "eoa_processed": False
+                    }
+                }
+            ]
+        assert return_value == config
+
+    def test_get_adapter_config_key_error(self):
+        """Test typeod adapter returns Error."""
+        adapter = "fp_bad"
+        self.test_daq.daq.is_initialised = True
+        return_value = self.test_daq.daq.get_adapter_config(adapter)
+        error = [{'Error': f'Adapter {adapter} not found'}]
+        assert return_value == error
+
+    def test_get_adapter_config_fails_initialised(self):
+        """Test uninitialised adapter returns Error."""
+        adapter = "fp"
+        self.test_daq.daq.is_initialised = False
+        return_value = self.test_daq.daq.get_adapter_config(adapter)
+        error = [{"Error": "Adapter {} not initialised with references yet".format(adapter)}]
+        assert return_value == error
+
     def test_set_number_frames(self):
         """Test function sets number of frames."""
         number_frames = 25
@@ -1140,6 +1192,16 @@ class TestDAQ(unittest.TestCase):
         max_frames = 100
         self.test_daq.daq._set_max_frames_received(max_frames)
         assert max_frames == self.test_daq.daq.max_frames_received
+
+    def test_set_pass_pixel_spectra(self):
+        """Test function sets pass_pixel_spectra bool."""
+        self.test_daq.daq.update_fp_configuration = False
+        pass_pixel_spectra = True
+        self.test_daq.daq.check_daq_acquiring_data = Mock ()
+        self.test_daq.daq._set_pass_pixel_spectra(pass_pixel_spectra)
+        assert pass_pixel_spectra == self.test_daq.daq.pass_pixel_spectra
+        assert self.test_daq.daq.update_fp_configuration == True
+        self.test_daq.daq.check_daq_acquiring_data.assert_called()
 
     def test_set_pass_processed(self):
         """Test function sets pass_process bool."""

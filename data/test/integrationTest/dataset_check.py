@@ -26,9 +26,14 @@ class DatasetChecker:
         # # 2x2:
         # expected_spectra[:5] = np.array([   0, 8960, 3680,    0,  320], dtype=np.uint64)
         # 2x6:
-        expected_spectra[:7] = np.array([300, 3650, 4190, 3640, 1560, 1300,  260], dtype=np.uint64)
-        # print("spectra:  ", self.spectra[0][:24])
+        expected_spectra[:19] = np.array([0,  0, 30, 130, 104, 131, 157, 105, 157, 208, 104, 52, 78, 52, 26, 52, 52, 26, 26], dtype=np.uint64)
+        # The first three indexes are of the same (1490), the remaining 7 are empty
+        # print("spectra:  ", self.spectra[0][:].sum())
+        # print("spectra:  ", self.spectra[1][:].sum())
+        # print("spectra:  ", self.spectra[2][:].sum())
         # print("expected: ", expected_spectra[0:24])
+        # print(" sum spectra:  ", self.spectra[0].sum())
+        # print(" sum exp_spec: ", expected_spectra.sum())
         assert_true(np.array_equal(self.spectra[0], expected_spectra))
 
     def check_addition_averages(self):

@@ -482,8 +482,8 @@ class TestFem(unittest.TestCase):
         """Test function fails unexpected exception."""
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.hardware_busy = False
-        self.test_fem.fem.initialise_system = Mock()
-        self.test_fem.fem.initialise_system.side_effect = AttributeError()
+        self.test_fem.fem.setup_data_lane_1 = Mock()
+        self.test_fem.fem.setup_data_lane_1.side_effect = AttributeError()
         with pytest.raises(ParameterTreeError) as exc_info:
             self.test_fem.fem.initialise_hardware()
         error = "Camera initialisation failed"

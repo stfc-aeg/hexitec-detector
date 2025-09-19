@@ -45,6 +45,15 @@
   },
   {
       "plugin": {
+          "load": {
+              "index":"stacked",
+              "name":"HexitecStackedPlugin",
+              "library":"${INSTALL_PREFIX}/lib/libHexitecStackedPlugin.so"
+          }
+      }
+  },
+  {
+      "plugin": {
           "connect": {
               "index":"reorder",
               "connection":"frame_receiver"
@@ -62,8 +71,16 @@
   {
       "plugin": {
           "connect": {
-              "index":"histogram",
+              "index":"stacked",
               "connection":"addition"
+          }
+      }
+  },
+  {
+      "plugin": {
+          "connect": {
+              "index":"histogram",
+              "connection":"stacked"
           }
       }
   },
@@ -87,8 +104,22 @@
   },
   {
       "histogram": {
-          "max_frames_received": 10,
+        "max_frames_received": 10,
+        "rank_index": 0,
+        "rank_offset": 1,
         "sensors_layout": "2x6"
+      }
+  },
+  {
+      "stacked": {
+        "rank_index": 0,
+        "rank_offset": 1,
+        "sensors_layout": "2x6"
+      }
+  },
+  {
+      "hdf": {
+          "dataset": "stacked_frames"
       }
   },
   {
@@ -130,6 +161,13 @@
               "raw_frames" : {
                   "cmd": "create",
                   "datatype": "uint16",
+                  "dims": [160, 480],
+                  "chunks": [1, 160, 480],
+                  "compression": "none"
+              },
+              "stacked_frames" : {
+                  "cmd": "create",
+                  "datatype": "float",
                   "dims": [160, 480],
                   "chunks": [1, 160, 480],
                   "compression": "none"
