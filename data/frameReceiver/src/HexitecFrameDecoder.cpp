@@ -19,7 +19,6 @@
 
 using namespace FrameReceiver;
 
-const std::string HexitecFrameDecoder::CONFIG_FEM_PORT_MAP = "fem_port_map";
 const std::string HexitecFrameDecoder::CONFIG_SENSORS_LAYOUT = "sensors_layout";
 const std::string HexitecFrameDecoder::CONFIG_EXTENDED_PACKET_HEADER = "extended_packet_header";
 
@@ -39,7 +38,6 @@ HexitecFrameDecoder::HexitecFrameDecoder() :
     current_frame_buffer_(0),
     current_frame_header_(0),
     dropping_frame_data_(false),
-    packets_ignored_(0),
     packets_lost_(0),
     fem_packets_lost_(0)
 {
@@ -50,7 +48,6 @@ HexitecFrameDecoder::HexitecFrameDecoder() :
   // Allocate buffers for packet header, dropped frames and scratched packets
   current_packet_header_.reset(new uint8_t[packet_header_size_]);
   dropped_frame_buffer_.reset(new uint8_t[Hexitec::max_frame_size(sensors_config_)]);
-  ignored_packet_buffer_.reset(new uint8_t[Hexitec::primary_packet_size]);
 }
 
 //! Destructor for HexitecFrameDecoder
@@ -100,25 +97,6 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
   FrameDecoder::init(logger, config_msg);
 
   LOG4CXX_DEBUG_LEVEL(2, logger_, "Got decoder config message: " << config_msg.encode());
-
-  // Extract the FEM to port map from the config message and pass to the parser. If no map is
-  // present, use the default. If the map cannot be parsed correctly, thrown an exception to signal
-  // an error to the app controller. Set the current number of active FEMs based on the output
-  // of the map parsing.
-  if (config_msg.has_param(CONFIG_FEM_PORT_MAP))
-  {
-    fem_port_map_str_ = config_msg.get_param<std::string>(CONFIG_FEM_PORT_MAP);
-    LOG4CXX_DEBUG_LEVEL(1, logger_, "Parsing FEM to port map found in config: "
-                        << fem_port_map_str_);
-  }
-  else
-  {
-    LOG4CXX_DEBUG_LEVEL(1,logger_, "No FEM to port map found in config, using default: "
-                        << default_fem_port_map);
-    fem_port_map_str_ = default_fem_port_map;
-  }
-
-  parse_fem_port_map(fem_port_map_str_);
 
   // Determine how many sensors to configure for
   if (config_msg.has_param(CONFIG_SENSORS_LAYOUT))
@@ -186,7 +164,6 @@ void HexitecFrameDecoder::init(LoggerPtr& logger, OdinData::IpcMessage& config_m
   }
 
   // Reset the scratched and lost packet counters
-  packets_ignored_ = 0;
   packets_lost_ = 0;
   fem_packets_lost_ = 0;
 }
@@ -199,7 +176,6 @@ void HexitecFrameDecoder::request_configuration(const std::string param_prefix,
   FrameDecoder::request_configuration(param_prefix, config_reply);
 
   // Add current configuration parameters to reply
-  config_reply.set_param(param_prefix + CONFIG_FEM_PORT_MAP, fem_port_map_str_);
   config_reply.set_param(param_prefix + CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
   config_reply.set_param(param_prefix + CONFIG_EXTENDED_PACKET_HEADER, extended_packet_header_);
 
@@ -292,24 +268,6 @@ void HexitecFrameDecoder::process_packet_header(size_t bytes_received, int port,
     LOG4CXX_INFO(packet_logger_, ss.str ());
   }
 
-  // Resolve the FEM index from the port the packet arrived on
-  if (fem_port_map_.count(port)) {
-    current_packet_fem_map_ =  fem_port_map_[port];
-  }
-  else
-  {
-    current_packet_fem_map_ = HexitecDecoderFemMapEntry(ILLEGAL_FEM_IDX, ILLEGAL_FEM_IDX);
-    packets_ignored_++;
-    if (packets_ignored_ < MAX_IGNORED_PACKET_REPORTS)
-    {
-      LOG4CXX_WARN(logger_, "Ignoring packet received on port " << port << " for unknown FEM idx");
-    }
-    else if (packets_ignored_ == MAX_IGNORED_PACKET_REPORTS)
-    {
-      LOG4CXX_WARN(logger_, "Reporting limit for ignored packets reached, suppressing further messages");
-    }
-  }
-
   // Extract fields from packet header
   uint64_t frame_number = get_frame_number();
   uint32_t packet_number = get_packet_number();
@@ -322,80 +280,76 @@ void HexitecFrameDecoder::process_packet_header(size_t bytes_received, int port,
       << " port: " << port
   );
 
-  // Only handle the packet header and frame logic further if this packet is not being ignored
-  if (current_packet_fem_map_.fem_idx_ != ILLEGAL_FEM_IDX)
+  // Handle the packet header and frame logic
+  if (frame != current_frame_seen_)
   {
-    if (frame != current_frame_seen_)
+    current_frame_seen_ = frame;
+
+    if (frame_buffer_map_.count(current_frame_seen_) == 0)
     {
-      current_frame_seen_ = frame;
-
-      if (frame_buffer_map_.count(current_frame_seen_) == 0)
+      if (empty_buffer_queue_.empty())
       {
-        if (empty_buffer_queue_.empty())
+        current_frame_buffer_ = dropped_frame_buffer_.get();
+
+        if (!dropping_frame_data_)
         {
-          current_frame_buffer_ = dropped_frame_buffer_.get();
-
-          if (!dropping_frame_data_)
-          {
-            LOG4CXX_ERROR(logger_, "First packet from frame " << current_frame_seen_
-                << " detected but no free buffers available. Dropping packet data for this frame");
-            dropping_frame_data_ = true;
-          }
+          LOG4CXX_ERROR(logger_, "First packet from frame " << current_frame_seen_
+              << "   detected but no free buffers available. Dropping packet data for this frame");
+          dropping_frame_data_ = true;
         }
-        else
-        {
-
-          current_frame_buffer_id_ = empty_buffer_queue_.front();
-          empty_buffer_queue_.pop();
-          frame_buffer_map_[current_frame_seen_] = current_frame_buffer_id_;
-          current_frame_buffer_ = buffer_manager_->get_buffer_address(current_frame_buffer_id_);
-
-          if (!dropping_frame_data_)
-          {
-            LOG4CXX_DEBUG_LEVEL(2, logger_, "First packet from frame " << current_frame_seen_
-                << " detected, allocating frame buffer ID " << current_frame_buffer_id_);
-          }
-          else
-          {
-            dropping_frame_data_ = false;
-            LOG4CXX_DEBUG_LEVEL(2, logger_, "Free buffer now available for frame "
-                << current_frame_seen_ << ", allocating frame buffer ID "
-                << current_frame_buffer_id_);
-          }
-        }
-
-        // Initialise frame header
-        current_frame_header_ = reinterpret_cast<Hexitec::FrameHeader*>(current_frame_buffer_);
-        initialise_frame_header(current_frame_header_);
-
       }
       else
       {
-        current_frame_buffer_id_ = frame_buffer_map_[current_frame_seen_];
+
+        current_frame_buffer_id_ = empty_buffer_queue_.front();
+        empty_buffer_queue_.pop();
+        frame_buffer_map_[current_frame_seen_] = current_frame_buffer_id_;
         current_frame_buffer_ = buffer_manager_->get_buffer_address(current_frame_buffer_id_);
-        current_frame_header_ = reinterpret_cast<Hexitec::FrameHeader*>(current_frame_buffer_);
+
+        if (!dropping_frame_data_)
+        {
+          LOG4CXX_DEBUG_LEVEL(2, logger_, "First packet from frame " << current_frame_seen_
+              << "   detected, allocating frame buffer ID " << current_frame_buffer_id_);
+        }
+        else
+        {
+          dropping_frame_data_ = false;
+          LOG4CXX_DEBUG_LEVEL(2, logger_, "Free buffer now available for frame "
+              << current_frame_seen_ << ", allocating frame buffer ID "
+              << current_frame_buffer_id_);
+        }
       }
+
+      // Initialise frame header
+      current_frame_header_ = reinterpret_cast<Hexitec::FrameHeader*>(current_frame_buffer_);
+      initialise_frame_header(current_frame_header_);
+
     }
-
-    Hexitec::FemReceiveState* fem_rx_state =
-        &(current_frame_header_->fem_rx_state);
-
-    // If SOF or EOF markers seen in packet header, increment appropriate field in frame header
-    if (start_of_frame_marker)
+    else
     {
-      (fem_rx_state->sof_marker_count)++;
-      (current_frame_header_->total_sof_marker_count)++;
+      current_frame_buffer_id_ = frame_buffer_map_[current_frame_seen_];
+      current_frame_buffer_ = buffer_manager_->get_buffer_address(current_frame_buffer_id_);
+      current_frame_header_ = reinterpret_cast<Hexitec::FrameHeader*>(current_frame_buffer_);
     }
-    if (end_of_frame_marker)
-    {
-      (fem_rx_state->sof_marker_count)++;
-      (current_frame_header_->total_eof_marker_count)++;
-    }
-
-    // Update packet_number state map in frame header
-    fem_rx_state->packet_state[packet_number] = 1;
   }
 
+  Hexitec::FemReceiveState* fem_rx_state =
+      &(current_frame_header_->fem_rx_state);
+
+  // If SOF or EOF markers seen in packet header, increment appropriate field in frame header
+  if (start_of_frame_marker)
+  {
+    (fem_rx_state->sof_marker_count)++;
+    (current_frame_header_->total_sof_marker_count)++;
+  }
+  if (end_of_frame_marker)
+  {
+    (fem_rx_state->sof_marker_count)++;
+    (current_frame_header_->total_eof_marker_count)++;
+  }
+
+  // Update packet_number state map in frame header
+  fem_rx_state->packet_state[packet_number] = 1;
 }
 
 //! Initialise a frame header
@@ -415,12 +369,6 @@ void HexitecFrameDecoder::initialise_frame_header(Hexitec::FrameHeader* header_p
   header_ptr->total_sof_marker_count = 0;
   header_ptr->total_eof_marker_count = 0;
 
-  for (HexitecDecoderFemMap::iterator it = fem_port_map_.begin();
-        it != fem_port_map_.end(); ++it)
-  {
-    header_ptr->active_fem_idx = (it->second).fem_idx_;
-  }
-
   gettime(reinterpret_cast<struct timespec*>(&(header_ptr->frame_start_time)));
 }
 
@@ -428,29 +376,15 @@ void HexitecFrameDecoder::initialise_frame_header(Hexitec::FrameHeader* header_p
 //!
 //! This method returns a pointer to the next packet payload buffer within the appropriate frame.
 //! The location of this is determined by state information set during the processing of the packet
-//! header. If the packet is not from a recognised FEM, a pointer to the ignored packet buffer will
-//! be returned instead.
+//! header.
 //!
 //! \return pointer to the next payload buffer
 //!
 void* HexitecFrameDecoder::get_next_payload_buffer(void) const
 {
-  uint8_t* next_receive_location;
-
-  if (current_packet_fem_map_.fem_idx_ != ILLEGAL_FEM_IDX)
-  {
-    std::size_t frame_size = Hexitec::frame_size(sensors_config_);
-
-    next_receive_location = reinterpret_cast<uint8_t*>(current_frame_buffer_)
-          + get_frame_header_size ()
-          + (frame_size * current_packet_fem_map_.buf_idx_)
-          + (0)
-          + (Hexitec::primary_packet_size * get_packet_number());
-  }
-  else
-  {
-    next_receive_location = reinterpret_cast<uint8_t*>(ignored_packet_buffer_.get());
-  }
+  uint8_t* next_receive_location = reinterpret_cast<uint8_t*>(current_frame_buffer_)
+        + get_frame_header_size ()
+        + (Hexitec::primary_packet_size * get_packet_number());
 
   return reinterpret_cast<void*>(next_receive_location);
 }
@@ -497,54 +431,50 @@ FrameDecoder::FrameReceiveState HexitecFrameDecoder::process_packet(size_t bytes
 
   FrameDecoder::FrameReceiveState frame_state = FrameDecoder::FrameReceiveStateIncomplete;
 
-  // Only process the packet if it is not being ignored due to an illegal port to FEM index mapping
-  if (current_packet_fem_map_.fem_idx_ != ILLEGAL_FEM_IDX)
+  // Get a convenience pointer to the FEM receive state data in the frame header
+  Hexitec::FemReceiveState* fem_rx_state = &(current_frame_header_->fem_rx_state);
+
+  // Increment the total and per-FEM packet received counters
+  (fem_rx_state->packets_received)++;
+  current_frame_header_->total_packets_received++;
+
+  // If we have received the expected number of packets, perform end of frame processing
+  // and hand off the frame for downstream processing.
+  if (current_frame_header_->total_packets_received == Hexitec::num_fem_frame_packets(sensors_config_))
   {
 
-    // Get a convenience pointer to the FEM receive state data in the frame header
-    Hexitec::FemReceiveState* fem_rx_state = &(current_frame_header_->fem_rx_state);
+    // Check that the appropriate number of SOF and EOF markers (one each per frame) have
+    // been seen, otherwise log a warning
 
-    // Increment the total and per-FEM packet received counters
-    (fem_rx_state->packets_received)++;
-    current_frame_header_->total_packets_received++;
-
-    // If we have received the expected number of packets, perform end of frame processing
-    // and hand off the frame for downstream processing.
-    if (current_frame_header_->total_packets_received == Hexitec::num_fem_frame_packets(sensors_config_))
+    if ((current_frame_header_->total_sof_marker_count != 1) ||
+        (current_frame_header_->total_eof_marker_count != 1))
     {
+      LOG4CXX_WARN(logger_, "Incorrect number of SOF ("
+          << (int)current_frame_header_->total_sof_marker_count << ") or EOF ("
+          << (int)current_frame_header_->total_eof_marker_count << ") markers "
+          << "seen on completed frame " << current_frame_seen_);
+    }
 
-      // Check that the appropriate number of SOF and EOF markers (one each per frame) have
-      // been seen, otherwise log a warning
+    // Set frame state accordingly
+    frame_state = FrameDecoder::FrameReceiveStateComplete;
 
-      if ((current_frame_header_->total_sof_marker_count != 1) ||
-          (current_frame_header_->total_eof_marker_count != 1))
-      {
-        LOG4CXX_WARN(logger_, "Incorrect number of SOF ("
-           << (int)current_frame_header_->total_sof_marker_count << ") or EOF ("
-           << (int)current_frame_header_->total_eof_marker_count << ") markers "
-           << "seen on completed frame " << current_frame_seen_);
-      }
+    // Complete frame header
+    current_frame_header_->frame_state = frame_state;
 
-      // Set frame state accordingly
-      frame_state = FrameDecoder::FrameReceiveStateComplete;
+    if (!dropping_frame_data_)
+    {
+      // Erase frame from buffer map
+      frame_buffer_map_.erase(current_frame_seen_);
 
-      // Complete frame header
-      current_frame_header_->frame_state = frame_state;
+      // Notify main thread that frame is ready
+      ready_callback_(current_frame_buffer_id_, current_frame_header_->frame_number);
 
-      if (!dropping_frame_data_)
-      {
-        // Erase frame from buffer map
-        frame_buffer_map_.erase(current_frame_seen_);
-
-        // Notify main thread that frame is ready
-        ready_callback_(current_frame_buffer_id_, current_frame_header_->frame_number);
-
-        // Reset current frame seen ID so that if next frame has same number (e.g. repeated
-        // sends of single frame 0), it is detected properly
-        current_frame_seen_ = -1;
-      }
+      // Reset current frame seen ID so that if next frame has same number (e.g. repeated
+      // sends of single frame 0), it is detected properly
+      current_frame_seen_ = -1;
     }
   }
+
   return frame_state;
 }
 
@@ -584,12 +514,8 @@ void HexitecFrameDecoder::monitor_buffers(void)
       packets_lost_ += packets_lost;
       if (packets_lost)
       {
-        for (HexitecDecoderFemMap::iterator iter = fem_port_map_.begin();
-            iter != fem_port_map_.end(); ++iter)
-        {
-          fem_packets_lost_ += num_fem_frame_packets -
-              (frame_header->fem_rx_state.packets_received);
-        }
+        fem_packets_lost_ += num_fem_frame_packets -
+            (frame_header->fem_rx_state.packets_received);
       }
 
       LOG4CXX_DEBUG_LEVEL(1, logger_, "Frame " << frame_num << " in buffer " << buffer_id
@@ -734,49 +660,6 @@ unsigned int HexitecFrameDecoder::elapsed_ms(struct timespec& start, struct time
   return (unsigned int)((end_ns - start_ns) / 1000000);
 }
 
-//! Parse the port to FEM index map configuration string.
-//!
-//! This method parses a configuration string containing port to FEM index mapping information,
-//! which is expected to be of the format "port:idx,port:idx" etc. The map is saved in a member
-//! variable for use in packet handling.
-//!
-//! \param[in] fem_port_map_str - string of port to FEM index mapping configuration
-//! \return number of valid map entries parsed from string
-//!
-std::size_t HexitecFrameDecoder::parse_fem_port_map(const std::string fem_port_map_str)
-{
-    // Clear the current map
-    fem_port_map_.clear();
-
-    // Define entry and port:idx delimiters
-    const std::string entry_delimiter(",");
-    const std::string elem_delimiter(":");
-
-    // Vector to hold entries split from map
-    std::vector<std::string> map_entries;
-
-    // Split into entries
-    boost::split(map_entries, fem_port_map_str, boost::is_any_of(entry_delimiter));
-
-    // unsigned int buf_idx = 0;
-    // Loop over entries, further splitting into port / fem index pairs
-    for (std::vector<std::string>::iterator it = map_entries.begin(); it != map_entries.end(); ++it)
-    {
-
-        std::vector<std::string> entry_elems;
-        boost::split(entry_elems, *it, boost::is_any_of(elem_delimiter));
-
-        // If a valid entry is found, save into the map
-        if (entry_elems.size() == 2) {
-            int port = static_cast<int>(strtol(entry_elems[0].c_str(), NULL, 10));
-            int fem_idx = static_cast<int>(strtol(entry_elems[1].c_str(), NULL, 10));
-            fem_port_map_[port] = HexitecDecoderFemMapEntry(fem_idx, 0);
-        }
-    }
-
-    // Return the number of valid entries parsed
-    return fem_port_map_.size();
-}
 
 //! Parse the number of sensors map configuration string.
 //!
@@ -836,7 +719,6 @@ void HexitecFrameDecoder::reset_statistics(void)
   LOG4CXX_DEBUG_LEVEL(1, logger_, "Resetting HexitecFrameDecoder statistics");
 
   // Reset the scratched and lost packet counters
-  packets_ignored_ = 0;
   packets_lost_ = 0 ;
 
 }
