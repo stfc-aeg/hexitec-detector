@@ -4,16 +4,16 @@
     "frame_ready_endpoint": "tcp://127.0.0.1:5201",
     "frame_release_endpoint": "tcp://127.0.0.1:5202",
     "shared_buffer_name": "HexitecFrameBuffer1",
-    "rx_address": "10.0.1.1",
-    "rx_ports": "61699, 61699",
-    "rx_address_list": "10.0.1.1,10.0.2.1",
+    "rx_address": "192.168.0.27",
+    "rx_ports": "61651, 61651",
+    "rx_address_list": "192.168.0.27,130.246.17.170",
     "max_buffer_mem": 500000000,
     "decoder_path": "lib/",
     "decoder_type": "Hexitec",
     "decoder_config": {
         "enable_packet_logging": false,
         "frame_timeout_ms": 1000,
-        "fem_port_map": "61699:0,61699:1",
+        "fem_port_map": "61651:0,61651:1",
         "sensors_layout": "2x6"
     }
   }

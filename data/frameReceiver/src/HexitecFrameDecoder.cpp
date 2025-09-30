@@ -319,7 +319,7 @@ void HexitecFrameDecoder::process_packet_header(size_t bytes_received, int port,
 
   LOG4CXX_DEBUG_LEVEL(3, logger_, "Got packet header:" << " packet: " << packet_number
       << " SOF: " << (int) start_of_frame_marker << " EOF: " << (int) end_of_frame_marker
-      << " port: " << port << " fem idx: " << current_packet_fem_map_.fem_idx_
+      << " port: " << port
   );
 
   // Only handle the packet header and frame logic further if this packet is not being ignored
@@ -375,7 +375,6 @@ void HexitecFrameDecoder::process_packet_header(size_t bytes_received, int port,
         current_frame_buffer_ = buffer_manager_->get_buffer_address(current_frame_buffer_id_);
         current_frame_header_ = reinterpret_cast<Hexitec::FrameHeader*>(current_frame_buffer_);
       }
-
     }
 
     Hexitec::FemReceiveState* fem_rx_state =
@@ -759,16 +758,10 @@ std::size_t HexitecFrameDecoder::parse_fem_port_map(const std::string fem_port_m
     // Split into entries
     boost::split(map_entries, fem_port_map_str, boost::is_any_of(entry_delimiter));
 
-    unsigned int buf_idx = 0;
+    // unsigned int buf_idx = 0;
     // Loop over entries, further splitting into port / fem index pairs
     for (std::vector<std::string>::iterator it = map_entries.begin(); it != map_entries.end(); ++it)
     {
-        // if (buf_idx >= 1) {
-        //   LOG4CXX_WARN(logger_, "Decoder FEM port map configuration contains too many elements, "
-        //                 << "truncating to maximium number of FEMs allowed ("
-        //                 << 1 << ")");
-        //   break;
-        // }
 
         std::vector<std::string> entry_elems;
         boost::split(entry_elems, *it, boost::is_any_of(elem_delimiter));
@@ -777,8 +770,7 @@ std::size_t HexitecFrameDecoder::parse_fem_port_map(const std::string fem_port_m
         if (entry_elems.size() == 2) {
             int port = static_cast<int>(strtol(entry_elems[0].c_str(), NULL, 10));
             int fem_idx = static_cast<int>(strtol(entry_elems[1].c_str(), NULL, 10));
-            fem_port_map_[port] = HexitecDecoderFemMapEntry(fem_idx, buf_idx);
-            buf_idx++;
+            fem_port_map_[port] = HexitecDecoderFemMapEntry(fem_idx, 0);
         }
     }
 
