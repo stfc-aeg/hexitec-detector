@@ -68,8 +68,7 @@ namespace FrameProcessor
 
       void process_end_of_acquisition();
       void process_frame(boost::shared_ptr<Frame> frame);
-      void apply_summed_image_algorithm(float *in, float *out);
-      void pushSummedDataset();
+      void apply_summed_image_algorithm(float *in, uint32_t *out);
 
       boost::shared_ptr<Frame> summed_image_;
       /** Pointer to logger **/
@@ -92,6 +91,7 @@ namespace FrameProcessor
       int rank_offset_;
       uint64_t processed_frame_number_;
       int frames_per_trigger_;
+      bool start_of_acquisition_;
 
       void reset_frames_numbering();
       void initialise_summed_image();

@@ -38,12 +38,11 @@ namespace FrameProcessor
       this->get_version_long() << " loaded.");
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
-    // summed_image_ = (uint32_t *) calloc(image_pixels_, sizeof(uint32_t *));
-    // memset(summed_image_, 0, image_pixels_ * sizeof(uint32_t));
     threshold_lower_ = 0;
     threshold_upper_ = 16382;
     image_frequency_ = 1;
     reset_image_ = 0;
+    start_of_acquisition_ = true;
   }
 
   /**
@@ -52,8 +51,6 @@ namespace FrameProcessor
   HexitecSummedImagePlugin::~HexitecSummedImagePlugin()
   {
     LOG4CXX_TRACE(logger_, "HexitecSummedImagePlugin destructor.");
-    // free(summed_image_);
-    // summed_image_ = NULL;
   }
 
   int HexitecSummedImagePlugin::get_version_major()
@@ -115,8 +112,6 @@ namespace FrameProcessor
       sensors_layout_str_ =
         config.get_param<std::string>(HexitecSummedImagePlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
-      initialise_summed_image();
-      // reset_summed_image_values();
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_FRAMES_PER_TRIGGER))
@@ -128,17 +123,14 @@ namespace FrameProcessor
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_RANK_INDEX))
     {
       rank_index_ = config.get_param<int>(HexitecSummedImagePlugin::CONFIG_RANK_INDEX);
-      // LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank index set to: " << rank_index_);
-      LOG4CXX_TRACE(logger_, "Rank index set to: " << rank_index_);
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank index set to: " << rank_index_);
       reset_frames_numbering();
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_RANK_OFFSET))
     {
       rank_offset_ = config.get_param<int>(HexitecSummedImagePlugin::CONFIG_RANK_OFFSET);
-      // LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank offset set to: " << rank_offset_);
-      LOG4CXX_TRACE(logger_, "Rank offset set to: " << rank_offset_);
-      reset_frames_numbering();
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank offset set to: " << rank_offset_);
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER))
@@ -166,9 +158,6 @@ namespace FrameProcessor
 
       if (reset_image_ == 1)
       {
-        // Clear all pixels to be 0 -- THIS IS BECOMING REDUNDANT???
-
-        // memset(summed_image_, 0, image_pixels_ * sizeof(uint32_t));
         frames_processed_ = 0;
         reset_image_ = 0;
       }
@@ -226,8 +215,9 @@ namespace FrameProcessor
   void HexitecSummedImagePlugin::process_end_of_acquisition()
   {
     LOG4CXX_DEBUG_LEVEL(2, logger_, "End of acquisition frame received, pushing dataset");
-    pushSummedDataset();
+    this->push(summed_image_);
     reset_frames_numbering();
+    start_of_acquisition_ = true;
   }
 
   /**
@@ -246,77 +236,46 @@ namespace FrameProcessor
     const std::string& dataset = incoming_frame_meta.get_dataset_name();
     long long frame_number = incoming_frame_meta.get_frame_number();
 
-    // Push dataset
-    LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << dataset << " dataset, frame number: "
-      << frame_number);
-    this->push(frame);
-
     if (dataset.compare(std::string("processed_frames")) == 0)
     {
       try
       {
-        ; // UNCOMMENT UNTIL...
+        // First frame of the trigger..?
+        int first_frame = ((frame_number % frames_per_trigger_) == 0);
+        // .. And start of acquisition?
+        if (first_frame && start_of_acquisition_)
+        {
+          start_of_acquisition_ = false;
+          initialise_summed_image();
+        }
 
-        // // Get a pointer to the data buffer in the output frame
-        // void* output_ptr = summed_image_->get_data_ptr();
+        // Get a pointer to the data buffer in the output frame
+        void* output_ptr = summed_image_->get_data_ptr();
 
-        // // First frame of the trigger?
-        // if (frame->get_frame_number() % frames_per_trigger_ == 0)
-        // {
-        //   initialise_summed_image();
-        //   LOG4CXX_TRACE(logger_, "Si: " << dataset << ", frame_number: " << frame->get_frame_number()
-        //     << ", changed to: " << processed_frame_number_ << " (rank_index: " << rank_index_ << ")");
-        // }
-        // else
-        // {
-        //   LOG4CXX_TRACE(logger_, "Si: " << dataset << ", frame_number: " << frame->get_frame_number()
-        //     << ", changed to: " << processed_frame_number_ << " (rank_index: " << rank_index_ << ")");
-        // }
+        // Define pointer to the input image data
+        void* input_ptr = static_cast<void *>(
+          static_cast<char *>(const_cast<void *>(data_ptr)));
 
+        // Apply algorithm
+        apply_summed_image_algorithm(static_cast<float *>(input_ptr),
+          static_cast<uint32_t *>(output_ptr));
 
-        // // Define pointer to the input image data
-        // void* input_ptr = static_cast<void *>(
-        //   static_cast<char *>(const_cast<void *>(data_ptr)));
-
-        // // Apply algorithm
-        // apply_summed_image_algorithm(static_cast<float *>(input_ptr), static_cast<float *>(output_ptr));
-
-        // STOP UNCOMMENTING HERE
-
-        // then..
-
-        // THIS BLOCK TO BE REMOVED
-
-        // // How often to write accumulated data to disk?
-        // if ( (image_frequency_ != 0) &&
-        //   (((frames_processed_+1) % image_frequency_) == 0)
-        //   )
-        // {
-        //   pushSummedDataset();
-        // }
-        // frames_processed_++;
-
-        // THIS BLOCK TO REPLACE THE ABOVE, BUT NEED SOME AMENDING
-
-        // // Final frame of current trigger?
-        // if (frame->get_frame_number() % frames_per_trigger_ == (frames_per_trigger_ - 1))
-        // {
-        //   // Finished with processed_frames
-        //   pushSummedDataset(); // KEEP THIS LINE !!!!!
-
-        //   LOG4CXX_TRACE(logger_, dataset << " Final frame of T, pushing as frame number: " << processed_frame_number_);
-        //   //   LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
-        //   //     << frame->get_frame_number());
-        //   this->push(stacked_frame_);
-        //   processed_frame_number_ += rank_offset_;
-        // }
-
+        LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << dataset << ", frame number: "<< frame_number);
+        this->push(frame);
       }
       catch (const std::exception& e)
       {
         LOG4CXX_ERROR(logger_, "HexitecSummedImagePlugin failed: " << e.what());
       }
     }
+    else
+    {
+      // Push dataset
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << dataset << ", frame number: "
+        << frame_number);
+      this->push(frame);
+    }
+
   }
 
   /**
@@ -328,7 +287,7 @@ namespace FrameProcessor
    *
    * \param[frame] frame - Pointer to a frame object.
    */
-  void HexitecSummedImagePlugin::apply_summed_image_algorithm(float *in, float *out)
+  void HexitecSummedImagePlugin::apply_summed_image_algorithm(float *in, uint32_t *out)
   {
     for (int i=0; i<image_pixels_; i++)
     {
@@ -340,49 +299,8 @@ namespace FrameProcessor
   }
 
   /**
-   * Create and push summed data set
+   * Initialise summed image frame
    */
-  void HexitecSummedImagePlugin::pushSummedDataset()
-  {
-    LOG4CXX_TRACE(logger_, "Pushing summed image dataset, frames processed: "
-      << summed_image_->get_frame_number() << ", rank_index: " << rank_index_);
-    // // Create summed_image dataset
-
-    // FrameMetaData summed_image_meta;
-    // dimensions_t dims(2);
-    // dims[0] = image_height_;
-    // dims[1] = image_width_;
-    // summed_image_meta.set_dimensions(dims);
-    // summed_image_meta.set_compression_type(no_compression);
-    // summed_image_meta.set_data_type(raw_32bit);
-    // summed_image_meta.set_frame_number(processed_frame_number_);
-    // summed_image_meta.set_dataset_name("summed_images");
-
-    // const std::size_t summed_image_size = image_width_ * image_height_ * sizeof(uint32_t);
-
-    // // boost::shared_ptr<Frame> summed_frame;
-    // summed_image_ = boost::shared_ptr<Frame>(new DataBlockFrame(summed_image_meta,
-    //   summed_image_size));
-
-    // // Ensure frame is empty
-    // float *summed = static_cast<float *>(summed_image_->get_data_ptr());
-    // memset(summed, 0, image_pixels_ * sizeof(uint32_t));
-
-    // // void* output_ptr = summed_image_->get_data_ptr();
-
-    // uint32_t *out = static_cast<uint32_t *>(summed_image_->get_data_ptr());
-    // for (int i=0; i<image_pixels_; i++)
-    // {
-    //   out[i] = summed_image_[i];
-    // }
-
-    // const std::string& dataset_name = summed_image_meta.get_dataset_name();
-    // LOG4CXX_DEBUG_LEVEL(2, 
-    LOG4CXX_TRACE(logger_, "Pushing summed_image dataset, frame number: "
-      << summed_image_->get_frame_number());
-    this->push(summed_image_);
-  }
-
   void HexitecSummedImagePlugin::initialise_summed_image()
   {
     try
@@ -457,17 +375,5 @@ namespace FrameProcessor
     // Return the number of valid entries parsed
     return sensors_layout_.size();
   }
-
-  // /** Reset array used to store summed image values.
-  //  * 
-  //  * This method is called when the number of sensors is changed,
-  //  *  to prevent accessing unassigned memory.
-  //  */
-  // void HexitecSummedImagePlugin::reset_summed_image_values()
-  // {
-  //   free(summed_image_);
-  //   summed_image_ = (uint32_t *) calloc(image_pixels_, sizeof(uint32_t));
-  //   memset(summed_image_, 0, image_pixels_ * sizeof(uint32_t));
-  // }
 
 } /* namespace FrameProcessor */

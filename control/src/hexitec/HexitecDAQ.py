@@ -1231,27 +1231,32 @@ class HexitecDAQ():
 
             pixel_spectra_params = self.gcf.generate_pixel_spectra_params()
 
-            # Set that unique rank for each fp's histogram plugin
+            # Set unique rank for each fp's histogram plugin
             command = "config/histogram/rank_index/" + str(index)
             error_message = "Setting Histogram plugin's rank index for FP{}".format(index)
             self.transmit_adapter_request(command, str(index), error_message)
 
-            # Set that unique rank for each fp's stacked plugin
+            # Set unique rank for each fp's stacked plugin
             command = "config/stacked/rank_index/" + str(index)
             error_message = "Setting Stacked plugin's rank index for FP{}".format(index)
             self.transmit_adapter_request(command, str(index), error_message)
             # request = ApiAdapterRequest(str(index), content_type="application/json")
 
+            # Set unique rank for each fp's summed_image plugin
+            command = "config/summed_image/rank_index/" + str(index)
+            error_message = "Setting Summed Image plugin's rank index for FP{}".format(index)
+            self.transmit_adapter_request(command, str(index), error_message)
+
             # Delete GCF object before next iteration
             del self.gcf
             self.gcf = None
 
-        # Set that unique rank for each fp's histogram plugin
+        # Set rank offset for all frameProcessors' histogram plugin
         command = "config/histogram/rank_offset/"
         error_message = "Setting Histogram plugin's rank offset"
         self.transmit_adapter_request(command, str(self.number_odin_instances), error_message)
 
-        # Set that unique rank for each fp's stacked plugin
+        # Set rank offset for all frameProcessors' stacked plugin
         command = "config/stacked/rank_offset/"
         error_message = "Setting Stacked plugin's rank offset"
         self.transmit_adapter_request(command, str(self.number_odin_instances), error_message)
@@ -1265,6 +1270,11 @@ class HexitecDAQ():
         # Set frames per trigger in stacked plugin
         command = "config/stacked/frames_per_trigger"
         error_message = "Setting Stacked plugin's frames/trigger"
+        self.transmit_adapter_request(command, str(triggering_frames), error_message)
+
+        # Set frames per trigger in summed_image plugin
+        command = "config/summed_image/frames_per_trigger/"
+        error_message = "Setting Summed Image plugin's frames/trigger"
         self.transmit_adapter_request(command, str(triggering_frames), error_message)
 
         # TODO Only necessary for raw frames?
