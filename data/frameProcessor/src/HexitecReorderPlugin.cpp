@@ -27,6 +27,9 @@ namespace FrameProcessor
       this->get_version_long() << " loaded.");
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
+    frame_start_sec_ = 0;
+    frame_start_nsec_ = 0;
+    start_of_acquisition_ = true;
   }
 
   /**
@@ -108,6 +111,8 @@ namespace FrameProcessor
     LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecReorderPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/packets_lost", packets_lost_);
+    status.set_param(get_name() + "/frame_start_sec", frame_start_sec_);
+    status.set_param(get_name() + "/frame_start_nsec", frame_start_nsec_);
   }
 
   /**
@@ -119,6 +124,15 @@ namespace FrameProcessor
     // Reset packets lost counter
     packets_lost_ = 0;
     return true;
+  }
+
+  /** Process an EndOfAcquisition Frame.
+  *
+  * Prepare for next acquisition on receiving end of acquisition
+  */
+  void HexitecReorderPlugin::process_end_of_acquisition()
+  {
+    start_of_acquisition_ = true;
   }
 
   /**
@@ -157,10 +171,16 @@ namespace FrameProcessor
 
     LOG4CXX_DEBUG_LEVEL(3, logger_, "Raw frame number: " << hdr_ptr->frame_number);
 
-    LOG4CXX_TRACE(logger_, " frame: " << hdr_ptr->frame_number << " @ Secs: " << hdr_ptr->frame_start_time.tv_sec
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "First packet of frame: " << hdr_ptr->frame_number
+      << " arrived at Secs: " << hdr_ptr->frame_start_time.tv_sec
       << ", Nanosecs: " << hdr_ptr->frame_start_time.tv_nsec);
 
-    //std::cout << "Seconds: " << ts.tv_sec << ", Nanoseconds: " << ts.tv_nsec << std::endl;
+    if (start_of_acquisition_)
+    {
+      frame_start_sec_ = hdr_ptr->frame_start_time.tv_sec;
+      frame_start_nsec_ = hdr_ptr->frame_start_time.tv_nsec;
+      start_of_acquisition_ = false;
+    }
 
     // Determine the size of the output reordered image
     const std::size_t output_image_size = reordered_image_size();

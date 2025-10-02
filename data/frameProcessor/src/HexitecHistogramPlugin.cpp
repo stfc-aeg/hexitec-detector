@@ -40,7 +40,8 @@ namespace FrameProcessor
       pass_processed_(true),
       pass_raw_(true),
       pass_pixel_spectra_(false),
-      initialise_pixel_spectra_(false)
+      initialise_pixel_spectra_(false),
+      first_frame_seen_(false)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecHistogramPlugin");
@@ -105,7 +106,7 @@ namespace FrameProcessor
    * Allocate and initialise histograms
    *
    */
-  void HexitecHistogramPlugin::initialiseHistograms()
+  void HexitecHistogramPlugin::initialise_histograms()
   {
     // Setup the dimension(s) for spectra_bins, summed_spectra
     dimensions_t dims(1);
@@ -175,13 +176,6 @@ namespace FrameProcessor
     float *summed = static_cast<float *>(summed_spectra_->get_data_ptr());
     memset(pixels, 0, (number_bins_ * image_pixels_) * sizeof(float));
     memset(summed, 0, number_bins_ * sizeof(uint64_t));
-
-    histograms_written_ = 0;
-    frames_processed_ = 0;
-    // LOG4CXX_TRACE(logger_,
-    //   "addresses; " <<
-    //   " summed_spectra_: " << summed_spectra_ << ", pixel_spectra_: " << pixel_spectra_ <<
-    // " initialiseHistograms()");
   }
 
   /**
@@ -200,7 +194,6 @@ namespace FrameProcessor
    * - frames_per_trigger_  <=> frames_per_trigger
    * - pass_processed_      <=> pass_processed
    * - pass_raw_            <=> pass_raw
-   * - pass_pixel_spectra_  <=> pass_pixel_spectra
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -252,20 +245,20 @@ namespace FrameProcessor
     if (config.has_param(HexitecHistogramPlugin::CONFIG_RANK_INDEX))
     {
       rank_index_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_RANK_INDEX);
-      LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank index set to: " << rank_index_);
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank index set to " << rank_index_);
       reset_histogram_numbering();
     }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_RANK_OFFSET))
     {
       rank_offset_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_RANK_OFFSET);
-      LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank offset set to: " << rank_offset_);
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank offset set to " << rank_offset_);
     }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_FRAMES_PER_TRIGGER))
     {
       frames_per_trigger_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_FRAMES_PER_TRIGGER);
-      LOG4CXX_DEBUG_LEVEL(2, logger_, "Frames per trigger set to: " << frames_per_trigger_);
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Frames per trigger set to " << frames_per_trigger_);
     }
 
     if (config.has_param(HexitecHistogramPlugin::CONFIG_PASS_PROCESSED))
@@ -327,8 +320,6 @@ namespace FrameProcessor
    */
   bool HexitecHistogramPlugin::reset_statistics(void)
   {
-    // Reset frames_processed_??
-    // frames_processed_ = 0;
     return true;
   }
 
@@ -338,15 +329,14 @@ namespace FrameProcessor
   */
   void HexitecHistogramPlugin::process_end_of_acquisition()
   {
-    // LOG4CXX_TRACE(logger_,
-    //   "addresses; " <<
-    //   " summed_spectra_: " << summed_spectra_ << ", pixel_spectra_: " << pixel_spectra_ <<
-    //   " EoA; Pushing histograms, summed_spectra frame " << summed_spectra_->get_frame_number() <<
-    //   " pixel_spectra frame " << pixel_spectra_->get_frame_number()
-    //   << " rank " << rank_index_);
+    LOG4CXX_DEBUG_LEVEL(2, logger_,
+      " EoA; Pushing histograms, summed_spectra frame " << summed_spectra_->get_frame_number() <<
+      " pixel_spectra frame " << pixel_spectra_->get_frame_number());
+
     pass_pixel_spectra_ = true;
-    writeHistogramsToDisk();
+    write_histograms_to_disk();
     pass_pixel_spectra_ = false;
+    first_frame_seen_ = false;
     reset_histogram_numbering();
   }
 
@@ -375,52 +365,38 @@ namespace FrameProcessor
     {
       // Pass raw_frames dataset down the chain, or only to lvframes
       if (pass_raw_)
-      {
         this->push(frame);
-      }
       else
-      {
         this->push(lvframes, frame);
-      }
     }
     else if (dataset.compare(std::string("processed_frames")) == 0)
     {
-      try
-      {
-        // Pass processed_frames dataset down the chain, or lvframes only
-        if (pass_processed_)
-        {
-          // Pass on processed_frames dataset unmodified:
-          this->push(frame);
-        }
-        else
-        {
-          this->push(lvframes, frame);
-        }
-      }
-      catch (const std::exception& e)
-      {
-        LOG4CXX_ERROR(logger_, "processed_frames dataset failed: " << e.what());
-      }
+      frames_processed_ += 1;
+      // Pass processed_frames dataset down the chain, or lvframes only
+      if (pass_processed_)
+        this->push(frame);
+      else
+        this->push(lvframes, frame);
     }
     else if (dataset.compare(std::string("stacked_frames")) == 0)
     {
       try
       {
-        // Rank_index_could be 0, therefore bump both frame number and rank index as checking modulo
-        // cannot be done against 0
-        int modulo_frame_vs_rank = (frame_number+1) % (rank_index_+1);
-        if (modulo_frame_vs_rank == 0)
+        // First frame of the trigger..?
+        if (((frame_number+1) % (rank_index_+1)) == 0)
         {
-          if (frame_number == rank_index_)
+          // First frame of acquisition?
+          if (!first_frame_seen_)
           {
             // First frame of the run - initialise pixel_spectra, spectra_bins datasets
             initialise_pixel_spectra_ = true;
+            last_frame_number_ = -1;
+            first_frame_seen_ = true;
           }
-          // LOG4CXX_TRACE(logger_, dataset << ", frame number: " << frame_number <<
-          //   " First frame of trigger, setting up histograms, for rank_index: " << rank_index_);
+          LOG4CXX_DEBUG_LEVEL(2, logger_, dataset << ", frame number " << frame_number <<
+            " First frame of trigger, setting up histograms, for rank_index " << rank_index_);
           // Initialise new histogram datasets
-          initialiseHistograms();
+          initialise_histograms();
         }
         // Define pointer to the input image data
         void* input_ptr = static_cast<void *>(
@@ -428,18 +404,18 @@ namespace FrameProcessor
 
         // Add this frame's contribution onto histograms
         add_frame_data_to_histogram_with_sum(static_cast<float *>(input_ptr));
-        frames_processed_++;
 
         // Push this trigger's histograms data to file
         histogram_index_ = frame->get_frame_number();
-        writeHistogramsToDisk();
-        // LOG4CXX_TRACE(logger_,
-        //   "addresses; " <<
-        //   " summed_spectra_: " << summed_spectra_ << ", pixel_spectra_: " << pixel_spectra_ <<
-        //   " Pushing datasets; histogram_index: " << histogram_index_ << " s_frame: " <<
-        //   frame->get_frame_number());
-
-        histograms_written_ += 1;
+        write_histograms_to_disk();
+        if (frame_number != last_frame_number_)
+        {
+          // Frame not seen before, increment counter
+          histograms_written_ += 1;
+        }
+        last_frame_number_= frame_number;
+        // Push stacked_frames dataset down the chain
+        LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << dataset << ", frame number " << frame_number);
         this->push(frame);
 
         // Keep passing summed_spectra dataset to lvspectra
@@ -449,13 +425,13 @@ namespace FrameProcessor
       }
       catch (const std::exception& e)
       {
-        LOG4CXX_ERROR(logger_, "stacked_frames dataset failed: " << e.what());
+        LOG4CXX_ERROR(logger_, "stacked_frames dataset failed " << e.what());
       }
     }
     else
     {
       // Push any other dataset
-      LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
+      LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number "
         << frame_number);
       this->push(frame);
     }
@@ -464,27 +440,28 @@ namespace FrameProcessor
   /**
    * Write Histogram data to disk.
    */
-  void HexitecHistogramPlugin::writeHistogramsToDisk()
+  void HexitecHistogramPlugin::write_histograms_to_disk()
   {
-      spectra_bins_->set_frame_number(rank_index_);
-      summed_spectra_->set_frame_number(histogram_index_);
-      if (pass_pixel_spectra_)
-        pixel_spectra_->set_frame_number(rank_index_);
+    // Set spectra_bins to frame 0, as it changes only with histogram settings, not data
+    spectra_bins_->set_frame_number(0);
+    summed_spectra_->set_frame_number(histogram_index_);
+    if (pass_pixel_spectra_)
+      pixel_spectra_->set_frame_number(rank_index_);
 
     const std::string& plugin_name = "hdf";
 
-    // LOG4CXX_TRACE(logger_, "Pushing " << spectra_bins_->get_meta_data().get_dataset_name() <<
-    //   " frame " << spectra_bins_->get_frame_number());
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << spectra_bins_->get_meta_data().get_dataset_name() <<
+      " frame " << spectra_bins_->get_frame_number());
     this->push(plugin_name, spectra_bins_);
 
-    // LOG4CXX_TRACE(logger_, "Pushing " << summed_spectra_->get_meta_data().get_dataset_name() <<
-    //   " frame " << summed_spectra_->get_frame_number());
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << summed_spectra_->get_meta_data().get_dataset_name() <<
+      " frame " << summed_spectra_->get_frame_number());
     this->push(plugin_name, summed_spectra_);
 
     if (pass_pixel_spectra_)
     {
-      // LOG4CXX_TRACE(logger_, "Pushing " << pixel_spectra_->get_meta_data().get_dataset_name()
-      //   << " frame " << pixel_spectra_->get_frame_number());
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << pixel_spectra_->get_meta_data().get_dataset_name()
+        << " frame " << pixel_spectra_->get_frame_number());
       this->push(plugin_name, pixel_spectra_);
     }
   }
@@ -529,11 +506,6 @@ namespace FrameProcessor
         total += thisEnergy;
       }
     }
-    // LOG4CXX_TRACE(logger_,
-    //   "addresses; " <<
-    //   " summed_spectra_: " << summed_spectra_ << ", pixel_spectra_: " << pixel_spectra_ <<
-    //   " summed_spectra frame number: " << summed_spectra_->get_frame_number() <<
-    //   ", total pixel value: " << total);
   }
 
   // Called when the user NOT selected spectrum option

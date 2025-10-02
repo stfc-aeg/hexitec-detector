@@ -65,6 +65,7 @@ namespace FrameProcessor
 
       void process_lost_packets(boost::shared_ptr<Frame>& frame);
       void process_frame(boost::shared_ptr<Frame> frame);
+      void process_end_of_acquisition();
 
       // Float type array version currently used:
       void reorder_pixels(unsigned short *in, float *out);
@@ -97,6 +98,9 @@ namespace FrameProcessor
       int fem_pixels_per_rows_;
       int fem_pixels_per_columns_;
       int fem_total_pixels_;
+      long frame_start_sec_;
+      long frame_start_nsec_;
+      bool start_of_acquisition_;
   };
 
   /**

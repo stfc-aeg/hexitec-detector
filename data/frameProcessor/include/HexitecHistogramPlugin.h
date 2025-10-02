@@ -127,9 +127,11 @@ namespace FrameProcessor
       double bin_width_;
       long long number_bins_;
       void reset_histogram_numbering();
-      void initialiseHistograms();
-      void writeHistogramsToDisk();
+      void initialise_histograms();
+      void write_histograms_to_disk();
       bool end_of_acquisition_processed_;
+      bool first_frame_seen_;
+      long long last_frame_number_;
       /// Debug only:
       int debugCounter;
   };

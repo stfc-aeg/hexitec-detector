@@ -199,10 +199,8 @@ namespace FrameProcessor
   */
   void HexitecStackedPlugin::process_end_of_acquisition()
   {
-    // LOG4CXX_DEBUG_LEVEL(2, 
-    // LOG4CXX_TRACE(logger_, "EoA: Pushing stacked frame, number: "
-    //   << stacked_frame_->get_frame_number() << ", rank: " << rank_index_
-    //   << " address: " << stacked_frame_);
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "EoA: Pushing stacked frame, number: "
+      << stacked_frame_->get_frame_number() << ", rank: " << rank_index_);
     this->push(stacked_frame_);
 
     reset_frames_numbering();

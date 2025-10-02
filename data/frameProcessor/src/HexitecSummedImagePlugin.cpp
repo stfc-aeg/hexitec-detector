@@ -117,20 +117,20 @@ namespace FrameProcessor
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_FRAMES_PER_TRIGGER))
     {
       frames_per_trigger_ = config.get_param<int>(HexitecSummedImagePlugin::CONFIG_FRAMES_PER_TRIGGER);
-      LOG4CXX_TRACE(logger_, "Frames per trigger set to: " << frames_per_trigger_);
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Frames per trigger set to " << frames_per_trigger_);
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_RANK_INDEX))
     {
       rank_index_ = config.get_param<int>(HexitecSummedImagePlugin::CONFIG_RANK_INDEX);
-      LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank index set to: " << rank_index_);
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank index set to " << rank_index_);
       reset_frames_numbering();
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_RANK_OFFSET))
     {
       rank_offset_ = config.get_param<int>(HexitecSummedImagePlugin::CONFIG_RANK_OFFSET);
-      LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank offset set to: " << rank_offset_);
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank offset set to " << rank_offset_);
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_THRESHOLD_LOWER))
@@ -260,7 +260,7 @@ namespace FrameProcessor
         apply_summed_image_algorithm(static_cast<float *>(input_ptr),
           static_cast<uint32_t *>(output_ptr));
 
-        LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << dataset << ", frame number: "<< frame_number);
+        LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << dataset << ", frame number "<< frame_number);
         this->push(frame);
       }
       catch (const std::exception& e)
@@ -271,7 +271,7 @@ namespace FrameProcessor
     else
     {
       // Push dataset
-      LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << dataset << ", frame number: "
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << dataset << ", frame number "
         << frame_number);
       this->push(frame);
     }
