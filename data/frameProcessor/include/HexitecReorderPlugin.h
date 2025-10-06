@@ -25,8 +25,6 @@ using namespace log4cxx::helpers;
 #include <fstream>
 #include <map>
 
-const std::string default_fem_port_map = "61651:0";
-
 namespace FrameProcessor
 {
   typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
@@ -101,6 +99,11 @@ namespace FrameProcessor
       long frame_start_sec_;
       long frame_start_nsec_;
       bool start_of_acquisition_;
+      /// Testing..
+      rapidjson::Value sec_array_;
+      rapidjson::Value::AllocatorType sec_allocator_;
+      rapidjson::Value nano_array_;
+      rapidjson::Value::AllocatorType nano_allocator_;
   };
 
   /**

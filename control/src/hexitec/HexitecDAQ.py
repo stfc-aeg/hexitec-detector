@@ -541,8 +541,27 @@ class HexitecDAQ():
         # TODO: Hacked until frame_process_adapter updated to use ParameterTree
         hdf_metadata_group = hdf_file.create_group("hdf")
         hdf_tree_dict = self.adapters['fp']._param
+        # print("\n self.adapters['fp'] = ", self.adapters['fp'])
+        # print("\n self.adapters['fp']._param = ", self.adapters['fp']._param)
+        # print("HDF metadata group items: ", list(hdf_tree_dict.keys()))
+        # import sys;sys.exit(-1)
         # Only "hexitec" group contain filename entries, ignore return value of write_metadata
         self.write_metadata(hdf_metadata_group, hdf_tree_dict, hdf_file)
+        
+        status = self.parent.daq.get_adapter_status("fp")
+        # print(f"\nFP Adapter status: {status}")
+        index = 0
+        fp_instances = {}
+        for odin in status:
+            # print(f" {index} reorder: {odin['reorder']}")
+            fp_instances[f"frameProcessor_{index}"] = odin
+            index += 1
+            print(f" index = {index} odin = {odin}")
+        fp_metadata_group = hdf_file.create_group(f"fp")
+        print(f"FP metadata group created")
+        fp_tree_dict = fp_instances
+        self.write_metadata(fp_metadata_group, fp_tree_dict, hdf_file)
+        print(f"FP metadata written")
 
         if (error_code == 0):
             self.parent.fem._set_status_message("Meta data added to {}".format(
@@ -611,6 +630,7 @@ class HexitecDAQ():
                     # Do not include errors, log messages (see error log for such details)
                     if key == "errors_history" or key == "log_messages":
                         continue
+                    print("Writing key: [{} + {}] value: {}".format(path, key, item))
                     hdf_file[path + key] = item
                 except TypeError as e:
                     logging.error("Error: {} Parsing key: {}{} value: {}".format(

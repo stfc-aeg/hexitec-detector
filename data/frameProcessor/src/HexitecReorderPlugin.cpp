@@ -30,6 +30,8 @@ namespace FrameProcessor
     frame_start_sec_ = 0;
     frame_start_nsec_ = 0;
     start_of_acquisition_ = true;
+    sec_array_ = rapidjson::kArrayType;
+    nano_array_ = rapidjson::kArrayType;
   }
 
   /**
@@ -113,6 +115,9 @@ namespace FrameProcessor
     status.set_param(get_name() + "/packets_lost", packets_lost_);
     status.set_param(get_name() + "/frame_start_sec", frame_start_sec_);
     status.set_param(get_name() + "/frame_start_nsec", frame_start_nsec_);
+
+    status.set_param(get_name() + "/nsec_array", nano_array_);
+    status.set_param(get_name() + "/sec_array", sec_array_);
   }
 
   /**
@@ -180,7 +185,13 @@ namespace FrameProcessor
       frame_start_sec_ = hdr_ptr->frame_start_time.tv_sec;
       frame_start_nsec_ = hdr_ptr->frame_start_time.tv_nsec;
       start_of_acquisition_ = false;
+      sec_array_.Clear();
+      nano_array_.Clear();
     }
+    sec_array_.PushBack(hdr_ptr->frame_start_time.tv_sec, sec_allocator_);
+    nano_array_.PushBack(hdr_ptr->frame_start_time.tv_nsec, nano_allocator_);
+    LOG4CXX_TRACE(logger_, " *** Secs array size: " << sec_array_.Size() << " TS: " << hdr_ptr->frame_start_time.tv_sec
+      << " Nanosecs size: " << nano_array_.Size() << " TS: " << hdr_ptr->frame_start_time.tv_nsec);
 
     // Determine the size of the output reordered image
     const std::size_t output_image_size = reordered_image_size();
