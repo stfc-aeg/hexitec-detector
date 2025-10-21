@@ -444,14 +444,14 @@ class HexitecFem():
             self.data_lane2.set_src_dst_port(port=self.src_dst_port)
             time.sleep(0.001)
 
-            # DEBUGGING
             fr = self.parent.daq.get_adapter_config("fr")
             addresses, ports = self.extract_frame_receiver_interfaces(fr)
-            # self.display_debugging(f"farm_mode_target: {self.farm_target_ip}")
-            self.display_debugging(f"DPG: addresses:  {addresses} ports: {ports}")
-            self.display_debugging(f"FM; DL0: {self.farm_server_1_ip}, {self.farm_server_1_mac}")
-            self.display_debugging(f"FM; DL1: {self.farm_server_2_ip}, {self.farm_server_2_mac}")
-            # How generate macs?
+            # DEBUGGING
+            # self.display_debugging(f"DPG: addresses:  {addresses} ports: {ports}")
+            # self.display_debugging(f"FM; DL0: {self.farm_server_1_ip}, {self.farm_server_1_mac}")
+            # self.display_debugging(f"FM; DL1: {self.farm_server_2_ip}, {self.farm_server_2_mac}")
+
+            # Generate MAC addresses
             macs = []
             for i in range(len(addresses)):
                 if self.farm_server_1_ip == addresses[i]:
@@ -463,18 +463,15 @@ class HexitecFem():
                 else:
                     self.flag_error(f"Farm Mode IP {addresses[i]} not in Farm Mode config")
                 macs.append(mac)
-            ips1, ips2, macs1, macs2, ports1, ports2 = self.determine_farm_mode_config_odd_frames(addresses, macs, ports, self.triggering_frames)
+            ips1, ips2, macs1, macs2, ports1, ports2 = self.determine_farm_mode_config(addresses, macs, ports, self.triggering_frames)
 
             lut_entries = len(ips1)
             self.farm_mode_targets = lut_entries * 2
 
-            self.display_debugging(f"FM; ips1: {ips1} ips2: {ips2}")
-            self.display_debugging(f"FM; macs1: {macs1} macs2: {macs2}")
-            self.display_debugging(f"FM; ports1: {ports1} ports2: {ports2}")
-            self.display_debugging(f" LUT entries: {lut_entries} for {self.farm_mode_targets} targets")
-            # # print(f"FM; OLD port_lut1: {port_lut1} port_lut2: {port_lut2}")
-            # # print(f"FM; NEW ports1: {ports1} ports2: {ports2}")
-            # # print(" [E ]");import sys;sys.exit(0)
+            # self.display_debugging(f"FM; ips1: {ips1} ips2: {ips2}")
+            # self.display_debugging(f"FM; macs1: {macs1} macs2: {macs2}")
+            # self.display_debugging(f"FM; ports1: {ports1} ports2: {ports2}")
+            # self.display_debugging(f" LUT entries: {lut_entries} for {self.farm_mode_targets} targets")
             self.data_lane1.set_lut_mode_ip(ips1)
             self.data_lane2.set_lut_mode_ip(ips2)
             self.data_lane1.set_lut_mode_mac(macs1)
@@ -490,22 +487,19 @@ class HexitecFem():
             Hex2x6CtrlRdma.__del__()
 
             if self.connect_only_once:
-                self.display_debugging("Farm Mode Completed; connect() & power_up_module() next")
                 self.connect()
                 # Power up the VSRs
                 self.power_up_modules()
                 self.connect_only_once = False
             else:
-                self.display_debugging("Farm Mode Completed; initialise_system() next")
                 self.initialise_system()
         except socket_error as e:
             self.hardware_connected = False
             self.hardware_busy = False
             self.flag_error("Farm Mode Config failed", str(e))
 
-    def determine_farm_mode_config_odd_frames(self, odin_instances, macs, ports, frames_per_trigger):
+    def determine_farm_mode_config(self, odin_instances, macs, ports, frames_per_trigger):
         """Determine Farm Mode configuration, based on Odin instances and frames per trigger"""
-        self.display_debugging(f"Selected ODD frames configuration; {len(odin_instances)//2} Odin pair(s), {frames_per_trigger} frames/trigger")
         lut_entries = frames_per_trigger * (len(odin_instances) // 2)
         ip_lut1 = []
         ip_lut2 = []
@@ -520,66 +514,27 @@ class HexitecFem():
         while index < lut_entries:
             if (offset % 2) == 0:
                 if (index % 2) == 0:  # Even
-                    print(f"{offset}:{index}: (c_i: {current_instance}) Adding {odin_instances[current_instance]} to ip_lut1")
                     ip_lut1.append(odin_instances[current_instance])
                     mac_lut1.append(macs[current_instance])
                     port_lut1.append(ports[current_instance])
                 else:
-                    print(f"{offset}:{index}: (c_i: {current_instance+1}) Adding {odin_instances[current_instance+1]} to ip_lut2")
                     ip_lut2.append(odin_instances[current_instance+1])
                     mac_lut2.append(macs[current_instance+1])
                     port_lut2.append(ports[current_instance+1])
             else:
                 if (index % 2) == 0:  # Even
-                    print(f"{offset}:{index}: (c_i: {current_instance+1}) Adding {odin_instances[current_instance+1]} to ip_lut1")
                     ip_lut1.append(odin_instances[current_instance+1])
                     mac_lut1.append(macs[current_instance+1])
                     port_lut1.append(ports[current_instance+1])
                 else:
-                    print(f"{offset}:{index}: (c_i: {current_instance}) Adding {odin_instances[current_instance]} to ip_lut2")
                     ip_lut2.append(odin_instances[current_instance])
                     mac_lut2.append(macs[current_instance])
                     port_lut2.append(ports[current_instance])
             frame_count += 1
             if frame_count == frames_per_trigger:
-                print(f"Frame count reached {frames_per_trigger}, c_i becomes: {current_instance + 2}")
                 frame_count = 0
                 current_instance += 2
                 offset += 1
-            index += 1
-        return ip_lut1, ip_lut2, mac_lut1, mac_lut2, port_lut1, port_lut2
-
-    def determine_farm_mode_config_even_frames(self, odin_instances, macs, ports, frames_per_trigger):
-        """Determine Farm Mode configuration, based on Odin instances and frames per trigger"""
-        self.display_debugging(f"Selected EVEN frames configuration; {len(odin_instances)//2} Odin pair(s), {frames_per_trigger} frames/trigger")
-        lut_entries = frames_per_trigger * (len(odin_instances) // 2)
-        ip_lut1 = []
-        ip_lut2 = []
-        mac_lut1 = []
-        mac_lut2 = []
-        port_lut1 = []
-        port_lut2 = []
-        frame_count = 0
-        current_instance = 0
-        index = 0
-        while index < lut_entries:
-            if (index % 2) == 0:  # Even
-                self.display_debugging(f" even entry; {index}: (c_i: {current_instance})")
-                self.display_debugging(f"     Adding; ip_lut1: {odin_instances[current_instance]}. mac_lut1: {macs[current_instance]}. port_lut1: {ports[current_instance]}")
-                ip_lut1.append(odin_instances[current_instance])
-                mac_lut1.append(macs[current_instance])
-                port_lut1.append(ports[current_instance])
-            else:
-                self.display_debugging(f" odd entries; {index}: (c_i: {current_instance+1})")
-                self.display_debugging(f"     Adding; ip_lut2: {odin_instances[current_instance+1]}. mac_lut2: {macs[current_instance+1]}. port_lut2: {ports[current_instance+1]}")
-                ip_lut2.append(odin_instances[current_instance+1])
-                mac_lut2.append(macs[current_instance+1])
-                port_lut2.append(ports[current_instance+1])
-            frame_count += 1
-            if frame_count == frames_per_trigger:
-                self.display_debugging(f"Frame count reached {frames_per_trigger}, c_i becomes: {current_instance + 2}")
-                frame_count = 0
-                current_instance += 2
             index += 1
         return ip_lut1, ip_lut2, mac_lut1, mac_lut2, port_lut1, port_lut2
 
@@ -1104,7 +1059,6 @@ class HexitecFem():
             # Timestamp when offsets collected
             self.offsets_timestamp = self.create_iso_timestamp()
             # ending = time.time()
-            # # print(" {} seconds, did:    collect_offsets ".format(ending-beginning));time.sleep(0.9)
             # self.display_debugging(f"offsets took: {ending-beginning}")
         except Exception as e:
             self.flag_error("Failed to collect offsets", str(e))
@@ -1450,12 +1404,6 @@ class HexitecFem():
                     vsr.start_trigger_sm()
                 else:
                     vsr.stop_trigger_sm()
-                # if vsr.addr == 0x90:
-                #     number_trigger_frames = vsr.read_trigger_mode_number_frames()
-                #     # self.display_debugging("--------------------------")
-                #     # self.display_debugging(f" -> number_trigger_frames: {number_trigger_frames}")
-                #     reg10_val = vsr.read_register_10()
-                #     self.display_debugging(f"Reg 10: {reg10_val}")
         except Exception as e:
             self.flag_error("Configure hardware triggering Error", str(e))
 
@@ -1596,13 +1544,6 @@ class HexitecFem():
             self.umid_value = self._extract_exponential(self.hexitec_parameters,
                                                         'Control-Settings/Uref_mid', bit_range=12)
             self.vcal_value = self._extract_float(self.hexitec_parameters, 'Control-Settings/VCAL')
-            # print("\n *** self.umid_value: {0} \n".format(self.umid_value))
-
-            # print("row_s1: {} from {}".format(self.row_s1, row_s1))
-            # print("s1_sph: {} from {}".format(self.s1_sph, s1_sph))
-            # print("sph_s2: {} from {}".format(self.sph_s2, sph_s2))
-            # print("bias:   {} from {}".format(self.bias_level, bias_level))
-            # print(" vsrs: {}".format(self.vsrs_selected))
             self.calculate_frame_rate()
         except HexitecFemError as e:
             self.flag_error("INI File Key Error", str(e))
@@ -1663,7 +1604,6 @@ class HexitecFem():
         :param triggering_frames: Number of frames to trigger on.
         """
         self.parent.daq.check_daq_acquiring_data("trigger frames")
-        self.display_debugging("Setting triggering frames to: %s" % triggering_frames)
         if isinstance(triggering_frames, int):
             self.triggering_frames = triggering_frames
             # TODO set_max_frames_received redundant for EPAC configuration?
@@ -1807,12 +1747,6 @@ class HexitecFem():
             return string_list
 
         entirety = first_channel + second_channel + third_channel + fourth_channel
-        if bDebug:  # pragma: no cover
-            print("   1st: %s" % first_channel)
-            print("   2nd: %s" % second_channel)
-            print("   3rd: %s" % third_channel)
-            print(f"   4th: {fourth_channel}, ({type(fourth_channel)})")
-            print("   entirety: %s" % entirety)
         # Convert string to bytes (to support Python 3)
         entirety = entirety.encode("utf-8")
         # Pixels appear in 8 bit reverse order, reverse bit order accordingly
@@ -1831,8 +1765,6 @@ class HexitecFem():
         for binary in byte_list:
             int_byte = int(binary, 2)
             string_list.append(int_byte)
-            if bDebug:  # pragma: no cover
-                print("\t\tVSR: %s   bin: %s dec: %s" % (vsr, binary, "{:02x}".format(int_byte)))
 
         return string_list
 
@@ -1853,26 +1785,17 @@ class HexitecFem():
         low_int = int(low_string, 16)
         high_encoded = self.HEX_ASCII_CODE[high_int]
         low_encoded = self.HEX_ASCII_CODE[low_int]
-        # print(" *** conv_to_aspect_..({}) -> {}, {}".format(value, high_encoded, low_encoded))
         return high_encoded, low_encoded
 
     def read_ini_file(self, filename, parameter_dict, debug=False):
         """Read filename, parse case sensitive keys decoded as strings into parameter_dict."""
         parser = configparser.ConfigParser()
-        if debug:  # pragma: no cover
-            print("---------------------------------------------------------------------")
         # Maintain case-sensitivity:
         parser.optionxform = str
         parser.read(filename)
         for section in parser.sections():
-            if debug:  # pragma: no cover
-                print("Section: ", section)
             for key, value in parser.items(section):
                 parameter_dict[section + "/" + key] = value.strip("\"")
-                if debug:  # pragma: no cover
-                    print("   " + section + "/" + key + " => " + value.strip("\""))
-        if debug:  # pragma: no cover
-            print("---------------------------------------------------------------------")
 
     def translate_to_normal_hex(self, value):
         """Translate Aspect encoding into 0-F equivalent scale."""
@@ -1894,13 +1817,10 @@ class HexitecFem():
         I.e. 21 V -> 0x0041 (0x30, 0x30, 0x34, 0x31)
         """
         hv_hex = self.convert_hv_to_hex(hv)
-        # print(" Selected hv: {0}. Converted to hex: {1:04X}".format(hv, hv_hex))
         hv_hex_msb = hv_hex >> 8
         hv_hex_lsb = hv_hex & 0xFF
         hv_msb = self.convert_to_aspect_format(hv_hex_msb)
         hv_lsb = self.convert_to_aspect_format(hv_hex_lsb)
-        # print(" Conv'd to aSp_M: {}".format(hv_msb))
-        # print(" Conv'd to aSp_L: {}".format(hv_lsb))
         return hv_msb, hv_lsb
 
     def hv_on(self):
@@ -1908,9 +1828,6 @@ class HexitecFem():
         self.check_hardware_ready("switch HV on")
         logging.debug("Going to set HV bias to -{} volts".format(self.bias_level))
         hv_msb, hv_lsb = self.convert_bias_to_dac_values(self.bias_level)
-        # print(f" HV Bias (-{self.bias_level}) : {hv_msb[0]:X} {hv_msb[1]:X}",
-        #       f" | {hv_lsb[0]:X} {hv_lsb[1]:X}")
-
         # Can call hv_on function on any VSR object
         self.vsr_list[0].hv_on(hv_msb, hv_lsb)
         self.hv_bias_enabled = True

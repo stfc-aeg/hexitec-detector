@@ -104,14 +104,83 @@ class TestFem(unittest.TestCase):
         """Tear down test fixture after each unit test."""
         del self.test_fem
 
-    # def test_connect(self):
-    #     """Assert the connect method creates the rdma as expected."""
-    #     with patch("hexitec.HexitecFem.RdmaUDP") as mock_rdma:
-    #         self.test_fem.fem.connect()
+    def test_setup_farm_mode_fails(self):
+        """Assert function's Exception handling works."""
+        with patch("hexitec.HexitecFem.RdmaUDP") as rdma_mock:
+            rdma_mock.side_effect = socket_error()
+            self.test_fem.fem.data_lane1 = Mock()
+            self.test_fem.fem.data_lane1.set_dst_ip.side_effect = socket_error()
+            self.test_fem.fem.flag_error = Mock()
+            Hex2x6Ctrl = Mock()
+            ctrl_lane = Mock()
+            # with pytest.raises(socket_error) as exc_info:
+            self.test_fem.fem.setup_farm_mode(Hex2x6Ctrl, ctrl_lane)
+            self.test_fem.fem.flag_error.assert_called_with("Farm Mode Config failed", "")
 
-    #         mock_rdma.assert_called_with(local_ip='127.0.0.1', local_port=61649,
-    #                                      rdma_ip='127.0.0.1', rdma_port=61648,
-    #                                      debug=False)
+    def test_extract_frame_receiver_interface(self):
+        """Test extracting frame receiver interface parameters from frameReceiver."""
+        value= [
+                {
+                    "ctrl_endpoint": "tcp://127.0.0.1:5110",
+                    "decoder_path": "lib/",
+                    "decoder_type": "Hexitec",
+                    "frame_count": 0,
+                    "frame_ready_endpoint": "tcp://127.0.0.1:5101",
+                    "frame_release_endpoint": "tcp://127.0.0.1:5102",
+                    "rx_address": "192.168.0.27",
+                    "rx_address_list": "192.168.0.27, 130.246.17.170",
+                    "rx_endpoint": "inproc://rx_channel",
+                    "rx_ports": "61649,61649",
+                    "rx_recv_buffer_size": 30000000,
+                    "rx_type": "udp",
+                    "shared_buffer_name": "HexitecFrameBuffer0"
+                },
+                {
+                    "ctrl_endpoint": "tcp://127.0.0.1:5111",
+                    "decoder_path": "lib/",
+                    "decoder_type": "Hexitec",
+                    "frame_count": 0,
+                    "frame_ready_endpoint": "tcp://127.0.0.1:5201",
+                    "frame_release_endpoint": "tcp://127.0.0.1:5202",
+                    "max_buffer_mem": 500000000,
+                    "rx_address": "192.168.0.27",
+                    "rx_address_list": "192.168.0.27, 130.246.17.170",
+                    "rx_endpoint": "inproc://rx_channel",
+                    "rx_ports": "61651,61651",
+                    "rx_recv_buffer_size": 30000000,
+                    "rx_type": "udp",
+                    "shared_buffer_name": "HexitecFrameBuffer1"
+                },
+                None
+            ]
+        addresses, ports = self.test_fem.fem.extract_frame_receiver_interfaces(value)
+        assert addresses == ['192.168.0.27', '130.246.17.170', '192.168.0.27', '130.246.17.170']
+        assert ports == [61649, 61649, 61651, 61651]
+
+    def test_extract_entries_from_string(self):
+        """Test extracting entries from space separated string."""
+        test_string = "10.0.2.1,10.0.2.2,10.0.2.3"
+        list_of_entries = []
+        entries = self.test_fem.fem.extract_entries_from_string(test_string, list_of_entries)
+        assert entries == ["10.0.2.1", "10.0.2.2", "10.0.2.3"]
+
+    def test_extract_entries_from_string_handles_disconnected_fr(self):
+        """Test function handles disconnected frameReceiver."""
+        list_of_entries = ["testing"]
+        entries = self.test_fem.fem.extract_entries_from_string(None, list_of_entries)
+        assert entries == list_of_entries
+
+    def test_connect(self):
+        """Assert the connect method creates the rdma as expected."""
+        with patch("hexitec.HexitecFem.RdmaUDP") as mock_rdma:
+            self.test_fem.fem.server_ctrl_ip = '127.0.0.1'
+            self.test_fem.fem.server_ctrl_port = 61649
+            self.test_fem.fem.camera_ctrl_ip = '127.0.0.1'
+            self.test_fem.fem.camera_ctrl_port = 61648
+            self.test_fem.fem.connect()
+            mock_rdma.assert_called_with(local_ip='127.0.0.1', local_port=61649,
+                                         rdma_ip='127.0.0.1', rdma_port=61648,
+                                         udptimeout=2, debug=False, uart_offset=0)
 
     def test_connect_fails(self):
         """Assert the connect method Exception handling works."""

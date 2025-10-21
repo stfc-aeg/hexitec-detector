@@ -402,9 +402,6 @@ class HexitecDAQ():
             self.received_remaining = self.number_frames - self.frames_received
             self.processed_remaining = self.number_frames - self.frames_processed
             self.collection_time_remaining = self.calculate_remaining_collection_time()
-            # print(" [E  {} -> acq_chk_lp\t rxd {} procd {} left: {} processed_t'stamp:{} [X".format(
-            #       self.debug_timestamp(), self.frames_received, self.frames_processed,
-            #       self.processed_remaining, self.processing_timestamp))
             IOLoop.instance().call_later(0.5, self.acquisition_check_loop)
         else:
             # Allow watchdog to interrupt processing if timed out
@@ -420,9 +417,6 @@ class HexitecDAQ():
         self.received_remaining = self.number_frames - self.frames_received
         if self.collection_time_remaining < 0.9:
             self.collection_time_remaining = 0
-        # print(" [E  {} -> proc_chk_lp\t rxd {} procd {} left: {} Frms: {} total procd: {} [X".format(
-        #       self.debug_timestamp(), self.frames_received, self.frames_processed,
-        #       self.processed_remaining, self.number_frames, total_frames_processed))
         if total_frames_processed == self.number_frames:
             IOLoop.instance().add_callback(self.flush_data)
             logging.debug("Acquisition Complete")
@@ -430,9 +424,6 @@ class HexitecDAQ():
             #   selected, wait for hdf file to close
             IOLoop.instance().call_later(0.1, self.hdf_closing_loop)
         else:
-            # print(" [E  {} -> tot_frms_procd ({}) == s.frames_procd ({}). shutdown? {}\n [X".format(
-            #       self.debug_timestamp(), total_frames_processed,
-            #       self.frames_processed, self.shutdown_processing))
             # Not all frames processed yet; Check data still in flow
             if total_frames_processed == self.frames_processed:
                 # No frames processed in at least 0.5 sec, did processing time out?
@@ -449,9 +440,6 @@ class HexitecDAQ():
                 self.processing_timestamp = time.time()
                 self.frames_processed = total_frames_processed
                 self.processed_remaining = self.number_frames - self.frames_processed
-                # print(" [E  {} -> Data procg, rxd {} procd {} left: {} s.procg_ts: {}\n [X".format(
-                #     self.debug_timestamp(), self.frames_received, self.frames_processed,
-                #     self.processed_remaining, self.processing_timestamp))
             # Wait 0.5 seconds and check again
             IOLoop.instance().call_later(.25, self.processing_check_loop)
 
@@ -485,9 +473,6 @@ class HexitecDAQ():
         self.set_file_writing(False)
         self.frames_processed = self.get_total_frames_processed(self.last_plugin_configured)
         self.processed_remaining = self.number_frames - self.frames_processed
-        # print("\n2\t rxd {} proc'd {} left: {}\n".format(
-        #     self.frames_received, self.frames_processed,
-        #     self.processed_remaining))
 
     def check_hdf_writing_true(self):
         """Check hdf node(s) statuses, return True if all FP(s) writing status' True."""
@@ -495,7 +480,6 @@ class HexitecDAQ():
         hdf_status = False
         for status in fp_statuses:
             writing = status.get('hdf').get("writing")
-            # print("Rank: ", status.get('hdf', None).get('rank'), " hdf writing: ", writing)
             if writing:
                 hdf_status = True
         return hdf_status
@@ -541,27 +525,18 @@ class HexitecDAQ():
         # TODO: Hacked until frame_process_adapter updated to use ParameterTree
         hdf_metadata_group = hdf_file.create_group("hdf")
         hdf_tree_dict = self.adapters['fp']._param
-        # print("\n self.adapters['fp'] = ", self.adapters['fp'])
-        # print("\n self.adapters['fp']._param = ", self.adapters['fp']._param)
-        # print("HDF metadata group items: ", list(hdf_tree_dict.keys()))
-        # import sys;sys.exit(-1)
         # Only "hexitec" group contain filename entries, ignore return value of write_metadata
         self.write_metadata(hdf_metadata_group, hdf_tree_dict, hdf_file)
         
         status = self.parent.daq.get_adapter_status("fp")
-        # print(f"\nFP Adapter status: {status}")
         index = 0
         fp_instances = {}
         for odin in status:
-            # print(f" {index} reorder: {odin['reorder']}")
             fp_instances[f"frameProcessor_{index}"] = odin
             index += 1
-            print(f" index = {index} odin = {odin}")
         fp_metadata_group = hdf_file.create_group(f"fp")
-        print(f"FP metadata group created")
         fp_tree_dict = fp_instances
         self.write_metadata(fp_metadata_group, fp_tree_dict, hdf_file)
-        print(f"FP metadata written")
 
         if (error_code == 0):
             self.parent.fem._set_status_message("Meta data added to {}".format(
@@ -571,7 +546,6 @@ class HexitecDAQ():
 
         hdf_file.close()
         self.parent.software_state = "Ready"
-        # print(" [E  {} -> DAQ._hdf_file() SW_date = Idle".format(self.debug_timestamp()))
         self.processing_interruptable = False
         self.in_progress = False
         self.daq_ready = True
@@ -630,7 +604,6 @@ class HexitecDAQ():
                     # Do not include errors, log messages (see error log for such details)
                     if key == "errors_history" or key == "log_messages":
                         continue
-                    print("Writing key: [{} + {}] value: {}".format(path, key, item))
                     hdf_file[path + key] = item
                 except TypeError as e:
                     logging.error("Error: {} Parsing key: {}{} value: {}".format(
@@ -742,7 +715,6 @@ class HexitecDAQ():
         frames_processed = 0
         for fp_status in fp_statuses:
             fw_status = fp_status.get(plugin, None).get('frames_processed')
-            # print("Rank:", fp_status.get('hdf', None).get('rank'), " frames_proc'd: ", fw_status)
             if fw_status > 0:   # TODO: Sort out this better
                 frames_processed = frames_processed + fw_status
         return frames_processed
@@ -753,7 +725,6 @@ class HexitecDAQ():
         eoa_processed = True
         for fp_status in fp_statuses:
             eoa_status = fp_status.get("histogram", None).get('eoa_processed')
-            # print("Rank:", fp_status.get('hdf', None).get('rank'), " eoa_processed: ", eoa_status)
             if eoa_status is False:
                 eoa_processed = eoa_status
         return eoa_processed
@@ -766,7 +737,6 @@ class HexitecDAQ():
             received = fr_status.get("frames", None).get("received", None)
             if received > 0:
                 total_received = total_received + received
-        # print(" {0} *** FR total received frames: {0}".format(total_received))
         return total_received
 
     def _is_od_connected(self, status=None, adapter=""):

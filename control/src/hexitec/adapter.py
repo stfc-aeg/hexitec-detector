@@ -385,9 +385,6 @@ class Hexitec():
         status = self._get_od_status("fp")
         frames_processed = 0
         for index in status:
-            # rank = index.get('hdf', None).get('rank')
-            # frames = index.get('histogram').get('frames_processed')
-            # print("    g_f_p(), rank: {} frames_processed: {}".format(rank, frames))
             histogram = index.get('histogram')
             if histogram is not None:
                 frames_processed += histogram.get('frames_processed', 0)
@@ -415,7 +412,6 @@ class Hexitec():
             leak_warning = response["leak"]["system"]["warning"]
         else:
             pass    # Cannot reach leak detector unit
-        # print(f"[E SC {status_code} LF {leak_fault} lw {leak_warning}")
         return leak_fault, leak_warning
 
     def poll_fem(self):
@@ -437,7 +433,6 @@ class Hexitec():
             # If leak detector fault, display in GUI (overrides any fem faults)
             if self.leak_fault:
                 self.leak_health = not self.leak_fault
-                # print(f"\n [E  IF* LH: {self.leak_health} LF: {self.leak_fault} LW: {self.leak_warning} state: {self.software_state} leak_err: '{self.leak_error}' cond {self.leak_error != ''}")
                 # Log leak detector fault only once
                 if self.leak_error == "":
                     self.software_state = "Interlocked"
@@ -446,8 +441,6 @@ class Hexitec():
                     self.report_leak_detector_error("Leak Detector fault!")
                     self.status_message = "Check leak detector unit!"
             else:
-                # print(f"\n [E  ELS LH: {self.leak_health} LF: {self.leak_fault} LW: {self.leak_warning} state: {self.software_state} leak_err: {self.leak_error} cond {self.leak_error != ''}")
-
                 # No leak fault(s), set to Fem's instead (or blank if none)
                 self.status_error = self.fem._get_status_error()
                 self.status_message = self.fem._get_status_message()
@@ -961,7 +954,6 @@ class Hexitec():
         self.status_message = ""
         # Determine system health
         self.system_health = self.fem_health and self.leak_health
-        # print(f"\n [E IF* FH: {self.fem_health} LH: {self.leak_health} ");time.sleep(0.2)
         if not self.leak_health:
             self.software_state = "Interlocked"
         elif not self.fem_health:
