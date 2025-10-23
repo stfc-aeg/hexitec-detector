@@ -41,7 +41,7 @@ namespace FrameProcessor
       pass_raw_(true),
       pass_pixel_spectra_(false),
       initialise_pixel_spectra_(false),
-      first_frame_seen_(false)
+      last_frame_number_(100000)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecHistogramPlugin");
@@ -336,7 +336,6 @@ namespace FrameProcessor
     pass_pixel_spectra_ = true;
     write_histograms_to_disk();
     pass_pixel_spectra_ = false;
-    first_frame_seen_ = false;
     reset_histogram_numbering();
   }
 
@@ -386,16 +385,18 @@ namespace FrameProcessor
         if (((frame_number+1) % (rank_index_+1)) == 0)
         {
           // First frame of acquisition?
-          if (!first_frame_seen_)
+          if (frame_number < last_frame_number_)
           {
+            LOG4CXX_DEBUG_LEVEL(2, logger_, "First frame of acquisition detected");
             // First frame of the run - initialise pixel_spectra, spectra_bins datasets
             initialise_pixel_spectra_ = true;
             last_frame_number_ = -1;
-            first_frame_seen_ = true;
           }
           LOG4CXX_DEBUG_LEVEL(2, logger_, dataset << ", frame number " << frame_number <<
             " First frame of trigger, setting up histograms, for rank_index " << rank_index_);
-          // Initialise new histogram datasets
+          // Initialise new histogram datasets, either:
+          // 1st frame of acquisition? Initialise all 3 histograms
+          // Subsequent frames, triggers? Only initialise summed_spectra histogram
           initialise_histograms();
         }
         // Define pointer to the input image data

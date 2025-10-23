@@ -229,7 +229,7 @@ class TestObject(unittest.TestCase):
             assert d['value'][19]['plugin'] == {'connect':
                                                 {'index': 'histogram', 'connection': 'stacked'}}
             assert d['value'][20]['plugin'] == {'connect': {'index': 'blosc', 'connection': 'histogram'}}
-            assert d['value'][21]['plugin'] == {'connect': {'connection': 'blosc','index': 'hdf'}}
+            assert d['value'][21]['plugin'] == {'connect': {'connection': 'blosc', 'index': 'hdf'}}
 
             assert d['value'][22] == {'reorder': sl_dic}
             assert d['value'][23] == {'threshold':

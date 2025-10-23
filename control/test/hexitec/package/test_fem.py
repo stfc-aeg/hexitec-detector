@@ -119,7 +119,8 @@ class TestFem(unittest.TestCase):
 
     def test_extract_frame_receiver_interface(self):
         """Test extracting frame receiver interface parameters from frameReceiver."""
-        value= [
+        value = \
+            [
                 {
                     "ctrl_endpoint": "tcp://127.0.0.1:5110",
                     "decoder_path": "lib/",
@@ -520,6 +521,30 @@ class TestFem(unittest.TestCase):
         with pytest.raises(HexitecFemError) as exc_info:
             self.test_fem.fem.extract_string_parameters(["list", "not_supported"])
         assert exc_info.type is HexitecFemError
+
+    def test_determine_farm_mode_config(self):
+        """Test function works ok."""
+        # Farm mode parameters
+        ip_addresses = ['10.0.2.1', '10.0.1.1', '10.0.1.1', '10.0.2.1']
+        macs = ['9c:69:b4:60:b8:26', '9c:69:b4:60:b8:25', '9c:69:b4:60:b8:25', '9c:69:b4:60:b8:26']
+        ports = [61651, 61651, 61650, 61650]
+        frames_per_trigger = 4
+        # Expected farm mode settings
+        ip_lut1 = ['10.0.2.1', '10.0.2.1', '10.0.2.1', '10.0.2.1']
+        ip_lut2 = ['10.0.1.1', '10.0.1.1', '10.0.1.1', '10.0.1.1']
+        mac_lut1 = ['9c:69:b4:60:b8:26', '9c:69:b4:60:b8:26', '9c:69:b4:60:b8:26', '9c:69:b4:60:b8:26']
+        mac_lut2 = ['9c:69:b4:60:b8:25', '9c:69:b4:60:b8:25', '9c:69:b4:60:b8:25', '9c:69:b4:60:b8:25']
+        port_lut1 = [61651, 61651, 61650, 61650]
+        port_lut2 = [61651, 61651, 61650, 61650]
+
+        ip1, ip2, mac1, mac2, port1, port2 = \
+            self.test_fem.fem.determine_farm_mode_config(ip_addresses, macs, ports, frames_per_trigger)
+        assert ip1 == ip_lut1
+        assert ip2 == ip_lut2
+        assert mac1 == mac_lut1
+        assert mac2 == mac_lut2
+        assert port1 == port_lut1
+        assert port2 == port_lut2
 
     def test_populate_lists(self):
         """Test function works ok."""

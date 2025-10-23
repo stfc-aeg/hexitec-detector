@@ -498,9 +498,9 @@ class HexitecFem():
             self.hardware_busy = False
             self.flag_error("Farm Mode Config failed", str(e))
 
-    def determine_farm_mode_config(self, odin_instances, macs, ports, frames_per_trigger):
+    def determine_farm_mode_config(self, ip_addresses, macs, ports, frames_per_trigger):
         """Determine Farm Mode configuration, based on Odin instances and frames per trigger"""
-        lut_entries = frames_per_trigger * (len(odin_instances) // 2)
+        lut_entries = frames_per_trigger * (len(ip_addresses) // 2)
         ip_lut1 = []
         ip_lut2 = []
         mac_lut1 = []
@@ -514,20 +514,20 @@ class HexitecFem():
         while index < lut_entries:
             if (offset % 2) == 0:
                 if (index % 2) == 0:  # Even
-                    ip_lut1.append(odin_instances[current_instance])
+                    ip_lut1.append(ip_addresses[current_instance])
                     mac_lut1.append(macs[current_instance])
                     port_lut1.append(ports[current_instance])
                 else:
-                    ip_lut2.append(odin_instances[current_instance+1])
+                    ip_lut2.append(ip_addresses[current_instance+1])
                     mac_lut2.append(macs[current_instance+1])
                     port_lut2.append(ports[current_instance+1])
             else:
                 if (index % 2) == 0:  # Even
-                    ip_lut1.append(odin_instances[current_instance+1])
+                    ip_lut1.append(ip_addresses[current_instance+1])
                     mac_lut1.append(macs[current_instance+1])
                     port_lut1.append(ports[current_instance+1])
                 else:
-                    ip_lut2.append(odin_instances[current_instance])
+                    ip_lut2.append(ip_addresses[current_instance])
                     mac_lut2.append(macs[current_instance])
                     port_lut2.append(ports[current_instance])
             frame_count += 1
