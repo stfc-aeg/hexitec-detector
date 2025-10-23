@@ -60,6 +60,8 @@ namespace FrameProcessor
       static const std::string CONFIG_FRAME_NUMBER;
       /** Configuration constant for resetting frame number **/
       static const std::string CONFIG_RESET_FRAME_NUMBER;
+      /** Configuration constant for frames per trigger */
+      static const std::string CONFIG_FRAMES_PER_TRIGGER;
 
       void process_lost_packets(boost::shared_ptr<Frame>& frame);
       void process_frame(boost::shared_ptr<Frame> frame);
@@ -96,10 +98,9 @@ namespace FrameProcessor
       int fem_pixels_per_rows_;
       int fem_pixels_per_columns_;
       int fem_total_pixels_;
-      long frame_start_sec_;
-      long frame_start_nsec_;
-      bool start_of_acquisition_;
-      /// Testing..
+      int frames_per_trigger_;
+      long long last_frame_number_;
+      // Arrays to hold timestamps of frames per trigger
       rapidjson::Value sec_array_;
       rapidjson::Value::AllocatorType sec_allocator_;
       rapidjson::Value nano_array_;

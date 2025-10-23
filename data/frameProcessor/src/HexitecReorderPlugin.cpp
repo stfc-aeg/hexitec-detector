@@ -11,13 +11,15 @@
 
 namespace FrameProcessor
 {
-  const std::string HexitecReorderPlugin::CONFIG_DROPPED_PACKETS    = "packets_lost";
-  const std::string HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT     = "sensors_layout";
+  const std::string HexitecReorderPlugin::CONFIG_DROPPED_PACKETS     = "packets_lost";
+  const std::string HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT      = "sensors_layout";
+  const std::string HexitecReorderPlugin::CONFIG_FRAMES_PER_TRIGGER  = "frames_per_trigger";
 
   /**
    * The constructor sets up logging used within the class.
    */
   HexitecReorderPlugin::HexitecReorderPlugin() :
+      frames_per_trigger_(3),
       packets_lost_(0)
   {
     // Setup logging for the class
@@ -27,9 +29,7 @@ namespace FrameProcessor
       this->get_version_long() << " loaded.");
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
-    frame_start_sec_ = 0;
-    frame_start_nsec_ = 0;
-    start_of_acquisition_ = true;
+    last_frame_number_ = 100000;
     sec_array_ = rapidjson::kArrayType;
     nano_array_ = rapidjson::kArrayType;
   }
@@ -72,8 +72,9 @@ namespace FrameProcessor
    * to configure the plugin, and any response can be added to the reply IpcMessage. This
    * plugin supports the following configuration parameters:
    * 
-   * - sensors_layout_str_    <=> sensors_layout
-   * - packets_lost_          <=> dropped_packets
+   * - sensors_layout_str_  <=> sensors_layout
+   * - packets_lost_        <=> dropped_packets
+   * - frames_per_trigger_  <=> frames_per_trigger
    *
    * \param[in] config - Reference to the configuration IpcMessage object.
    * \param[in] reply - Reference to the reply IpcMessage object.
@@ -92,6 +93,12 @@ namespace FrameProcessor
       packets_lost_ = config.get_param<unsigned int>(HexitecReorderPlugin::CONFIG_DROPPED_PACKETS);
     }
 
+    if (config.has_param(HexitecReorderPlugin::CONFIG_FRAMES_PER_TRIGGER))
+    {
+      frames_per_trigger_ = config.get_param<int>(HexitecReorderPlugin::CONFIG_FRAMES_PER_TRIGGER);
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Frames per trigger set to " << frames_per_trigger_);
+    }
+
   }
 
   void HexitecReorderPlugin::requestConfiguration(OdinData::IpcMessage& reply)
@@ -100,6 +107,7 @@ namespace FrameProcessor
   	std::string base_str = get_name() + "/";
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_SENSORS_LAYOUT, sensors_layout_str_);
     reply.set_param(base_str + HexitecReorderPlugin::CONFIG_DROPPED_PACKETS, packets_lost_);
+    reply.set_param(base_str + HexitecReorderPlugin::CONFIG_FRAMES_PER_TRIGGER, frames_per_trigger_);
   }
 
   /**
@@ -113,9 +121,7 @@ namespace FrameProcessor
     LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecReorderPlugin");
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
     status.set_param(get_name() + "/packets_lost", packets_lost_);
-    status.set_param(get_name() + "/frame_start_sec", frame_start_sec_);
-    status.set_param(get_name() + "/frame_start_nsec", frame_start_nsec_);
-
+    status.set_param(get_name() + "/frames_per_trigger", frames_per_trigger_);
     status.set_param(get_name() + "/nsec_array", nano_array_);
     status.set_param(get_name() + "/sec_array", sec_array_);
   }
@@ -137,7 +143,7 @@ namespace FrameProcessor
   */
   void HexitecReorderPlugin::process_end_of_acquisition()
   {
-    start_of_acquisition_ = true;
+    ;
   }
 
   /**
@@ -180,18 +186,22 @@ namespace FrameProcessor
       << " arrived at Secs: " << hdr_ptr->frame_start_time.tv_sec
       << ", Nanosecs: " << hdr_ptr->frame_start_time.tv_nsec);
 
-    if (start_of_acquisition_)
+    // Start of new acquisition if this frame number < last frame number
+    // BUT occasionally the odd frame arrives out of sequence when 5 frames/trigger
+    // i.e. frames sequence: 50, 51, 53, 52, 54
+    if (frame->get_frame_number() < (last_frame_number_ - 2))
     {
-      frame_start_sec_ = hdr_ptr->frame_start_time.tv_sec;
-      frame_start_nsec_ = hdr_ptr->frame_start_time.tv_nsec;
-      start_of_acquisition_ = false;
+      LOG4CXX_DEBUG_LEVEL(1, logger_, "Start of acquisition detected.");
       sec_array_.Clear();
       nano_array_.Clear();
     }
-    sec_array_.PushBack(hdr_ptr->frame_start_time.tv_sec, sec_allocator_);
-    nano_array_.PushBack(hdr_ptr->frame_start_time.tv_nsec, nano_allocator_);
-    LOG4CXX_TRACE(logger_, " *** Secs array size: " << sec_array_.Size() << " TS: " << hdr_ptr->frame_start_time.tv_sec
-      << " Nanosecs size: " << nano_array_.Size() << " TS: " << hdr_ptr->frame_start_time.tv_nsec);
+
+    last_frame_number_ = frame->get_frame_number();
+    if (frame->get_frame_number() % frames_per_trigger_ == 0)
+    {
+      sec_array_.PushBack(hdr_ptr->frame_start_time.tv_sec, sec_allocator_);
+      nano_array_.PushBack(hdr_ptr->frame_start_time.tv_nsec, nano_allocator_);
+    }
 
     // Determine the size of the output reordered image
     const std::size_t output_image_size = reordered_image_size();

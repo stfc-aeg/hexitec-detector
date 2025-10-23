@@ -1267,6 +1267,11 @@ class HexitecDAQ():
         error_message = "Setting Summed Image plugin's frames/trigger"
         self.transmit_adapter_request(command, str(triggering_frames), error_message)
 
+        # Set frames per trigger in reorder plugin
+        command = "config/reorder/frames_per_trigger"
+        error_message = "Setting Reorder plugin's frames/trigger"
+        self.transmit_adapter_request(command, str(triggering_frames), error_message)
+
         # TODO Only necessary for raw frames?
         # # Set how many consecutive frames to write to each Odin instance
         # command = "config/hdf/process/frames_per_block"
