@@ -1008,6 +1008,11 @@ class HexitecDAQ():
         self.bin_end = bin_end
         self.update_number_histograms()
         self.update_fp_configuration = True
+        # Update live histogram adapter too
+        command = "bin_end"
+        payload = str(self.bin_end)
+        self.transmit_adapter_request("live_histogram", command, payload,
+                                      "Setting bin_end")
 
     def _set_bin_start(self, bin_start):
         """Update bin_start and datasets' histograms' dimensions."""
@@ -1017,6 +1022,11 @@ class HexitecDAQ():
         self.bin_start = bin_start
         self.update_number_histograms()
         self.update_fp_configuration = True
+        # Update live histogram adapter too
+        command = "bin_start"
+        payload = str(self.bin_start)
+        self.transmit_adapter_request("live_histogram", command, payload,
+                                      "Setting bin_start")
 
     def _set_bin_width(self, bin_width):
         """Update bin_width and datasets' histograms' dimensions."""
@@ -1026,6 +1036,11 @@ class HexitecDAQ():
         self.bin_width = bin_width
         self.update_number_histograms()
         self.update_fp_configuration = True
+        # Update live histogram adapter too
+        command = "bin_width"
+        payload = str(self.bin_width)
+        self.transmit_adapter_request("live_histogram", command, payload,
+                                      "Setting bin_width")
 
     def update_datasets_frame_dimensions(self):
         """Update frames' datasets' dimensions."""
@@ -1212,11 +1227,11 @@ class HexitecDAQ():
 
             command = "config/store/" + str(index)    # Configure using strings
             error_message = "storing plugins config in fp adapter"
-            self.transmit_adapter_request(command, store_string, error_message)
+            self.transmit_adapter_request("fp", command, store_string, error_message)
 
             command = "config/execute/" + str(index)  # Configure using strings
             error_message = "loading plugins config in fp adapter"
-            self.transmit_adapter_request(command, execute_string, error_message)
+            self.transmit_adapter_request("fp", command, execute_string, error_message)
             # request = ApiAdapterRequest(execute_string, content_type="application/json")
 
             pixel_spectra_params = self.gcf.generate_pixel_spectra_params()
@@ -1224,18 +1239,18 @@ class HexitecDAQ():
             # Set unique rank for each fp's histogram plugin
             command = "config/histogram/rank_index/" + str(index)
             error_message = "Setting Histogram plugin's rank index for FP{}".format(index)
-            self.transmit_adapter_request(command, str(index), error_message)
+            self.transmit_adapter_request("fp", command, str(index), error_message)
 
             # Set unique rank for each fp's stacked plugin
             command = "config/stacked/rank_index/" + str(index)
             error_message = "Setting Stacked plugin's rank index for FP{}".format(index)
-            self.transmit_adapter_request(command, str(index), error_message)
+            self.transmit_adapter_request("fp", command, str(index), error_message)
             # request = ApiAdapterRequest(str(index), content_type="application/json")
 
             # Set unique rank for each fp's summed_image plugin
             command = "config/summed_image/rank_index/" + str(index)
             error_message = "Setting Summed Image plugin's rank index for FP{}".format(index)
-            self.transmit_adapter_request(command, str(index), error_message)
+            self.transmit_adapter_request("fp", command, str(index), error_message)
 
             # Delete GCF object before next iteration
             del self.gcf
@@ -1244,39 +1259,33 @@ class HexitecDAQ():
         # Set rank offset for all frameProcessors' histogram plugin
         command = "config/histogram/rank_offset/"
         error_message = "Setting Histogram plugin's rank offset"
-        self.transmit_adapter_request(command, str(self.number_odin_instances), error_message)
+        self.transmit_adapter_request("fp", command, str(self.number_odin_instances), error_message)
 
         # Set rank offset for all frameProcessors' stacked plugin
         command = "config/stacked/rank_offset/"
         error_message = "Setting Stacked plugin's rank offset"
-        self.transmit_adapter_request(command, str(self.number_odin_instances), error_message)
+        self.transmit_adapter_request("fp", command, str(self.number_odin_instances), error_message)
 
         triggering_frames = self.parent.fem.triggering_frames
         # Set frames per trigger in histogram plugin
         command = "config/histogram/frames_per_trigger"
         error_message = "Setting Histogram plugin's frames/trigger"
-        self.transmit_adapter_request(command, str(triggering_frames), error_message)
+        self.transmit_adapter_request("fp", command, str(triggering_frames), error_message)
 
         # Set frames per trigger in stacked plugin
         command = "config/stacked/frames_per_trigger"
         error_message = "Setting Stacked plugin's frames/trigger"
-        self.transmit_adapter_request(command, str(triggering_frames), error_message)
+        self.transmit_adapter_request("fp", command, str(triggering_frames), error_message)
 
         # Set frames per trigger in summed_image plugin
         command = "config/summed_image/frames_per_trigger/"
         error_message = "Setting Summed Image plugin's frames/trigger"
-        self.transmit_adapter_request(command, str(triggering_frames), error_message)
+        self.transmit_adapter_request("fp", command, str(triggering_frames), error_message)
 
         # Set frames per trigger in reorder plugin
         command = "config/reorder/frames_per_trigger"
         error_message = "Setting Reorder plugin's frames/trigger"
-        self.transmit_adapter_request(command, str(triggering_frames), error_message)
-
-        # TODO Only necessary for raw frames?
-        # # Set how many consecutive frames to write to each Odin instance
-        # command = "config/hdf/process/frames_per_block"
-        # error_message = "Setting frames per block in FP(s) {}".format(triggering_frames)
-        # self.transmit_adapter_request(command, str(triggering_frames), error_message)
+        self.transmit_adapter_request("fp", command, str(triggering_frames), error_message)
 
         # Update dataset dimensions
 
@@ -1285,14 +1294,14 @@ class HexitecDAQ():
             (self.number_histograms, self.number_histograms)
         command = "config/hdf/dataset/" + "spectra_bins"
         error_message = "Setting spectra_bins dataset dimensions"
-        self.transmit_adapter_request(command, payload, error_message)
+        self.transmit_adapter_request("fp", command, payload, error_message)
         # request = ApiAdapterRequest(str(payload), content_type="application/json")
 
         # pixel_spectra dataset
         payload = '{%s}' % (pixel_spectra_params)
         command = "config/hdf/dataset/" + "pixel_spectra"
         error_message = "Setting pixel_spectra dataset dimensions"
-        self.transmit_adapter_request(command, payload, error_message)
+        self.transmit_adapter_request("fp", command, payload, error_message)
         # request = ApiAdapterRequest(str(payload), content_type="application/json")
 
         # summed_spectra dataset
@@ -1300,7 +1309,7 @@ class HexitecDAQ():
             (self.number_histograms, self.number_histograms)
         command = "config/hdf/dataset/" + "summed_spectra"
         error_message = "Setting summed_spectra dataset dimensions"
-        self.transmit_adapter_request(command, payload, error_message)
+        self.transmit_adapter_request("fp", command, payload, error_message)
         # request = ApiAdapterRequest(str(payload), content_type="application/json")
 
         # Allow FP time to process above PUT requests before configuring plugin settings
@@ -1333,17 +1342,6 @@ class HexitecDAQ():
         else:
             self.last_plugin_configured = "histogram"
 
-        # T0DO: Pass_pixel_spectra to become internal variable only 
-        # # command = "config/histogram"
-        # formatted_string = ('{"pass_pixel_spectra": %s}' % self.pass_pixel_spectra).lower()
-        # request = ApiAdapterRequest(formatted_string, content_type="application/json")
-
-        # response = self.adapters["fp"].put(command, request)
-        # status_code = response.status_code
-        # if (status_code != 200):
-        #     error = "Error {} toggling histogram's pixel spectra setting".format(status_code)
-        #     self.parent.fem.flag_error(error)
-
         command = "config/histogram"
         formatted_string = ('{"pass_processed": %s}' % self.pass_processed).lower()
         request = ApiAdapterRequest(formatted_string, content_type="application/json")
@@ -1372,12 +1370,12 @@ class HexitecDAQ():
 
         self.busy_configuring_fps = False
 
-    def transmit_adapter_request(self, command, request_content, error_message):
+    def transmit_adapter_request(self, adapter, command, request_content, error_message):
         """Transmit request to adapter."""
         request = ApiAdapterRequest(request_content, content_type="application/vnd.odin-native")
         # application/json
 
-        response = self.adapters["fp"].put(command, request)
+        response = self.adapters[adapter].put(command, request)
         status_code = response.status_code
         if (status_code != 200):
             error = "Error {} {}".format(status_code, error_message)

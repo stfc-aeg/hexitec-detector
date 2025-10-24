@@ -6,7 +6,6 @@ api_version = '0.1';
 const hexitec_url = '/api/' + api_version + '/hexitec/';
 
 let hexitec_endpoint;
-let livehisto_endpoint;
 let last_message_timestamp = '';
 
 // Vars added for Odin-Data
@@ -62,7 +61,6 @@ var populate_gui_with_odin_data_nodes = true; // Flag to populate GUI with Odin 
 // Called once, when page 1st loaded
 document.addEventListener("DOMContentLoaded", function () {
     hexitec_endpoint = new AdapterEndpoint("hexitec");
-    livehisto_endpoint = new AdapterEndpoint("live_histogram");
     'use strict';
 
     document.querySelector('#odin-control-message').innerHTML = "Disconnected, Idle";
@@ -83,8 +81,8 @@ document.addEventListener("DOMContentLoaded", function () {
             polling_thread_running = true;
             start_polling_thread();
             // // Enable Live View by default
-            // liveview_enable = true;
-            // document.getElementById('live_view_radio1').checked = true;
+            liveview_enable = true;
+            document.getElementById('live_view_radio1').checked = true;
         }
     }, 800);
 });
@@ -1099,11 +1097,6 @@ function bin_start_changed() {
             bin_start.reportValidity();
             bin_start.classList.add('alert-danger');
         });
-    // Support histogram (1D) Live view data
-    livehisto_endpoint.put(parseFloat(bin_start.value), 'bin_start')
-        .catch(error => {
-            console.log("Couldn't update bin_start");
-        });
 }
 
 function bin_end_changed() {
@@ -1117,11 +1110,6 @@ function bin_end_changed() {
             bin_end.reportValidity();
             bin_end.classList.add('alert-danger');
         });
-    // Support histogram (1D) Live view data
-    livehisto_endpoint.put(parseFloat(bin_end.value), 'bin_end')
-        .catch(error => {
-            console.log("Couldn't update bin_end");
-        });
 }
 
 function bin_width_changed() {
@@ -1134,11 +1122,6 @@ function bin_width_changed() {
             bin_width.setCustomValidity(error.message);
             bin_width.reportValidity();
             bin_width.classList.add('alert-danger');
-        });
-    // Support histogram (1D) Live view data
-    livehisto_endpoint.put(parseFloat(bin_width.value), 'bin_width')
-        .catch(error => {
-            console.log("Couldn't update bin_width");
         });
 }
 

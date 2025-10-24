@@ -240,10 +240,7 @@ namespace FrameProcessor
     {
       try
       {
-        // First frame of the trigger..?
-        int first_frame = ((frame_number % frames_per_trigger_) == 0);
-        // .. And start of acquisition?
-        if (first_frame && start_of_acquisition_)
+        if (start_of_acquisition_)
         {
           start_of_acquisition_ = false;
           initialise_summed_image();
