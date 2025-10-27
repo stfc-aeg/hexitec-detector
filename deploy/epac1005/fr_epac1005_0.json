@@ -1,11 +1,11 @@
 [
   {
-    "ctrl_endpoint": "tcp://127.0.0.1:5111",
-    "frame_ready_endpoint": "tcp://127.0.0.1:5201",
-    "frame_release_endpoint": "tcp://127.0.0.1:5202",
-    "shared_buffer_name": "HexitecFrameBuffer1",
-    "rx_address": "10.0.1.1",
-    "rx_address_list": "10.0.1.1, 10.0.2.1",
+    "ctrl_endpoint": "tcp://127.0.0.1:5110",
+    "frame_ready_endpoint": "tcp://127.0.0.1:5101",
+    "frame_release_endpoint": "tcp://127.0.0.1:5102",
+    "shared_buffer_name": "HexitecFrameBuffer0",
+    "rx_address": "10.0.2.1",
+    "rx_address_list": "10.0.2.1, 10.0.1.1",
     "rx_ports": "61650, 61650",
     "max_buffer_mem": 46099200,
     "decoder_path": "lib/",
