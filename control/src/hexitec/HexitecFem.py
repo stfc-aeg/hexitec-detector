@@ -16,6 +16,7 @@ import logging
 import configparser
 import psutil
 from json.decoder import JSONDecodeError
+import struct
 import json
 
 from RdmaUdp import *
@@ -219,7 +220,6 @@ class HexitecFem():
         self.data_lane2 = None
         self.farm_mode_targets = None
         self.verify_parameters = True
-        ## DEBUGGING; This must be examined  more closely:
         self.connect_only_once = True
 
     def load_farm_mode_json_parameters(self):
@@ -446,10 +446,6 @@ class HexitecFem():
 
             fr = self.parent.daq.get_adapter_config("fr")
             addresses, ports = self.extract_frame_receiver_interfaces(fr)
-            # DEBUGGING
-            # self.display_debugging(f"DPG: addresses:  {addresses} ports: {ports}")
-            # self.display_debugging(f"FM; DL0: {self.farm_server_1_ip}, {self.farm_server_1_mac}")
-            # self.display_debugging(f"FM; DL1: {self.farm_server_2_ip}, {self.farm_server_2_mac}")
 
             # Generate MAC addresses
             macs = []
@@ -468,10 +464,6 @@ class HexitecFem():
             lut_entries = len(ips1)
             self.farm_mode_targets = lut_entries * 2
 
-            # self.display_debugging(f"FM; ips1: {ips1} ips2: {ips2}")
-            # self.display_debugging(f"FM; macs1: {macs1} macs2: {macs2}")
-            # self.display_debugging(f"FM; ports1: {ports1} ports2: {ports2}")
-            # self.display_debugging(f" LUT entries: {lut_entries} for {self.farm_mode_targets} targets")
             self.data_lane1.set_lut_mode_ip(ips1)
             self.data_lane2.set_lut_mode_ip(ips2)
             self.data_lane1.set_lut_mode_mac(macs1)
@@ -481,9 +473,8 @@ class HexitecFem():
 
             address = HEX_REGISTERS.HEXITEC_2X6_NOF_LUT_MODE_ENTRIES['addr']
             Hex2x6CtrlRdma.udp_rdma_write(address=address, data=lut_entries, burst_len=1)
-            self.data_lane1.set_lut_mode()  # enp2s0f1
-            self.data_lane2.set_lut_mode()  # enp2s0f2
-
+            self.data_lane1.set_lut_mode()
+            self.data_lane2.set_lut_mode()
             Hex2x6CtrlRdma.__del__()
 
             if self.connect_only_once:
@@ -569,7 +560,6 @@ class HexitecFem():
             ports = self.extract_entries_from_string(instance.get("rx_ports", None), ports)
         # Convert ports from list of strings, to list of integers
         ports = list(map(int, ports))
-        
         return addresses, ports
 
     def extract_entries_from_string(self, comma_separated_string, list_of_entries):
@@ -682,9 +672,13 @@ class HexitecFem():
         """Disconnect hardware connection."""
         # Close network socket without hardware interactions if leak fault detected
         if self.parent.leak_fault_counter > 0:
-            self.broadcast_VSRs.set_leak_detector_fault(True)
-            for vsr in self.vsr_list:
-                vsr.set_leak_detector_fault(True)
+            # Ensure VSR connections exist
+            if self.broadcast_VSRs is not None:
+                self.broadcast_VSRs.set_leak_detector_fault(True)
+            if (len(self.vsr_list) > 0):
+                for vsr in self.vsr_list:
+                    vsr.set_leak_detector_fault(True)
+        self.connect_only_once = True
         del self.broadcast_VSRs
         del self.vsr_list[:]
         self.x10g_rdma.close()
@@ -829,9 +823,8 @@ class HexitecFem():
         try:
             self.hardware_busy = True
             self.parent.software_state = "Initialising"
-            ## DEBUGGING
+            # Seup Farm Mode (again), then initialise
             self.setup_data_lane_1()
-            # self.initialise_system()
         except Exception as e:
             error = "Camera initialisation failed"
             self.flag_error(error, str(e))
@@ -899,6 +892,10 @@ class HexitecFem():
                 logging.debug("Modules Disabled")
             self.disconnect()
             logging.debug("Camera is Disconnected")
+        except struct.error as e:
+            self.flag_error("Couldn't disconnect camera", str(e))
+            self.parent.leak_fault_counter = 1
+            self.disconnect()
         except socket_error as e:
             self.flag_error("Unable to disconnect camera", str(e))
             raise HexitecFemError(e)
@@ -1313,6 +1310,10 @@ class HexitecFem():
             self.system_initialised = True
         except HexitecFemError as e:
             self.flag_error("Failed to initialise camera", str(e))
+        except OSError as e:
+            self.flag_error("Detector initialisation failed", str(e))
+            self.parent.leak_fault_counter = 1
+            self.hardware_connected = True
         except Exception as e:
             self.flag_error("Camera initialisation failed", str(e))
         self.hardware_busy = False
@@ -1713,8 +1714,6 @@ class HexitecFem():
         # channel_or_block = "Channel"
         # Example Column variable: 'Sensor-Config_V1_S1/ColumnEn_1stChannel'
         # Examples Row variable:   'Sensor-Config_V1_S1/RowPwr4thBlock'
-
-        bDebug = False
 
         string_list = [-1]
 

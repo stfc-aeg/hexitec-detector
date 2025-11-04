@@ -80,7 +80,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (polling_thread_running === false) {
             polling_thread_running = true;
             start_polling_thread();
-            // // Enable Live View by default
+            // Enable Live View by default
             liveview_enable = true;
             document.getElementById('live_view_radio1').checked = true;
         }

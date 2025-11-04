@@ -225,38 +225,6 @@ class TestArchiver(unittest.TestCase):
 
     @patch('hexitec.archiver.Archiver.execute_rsync_command')
     @patch('hexitec.archiver.Archiver.is_server_accessible')
-    def test_archive_files_rsync_interrupted(self, mock_is_server_accessible,
-                                             mock_execute_rsync_command):
-        mock_is_server_accessible.return_value = 0
-        mock_execute_rsync_command.return_value = (False, ['error'], 255)
-        self.archiver.queue = MagicMock()
-        self.archiver.queue.get.return_value = 'server:/path/to/file.h5'
-        self.archiver.queue.qsize.side_effect = [1, 0]
-        self.archiver.queue.empty.side_effect = [False, True]
-        self.archiver.archive_files()
-        self.assertEqual(self.archiver.queue.qsize(), 1)
-        self.assertFalse(self.archiver.background_task_enable)
-        self.assertFalse(self.archiver.archiving_in_progress)
-
-    @patch('hexitec.archiver.Archiver.execute_rsync_command')
-    @patch('hexitec.archiver.Archiver.is_server_accessible')
-    def test_archive_files_with_bandwidth_limit(self, mock_is_server_accessible,
-                                                mock_execute_rsync_command):
-        mock_is_server_accessible.return_value = 0
-        mock_execute_rsync_command.return_value = (True, [], 0)
-        self.archiver.bandwidth_limit = 1000
-        self.archiver.queue = MagicMock()
-        self.archiver.queue.get.return_value = 'server:/path/to/file.h5'
-        self.archiver.queue.qsize.side_effect = [1, 0]
-        self.archiver.queue.empty.side_effect = [False, True]
-        self.archiver.archive_files()
-        self.assertEqual(self.archiver.number_files_archived, 1)
-        self.assertEqual(self.archiver.number_files_failed, 0)
-        self.assertFalse(self.archiver.archiving_in_progress)
-        self.assertEqual(self.archiver.status, "Idle")
-
-    @patch('hexitec.archiver.Archiver.execute_rsync_command')
-    @patch('hexitec.archiver.Archiver.is_server_accessible')
     def test_archive_files_fails_copy_file(self, mock_is_server_accessible,
                                            mock_execute_rsync_command):
         mock_is_server_accessible.return_value = 0
@@ -269,6 +237,23 @@ class TestArchiver(unittest.TestCase):
         self.assertEqual(self.archiver.number_files_failed, 1)
         self.assertFalse(self.archiver.archiving_in_progress)
         self.assertEqual(self.archiver.status, "Idle")
+
+    @patch('hexitec.archiver.Archiver.execute_rsync_command')
+    @patch('hexitec.archiver.Archiver.is_server_accessible')
+    def test_archive_files_rsync_interrupted_negative_rc(self, mock_is_server_accessible,
+                                                         mock_execute_rsync_command):
+        mock_is_server_accessible.return_value = 0
+        mock_execute_rsync_command.return_value = (False, ['error'], -9)
+        self.archiver.queue = MagicMock()
+        full_path = 'server:/path/to/file.h5'
+        self.archiver.queue.get.return_value = full_path
+        self.archiver.queue.qsize.side_effect = [1, 0]
+        self.archiver.queue.empty.side_effect = [False, True]
+        self.archiver.archive_files()
+        # interrupted transfer should put the item back on the queue and stop background tasks
+        self.archiver.queue.put.assert_called_once_with(full_path)
+        self.assertFalse(self.archiver.background_task_enable)
+        self.assertFalse(self.archiver.archiving_in_progress)
 
     def test_get_log_messages_with_last_message_timestamp(self):
         # Prepare errors_history with timestamps

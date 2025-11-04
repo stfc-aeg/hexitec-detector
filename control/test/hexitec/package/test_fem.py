@@ -770,6 +770,19 @@ class TestFem(unittest.TestCase):
         assert exc_info.type is HexitecFemError
         assert self.test_fem.fem.hardware_connected is False
 
+    def test_cam_disconnect_fails_struct_error(self):
+        """Test function handles struct error."""
+        import struct
+        self.test_fem.fem.disconnect = Mock()
+        self.test_fem.fem.disconnect.side_effect = struct.error()
+        self.test_fem.fem.parent.leak_fault_counter = 0
+
+        with pytest.raises(struct.error) as exc_info:
+            self.test_fem.fem.cam_disconnect()
+        assert exc_info.type is struct.error
+        assert self.test_fem.fem.hardware_connected is False
+        self.test_fem.fem.parent.leak_fault_counter == 1
+
     def test_cam_disconnect_fails_attribute_error(self):
         """Test function handles attribute error."""
         self.test_fem.fem.disconnect = Mock()
@@ -1151,6 +1164,18 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.vsr_list = vsr_list
         await self.test_fem.fem.initialise_system()
         assert self.test_fem.fem.status_error == "Failed to initialise camera: {}".format("E")
+        assert self.test_fem.fem.parent.software_state == "Error"
+
+    @patch('hexitec_vsr.VsrModule')
+    @async_test
+    async def test_initialise_system_handles_OSError(self, mocked_vsr_module):
+        """Test function handles OSError."""
+        mocked_vsr_module.stop_trigger_sm = Mock()
+        mocked_vsr_module.stop_trigger_sm.side_effect = OSError("E")
+        vsr_list = [mocked_vsr_module]
+        self.test_fem.fem.vsr_list = vsr_list
+        await self.test_fem.fem.initialise_system()
+        assert self.test_fem.fem.status_error == "Detector initialisation failed: {}".format("E")
         assert self.test_fem.fem.parent.software_state == "Error"
 
     @patch('hexitec_vsr.VsrModule')
