@@ -14,6 +14,7 @@ class GenerateConfigFiles():
 
     def __init__(self, param_tree, number_histograms, compression_type="none",
                  master_dataset="processed_frames", extra_datasets=[],
+                 stacked_plugin_selected=False,
                  live_view_selected=True, odin_path=None):
         """
         Initialize the GenerateConfigFiles object.
@@ -32,6 +33,7 @@ class GenerateConfigFiles():
         self.compression_type = compression_type
         self.master_dataset = master_dataset
         self.extra_datasets = extra_datasets
+        self.stacked_plugin_selected = stacked_plugin_selected
         self.live_view_selected = live_view_selected
         self.odin_path = odin_path
         # Work out number of rows and columns
@@ -225,7 +227,11 @@ class GenerateConfigFiles():
                 logging.debug("Plugin %s missing 'enable' setting!" % key)
                 raise Exception("Plugin %s missing 'enable' setting!" % key)
 
-        plugin_chain += ["summed_image", "stacked", "histogram"]
+        plugin_chain += ["summed_image"]
+        if self.stacked_plugin_selected:
+            plugin_chain += ["stacked"]
+        plugin_chain += ["histogram"]
+
         if self.live_view_selected:
             plugin_chain += ["lvframes"]
             plugin_chain += ["lvspectra"]
@@ -396,7 +402,7 @@ class GenerateConfigFiles():
                                 "blosc_shuffle": 0,
                                 "blosc_level": 4''' % self.compression_type
 
-        if 1:
+        if self.stacked_plugin_selected:
             # datatype is float for processed_frames, uint16 for raw_frames
             datatype = "float"
             dataset = "stacked_frames"
@@ -534,6 +540,7 @@ if __name__ == '__main__':  # pragma: no cover
                    'discrimination': {'enable': False, 'pixel_grid_size': 5},
                    'histogram': {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0,
                                  'max_frames_received': 10, 'pass_processed': True,
+                                 'selected_dataset': 'processed_frames',
                                  'pass_raw': True},
                    'lvframes': {'dataset_name': 'raw_frames', 'frame_frequency': 0,
                                 'live_view_socket_addr': 'tcp://127.0.0.1:5020', 'per_second': 2},
@@ -559,6 +566,7 @@ if __name__ == '__main__':  # pragma: no cover
     odin_path = cwd[:base_path_index - 1]
     gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="none",
                               master_dataset=master_dataset, extra_datasets=extra_datasets,
+                            #   stacked_plugin_selected=True,
                               odin_path=odin_path)
     s, e, ss, se = gcf.generate_config_files(0)
     # print(type(s), type(e), type(ss), type(se))

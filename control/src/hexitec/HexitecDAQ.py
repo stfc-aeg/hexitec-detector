@@ -100,6 +100,13 @@ class HexitecDAQ():
         self.bin_start = 0
         self.bin_width = 10.0
         self.number_histograms = int((self.bin_end - self.bin_start) / self.bin_width)
+        self.selected_dataset = "processed_frames"
+        if self.parent.operating_mode == "EPAC":
+            self.selected_dataset = "stacked_frames"
+            self.stacked_plugin_selected = True
+        elif self.parent.operating_mode == "NXCT":
+            self.selected_dataset = "processed_frames"
+            self.stacked_plugin_selected = False
 
         self.max_frames_received = 0
         self.pass_pixel_spectra = True
@@ -207,6 +214,7 @@ class HexitecDAQ():
                     "bin_end": (lambda: self.bin_end, self._set_bin_end),
                     "bin_start": (lambda: self.bin_start, self._set_bin_start),
                     "bin_width": (lambda: self.bin_width, self._set_bin_width),
+                    "selected_dataset": (lambda: self.selected_dataset, self._set_selected_dataset),
                     "max_frames_received": (lambda: self.max_frames_received,
                                             self._set_max_frames_received),
                     "pass_pixel_spectra": (lambda: self.pass_pixel_spectra,
@@ -1042,6 +1050,14 @@ class HexitecDAQ():
         self.transmit_adapter_request("live_histogram", command, payload,
                                       "Setting bin_width")
 
+    def _set_selected_dataset(self, selected_dataset):
+        """Update selected_dataset and datasets' histograms' dimensions."""
+        self.check_daq_acquiring_data("selected dataset")
+        if (selected_dataset != "processed_frames" and selected_dataset != "stacked_frames"):
+            raise ParameterTreeError("selected_dataset must be processed_frames or stacked_frames")
+        self.selected_dataset = selected_dataset
+        self.update_fp_configuration = True
+
     def update_datasets_frame_dimensions(self):
         """Update frames' datasets' dimensions."""
         for dataset in ["processed_frames", "raw_frames"]:
@@ -1214,6 +1230,7 @@ class HexitecDAQ():
                                            compression_type=self.compression_type,
                                            master_dataset=self.master_dataset,
                                            extra_datasets=self.extra_datasets,
+                                           stacked_plugin_selected=self.stacked_plugin_selected,
                                            live_view_selected=live_view_selected,
                                            odin_path=self.odin_path)
             try:

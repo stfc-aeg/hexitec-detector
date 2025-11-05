@@ -1178,6 +1178,16 @@ class TestDAQ(unittest.TestCase):
         with pytest.raises(ParameterTreeError, match="bin_width must be positive!"):
             self.test_daq.daq._set_bin_width(-1)
 
+    def test_set_selected_dataset(self):
+        """Test function sets selected datasets."""
+        selected_dataset = "processed_frames"
+        self.test_daq.daq._set_selected_dataset(selected_dataset)
+        assert selected_dataset == self.test_daq.daq.selected_dataset
+
+        match = "selected_dataset must be processed_frames or stacked_frames"
+        with pytest.raises(ParameterTreeError, match=match):
+            self.test_daq.daq._set_selected_dataset("wrong_frames")
+
     def test_update_number_histograms(self):
         """Update histograms' dimensions in the relevant datasets."""
         bin_start = 50

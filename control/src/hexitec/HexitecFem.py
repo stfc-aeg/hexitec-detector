@@ -727,7 +727,7 @@ class HexitecFem():
             self.calculate_frame_rate()
         self.duration = duration
         frames = self.duration * self.frame_rate
-        # # Ensure even number of frames
+        # Ensure even number of frames
         if frames % 2:
             frames = self.parent.round_to_even(frames)
         self.number_frames = int(round(frames))

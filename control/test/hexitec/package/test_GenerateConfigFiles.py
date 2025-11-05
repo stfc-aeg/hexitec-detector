@@ -55,6 +55,7 @@ class ObjectTestFixture(object):
         self.adapter = GenerateConfigFiles(param_tree, number_histograms, compression_type="blosc",
                                            master_dataset=master_dataset,
                                            extra_datasets=extra_datasets,
+                                           stacked_plugin_selected=True,
                                            live_view_selected=live_view_selected)
 
 

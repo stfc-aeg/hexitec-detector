@@ -180,7 +180,8 @@ class Hexitec():
     DATA_DIR_NAME = 'data_config'
     DEFAULT_DATA_DIR = '/hxt_sw/install/config/data/'
     PROCESSING_NODES = 'processing_nodes'
-    ODIN_CONTROL_NODE = "odin_control_node"
+    ODIN_CONTROL_NODE = 'odin_control_node'
+    OPERATING_MODE = 'operating_mode'
 
     def __init__(self, options):
         """Initialise the Hexitec object.
@@ -194,6 +195,7 @@ class Hexitec():
         processing_nodes = options.get(self.PROCESSING_NODES, "")
         self.processing_nodes = processing_nodes.replace(" ", "").split(",")
         self.odin_control_node = options.get(self.ODIN_CONTROL_NODE, "")
+        self.operating_mode = options.get(self.OPERATING_MODE, "NXCT")
 
         self.number_frames = options.get("acquisition_num_frames", defaults.number_frames)
         self.number_frames_to_request = self.number_frames

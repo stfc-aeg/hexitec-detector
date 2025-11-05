@@ -81,6 +81,8 @@ namespace FrameProcessor
       static const std::string CONFIG_RANK_OFFSET;
       /** Configuration constant for frames per trigger */
       static const std::string CONFIG_FRAMES_PER_TRIGGER;
+      /** Configuration constant for selected dataset */
+      static const std::string CONFIG_SELECTED_DATASET;
 
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
       std::string sensors_layout_str_;
@@ -131,6 +133,7 @@ namespace FrameProcessor
       void write_histograms_to_disk();
       bool end_of_acquisition_processed_;
       long long last_frame_number_;
+      std::string selected_dataset_;
       /// Debug only:
       int debugCounter;
   };
