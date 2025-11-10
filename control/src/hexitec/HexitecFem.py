@@ -165,6 +165,7 @@ class HexitecFem():
         self.enable_trigger_mode = False
         self.enable_trigger_input = False
         self.triggering_mode = "none"
+        self.triggering_frames_locked = True  # Lock triggering mode in GUI until configured
         self.triggering_frames = 10
         self.synchronisation_mode_enable = False
 
@@ -198,7 +199,8 @@ class HexitecFem():
                 "enable_trigger_mode": (lambda: self.enable_trigger_mode, self.set_enable_trigger_mode),
                 "enable_trigger_input": (lambda: self.enable_trigger_input, self.set_enable_trigger_input),
                 "triggering_mode": (lambda: self.triggering_mode, self.set_triggering_mode),
-                "triggering_frames": (lambda: self.triggering_frames, self.set_triggering_frames)
+                "triggering_frames": (lambda: self.triggering_frames, self.set_triggering_frames),
+                "triggering_frames_locked": (lambda: self.triggering_frames_locked, None)
             },
             "system_initialised": (lambda: self.system_initialised, None),
             "firmware_date": (lambda: self.firmware_date, None),
@@ -253,7 +255,6 @@ class HexitecFem():
                 self.farm_server_2_mac = config.get("farm_server_2_mac")
                 self.farm_camera_2_ip = config.get("farm_camera_2_ip")
                 self.farm_camera_2_mac = config.get("farm_camera_2_mac")
-                # self.display_debugging(f"farm_camera_1_ip: {self.farm_camera_1_ip} farm_camera_2_ip: {self.farm_camera_2_ip}")
 
                 self.farm_target_ip = config.get("farm_target_ip")
                 self.farm_target_mac = config.get("farm_target_mac")
@@ -459,7 +460,21 @@ class HexitecFem():
                 else:
                     self.flag_error(f"Farm Mode IP {addresses[i]} not in Farm Mode config")
                 macs.append(mac)
-            ips1, ips2, macs1, macs2, ports1, ports2 = self.determine_farm_mode_config(addresses, macs, ports, self.triggering_frames)
+
+            if self.triggering_mode == "none":
+                if self.parent.operating_mode == "NXCT":
+                    ips1, ips2, macs1, macs2, ports1, ports2 = \
+                        self.nxct_untriggering_farm_mode_config(addresses, macs, ports)
+                else:
+                    ips1, ips2, macs1, macs2, ports1, ports2 = \
+                        self.epac_untriggering_farm_mode_config(addresses, macs, ports)
+            else:
+                if self.parent.operating_mode == "NXCT":
+                    ips1, ips2, macs1, macs2, ports1, ports2 = \
+                        self.nxct_triggering_farm_mode_config(addresses, macs, ports, self.triggering_frames)
+                else:
+                    ips1, ips2, macs1, macs2, ports1, ports2 = \
+                        self.epac_triggering_farm_mode_config(addresses, macs, ports, self.triggering_frames)
 
             lut_entries = len(ips1)
             self.farm_mode_targets = lut_entries * 2
@@ -489,8 +504,16 @@ class HexitecFem():
             self.hardware_busy = False
             self.flag_error("Farm Mode Config failed", str(e))
 
-    def determine_farm_mode_config(self, ip_addresses, macs, ports, frames_per_trigger):
-        """Determine Farm Mode configuration, based on Odin instances and frames per trigger"""
+    def nxct_triggering_farm_mode_config(self, ip_addresses, macs, ports, frames_per_trigger):
+        """Determine Farm Mode configuration, based on NXCT instances and frames per trigger.
+
+        Round-robin, N frames (per trigger) to each NXCT instance."""
+        return self.nxct_untriggering_farm_mode_config(ip_addresses, macs, ports)
+
+    def epac_triggering_farm_mode_config(self, ip_addresses, macs, ports, frames_per_trigger):
+        """Determine Farm Mode configuration, based on Odin instances and frames per trigger.
+
+        Round-robin, N frames (per trigger) to each Odin instance."""
         lut_entries = frames_per_trigger * (len(ip_addresses) // 2)
         ip_lut1 = []
         ip_lut2 = []
@@ -527,6 +550,58 @@ class HexitecFem():
                 current_instance += 2
                 offset += 1
             index += 1
+        return ip_lut1, ip_lut2, mac_lut1, mac_lut2, port_lut1, port_lut2
+
+    def nxct_untriggering_farm_mode_config(self, ip_addresses, macs, ports):
+        """Determine NXCT's Farm Mode configuration, untriggered mode.
+
+        Round-robin, one frame to Odin instance."""
+        lut_entries = len(ip_addresses)
+        ip_lut1 = []
+        ip_lut2 = []
+        mac_lut1 = []
+        mac_lut2 = []
+        port_lut1 = []
+        port_lut2 = []
+        index = 0
+        while index < lut_entries:
+            if (index % 2) == 0:
+                ip_lut1.append(ip_addresses[index])
+                mac_lut1.append(macs[index])
+                port_lut1.append(ports[index])
+            else:
+                ip_lut2.append(ip_addresses[index])
+                mac_lut2.append(macs[index])
+                port_lut2.append(ports[index])
+            index += 1
+        return ip_lut1, ip_lut2, mac_lut1, mac_lut2, port_lut1, port_lut2
+
+    def epac_untriggering_farm_mode_config(self, ip_addresses, macs, ports):
+        """Determine EPAC's Farm Mode configuration, untriggered mode.
+
+        Round-robin, one frame to Odin instance."""
+        lut_entries = len(ip_addresses)
+        ip_lut1 = []
+        ip_lut2 = []
+        mac_lut1 = []
+        mac_lut2 = []
+        port_lut1 = []
+        port_lut2 = []
+        index = 0
+        added_entries = 0
+        while index < lut_entries:
+            if (added_entries % 2) == 0:
+                print(f" {index} Adding to LUT1: IP {ip_addresses[index]}, Port {ports[index]}")
+                ip_lut1.append(ip_addresses[index])
+                mac_lut1.append(macs[index])
+                port_lut1.append(ports[index])
+            else:
+                print(f" {index} Adding to LUT2: IP {ip_addresses[index]}, Port {ports[index]}")
+                ip_lut2.append(ip_addresses[index])
+                mac_lut2.append(macs[index])
+                port_lut2.append(ports[index])
+            index += 2
+            added_entries += 1
         return ip_lut1, ip_lut2, mac_lut1, mac_lut2, port_lut1, port_lut2
 
     def populate_lists(self, entries):
@@ -1586,6 +1661,7 @@ class HexitecFem():
             self.parent.daq._set_max_frames_received(0)
             # self.parent.daq._set_max_frames_received(self.triggering_frames)
             self.parent.daq.pass_pixel_spectra = True
+            self.triggering_frames_locked = True
         elif triggering_mode == "triggered":
             self.enable_trigger_input = True
             self.enable_trigger_mode = True
@@ -1595,9 +1671,20 @@ class HexitecFem():
             # TODO set_max_frames_received redundant for EPAC configuration?
             self.parent.daq._set_max_frames_received(0)
             self.parent.daq.pass_pixel_spectra = False
+            self.triggering_frames_locked = False
         # Triggering mode changed, must reinitialise system
         self.system_initialised = False
         self.triggering_mode = triggering_mode
+        if self.triggering_mode == "none":
+            self.parent.daq.stacked_plugin_selected = False
+            self.parent.daq.selected_dataset = "processed_frames"
+        else:
+            if self.parent.operating_mode == "EPAC":
+                self.parent.daq.stacked_plugin_selected = True
+                self.parent.daq.selected_dataset = "stacked_frames"
+            else:
+                self.parent.daq.stacked_plugin_selected = False
+                self.parent.daq.selected_dataset = "processed_frames"
 
     def set_triggering_frames(self, triggering_frames):
         """Sets the number of hardware frames when running in triggering mode.

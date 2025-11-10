@@ -48,6 +48,7 @@ var lvDatasetSelect = document.querySelector('#lv_dataset_select').disabled;
 var offsetsButton = document.querySelector('#offsetsButton').disabled;
 var modeRadio1 = document.querySelector('#camera-mode-radio1').disabled;
 var modeRadio2 = document.querySelector('#camera-mode-radio2').disabled;
+var triggering_frames_locked = false;
 
 var framesTextStateUnlocked;
 var durationTextStateUnlocked;
@@ -488,7 +489,14 @@ function toggle_ui_elements(bBool) {
                 document.querySelector('#frames-text').disabled = bBool;
         }
         document.querySelector('#triggering-mode-text').disabled = bBool;
-        document.querySelector('#triggering-frames-text').disabled = bBool;
+        if (triggering_frames_locked === true)
+        {
+            document.querySelector('#triggering-frames-text').disabled = true;
+        }
+        else
+        {
+            document.querySelector('#triggering-frames-text').disabled = bBool;
+        }
     } catch(error) {
         console.log("toggle_ui_elements() Error: " + error);
     }
@@ -503,8 +511,6 @@ function update_ui_with_leak_detector_settings(result) {
     // var results = result["value"];
     // var results = result["leak"];   // Leak Detector faked
     // console.log("result['leak']: " + JSON.stringify(results, null, 4) );
-    // console.log("result['leak']['system']: " + JSON.stringify(results['system'], null, 4) );
-    // var system = result["leak"]["system"];
 
     var system = result["leak"]["system"];
     var outlets = system["outlets"];
@@ -603,7 +609,6 @@ function poll_fem() {
 
                     // Note software state
                     const new_software_state = result["detector"]["software_state"];
-                    // console.log("SW State was: " + software_state + " now is: " + new_software_state);
                     if (new_software_state !== software_state)
                     {
                         // If state just became Interlocked or Acquiring, lock GUI processing options/buttons
@@ -618,13 +623,15 @@ function poll_fem() {
                     var adapter_leak = result["detector"]["status"]["leak"];
                     adapter_leak_fault = adapter_leak["fault"];
                     adapter_leak_warning = adapter_leak["warning"];
-                    // console.log("poll_fem, ADP F: " + adapter_leak_fault + " W: " + adapter_leak_warning);
 
                     const fem = result["detector"]["fem"]
                     const adapter_status = result["detector"]["status"] // adapter.py's status
                     const hardware_connected = fem["hardware_connected"];
                     const hardware_busy = fem["hardware_busy"];
                     const system_initialised = fem["system_initialised"];
+
+                    // const fem = result["detector"]["fem"];
+                    triggering_frames_locked = fem.triggering.triggering_frames_locked;
 
                     const daq_in_progress = result["detector"]["daq"]["status"]["in_progress"];
 
@@ -722,10 +729,6 @@ function poll_fem() {
                     var frame_rate = fem["frame_rate"];
                     document.querySelector('#frame_rate').innerHTML = frame_rate.toFixed(2);
 
-                    // console.log(hardware_busy + " " + daq_in_progress + 
-                    //             " <= hw_busy, daq_in_prog " + "   %_compl: "
-                    //             + " msg: " + adapter_status["status_message"]);
-
                     var acquire_start = fem_diagnostics["acquire_start_time"];
                     var acquire_stop = fem_diagnostics["acquire_stop_time"];
                     var acquire_time = fem_diagnostics["acquire_time"];
@@ -762,7 +765,6 @@ function poll_fem() {
                     let idx = 0;
                     for (var i = 0; i < numVSRs; i++) {
                         idx = i + 1;
-                        // console.log("       [" + i + "] = " + fem['vsr_humidity_list'][i]);
                         document.querySelector('#vsr' + idx + '_humidity').innerHTML = fem["vsr_humidity_list"][i].toFixed(2);
                         document.querySelector('#vsr' + idx + '_ambient').innerHTML = fem["vsr_ambient_list"][i].toFixed(2);
                         document.querySelector('#vsr' + idx + '_asic1').innerHTML = fem["vsr_asic1_list"][i].toFixed(2);

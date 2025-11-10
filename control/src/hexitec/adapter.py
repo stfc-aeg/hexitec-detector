@@ -196,6 +196,7 @@ class Hexitec():
         self.processing_nodes = processing_nodes.replace(" ", "").split(",")
         self.odin_control_node = options.get(self.ODIN_CONTROL_NODE, "")
         self.operating_mode = options.get(self.OPERATING_MODE, "NXCT")
+        # print("Operating mode: {}".format(self.operating_mode));time.sleep(2);#;import sys;sys.exit(0)
 
         self.number_frames = options.get("acquisition_num_frames", defaults.number_frames)
         self.number_frames_to_request = self.number_frames
@@ -602,6 +603,7 @@ class Hexitec():
         try:
             not_triggered = False
             if self.fem.triggering_mode == "none":
+                self.daq.stacked_plugin_selected = False
                 not_triggered = True
             with open(self.odin_config_file, "r") as f:
                 config = json.load(f)

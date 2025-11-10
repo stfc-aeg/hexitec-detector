@@ -538,7 +538,7 @@ class TestFem(unittest.TestCase):
         port_lut2 = [61651, 61651, 61650, 61650]
 
         ip1, ip2, mac1, mac2, port1, port2 = \
-            self.test_fem.fem.determine_farm_mode_config(ip_addresses, macs, ports, frames_per_trigger)
+            self.test_fem.fem.epac_triggering_farm_mode_config(ip_addresses, macs, ports, frames_per_trigger)
         assert ip1 == ip_lut1
         assert ip2 == ip_lut2
         assert mac1 == mac_lut1
