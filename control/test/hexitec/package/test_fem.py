@@ -195,7 +195,7 @@ class TestFem(unittest.TestCase):
     def test_get_log_messages_display_new_messages(self):
         """Test the function displays new messages."""
         datestamp = self.test_fem.fem.create_iso_timestamp()
-        log_messages = [(datestamp, 'Initialised OK.')]
+        log_messages = [(datestamp, 'Operating mode: NXCT.')]
         self.test_fem.fem.last_message_timestamp = "something"
         self.test_fem.fem.get_log_messages("")
         # Test part of timestamp, as milliseconds will not agree anyway
@@ -205,7 +205,7 @@ class TestFem(unittest.TestCase):
     def test_get_log_messages_display_all_messages(self):
         """Test the function displays all messages."""
         datestamp = self.test_fem.fem.create_iso_timestamp()
-        log_messages = [(datestamp, 'Initialised OK.')]
+        log_messages = [(datestamp, 'Operating mode: NXCT.')]
         self.test_fem.fem.get_log_messages("")
         # Test part of timestamp, as milliseconds will not agree anyway
         assert self.test_fem.fem.log_messages[0][:-4] == log_messages[0][:-4]

@@ -151,6 +151,7 @@ class HexitecFem():
         # Track history of errors
         self.errors_history = []
         timestamp = self.create_iso_timestamp()
+        self.errors_history.append([timestamp, f"Operating mode: {self.parent.operating_mode}."])
         self.errors_history.append([timestamp, "Initialised OK."])
         self.last_message_timestamp = ''
         self.log_messages = [timestamp, "initialised OK"]
@@ -591,12 +592,10 @@ class HexitecFem():
         added_entries = 0
         while index < lut_entries:
             if (added_entries % 2) == 0:
-                print(f" {index} Adding to LUT1: IP {ip_addresses[index]}, Port {ports[index]}")
                 ip_lut1.append(ip_addresses[index])
                 mac_lut1.append(macs[index])
                 port_lut1.append(ports[index])
             else:
-                print(f" {index} Adding to LUT2: IP {ip_addresses[index]}, Port {ports[index]}")
                 ip_lut2.append(ip_addresses[index])
                 mac_lut2.append(macs[index])
                 port_lut2.append(ports[index])

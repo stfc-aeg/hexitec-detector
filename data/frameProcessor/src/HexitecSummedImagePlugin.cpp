@@ -215,7 +215,10 @@ namespace FrameProcessor
   void HexitecSummedImagePlugin::process_end_of_acquisition()
   {
     LOG4CXX_DEBUG_LEVEL(2, logger_, "End of acquisition frame received, pushing dataset");
-    this->push(summed_image_);
+    if (frames_processed_ > 0)
+    {
+      this->push(summed_image_);
+    }
     reset_frames_numbering();
     start_of_acquisition_ = true;
   }

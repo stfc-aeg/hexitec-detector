@@ -342,14 +342,16 @@ namespace FrameProcessor
   */
   void HexitecHistogramPlugin::process_end_of_acquisition()
   {
-    LOG4CXX_DEBUG_LEVEL(1, logger_,
-      " EoA; Pushing histograms, summed_spectra frame " << summed_spectra_->get_frame_number() <<
-      " pixel_spectra frame " << pixel_spectra_->get_frame_number());
-
-    pass_pixel_spectra_ = true;
-    write_histograms_to_disk();
-    pass_pixel_spectra_ = false;
-    reset_histogram_numbering();
+    if (frames_processed_ > 0)
+    {
+      LOG4CXX_DEBUG_LEVEL(2, logger_,
+        " EoA; Pushing histograms, summed_spectra frame " << summed_spectra_->get_frame_number() <<
+        " pixel_spectra frame " << pixel_spectra_->get_frame_number());
+      pass_pixel_spectra_ = true;
+      write_histograms_to_disk();
+      pass_pixel_spectra_ = false;
+      reset_histogram_numbering();
+    }
   }
 
   /**
