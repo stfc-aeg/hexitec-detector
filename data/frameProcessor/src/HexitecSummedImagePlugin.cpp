@@ -259,6 +259,7 @@ namespace FrameProcessor
         // Apply algorithm
         apply_summed_image_algorithm(static_cast<float *>(input_ptr),
           static_cast<uint32_t *>(output_ptr));
+        frames_processed_ += 1;
 
         LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing " << dataset << ", frame number "<< frame_number);
         this->push(frame);
