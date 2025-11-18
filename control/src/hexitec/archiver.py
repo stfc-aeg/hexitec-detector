@@ -143,6 +143,9 @@ class Archiver():
         # Parse options
         self.local_dir = options.get('local_dir', "/")
         self.bandwidth_limit = options.get('bandwidth_limit', None)
+        self.remove_source_files = bool(options.get('remove_source_files', None))
+        logging.debug(f"Configuration: local_dir={self.local_dir}, bandwidth_limit={self.bandwidth_limit}")
+        logging.debug(f"Configuration: remove_source_files={self.remove_source_files}")
 
         # Store initialisation time
         self.init_time = time.time()
@@ -178,6 +181,7 @@ class Archiver():
             'local_dir': (lambda: self.local_dir, self.set_local_dir),
             'log_messages': (lambda: self.log_messages, None),
             'odin_version': version_info,
+            'remove_source_files': (lambda: self.remove_source_files, None),
             'server_uptime': (self.get_server_uptime, None),
             'transfer_progress': (lambda: self.transfer_progress, None),
             'files_archived': (lambda: self.number_files_archived, None),
