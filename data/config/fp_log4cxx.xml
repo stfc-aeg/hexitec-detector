@@ -4,7 +4,7 @@
  <!-- Output the log message to system console -->
  <appender name="ApplicationConsoleAppender" class="org.apache.log4j.ConsoleAppender">
   <param name="Target" value="System.out" />
-  <param name="Threshold" value="ALL"/>
+  <param name="Threshold" value="ERROR"/>
   <layout class="org.apache.log4j.PatternLayout">
    <!-- <param name="ConversionPattern" value="%d{HH:mm:ss,SSS} %-14c %-5p (%F:%L) - %m%n"/> -->
    <param name="ConversionPattern" value="%d{HH:mm:ss,SSS}  %-14c %-5p - %m%n" />
@@ -14,7 +14,7 @@
  <appender name="FrameProcessorAppender" class="org.apache.log4j.FileAppender">
   <param name="file" value="/tmp/frameProcessor.log" />
   <param name="append" value="false" />
-  <param name="Threshold" value="INFO"/>
+  <param name="Threshold" value="ERROR"/>
   <layout class="org.apache.log4j.PatternLayout">
    <param name="ConversionPattern" value="%d{HH:mm:ss,SSS} %-16c %-5p (%F:%L) - %m%n" />
   </layout>
