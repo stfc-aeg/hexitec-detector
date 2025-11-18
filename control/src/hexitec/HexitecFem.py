@@ -1656,9 +1656,7 @@ class HexitecFem():
         if triggering_mode == "none":
             self.enable_trigger_input = False
             self.enable_trigger_mode = False
-            # TODO Restore this line:
             self.parent.daq._set_max_frames_received(0)
-            # self.parent.daq._set_max_frames_received(self.triggering_frames)
             self.parent.daq.pass_pixel_spectra = True
             self.triggering_frames_locked = True
         elif triggering_mode == "triggered":
@@ -1667,7 +1665,6 @@ class HexitecFem():
             # Number of Frames to near infinity (>5 days of acquisition)
             self.parent.set_number_frames(4294967290)
             self.parent.set_duration_enable(False)
-            # TODO set_max_frames_received redundant for EPAC configuration?
             self.parent.daq._set_max_frames_received(0)
             self.parent.daq.pass_pixel_spectra = False
             self.triggering_frames_locked = False

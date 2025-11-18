@@ -293,7 +293,6 @@ class LiveViewer(object):
         :return: The rendered image binary data, encoded into a string so it can be returned
         by a GET request.
         """
-        # logging.debug("  Expected {} got {}".format(self.number_bins, len(self.img_data)))
         if self.image_dims == 1:
             self.recalculate_bins()
             # Handle summed_spectra (One dimensional) dataset
@@ -302,13 +301,14 @@ class LiveViewer(object):
             plt.plot(xpoints, self.img_data)
             if self.calibration_enable:
                 ax.set_xlabel('Energy')
+                plt.xlim(0, self.bin_end)
             else:
                 ax.set_xlabel('Number of bins')
+                plt.xlim(0, self.number_bins)
             ax.set_ylabel('Hits')
             timestamp = '%s' % (datetime.now().strftime('%Y%m%d_%H%M%S.%f'))
             ax.set_title(r'Summed_spectra ({})'.format(timestamp))
             # Enforcing plot limits redundant?
-            plt.xlim(0, self.number_bins)
             ymin = self.img_data.min()
             ymax = self.img_data.max()
             ymax = ymax + round(ymax * 0.1)

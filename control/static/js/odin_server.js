@@ -847,7 +847,7 @@ function poll_fem() {
             // Polls Proxy adapter for leak detector information
             hexitec_endpoint.get_url('/api/' + api_version + '/proxy/')
                 .then(result => {
-                    // update_ui_with_leak_detector_settings(result)
+                    update_ui_with_leak_detector_settings(result)
                 })
                 .catch(error => {
                     document.querySelector('#odin-control-error').innerHTML = "Polling Leak: " + error.message;

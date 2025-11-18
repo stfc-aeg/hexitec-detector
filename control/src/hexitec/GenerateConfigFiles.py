@@ -566,7 +566,7 @@ if __name__ == '__main__':  # pragma: no cover
     odin_path = cwd[:base_path_index - 1]
     gcf = GenerateConfigFiles(param_tree, number_histograms, compression_type="none",
                               master_dataset=master_dataset, extra_datasets=extra_datasets,
-                            #   stacked_plugin_selected=True,
+                              # stacked_plugin_selected=True,
                               odin_path=odin_path)
     s, e, ss, se = gcf.generate_config_files(0)
     # print(type(s), type(e), type(ss), type(se))

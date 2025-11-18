@@ -1445,8 +1445,26 @@ class TestFem(unittest.TestCase):
 
         self.test_fem.fem.parent.daq.check_daq_acquiring_data.assert_called_with("trigger mode")
         assert self.test_fem.fem.triggering_mode == "none"
+        assert self.test_fem.fem.parent.daq.stacked_plugin_selected is False
+        assert self.test_fem.fem.parent.daq.selected_dataset == "processed_frames"
         assert self.test_fem.fem.enable_trigger_input is False
         assert self.test_fem.fem.enable_trigger_mode is False
+        assert self.test_fem.fem.system_initialised is False
+
+    def test_set_triggering_mode_triggered_selected_epac(self):
+        """Test function sets triggering mode ok."""
+        self.test_fem.fem.parent.daq.check_daq_acquiring_data = Mock()
+        self.test_fem.fem.parent.operating_mode = "EPAC"
+        self.test_fem.fem.system_initialised = True
+        self.test_fem.fem.triggering_mode = "none"
+        self.test_fem.fem.set_triggering_mode("triggered")
+
+        self.test_fem.fem.parent.daq.check_daq_acquiring_data.assert_called_with("trigger mode")
+        assert self.test_fem.fem.triggering_mode == "triggered"
+        assert self.test_fem.fem.parent.daq.stacked_plugin_selected is True
+        assert self.test_fem.fem.parent.daq.selected_dataset == "stacked_frames"
+        assert self.test_fem.fem.enable_trigger_input is True
+        assert self.test_fem.fem.enable_trigger_mode is True
         assert self.test_fem.fem.system_initialised is False
 
     def test_set_triggering_mode_handles_undefined_mode(self):
