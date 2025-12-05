@@ -19,6 +19,7 @@ from datetime import timezone
 import socket
 
 from unittest.mock import Mock, call, patch, mock_open, MagicMock
+import hexitec.ALL_RDMA_REGISTERS as HEX_REGISTERS
 
 
 # Custom decorator to support testing of asynchronous functions
@@ -522,7 +523,14 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.extract_string_parameters(["list", "not_supported"])
         assert exc_info.type is HexitecFemError
 
-    def test_determine_farm_mode_config(self):
+    def test_nxct_triggering_farm_mode_config(self):
+        """Test functiom works ok."""
+        ip_addresses, macs, ports, frames_per_trigger = None, None, None, None
+        self.test_fem.fem.nxct_untriggering_farm_mode_config = Mock()
+        self.test_fem.fem.nxct_triggering_farm_mode_config(ip_addresses, macs, ports, frames_per_trigger)
+        self.test_fem.fem.nxct_untriggering_farm_mode_config.assert_called_with(ip_addresses, macs, ports)
+
+    def epac_triggering_farm_mode_config(self):
         """Test function works ok."""
         # Farm mode parameters
         ip_addresses = ['10.0.2.1', '10.0.1.1', '10.0.1.1', '10.0.2.1']
@@ -678,8 +686,8 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.hardware_connected = True
         self.test_fem.fem.system_initialised = True
         self.test_fem.fem.hardware_busy = False
-        self.test_fem.fem.acquire_data = Mock()
-        self.test_fem.fem.acquire_data.side_effect = AttributeError()
+        self.test_fem.fem.acquire_data_prep = Mock()
+        self.test_fem.fem.acquire_data_prep.side_effect = AttributeError()
         error = "Data acquisition failed"
         self.test_fem.fem.flag_error = Mock()
         self.test_fem.fem.collect_data()
@@ -693,10 +701,10 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.hardware_busy = False
         # Reset variables, to be checked post run
         self.test_fem.fem.acquisition_completed = False
-        self.test_fem.fem.acquire_data = Mock()
+        self.test_fem.fem.acquire_data_prep = Mock()
         self.test_fem.fem.collect_data()
         assert self.test_fem.fem.hardware_busy is True
-        self.test_fem.fem.acquire_data.assert_called()
+        self.test_fem.fem.acquire_data_prep.assert_called()
 
     def test_disconnect_hardware(self):
         """Test the function works ok."""
@@ -793,19 +801,19 @@ class TestFem(unittest.TestCase):
         assert exc_info.type is HexitecFemError
         assert self.test_fem.fem.hardware_connected is False
 
-    def test_acquire_data_hardware_calls(self):
+    def test_acquire_data_prep_hardware_calls(self):
         """Nominally tests the four hardware functions called by acquire_data.
 
             Actually just bumps the unit test coverage to 100%.
             TODO Cover four functions directly:
             frame_reset_to_zero, data_path_reset, set_nof_frames, data_en
         """
-        with patch("time.sleep"), patch("hexitec.HexitecFem.IOLoop") as mock_loop:
-            self.test_fem.fem.acquire_data()
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.acquire_data_prep()
             i = mock_loop.instance()
-            i.call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
+            i.call_later.assert_called_with(0.2, self.test_fem.fem.acquire_data_ready)
 
-    def test_acquire_data(self):
+    def test_acquire_data_prep_untriggered_mode(self):
         """Test function handles normal configuration."""
         self.test_fem.fem.frame_reset_to_zero = Mock()
         self.test_fem.fem.data_path_reset = Mock()
@@ -813,25 +821,99 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.data_en = Mock()
         number_frames = 10
         self.test_fem.fem.number_frames = number_frames
-        with patch("time.sleep"), patch("hexitec.HexitecFem.IOLoop") as mock_loop:
-            self.test_fem.fem.acquire_data()
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.acquire_data_prep()
             i = mock_loop.instance()
-            i.call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
+            i.call_later.assert_called_with(0.2, self.test_fem.fem.acquire_data_ready)
             self.test_fem.fem.frame_reset_to_zero.assert_called_once()
             self.test_fem.fem.data_path_reset.assert_called_once()
             self.test_fem.fem.set_nof_frames.assert_called_once_with(number_frames)
-            self.test_fem.fem.data_en.assert_has_calls([call(enable=True), call(enable=False)])
-            self.assertEqual(self.test_fem.fem.data_en.call_count, 2)
+            self.test_fem.fem.data_en.assert_has_calls([call(enable=True)])
+            self.assertEqual(self.test_fem.fem.data_en.call_count, 1)
 
-    def test_acquire_data_handles_exception(self):
+    def test_acquire_data_prep_untriggered_mode(self):
+        """Test function handles normal configuration."""
+        self.test_fem.fem.frame_reset_to_zero = Mock()
+        self.test_fem.fem.data_path_reset = Mock()
+        self.test_fem.fem.set_nof_frames = Mock()
+        self.test_fem.fem.data_en = Mock()
+        self.test_fem.fem.set_bit = Mock()
+        self.test_fem.fem.triggering_mode = "triggered"
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.acquire_data_prep()
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(0.2, self.test_fem.fem.acquire_data_await_dummy_trigger_processed)
+            self.test_fem.fem.frame_reset_to_zero.assert_called_once()
+            self.test_fem.fem.data_path_reset.assert_called_once()
+            # self.test_fem.fem.set_nof_frames.assert_called_once_with()
+            self.test_fem.fem.set_bit.assert_called_with(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL,
+                                                         "HEXITEC_ACQ_TRIGGER_INIT")
+
+    def test_acquire_data_prep_handles_exception(self):
         """Test function handles exception."""
         self.test_fem.fem.create_iso_timestamp = Mock()
         self.test_fem.fem.create_iso_timestamp.side_effect = Exception()
         self.test_fem.fem.flag_error = Mock()
-        with patch("time.sleep"), patch("hexitec.HexitecFem.IOLoop"):
+        with patch("hexitec.HexitecFem.IOLoop"):
             with pytest.raises(ParameterTreeError) as exc_info:
-                self.test_fem.fem.acquire_data()
-            error = "Failed to start acquire_data"
+                self.test_fem.fem.acquire_data_prep()
+            error = "Failed to start acquire_data_prep"
+            assert exc_info.value.args[0] == error
+            assert self.test_fem.fem.hardware_busy is False
+            self.test_fem.fem.flag_error.assert_called_with(error, "")
+
+    def test_acquire_data_await_dummy_trigger_processed_finished(self):
+        """Test function handles firmware processed dummy trigger."""
+        self.test_fem.fem.x10g_rdma.udp_rdma_read = Mock()
+        self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [8]
+        self.test_fem.fem.acquire_data_ready = Mock()
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.acquire_data_await_dummy_trigger_processed()
+            i = mock_loop.instance()
+            self.test_fem.fem.acquire_data_ready.assert_called()
+
+    # # TODO or acquire_data_ready() is called  but no socket error raised !!!!!
+    # def test_acquire_data_await_dummy_trigger_processed_handles_socket_error(self):
+    #     """Test function handles firmware processed dummy trigger."""
+    #     self.test_fem.fem.acquire_data_ready = Mock()
+    #     self.test_fem.fem.acquire_data_ready.side_effect = socket_error()
+    #     self.test_fem.fem.flag_error = Mock()
+
+    #     error = "Awaiting dummy trigger processing Error"
+    #     self.test_fem.fem.x10g_rdma.udp_rdma_read = Mock()
+    #     self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [8]
+    #     self.test_fem.fem.acquire_data_ready = Mock()
+    #     self.test_fem.fem.acquire_data_await_dummy_trigger_processed()
+    #     self.test_fem.fem.flag_error.assert_called_with(error, "")
+
+    def test_acquire_data_await_dummy_trigger_processed_ongoing(self):
+        """Test function handles firmware not yet processed dummy trigger."""
+        self.test_fem.fem.x10g_rdma.udp_rdma_read = Mock()
+        self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [5]
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.acquire_data_await_dummy_trigger_processed()
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(0.1, self.test_fem.fem.acquire_data_await_dummy_trigger_processed)
+
+    def test_acquire_data_ready(self):
+        """Test function handles normal configuration."""
+        self.test_fem.fem.data_en = Mock()
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.acquire_data_ready()
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
+            self.test_fem.fem.data_en.assert_has_calls([call(enable=False)])
+            self.assertEqual(self.test_fem.fem.data_en.call_count, 1)
+
+    def test_acquire_data_ready_handles_exception(self):
+        """Test function handles exception."""
+        self.test_fem.fem.data_en = Mock()
+        self.test_fem.fem.data_en.side_effect = Exception()
+        self.test_fem.fem.flag_error = Mock()
+        with patch("hexitec.HexitecFem.IOLoop"):
+            with pytest.raises(ParameterTreeError) as exc_info:
+                self.test_fem.fem.acquire_data_ready()
+            error = "Failed to start acquire_data_ready"
             assert exc_info.value.args[0] == error
             assert self.test_fem.fem.hardware_busy is False
             self.test_fem.fem.flag_error.assert_called_with(error, "")

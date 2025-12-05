@@ -910,7 +910,7 @@ class HexitecFem():
         try:
             self.hardware_busy = True
             self._set_status_message("Acquiring data..")
-            self.acquire_data()
+            self.acquire_data_prep()
         except Exception as e:
             error = "Data acquisition failed"
             self.flag_error(error, str(e))
@@ -979,7 +979,7 @@ class HexitecFem():
             raise HexitecFemError("%s; %s" % (e, "No active connection"))
         self.system_initialised = False
 
-    def acquire_data(self):
+    def acquire_data_prep(self):
         """Acquire data, poll fem for completion."""
         try:
             logging.info("Initiate Data Capture")
@@ -998,7 +998,54 @@ class HexitecFem():
 
             logging.debug("Enable data")
             self.data_en(enable=True)
-            time.sleep(0.2)
+            # TODO Just EPAC triggered mode, or NXCT also?
+            # EPAC triggered mode,  firmware to handle dummy trigger
+            # if self.parent.operating_mode == "EPAC":
+            if self.triggering_mode == "triggered":
+                # Using this helper function is okay: ?
+                self.set_bit(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL, "HEXITEC_ACQ_TRIGGER_INIT")
+                # Alternatively, direct RDMA write: ? Although syntax..?
+                # self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_LOWER['addr'],
+                #                             data=0x0, burst_len=1)
+                IOLoop.instance().call_later(0.2, self.acquire_data_await_dummy_trigger_processed)
+            else:
+                # untriggered mode, don't need handle dummy trigger
+                IOLoop.instance().call_later(0.2, self.acquire_data_ready)
+        except Exception as e:
+            error = "Failed to start acquire_data_prep"
+            self.flag_error(error, str(e))
+            self.hardware_busy = False
+            self.parent.daq.in_progress = False
+            raise ParameterTreeError(error) from None
+
+    def acquire_data_await_dummy_trigger_processed(self):
+        """Wait until dummy trigger has been processed, before starting data acquisition."""
+        try:
+            # Check whether dummy trigger has been processed
+            # TODO Will "HEXITEC_ACQ_FALSE_TRIGGER_DONE – is the flag to be polled" be added here?
+
+            status = \
+                self.x10g_rdma.udp_rdma_read(
+                    address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
+                    burst_len=1)[0]
+
+            # TODO Check correct bitmask and value here??? Likely higher than 8..
+            if (status & 0x8) == 8:
+                # Dummy trigger processed, start acquisition
+                logging.debug("Dummy trigger processed, starting acquisition")
+                self.acquire_data_ready()
+            else:
+                # Not yet processed
+                IOLoop.instance().call_later(0.1, self.acquire_data_await_dummy_trigger_processed)
+        except socket_error as e:
+            self.flag_error("Awaiting dummy trigger processing Error", str(e))
+            self.hardware_connected = False
+            self.hardware_busy = False
+ 
+    def acquire_data_ready(self):
+        """Acquisition can begin when data enable deasserted."""
+        try:
+            # TODO Could ve more than 0.2 s delay until data_en() deasserted???
 
             # Stop data flow (free acquisition mode), reset setting if number of frames mode
             logging.debug("Disable data")
@@ -1006,7 +1053,7 @@ class HexitecFem():
 
             IOLoop.instance().call_later(0.1, self.check_acquire_finished)
         except Exception as e:
-            error = "Failed to start acquire_data"
+            error = "Failed to start acquire_data_ready"
             self.flag_error(error, str(e))
             self.hardware_busy = False
             self.parent.daq.in_progress = False
