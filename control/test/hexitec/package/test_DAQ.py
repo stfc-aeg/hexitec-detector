@@ -962,7 +962,7 @@ class TestDAQ(unittest.TestCase):
                     "eoa_processed": False
                 }
             }
-            ]
+        ]
         assert return_value == config
 
     def test_get_adapter_config_key_error(self):

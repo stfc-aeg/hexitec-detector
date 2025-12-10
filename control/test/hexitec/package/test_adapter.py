@@ -986,7 +986,6 @@ class TestDetector(unittest.TestCase):
 
         self.test_adapter.detector.daq.prepare_daq.assert_called_with(number_frames)
         assert self.test_adapter.detector.daq.in_error is False
-        assert self.test_adapter.detector.software_state == "Acquiring"
 
     def test_detector_start_acquisition_handles_interlocked(self):
         """Test function prevents acquisition when interlocked."""

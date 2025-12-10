@@ -838,8 +838,6 @@ class Hexitec():
             IOLoop.instance().call_later(0.05, self.await_daq_configuring_fps)
         else:
             self.daq.prepare_daq(self.number_frames)
-            # Acquisition starts here
-            self.software_state = "Acquiring"
             # Wait for DAQ (i.e. file writer) to be enabled before FEM told to acquire data
             IOLoop.instance().add_callback(self.await_daq_ready)
 

@@ -655,7 +655,15 @@ HEXITEC_2X6_HEXITEC_CTRL = { 'addr': 40,
                 'name': 'HEXITEC_ACQ_TRIGGER_INIT',
                 'nof_bits': 1,
                 'reset_value': '0x0',
-                'shiftr': 28}],
+                'shiftr': 28},
+              { 'description': 'Work-around solution for issues related to 1st '
+                               'trigger',
+                'is_bit': True,
+                'mask': 536870912,
+                'name': 'HEXITEC_ACQ_FALSE_TRIGGER_DONE',
+                'nof_bits': 1,
+                'reset_value': '0x0',
+                'shiftr': 29}],
   'mask': 4294967295,
   'name': 'HEXITEC_2X6_HEXITEC_CTRL',
   'nof_bits': 32,
@@ -663,16 +671,17 @@ HEXITEC_2X6_HEXITEC_CTRL = { 'addr': 40,
   'shiftr': 0}
 """:const:`HEXITEC_2X6_HEXITEC_CTRL` generated from `XML2VHDL` output.
 
-========================  ======================================================  ===============  ==============  ===============
+==============================  ======================================================  ===============  ==============  ===============
 **Register**
-**Name:**                 HEXITEC_2X6_HEXITEC_CTRL
-**Address:**              ``0x0000_0028``
-**Description:**          exitec 2x6 output datapath control
-**Bit Fields**            **Description**                                         **Mask**         **Permission**  **Reset Value**
-HEXITEC_RST               Hexitec 2x6 output datapath reset                       ``0x0000_0001``  Read/Write      ``0x0000_0000``
-HEXITEC_ACQ_ABORT         Hexitec 2x6 data acquisition abort                      ``0x0000_0010``  Read/Write      ``0x0000_0000``
-HEXITEC_ACQ_TRIGGER_INIT  Work-around solution for issues related to 1st trigger  ``0x1000_0000``  Read/Write      ``0x0000_0000``
-========================  ======================================================  ===============  ==============  ===============
+**Name:**                       HEXITEC_2X6_HEXITEC_CTRL
+**Address:**                    ``0x0000_0028``
+**Description:**                exitec 2x6 output datapath control
+**Bit Fields**                  **Description**                                         **Mask**         **Permission**  **Reset Value**
+HEXITEC_RST                     Hexitec 2x6 output datapath reset                       ``0x0000_0001``  Read/Write      ``0x0000_0000``
+HEXITEC_ACQ_ABORT               Hexitec 2x6 data acquisition abort                      ``0x0000_0010``  Read/Write      ``0x0000_0000``
+HEXITEC_ACQ_TRIGGER_INIT        Work-around solution for issues related to 1st trigger  ``0x1000_0000``  Read/Write      ``0x0000_0000``
+HEXITEC_ACQ_FALSE_TRIGGER_DONE  Work-around solution for issues related to 1st trigger  ``0x2000_0000``  Read/Write      ``0x0000_0000``
+==============================  ======================================================  ===============  ==============  ===============
 
 .. packetdiag::
 
@@ -687,7 +696,8 @@ HEXITEC_ACQ_TRIGGER_INIT  Work-around solution for issues related to 1st trigger
       4: HEXITEC_ACQ_ABORT [ rotate = 270 ]
       5-27:  [ color = lightgrey ]
       28: HEXITEC_ACQ_TRIGGER_INIT [ rotate = 270 ]
-      29-31:  [ rotate = 270, color = lightgrey ]
+      29: HEXITEC_ACQ_FALSE_TRIGGER_DONE [ rotate = 270 ]
+      30-31:  [ rotate = 270, color = lightgrey ]
    }
 
 """

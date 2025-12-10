@@ -909,7 +909,7 @@ class HexitecFem():
         """Acquire data from camera."""
         try:
             self.hardware_busy = True
-            self._set_status_message("Acquiring data..")
+            self._set_status_message("Prep to acquire data..")
             self.acquire_data_prep()
         except Exception as e:
             error = "Data acquisition failed"
@@ -998,18 +998,13 @@ class HexitecFem():
 
             logging.debug("Enable data")
             self.data_en(enable=True)
-            # TODO Just EPAC triggered mode, or NXCT also?
-            # EPAC triggered mode,  firmware to handle dummy trigger
-            # if self.parent.operating_mode == "EPAC":
-            if self.triggering_mode == "triggered":
-                # Using this helper function is okay: ?
+            # EPAC triggered mode, firmware to handle dummy trigger
+            if (self.parent.operating_mode == "EPAC") and self.triggering_mode == "triggered":
                 self.set_bit(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL, "HEXITEC_ACQ_TRIGGER_INIT")
-                # Alternatively, direct RDMA write: ? Although syntax..?
-                # self.x10g_rdma.udp_rdma_write(address=HEX_REGISTERS.HEXITEC_2X6_FRAME_PRELOAD_LOWER['addr'],
-                #                             data=0x0, burst_len=1)
+                self.reset_bit(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL, "HEXITEC_ACQ_TRIGGER_INIT")
                 IOLoop.instance().call_later(0.2, self.acquire_data_await_dummy_trigger_processed)
             else:
-                # untriggered mode, don't need handle dummy trigger
+                # Untriggered mode, don't need handle dummy trigger
                 IOLoop.instance().call_later(0.2, self.acquire_data_ready)
         except Exception as e:
             error = "Failed to start acquire_data_prep"
@@ -1022,15 +1017,14 @@ class HexitecFem():
         """Wait until dummy trigger has been processed, before starting data acquisition."""
         try:
             # Check whether dummy trigger has been processed
-            # TODO Will "HEXITEC_ACQ_FALSE_TRIGGER_DONE – is the flag to be polled" be added here?
-
             status = \
                 self.x10g_rdma.udp_rdma_read(
                     address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
                     burst_len=1)[0]
-
-            # TODO Check correct bitmask and value here??? Likely higher than 8..
-            if (status & 0x8) == 8:
+            trigger_processed = rdma.decode_field(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL,
+                                                  "HEXITEC_ACQ_FALSE_TRIGGER_DONE", status)
+            # Register bit set (0x1) when dummy trigger processed, cleared otherwise
+            if (trigger_processed & 1) == 1:
                 # Dummy trigger processed, start acquisition
                 logging.debug("Dummy trigger processed, starting acquisition")
                 self.acquire_data_ready()
@@ -1045,8 +1039,9 @@ class HexitecFem():
     def acquire_data_ready(self):
         """Acquisition can begin when data enable deasserted."""
         try:
-            # TODO Could ve more than 0.2 s delay until data_en() deasserted???
-
+            # Acquisition starts here
+            self.parent.software_state = "Acquiring"
+            self._set_status_message("Acquiring data..")
             # Stop data flow (free acquisition mode), reset setting if number of frames mode
             logging.debug("Disable data")
             self.data_en(enable=False)
@@ -1250,35 +1245,30 @@ class HexitecFem():
 
         # # Column Read Enable ASIC1 (Reg 0x61) - checked 2
         # asic1_col_read_enable = self._extract_80_bits("ColumnEn_", vsr_num, 1, "Channel")
-        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
         # # self.load_enables_settings(vsr, 0x36, 0x31, asic1_col_read_enable, enables_defaults)
 
         # # Column Read Enable ASIC2 (Reg 0xC2) - checked 1
         # asic2_col_read_enable = self._extract_80_bits("ColumnEn_", vsr_num, 2, "Channel")
-        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
         # # self.load_enables_settings(vsr, 0x43, 0x32, asic2_col_read_enable, enables_defaults)
 
         logging.debug("Column Power Enable")
 
         # # Column Power Enable ASIC1 (Reg 0x4D) - checked 2
         # asic1_col_power_enable = self._extract_80_bits("ColumnPwr", vsr_num, 1, "Channel")
-        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
         # # self.load_enables_settings(vsr, 0x34, 0x44, asic1_col_power_enable, enables_defaults)
 
         # # Column Power Enable ASIC2 (Reg 0xAE) - checked 1
         # asic2_col_power_enable = self._extract_80_bits("ColumnPwr", vsr_num, 2, "Channel")
-        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
         # # self.load_enables_settings(vsr, 0x41, 0x45, asic2_col_power_enable, enables_defaults)
 
         logging.debug("Column Calibration Enable")
         # Column Calibrate Enable ASIC1 (Reg 0x57) - checked 3
         asic1_col_cal_enable = self._extract_80_bits("ColumnCal", vsr_num, 1, "Channel")
-        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
-                            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
         if asic1_col_cal_enable[0] > -1:
             # vsr.debug = True
             vsr.set_column_calibration_mask(asic1_col_cal_enable, asic=1)
@@ -1287,8 +1277,7 @@ class HexitecFem():
 
         # Column Calibrate Enable ASIC2 (Reg 0xB8) - checked 3
         asic2_col_cal_enable = self._extract_80_bits("ColumnCal", vsr_num, 2, "Channel")
-        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
-                            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
         if asic2_col_cal_enable[0] > -1:
             vsr.set_column_calibration_mask(asic2_col_cal_enable, asic=2)
         else:
@@ -1298,36 +1287,31 @@ class HexitecFem():
 
         # # Row Read Enable ASIC1 (Reg 0x43) - chcked 5
         # asic1_row_enable = self._extract_80_bits("RowEn_", vsr_num, 1, "Block")
-        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
         # # self.load_enables_settings(vsr, 0x34, 0x33, asic1_row_enable, enables_defaults)
 
         # # Row Read Enable ASIC2 (Reg 0xA4) - checked 4
         # asic2_row_enable = self._extract_80_bits("RowEn_", vsr_num, 2, "Block")
-        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
         # # self.load_enables_settings(vsr, 0x41, 0x34, asic2_row_enable, enables_defaults)
 
         logging.debug("Row Power Enable")
 
         # # Row Power Enable ASIC1 (Reg 0x2F) - checked 5
         # asic1_row_power_enable = self._extract_80_bits("RowPwr", vsr_num, 1, "Block")
-        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
         # # self.load_enables_settings(vsr, 0x32, 0x46, asic1_row_power_enable, enables_defaults)
 
         # # Row Power Enable ASIC2 (Reg 0x90) - chcked 4
         # asic2_row_power_enable = self._extract_80_bits("RowPwr", vsr_num, 2, "Block")
-        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46,
-        #                     0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
+        # enables_defaults = [0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46]
         # # self.load_enables_settings(vsr, 0x39, 0x30, asic2_row_power_enable, enables_defaults)
 
         logging.debug("Row Calibration Enable")
 
         # Row Calibrate Enable ASIC1 (Reg 0x39) - chcked 6
         asic1_row_cal_enable = self._extract_80_bits("RowCal", vsr_num, 1, "Block")
-        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
-                            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
         if asic1_row_cal_enable[0] > -1:
             vsr.set_row_calibration_mask(asic1_row_cal_enable, asic=1)
         else:
@@ -1335,8 +1319,7 @@ class HexitecFem():
 
         # Row Calibrate Enable ASIC2 (Reg 0x9A) - checked 6
         asic2_row_cal_enable = self._extract_80_bits("RowCal", vsr_num, 2, "Block")
-        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
-                            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
         if asic2_row_cal_enable[0] > -1:
             vsr.set_row_calibration_mask(asic2_row_cal_enable, asic=2)
         else:

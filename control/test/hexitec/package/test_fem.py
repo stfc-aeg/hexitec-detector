@@ -530,7 +530,7 @@ class TestFem(unittest.TestCase):
         self.test_fem.fem.nxct_triggering_farm_mode_config(ip_addresses, macs, ports, frames_per_trigger)
         self.test_fem.fem.nxct_untriggering_farm_mode_config.assert_called_with(ip_addresses, macs, ports)
 
-    def epac_triggering_farm_mode_config(self):
+    def test_epac_triggering_farm_mode_config(self):
         """Test function works ok."""
         # Farm mode parameters
         ip_addresses = ['10.0.2.1', '10.0.1.1', '10.0.1.1', '10.0.2.1']
@@ -547,6 +547,49 @@ class TestFem(unittest.TestCase):
 
         ip1, ip2, mac1, mac2, port1, port2 = \
             self.test_fem.fem.epac_triggering_farm_mode_config(ip_addresses, macs, ports, frames_per_trigger)
+        assert ip1 == ip_lut1
+        assert ip2 == ip_lut2
+        assert mac1 == mac_lut1
+        assert mac2 == mac_lut2
+        assert port1 == port_lut1
+        assert port2 == port_lut2
+
+    def test_epac_untriggering_farm_mode_config(self):
+        """Test function works ok."""
+        ip_addresses = ['10.0.2.1', '10.0.1.1', '10.0.1.1', '10.0.2.1']
+        macs = ['9c:69:b4:60:b8:26', '9c:69:b4:60:b8:25', '9c:69:b4:60:b8:25', '9c:69:b4:60:b8:26']
+        ports = [61650, 61650, 61651, 61651]
+        # Expected farm mode settings
+        ip_lut1 = ['10.0.2.1']
+        ip_lut2 = ['10.0.1.1']
+        mac_lut1 = ['9c:69:b4:60:b8:26']
+        mac_lut2 = ['9c:69:b4:60:b8:25']
+        port_lut1 = [61650]
+        port_lut2 = [61651]
+        ip1, ip2, mac1, mac2, port1, port2 = \
+            self.test_fem.fem.epac_untriggering_farm_mode_config(ip_addresses, macs, ports)
+        assert ip1 == ip_lut1
+        assert ip2 == ip_lut2
+        assert mac1 == mac_lut1
+        assert mac2 == mac_lut2
+        assert port1 == port_lut1
+        assert port2 == port_lut2
+
+    def test_nxct_untriggering_farm_mode_config(self):
+        """Test function works ok."""
+        # Farm mode parameters
+        ip_addresses = ['10.0.2.1', '10.0.1.1', '10.0.1.1', '10.0.2.1']
+        macs = ['9c:69:b4:60:b8:26', '9c:69:b4:60:b8:25', '9c:69:b4:60:b8:25', '9c:69:b4:60:b8:26']
+        ports = [61650, 61650, 61651, 61651]
+        # Expected farm mode settings
+        ip_lut1 = ['10.0.2.1', '10.0.1.1']
+        ip_lut2 = ['10.0.1.1', '10.0.2.1']
+        mac_lut1 = ['9c:69:b4:60:b8:26', '9c:69:b4:60:b8:25']
+        mac_lut2 = ['9c:69:b4:60:b8:25', '9c:69:b4:60:b8:26']
+        port_lut1 = [61650, 61651]
+        port_lut2 = [61650, 61651]
+        ip1, ip2, mac1, mac2, port1, port2 = \
+            self.test_fem.fem.nxct_untriggering_farm_mode_config(ip_addresses, macs, ports)
         assert ip1 == ip_lut1
         assert ip2 == ip_lut2
         assert mac1 == mac_lut1
@@ -831,23 +874,27 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.data_en.assert_has_calls([call(enable=True)])
             self.assertEqual(self.test_fem.fem.data_en.call_count, 1)
 
-    def test_acquire_data_prep_untriggered_mode(self):
+    def test_acquire_data_prep_epac_triggered_mode(self):
         """Test function handles normal configuration."""
         self.test_fem.fem.frame_reset_to_zero = Mock()
         self.test_fem.fem.data_path_reset = Mock()
         self.test_fem.fem.set_nof_frames = Mock()
         self.test_fem.fem.data_en = Mock()
         self.test_fem.fem.set_bit = Mock()
+        self.test_fem.fem.reset_bit = Mock()
         self.test_fem.fem.triggering_mode = "triggered"
-        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
-            self.test_fem.fem.acquire_data_prep()
-            i = mock_loop.instance()
-            i.call_later.assert_called_with(0.2, self.test_fem.fem.acquire_data_await_dummy_trigger_processed)
-            self.test_fem.fem.frame_reset_to_zero.assert_called_once()
-            self.test_fem.fem.data_path_reset.assert_called_once()
-            # self.test_fem.fem.set_nof_frames.assert_called_once_with()
-            self.test_fem.fem.set_bit.assert_called_with(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL,
-                                                         "HEXITEC_ACQ_TRIGGER_INIT")
+        self.test_fem.fem.parent.operating_mode = "EPAC"
+        with patch("RdmaUdp.rdma_register_helpers") as rdma_mock:
+            rdma_mock.decode_field = Mock()
+            rdma_mock.decode_field.return_value = 0x1
+            with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+                self.test_fem.fem.acquire_data_prep()
+                i = mock_loop.instance()
+                i.call_later.assert_called_with(0.2, self.test_fem.fem.acquire_data_await_dummy_trigger_processed)
+                self.test_fem.fem.frame_reset_to_zero.assert_called_once()
+                self.test_fem.fem.data_path_reset.assert_called_once()
+                self.test_fem.fem.set_bit.assert_called_with(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL,
+                                                             "HEXITEC_ACQ_TRIGGER_INIT")
 
     def test_acquire_data_prep_handles_exception(self):
         """Test function handles exception."""
@@ -865,11 +912,10 @@ class TestFem(unittest.TestCase):
     def test_acquire_data_await_dummy_trigger_processed_finished(self):
         """Test function handles firmware processed dummy trigger."""
         self.test_fem.fem.x10g_rdma.udp_rdma_read = Mock()
-        self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [8]
+        self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [0x20000000]
         self.test_fem.fem.acquire_data_ready = Mock()
-        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+        with patch("hexitec.HexitecFem.IOLoop"):
             self.test_fem.fem.acquire_data_await_dummy_trigger_processed()
-            i = mock_loop.instance()
             self.test_fem.fem.acquire_data_ready.assert_called()
 
     # # TODO or acquire_data_ready() is called  but no socket error raised !!!!!
@@ -904,6 +950,7 @@ class TestFem(unittest.TestCase):
             i.call_later.assert_called_with(0.1, self.test_fem.fem.check_acquire_finished)
             self.test_fem.fem.data_en.assert_has_calls([call(enable=False)])
             self.assertEqual(self.test_fem.fem.data_en.call_count, 1)
+            assert self.test_fem.fem.parent.software_state == "Acquiring"
 
     def test_acquire_data_ready_handles_exception(self):
         """Test function handles exception."""
@@ -986,6 +1033,7 @@ class TestFem(unittest.TestCase):
 
     def test_acquire_data_completed(self):
         """Test function handles normal end of acquisition."""
+        # Simulate dummy trigger already processed at start of run
         self.test_fem.fem.acquire_start_time = datetime.now(timezone.utc).astimezone().isoformat()
         self.test_fem.fem.parent.software_state = "Cold"
         self.test_fem.fem.acquire_data_completed()
@@ -1154,8 +1202,7 @@ class TestFem(unittest.TestCase):
         """Test function handles setting default values."""
         mocked_vsr_module.addr = 0x90
         self.test_fem.fem.load_pwr_cal_read_enables(mocked_vsr_module)
-        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
-                            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
+        enables_defaults = [0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30]
         mocked_vsr_module.set_column_calibration_mask.assert_called_with(enables_defaults, asic=2)
         mocked_vsr_module.set_row_calibration_mask.assert_called_with(enables_defaults, asic=2)
 
@@ -1164,8 +1211,7 @@ class TestFem(unittest.TestCase):
         """Test function handles setting customised values."""
         mocked_vsr_module.addr = 0x90
         self.test_fem.fem._extract_80_bits = Mock()
-        enables = [0x30, 0x31, 0x32, 0x33, 0x35, 0x36, 0x37, 0x38, 0x39, 0x41,
-                   0x42, 0x43, 0x44, 0x45, 0x46, 0x30, 0x32, 0x34, 0x36, 0x38]
+        enables = [0x30, 0x31, 0x32, 0x33, 0x35, 0x36, 0x37, 0x38, 0x39, 0x41]
         self.test_fem.fem._extract_80_bits.return_value = enables
         self.test_fem.fem.load_pwr_cal_read_enables(mocked_vsr_module)
         mocked_vsr_module.set_column_calibration_mask.assert_called_with(enables, asic=2)
