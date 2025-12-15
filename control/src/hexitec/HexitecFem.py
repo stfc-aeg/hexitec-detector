@@ -898,7 +898,22 @@ class HexitecFem():
             self.hardware_busy = True
             self.parent.software_state = "Initialising"
             # Seup Farm Mode (again), then initialise
-            self.setup_data_lane_1()
+            if (self.parent.operating_mode == "EPAC") and self.triggering_mode == "triggered":
+                # EPAC triggered mode, firmware to handle dummy trigger prior to data arriving
+                success = self.broadcast_VSRs.enable_module()
+                vsr_statuses = self.broadcast_VSRs._get_status(hv=False, all_vsrs=True)
+                logging.debug("Power Status: {}".format(vsr_statuses))
+                if not success:
+                    logging.debug("Power Status: {}".format(vsr_statuses))
+                    message = "Not all VSR(s) enabled"
+                    error = "{}".format(vsr_statuses)
+                    self.flag_error(message, error)
+                    return
+                powering_delay = 10
+                self._set_status_message("Waiting {} seconds (VSRs booting, after re-enabling)".format(powering_delay))
+                IOLoop.instance().call_later(powering_delay, self.setup_data_lane_1)
+            else:
+                self.setup_data_lane_1()
         except Exception as e:
             error = "Camera initialisation failed"
             self.flag_error(error, str(e))
@@ -998,7 +1013,7 @@ class HexitecFem():
 
             logging.debug("Enable data")
             self.data_en(enable=True)
-            # EPAC triggered mode, firmware to handle dummy trigger
+            # EPAC triggered mode? Firmware to handle dummy trigger
             if (self.parent.operating_mode == "EPAC") and self.triggering_mode == "triggered":
                 self.set_bit(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL, "HEXITEC_ACQ_TRIGGER_INIT")
                 self.reset_bit(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL, "HEXITEC_ACQ_TRIGGER_INIT")
