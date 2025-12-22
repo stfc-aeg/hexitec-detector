@@ -28,6 +28,13 @@ namespace FrameProcessor
 {
   typedef std::map<int, Hexitec::HexitecSensorLayoutMapEntry> HexitecSensorLayoutMap;
 
+  typedef struct
+  {
+    uint64_t trigger_number;
+    std::set<uint64_t> frames_received;
+    boost::shared_ptr<Frame> stacked_frame_;
+  } TriggerObject;
+
   /** Stacks frame(s) for Hexitec Frame objects.
    *
    * The HexitecStackedPlugin will stack the N frames per trigger into one stacked frame.
@@ -59,6 +66,12 @@ namespace FrameProcessor
       /** Configuration constant for frames per trigger */
       static const std::string CONFIG_FRAMES_PER_TRIGGER;
 
+      bool first_frame_of_trigger(int target);
+      bool trigger_already_processed(int target);
+      bool frame_already_received(TriggerObject* trigger_object, int frame_number);
+      int get_number_of_frames_received(TriggerObject* trigger_object);
+      TriggerObject* get_trigger_object(int trigger_number);
+      bool erase_trigger_object(int trigger_number);
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
       std::string sensors_layout_str_;
       HexitecSensorLayoutMap sensors_layout_;
@@ -66,24 +79,27 @@ namespace FrameProcessor
       void process_end_of_acquisition();
       void process_frame(boost::shared_ptr<Frame> frame);
 
-      boost::shared_ptr<Frame> stacked_frame_;
       /** Pointer to logger **/
       LoggerPtr logger_;
-      /** Image width **/
       int image_width_;
-      /** Image height **/
       int image_height_;
-      /** Image pixel count **/
       int image_pixels_;
       /** Rank index, differentiate each histogram if multiple frame processors **/
       int rank_index_;
       int rank_offset_;
-      uint64_t stacked_frame_number_;
       int frames_per_trigger_;
+      uint64_t frames_processed_;
 
-      void reset_frames_numbering();
-      void initialise_stacked_frame();
+      void initialise_stacked_frame(TriggerObject* trigger_object);
       void stack_current_frame(float *in, float *out);
+      // Arrays to track triggers received, processed and incomplete
+      rapidjson::Value triggers_received_;
+      rapidjson::Value triggers_processed_;
+      rapidjson::Value triggers_incomplete_;
+      rapidjson::Value::AllocatorType triggers_received_allocator_;
+      rapidjson::Value::AllocatorType triggers_processed_allocator_;
+      rapidjson::Value::AllocatorType triggers_incomplete_allocator_;
+      std::vector<TriggerObject> trigger_objects_;
   };
 
   /**

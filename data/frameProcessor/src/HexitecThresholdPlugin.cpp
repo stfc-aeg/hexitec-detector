@@ -110,17 +110,17 @@ namespace FrameProcessor
       if (threshold_mode.compare(std::string("none")) == 0)
       {
         threshold_mode_ = (ThresholdMode)0;
-        LOG4CXX_TRACE(logger_, "User selected threshold mode: none");
+        LOG4CXX_DEBUG_LEVEL(2, logger_, "User selected threshold mode: none");
       }
       else if (threshold_mode.compare(std::string("value")) == 0)
       {
         threshold_mode_ = (ThresholdMode)1;
-        LOG4CXX_TRACE(logger_, "User selected threshold mode: value");
+        LOG4CXX_DEBUG_LEVEL(2, logger_, "User selected threshold mode: value");
       }
       else if (threshold_mode.compare(std::string("filename")) == 0)
       {
         threshold_mode_ = (ThresholdMode)2;
-        LOG4CXX_TRACE(logger_, "User selected threshold mode: filename");
+        LOG4CXX_DEBUG_LEVEL(2, logger_, "User selected threshold mode: filename");
       }
     }
 
@@ -128,7 +128,7 @@ namespace FrameProcessor
     {
       threshold_value_ = config.get_param<unsigned int>(
         HexitecThresholdPlugin::CONFIG_THRESHOLD_VALUE);
-      LOG4CXX_TRACE(logger_, "Setting threshold value to: " << threshold_value_);
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Setting threshold value to: " << threshold_value_);
     }
 
     if (config.has_param(HexitecThresholdPlugin::CONFIG_THRESHOLD_FILE))
@@ -139,10 +139,10 @@ namespace FrameProcessor
       // Update threshold filename if filename mode selected
       if (!threshold_filename_.empty())
       {
-        LOG4CXX_TRACE(logger_, "Setting thresholds from file: " << threshold_filename_);
+        LOG4CXX_DEBUG_LEVEL(2, logger_, "Setting thresholds from file: " << threshold_filename_);
         if (set_threshold_per_pixel(threshold_filename_.c_str()))
         {
-          LOG4CXX_TRACE(logger_, "Read thresholds from file successfully");
+          LOG4CXX_DEBUG_LEVEL(2, logger_, "Read thresholds from file successfully");
         }
         else
         {

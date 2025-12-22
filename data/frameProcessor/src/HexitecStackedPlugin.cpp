@@ -23,7 +23,7 @@ namespace FrameProcessor
       rank_index_(0),
       rank_offset_(2),  // Default rank offset for Hexitec
       frames_per_trigger_(3),
-      stacked_frame_number_(0)
+      frames_processed_(0)
   {
     // Setup logging for the class
     logger_ = Logger::getLogger("FP.HexitecStackedPlugin");
@@ -34,6 +34,9 @@ namespace FrameProcessor
     // Set image_width_, image_height_, image_pixels_
     sensors_layout_str_ = Hexitec::default_sensors_layout_map;
     parse_sensors_layout_map(sensors_layout_str_);
+    triggers_received_ = rapidjson::kArrayType;
+    triggers_processed_ = rapidjson::kArrayType;
+    triggers_incomplete_ = rapidjson::kArrayType;
   }
 
   /**
@@ -69,17 +72,11 @@ namespace FrameProcessor
     return ODIN_DATA_VERSION_STR;
   }
 
-  /**
-   * Reset the frame number for the stacked frame dataset.
-   * 
-   * The first frame of each trigger will increment frame number by rank offset.
+  /** Initialise the stacked frame for the current trigger.
+   *
+   * \param[in] current_trigger - Pointer to the current TriggerObject.
    */
-  void HexitecStackedPlugin::reset_frames_numbering()
-  {
-    stacked_frame_number_ = rank_index_;
-  }
-
-  void HexitecStackedPlugin::initialise_stacked_frame()
+  void HexitecStackedPlugin::initialise_stacked_frame(TriggerObject* current_trigger)
   {
     try
     {
@@ -92,7 +89,8 @@ namespace FrameProcessor
       stacked_meta.set_dimensions(dims);
       stacked_meta.set_compression_type(no_compression);
       stacked_meta.set_data_type(raw_float);
-      stacked_meta.set_frame_number(stacked_frame_number_);
+
+      stacked_meta.set_frame_number(current_trigger->trigger_number);
 
       // Determine the size of the image
       const std::size_t output_image_size = image_width_ * image_height_ * sizeof(float);
@@ -100,16 +98,15 @@ namespace FrameProcessor
       // Set the dataset name
       stacked_meta.set_dataset_name("stacked_frames");
 
-      stacked_frame_ = boost::shared_ptr<Frame>(new DataBlockFrame(stacked_meta, output_image_size));
+      current_trigger->stacked_frame_ = boost::shared_ptr<Frame>(new DataBlockFrame(stacked_meta, output_image_size));
 
       // Get a pointer to the data buffer in the output frame
-      void* output_ptr = static_cast<float *>(stacked_frame_->get_data_ptr());
+      void* output_ptr = static_cast<float *>(current_trigger->stacked_frame_->get_data_ptr());
 
       // Ensure frame is empty
       memset(output_ptr, 0, output_image_size);
 
-      LOG4CXX_DEBUG_LEVEL(2, logger_, "Initialised stacked frame, number: " << stacked_frame_number_
-        << " address: " << stacked_frame_);
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "Initialised stacked frame " << current_trigger->trigger_number);
     }
     catch (const std::exception& e)
     {
@@ -142,7 +139,6 @@ namespace FrameProcessor
     {
       rank_index_ = config.get_param<int>(HexitecStackedPlugin::CONFIG_RANK_INDEX);
       LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank index set to: " << rank_index_);
-      reset_frames_numbering();
     }
 
     if (config.has_param(HexitecStackedPlugin::CONFIG_RANK_OFFSET))
@@ -179,9 +175,13 @@ namespace FrameProcessor
     // Record the plugin's status items
     LOG4CXX_DEBUG_LEVEL(3, logger_, "Status requested for HexitecStackedPlugin");
     status.set_param(get_name() + "/frames_per_trigger", frames_per_trigger_);
+    status.set_param(get_name() + "/frames_processed", frames_processed_);
     status.set_param(get_name() + "/rank_index", rank_index_);
     status.set_param(get_name() + "/rank_offset", rank_offset_);
     status.set_param(get_name() + "/sensors_layout", sensors_layout_str_);
+    status.set_param(get_name() + "/triggers_received", triggers_received_);
+    status.set_param(get_name() + "/triggers_processed", triggers_processed_);
+    status.set_param(get_name() + "/triggers_incomplete", triggers_incomplete_);
   }
 
   /**
@@ -190,6 +190,11 @@ namespace FrameProcessor
   bool HexitecStackedPlugin::reset_statistics(void)
   {
     // Nowt to reset..?
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "Resetting HexitecStackedPlugin statistics.");
+    frames_processed_ = 0;
+    triggers_received_.SetArray();
+    triggers_processed_.SetArray();
+    triggers_incomplete_.SetArray();
     return true;
   }
 
@@ -199,11 +204,131 @@ namespace FrameProcessor
   */
   void HexitecStackedPlugin::process_end_of_acquisition()
   {
-    LOG4CXX_DEBUG_LEVEL(2, logger_, "EoA: Pushing stacked frame, number: "
-      << stacked_frame_->get_frame_number() << ", rank: " << rank_index_);
-    this->push(stacked_frame_);
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "EoA: There are " << trigger_objects_.size() << " trigger(s) to push");
+    for (auto& trigger_object : trigger_objects_)
+    {
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "EoA: Pushing stacked frame, trigger "
+        << trigger_object.trigger_number  << " with " << trigger_object.frames_received.size()
+        << " frames");
+      this->push(trigger_object.stacked_frame_);
+      triggers_processed_.PushBack(trigger_object.trigger_number, triggers_processed_allocator_);
+      triggers_incomplete_.PushBack(trigger_object.trigger_number, triggers_incomplete_allocator_);
+    }
+    trigger_objects_.clear();
+  }
 
-    reset_frames_numbering();
+  /**
+   * Determine whether frame is the first received of a trigger.
+   * 
+   * \param[in] frame - Frame number to search for.
+   * \return true if first frame of trigger, false otherwise.
+   */
+  bool HexitecStackedPlugin::first_frame_of_trigger(int frame)
+  {
+    for (rapidjson::SizeType i = 0; i < triggers_received_.Size(); i++) {
+        if (triggers_received_[i].IsInt() && triggers_received_[i].GetInt() == frame) {
+            LOG4CXX_DEBUG_LEVEL(3, logger_, "INFO: Trigger: " << frame << " (at index " << i 
+              << ") already seen. Don't create new TriggerObject.");
+            return false;
+        }
+    }
+    return true;
+  }
+
+  /**
+   * Determine whether frame belongs to an already processed trigger
+   *
+   * \param[in] frame - Frame number to search for.
+   * \return true if trigger already processed, false otherwise.
+   */
+  bool HexitecStackedPlugin::trigger_already_processed(int frame)
+  {
+    for (rapidjson::SizeType i = 0; i < triggers_processed_.Size(); i++) {
+        if (triggers_processed_[i].IsInt() && triggers_processed_[i].GetInt() == frame) {
+            LOG4CXX_DEBUG_LEVEL(3, logger_, "INFO: Trigger: " << frame << " (at index " << i
+              << ") already processed. Don't process.");
+            return true;
+        }
+    }
+    return false;
+  }
+
+  /**
+   * Check whether frame already received.
+   * 
+   * \param[in] trigger_object - Pointer to TriggerObject.
+   * \param[in] frame_number - Frame number to search for.
+   * \return true if frame already received, false otherwise.
+   */
+  bool HexitecStackedPlugin::frame_already_received(TriggerObject* trigger_object, int frame_number)
+  {
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "Checking if trigger " << trigger_object->trigger_number
+      << " frame " << frame_number << " already received.");
+    for (const auto& received_frame : trigger_object->frames_received)
+    {
+      LOG4CXX_DEBUG_LEVEL(3, logger_, "Comparing received frame: " << received_frame <<
+        " (vs incoming frame: " << frame_number << ")");
+      if (received_frame == frame_number)
+      {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Get number of frames received for trigger.
+   * 
+   * \param[in] trigger_object - Pointer to TriggerObject.
+   * \return Number of frames received.
+   */
+  int HexitecStackedPlugin::get_number_of_frames_received(TriggerObject* trigger_object)
+  {
+    if (trigger_object)
+    {
+      return trigger_object->frames_received.size();
+    }
+    return 0;
+  }
+
+  /**
+   * Get trigger of associated trigger number.
+   *
+   * \param[in] trigger_number - Trigger number to search for.
+   * \return Pointer to TriggerObject if found, nullptr otherwise.
+   */
+  TriggerObject* HexitecStackedPlugin::get_trigger_object(int trigger_number)
+  {
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "Retrieving TriggerObject for trigger number: " << trigger_number);
+    for (auto& trigger_object : trigger_objects_)
+    {
+      if (trigger_object.trigger_number == trigger_number)
+      {
+        return &trigger_object;
+      }
+    }
+    return nullptr;
+  }
+
+  /**
+   * Erase trigger of associated trigger number.
+   * 
+   * \param[in] trigger_number - Trigger number whose trigger object to erase.
+   * \return true if found and erased, false otherwise.
+   */
+  bool HexitecStackedPlugin::erase_trigger_object(int trigger_number)
+  {
+    LOG4CXX_DEBUG_LEVEL(2, logger_, "Finding TriggerObject of trigger " << trigger_number << " to erase");
+    auto trigger_to_erase = std::remove_if(trigger_objects_.begin(), trigger_objects_.end(),
+      [trigger_number](const TriggerObject& obj) { return obj.trigger_number == trigger_number; });
+
+    if (trigger_to_erase != trigger_objects_.end())
+    {
+      trigger_objects_.erase(trigger_to_erase, trigger_objects_.end());
+      return true;
+    }
+    else
+      return false;
   }
 
   /**
@@ -222,6 +347,7 @@ namespace FrameProcessor
     // Check datasets name
     FrameMetaData &incoming_frame_meta = frame->meta_data();
     const std::string& dataset = incoming_frame_meta.get_dataset_name();
+    long long frame_number = incoming_frame_meta.get_frame_number();
 
     if (dataset.compare(std::string("processed_frames")) == 0)
     {
@@ -231,40 +357,87 @@ namespace FrameProcessor
         void* input_ptr = static_cast<void *>(
           static_cast<char *>(const_cast<void *>(data_ptr)));
 
-        // First frame of the trigger?
-        if (frame->get_frame_number() % frames_per_trigger_ == 0)
+        // Which trigger does frame belong to?
+        int trigger_number = int(frame_number / frames_per_trigger_);
+
+        if (trigger_already_processed(trigger_number))
         {
-          initialise_stacked_frame();
+          // Blocks processed_frames, but not raw_frames.. Move that this protection earlier?
+          LOG4CXX_ERROR(logger_, "Trigger " << trigger_number << " already processed, skipping frame "
+            << frame_number << ".");
+          return;
+        }
+
+        TriggerObject* current_trigger = nullptr;
+        // First frame of the trigger?
+        if (first_frame_of_trigger(trigger_number))
+        {
+          LOG4CXX_DEBUG_LEVEL(2, logger_, "INFO: NEW First frame (" << frame_number << ") of trigger "
+            << trigger_number);
+          current_trigger = new TriggerObject();
+          current_trigger->trigger_number = trigger_number;
+          current_trigger->frames_received.insert(frame_number);
+          initialise_stacked_frame(current_trigger);
+          // Note new trigger number we have received frame belonging to
+          triggers_received_.PushBack(trigger_number, triggers_received_allocator_);
+          // Save trigger object to vector for later retrieval
+          trigger_objects_.push_back(*current_trigger);
+        }
+        else
+        {
+          LOG4CXX_DEBUG_LEVEL(2, logger_, "INFO: NOT first frame (" << frame_number << ") of trigger "
+            << trigger_number);
+          current_trigger = get_trigger_object(trigger_number);
+          if (current_trigger == nullptr)
+          {
+            LOG4CXX_ERROR(logger_, "Could not find existing TriggerObject for trigger number "
+              << trigger_number);
+            return;
+          }
+          if (frame_already_received(current_trigger, frame_number))
+          {
+            LOG4CXX_ERROR(logger_, "Duplicate frame number " << frame_number
+              << " received for trigger " << trigger_number << ", skipping frame.");
+            return;
+          }
+          current_trigger->frames_received.insert(frame_number);
         }
 
         // Get a pointer to the data buffer in the output frame
-        void* output_ptr = stacked_frame_->get_data_ptr();
+        void* output_ptr = current_trigger->stacked_frame_->get_data_ptr();
 
         // Add this frame's contribution onto stacked frame
         stack_current_frame(static_cast<float *>(input_ptr), static_cast<float *>(output_ptr));
+        frames_processed_++;
 
-        LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing processed_frames, number: " << frame->get_frame_number());
+        LOG4CXX_DEBUG_LEVEL(2, logger_, "Pushing processed_frames, number: " << frame_number);
         // Pass on processed_frames dataset unmodified:
         this->push(frame);
 
         // Final frame of current trigger?
-        if (frame->get_frame_number() % frames_per_trigger_ == (frames_per_trigger_ - 1))
+        if (get_number_of_frames_received(current_trigger) == frames_per_trigger_)
         {
-          LOG4CXX_DEBUG_LEVEL(2, logger_, dataset << " Final frame, pushing stacked frame: "
-            << stacked_frame_number_ << " address: " << stacked_frame_);
-          this->push(stacked_frame_);
-          stacked_frame_number_ += rank_offset_;
+          LOG4CXX_DEBUG_LEVEL(2, logger_, "INFO: Trigger " << trigger_number << " all frames ("
+            << frames_per_trigger_ << ") received, pushing stacked frame.");
+          this->push(current_trigger->stacked_frame_);
+          // Remove current_trigger from trigger_objects_ vector
+          if (!erase_trigger_object(trigger_number))
+          {
+            LOG4CXX_ERROR(logger_, "Failed to erase TriggerObject for trigger "
+              << trigger_number);
+          }
+          triggers_processed_.PushBack(trigger_number, triggers_processed_allocator_);
         }
       }
       catch (const std::exception& e)
       {
-        LOG4CXX_ERROR(logger_, "HexitecStackedPluginfailed: " << e.what());
+        LOG4CXX_ERROR(logger_, "HexitecStackedPlugin failed: " << e.what());
       }
     }
     else
     {
       LOG4CXX_DEBUG_LEVEL(3, logger_, "Pushing " << dataset << " dataset, frame number: "
-                                        << frame->get_frame_number());
+        << frame_number);
       this->push(frame);
     }
   }
@@ -278,17 +451,10 @@ namespace FrameProcessor
    */
   void HexitecStackedPlugin::stack_current_frame(float *in, float *out)
   {
-    float total_in = 0.0f;
-    float total_out = 0.0f;
     for (int i=0; i<image_pixels_; i++)
     {
       out[i] += in[i];
-      total_out += out[i];  // DEBUG
-      total_in += in[i];    // DEBUG
     }
-    LOG4CXX_DEBUG_LEVEL(2, logger_, "Stacked frame: " << stacked_frame_number_
-      << " stacked_frame total: " << total_out << " of which processed_frames added: "
-      << total_in << " stacked_frame address: " << out);
   }
 
   /**
