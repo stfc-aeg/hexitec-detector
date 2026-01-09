@@ -19,10 +19,6 @@ def extract_meta_data(source_file):
     # MUST access .shape and .dtype to avoid later issues, ie
     # .shape -> RuntimeError: Unable to synchronously get dataspace (identifier is not of specified type)
     # .dtype -> ValueError: Invalid dataset identifier (identifier is not of specified type)
-    # ps_dtype = None
-    # ps_inshape = None
-    # si_dtype = None
-    # si_inshape = None
 
     # Open first file to check how many datasets
     try:
