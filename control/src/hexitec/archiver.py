@@ -352,10 +352,8 @@ class Archiver():
                 if len(error_line) > 0:
                     bOK = False
                     errors.append(self.parse_error_bytes(error_line))
-                    # print(f" Error? {error_line}")
                 output_line = self.proc.stdout.readline()
                 if len(output_line) > 0:
-                    # print(f"poll: {self.proc.poll()} len {len(output_line)} ln {output_line}")
                     self.parse_rsync_output(output_line)
         except Exception as e:
             logging.error(f"rsync error, subprocess returned: {e.returncode}")
@@ -408,7 +406,7 @@ class Archiver():
         source_file = source_files[0]
         dataset_names, ps_dset, si_dset, ss_dset, num_datasets = self.extract_meta_data(source_file)
 
-        # print(f"first file contains: {dataset_names} dataset_names")
+        logging.debug(f"first file contains: {dataset_names} dataset_names")
 
         # Determine 'pixel_spectra' dimensions
         if ps_dset is None:
@@ -435,12 +433,7 @@ class Archiver():
         layout = []
         dataset_index = [0 for idx in range(num_datasets)]
         index = -1
-        # print(f"Dataset names: {dataset_names}")
-        # print(f"Number of datasets: {num_datasets}")
-        # print(f"num_frames: {num_frames}")
-        # print(f"inshape: {inshape}\n")
 
-        # print("Determine virtual dataset dimensions and map sources into layout")
         for dataset in dataset_names:  # Iterate through all datasets
             try:
                 index += 1
@@ -462,8 +455,8 @@ class Archiver():
             except BlockingIOError as e:
                 logging.error(f"File {dest_file} is locked, couldn't write VDS: {e}")
                 return -4
-            logging.debug(f"VDS finished mapping virtual datasets into file {dest_file}")
-            return 0
+        logging.debug(f"VDS finished mapping virtual datasets into file {dest_file}")
+        return 0
 
     def extract_meta_data(self, source_file):
         """Extracts metadata from source file."""
@@ -479,7 +472,6 @@ class Archiver():
             with h5py.File(source_file) as file:
                 num_datasets = len(file.keys())
                 for dataset in file:  # Each dataset in current file
-                    # print(f" Found dataset: '{dataset}'")
                     dataset_names.append(dataset)
                     if dataset == "pixel_spectra":
                         ps_dset = file[dataset]
@@ -499,49 +491,110 @@ class Archiver():
         return dataset_names, ps_dset, si_dset, ss_dset, num_datasets
 
     def build_virtual_layout(self, dataset, inshape, index, num_frames, dtype):
-        """."""
+        """Build a virtual HDF5 layout for a dataset with the appropriate shape and dtype.
+
+        Parameters
+        ----------
+        dataset : str
+            Name of the dataset being processed. Determines the output shape calculation.
+        inshape : list of tuples
+            List of input shapes, where inshape[index] contains the shape tuple for the current dataset.
+        index : int
+            Index into the inshape and num_frames lists to identify the current dataset.
+        num_frames : list of int
+            List containing the number of frames for each dataset.
+        dtype : list
+            List of data types corresponding to each dataset.
+
+        Returns
+        -------
+        h5py.VirtualLayout
+            A virtual layout object configured with the calculated output shape and dtype.
+        """
         if len(inshape[index]) == 2:
             n = 1
         else:
             n = 0
-        # print(f"*idx={index}* dataset: '{dataset}' n_frames: {num_frames[index]} Shape: {inshape[index]} n: {n}")
         if dataset == "spectra_bins":
             outshape = (inshape[index][1-n], inshape[index][2-n])
         elif dataset == "pixel_spectra":
-            # print(" pixel_spectra dataset summed, not mapped as VDS - Skipping")
-            # continue
-            # print(f" dataset: 'pixel_spectra' num_frames = {num_frames[index]}")
-            # print(f" num_frames = {num_frames[index]}")
-            # print(f" inshape = {inshape[index]}")
             outshape = (num_frames[index], inshape[index][1],
                         inshape[index][2], inshape[index][3])
         else:
             outshape = (num_frames[index], inshape[index][1-n], inshape[index][2-n])
-        # print(f" DS: {dataset}, outshape = {outshape}")
         return h5py.VirtualLayout(shape=outshape, dtype=dtype[index])
 
     def map_sources_to_layout(self, dataset, index, num_frames, num_datasets, num_sources, vsources, layout, dataset_index):
-        """."""
+        """Map virtual sources to their corresponding positions in the layout array.
+
+        This method distributes data from multiple virtual sources into a layout array
+        based on the dataset type and frame indexing parameters.
+
+        Args:
+            dataset (str):
+                The type of dataset being mapped.
+            index (int):
+                The current dataset index to process.
+            num_frames (list):
+                List containing the number of frames for each dataset.
+            num_datasets (int):
+                Total number of datasets.
+            num_sources (int):
+                Number of sources, used as stride for layout indexing.
+            vsources (list):
+                List of virtual sources containing data to be mapped.
+            layout (ndarray):
+                The target numpy array where data will be placed.
+            dataset_index (list):
+                List tracking the current index position for each dataset,
+                incremented after each source is mapped.
+
+        Returns:
+            None: Modifies the layout array in-place.
+        """
         for (idx, vsource) in enumerate(vsources):
             current_index = idx % num_datasets
             if current_index == index:
                 temp_idx = dataset_index[current_index]
 
                 if dataset == "spectra_bins":
-                    # print(f" spectra_bins, layout[, ] = layout[, ]")
                     layout[:, :] = vsource
                 elif dataset == "pixel_spectra":
-                    # print(f" l'out: [{temp_idx}:{num_frames[index]}:{num_sources}, :, :, :]")
                     layout[temp_idx:num_frames[index]:num_sources, :, :, :] = vsource
                 else:
-                    # print(f" '{dataset}' l'out: [{temp_idx}:{num_frames[index]}:{num_sources}, :, :] = vsource")
                     layout[temp_idx:num_frames[index]:num_sources, :, :] = vsource
                 dataset_index[current_index] += 1
 
     def write_datasets_to_file(self, dest_file, dataset, dataset_names, index, layout,
                                pixel_spectra_summed, summed_images_summed,
                                summed_spectra_summed):
-        """."""
+        """Write datasets to an HDF5 file, handling virtual datasets and summed data.
+
+        This method creates virtual datasets in an HDF5 file and replaces spectra with
+        real datasets containing summed data. If a dataset with the same name already
+        exists, it appends a timestamp prefix to avoid conflicts.
+
+        Args:
+            dest_file (str):
+                Path to the destination HDF5 file.
+            dataset (str):
+                Type of dataset to write.
+            dataset_names (list):
+                List of dataset names to be created.
+            index (int):
+                Index into dataset_names to determine which dataset to create.
+            layout (h5py.VirtualLayout):
+                Virtual dataset layout to apply.
+            pixel_spectra_summed (numpy.ndarray):
+                Summed pixel spectra data to write
+            summed_images_summed (numpy.ndarray):
+                Summed images data to write
+            summed_spectra_summed (numpy.ndarray):
+                Summed spectra data to write
+
+        Returns:
+            None
+        """
         with h5py.File(dest_file, 'a', libver='latest') as outfile:
             if dataset_names[index] in outfile.keys():
                 # In case user tries to add datasets that already exist in destination file
@@ -568,7 +621,42 @@ class Archiver():
 
     def aggregate_data_across_files(self, source_files, num_datasets, pixel_spectra_summed,
                                     summed_images_summed, summed_spectra_summed):
-        """."""
+        """Aggregate data across multiple HDF5 files.
+
+        This method iterates through multiple HDF5 source files and aggregates their datasets.
+        It accumulates data from pixel spectra, summed images, and summed spectra datasets,
+        while tracking metadata about the aggregated data.
+
+        Parameters
+        ----------
+        source_files : list
+            List of paths to HDF5 files to aggregate data from.
+        num_datasets : int
+            Expected number of datasets in each file. Used for validation.
+        pixel_spectra_summed : np.ndarray
+            Accumulated pixel spectra data across files.
+        summed_images_summed : np.ndarray
+            Accumulated summed images data across files.
+        summed_spectra_summed : np.ndarray
+            Accumulated summed spectra data across files.
+
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            - vsources (list): List of h5py.VirtualSource objects for each dataset across files.
+            - pixel_spectra_summed (np.ndarray): Updated accumulated pixel spectra.
+            - summed_images_summed (np.ndarray): Updated accumulated summed images.
+            - summed_spectra_summed (np.ndarray): Updated accumulated summed spectra.
+            - num_frames (list): Number of frames for each dataset type.
+            - dtype (list): Data types for each dataset.
+            - inshape (list): Input shapes for each dataset.
+
+        Returns
+        -------
+        int
+            -2 if the number of datasets in a file does not match num_datasets (error condition).
+        """
         vsources = []
         num_frames = [0 for idx in range(num_datasets)]
         dtype = [0 for idx in range(num_datasets)]
@@ -604,7 +692,6 @@ class Archiver():
                     else:
                         assert dset.dtype == dtype[index]
 
-                    # print(f" *** Adding vsrc -> vsource = '{source}' ds = '{dataset}', shape={dset.shape}")
                     vsources.append(h5py.VirtualSource(source, dataset, shape=dset.shape))
                     index += 1
         return vsources, pixel_spectra_summed, summed_images_summed, summed_spectra_summed, num_frames, dtype, inshape

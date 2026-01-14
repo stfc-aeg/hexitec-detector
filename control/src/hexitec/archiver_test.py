@@ -141,6 +141,7 @@ def aggregate_data_across_files(source_files, num_datasets, pixel_spectra_summed
                     # 'spectra_bins' identical across files, need only one instance
                     num_frames[index] = 1
                 else:
+                    print(f"{dataset}; adding {dset.shape[0]}  frame(s)..")
                     num_frames[index] += dset.shape[0]
 
                 if not inshape[index]:
