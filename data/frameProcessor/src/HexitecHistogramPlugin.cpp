@@ -344,9 +344,7 @@ namespace FrameProcessor
   {
     if (frames_processed_ > 0)
     {
-      LOG4CXX_DEBUG_LEVEL(2, logger_,
-        " EoA; Pushing histograms, summed_spectra frame " << summed_spectra_->get_frame_number() <<
-        " pixel_spectra frame " << pixel_spectra_->get_frame_number());
+      LOG4CXX_DEBUG_LEVEL(2, logger_, " EoA; Pushing histograms");
       pass_pixel_spectra_ = true;
       write_histograms_to_disk();
       pass_pixel_spectra_ = false;
@@ -400,7 +398,7 @@ namespace FrameProcessor
           // Add this frame's contribution onto histograms
           add_frame_data_to_histogram_with_sum(static_cast<float *>(input_ptr));
 
-          LOG4CXX_DEBUG_LEVEL(2, logger_, dataset << ", frame " << frame_number << " max_frames_received: "
+          LOG4CXX_DEBUG_LEVEL(3, logger_, dataset << ", frame " << frame_number << " max_frames_received: "
             << max_frames_received_ << ", frames_processed: " << frames_processed_ << " write histograms? "
             << ((max_frames_received_ != 0) &&
             (((frames_processed_+1) % max_frames_received_) == 0))
@@ -524,7 +522,7 @@ namespace FrameProcessor
   void HexitecHistogramPlugin::write_histograms_to_disk()
   {
     // Set spectra_bins to frame 0, as it changes only with histogram settings, not data
-    spectra_bins_->set_frame_number(0);
+    spectra_bins_->set_frame_number(rank_index_);
     summed_spectra_->set_frame_number(histogram_index_);
     if (pass_pixel_spectra_)
       pixel_spectra_->set_frame_number(rank_index_);
