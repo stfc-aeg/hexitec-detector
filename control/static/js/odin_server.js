@@ -868,8 +868,17 @@ function poll_fem() {
                             document.querySelector('#fp_processed' + (i+1)).innerHTML = 0;
                         }
                         else {
-                            var processed = result["value"][i].histogram.frames_processed
-                            document.querySelector('#fp_processed' + (i+1)).innerHTML = processed;
+                            var processed = result["value"][i].histogram.frames_processed;
+                            var frames = result["value"][i].summed_image.frames_processed;
+                            var frames_and_triggers = frames + ", " + processed + " Trigger(s)";
+                            if ((result["value"][i].stacked !== undefined) && (triggered_mode_selected === true)) {
+                                // EPAC, triggered mode; Display frames and triggers processed
+                                document.querySelector('#fp_processed' + (i+1)).innerHTML = frames_and_triggers;
+                            }
+                            else {
+                                // No stacked plugin, either untriggered mode or NXCT triggered mode
+                                document.querySelector('#fp_processed' + (i+1)).innerHTML = frames;
+                            }
                         }
 
                         if (result["value"][i].error === undefined) {
