@@ -348,151 +348,8 @@ class HexitecFem():
 
     def configure_camera_interfaces(self):
         """Configure IP, Mac and port parameters for detector's Control and Data interfaces."""
-        Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
-                                 rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
-                                 multicast=True, debug=False)
-        ctrl_lane = \
-            UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface,
-                    qsfp_idx=self.control_qsfp_idx, lane=self.control_lane)
-
-        self._set_status_message("Set Control params..")
-        IOLoop.instance().call_later(2, self.configure_control_with_multicast,
-                                     Hex2x6CtrlRdma, ctrl_lane)
-
-    def configure_control_with_multicast(self, Hex2x6CtrlRdma, ctrl_lane):  # pragma: no cover
-        """Configure Control link's parameters."""
+        # TODO Enables running software without hardware
         try:
-            ctrl_lane.set_dst_mac(mac=self.server_ctrl_mac, response_check=False)
-            time.sleep(0.001)
-            ctrl_lane.set_dst_ip(ip=self.server_ctrl_ip, response_check=False)
-            time.sleep(0.001)
-            ctrl_lane.set_src_dst_port(port=self.src_dst_port, response_check=False)
-            time.sleep(0.001)
-            ctrl_lane.set_src_mac(mac=self.camera_ctrl_mac, response_check=False)
-            time.sleep(0.001)
-            ctrl_lane.set_src_ip(ip=self.camera_ctrl_ip, response_check=False)
-
-            # Close multicast connection
-            Hex2x6CtrlRdma.__del__()
-
-            self._set_status_message("Setting Data Lane 1..")
-            IOLoop.instance().call_later(2, self.setup_data_lane_1)
-        except socket_error as e:
-            self.hardware_connected = False
-            self.hardware_busy = False
-            self.flag_error("Setup Control", str(e))
-
-    def setup_data_lane_1(self):    # pragma: no cover
-        """Setup Data Lane 1's parameters."""
-        try:
-            # Connect with Control interface
-            Hex2x6CtrlRdma = RdmaUDP(local_ip=self.server_ctrl_ip, local_port=self.server_ctrl_port,
-                                     rdma_ip=self.camera_ctrl_ip, rdma_port=self.camera_ctrl_port,
-                                     multicast=False, debug=False)
-            ctrl_lane = \
-                UdpCore(Hex2x6CtrlRdma, ctrl_flag=True, iface_name=self.control_interface,
-                        qsfp_idx=self.control_qsfp_idx, lane=self.control_lane)
-            ctrl_lane.set_filtering(enable=True, response_check=True)
-            time.sleep(0.001)
-            ctrl_lane.set_arp_timeout_length()
-            time.sleep(0.001)
-
-            self.data_lane1 = \
-                UdpCore(Hex2x6CtrlRdma, ctrl_flag=False, iface_name=self.data1_interface,
-                        qsfp_idx=1, lane=self.data1_lane)
-            self._set_status_message("Setting Data Lane 2..")
-            IOLoop.instance().call_later(2, self.setup_data_lane_2, Hex2x6CtrlRdma, ctrl_lane)
-        except socket_error as e:
-            self.hardware_connected = False
-            self.hardware_busy = False
-            self.flag_error("Setup Data Lane 1", str(e))
-
-    def setup_data_lane_2(self, Hex2x6CtrlRdma, ctrl_lane):     # pragma: no cover
-        """Setup Data Lane 2's parameters."""
-        try:
-            self.data_lane2 = \
-                UdpCore(Hex2x6CtrlRdma, ctrl_flag=False, iface_name=self.data2_interface,
-                        qsfp_idx=1, lane=self.data2_lane)
-            self._set_status_message("Configuring Farm Mode..")
-            IOLoop.instance().call_later(2, self.setup_farm_mode, Hex2x6CtrlRdma, ctrl_lane)
-        except socket_error as e:
-            self.hardware_connected = False
-            self.hardware_busy = False
-            self.flag_error("Setup Data Lane 2", str(e))
-
-    def setup_farm_mode(self, Hex2x6CtrlRdma, ctrl_lane):   # pragma: no cover
-        """Configure data lanes for Farm Mode."""
-        # Source = Camera, Destination: PC
-        try:
-            self.data_lane1.set_dst_ip(ip=self.farm_server_1_ip)
-            time.sleep(0.001)
-            self.data_lane1.set_dst_mac(mac=self.farm_server_1_mac)
-            time.sleep(0.001)
-            self.data_lane1.set_src_ip(ip=self.farm_camera_1_ip)
-            time.sleep(0.001)
-            self.data_lane1.set_src_mac(mac=self.farm_camera_1_mac)
-            time.sleep(0.001)
-            self.data_lane1.set_src_dst_port(port=self.src_dst_port)
-            time.sleep(0.001)
-
-            self.data_lane2.set_dst_ip(ip=self.farm_server_2_ip)
-            time.sleep(0.001)
-            self.data_lane2.set_dst_mac(mac=self.farm_server_2_mac)
-            time.sleep(0.001)
-            self.data_lane2.set_src_ip(ip=self.farm_camera_2_ip)
-            time.sleep(0.001)
-            self.data_lane2.set_src_mac(mac=self.farm_camera_2_mac)
-            time.sleep(0.001)
-            self.data_lane2.set_src_dst_port(port=self.src_dst_port)
-            time.sleep(0.001)
-
-            fr = self.parent.daq.get_adapter_config("fr")
-            addresses, ports = self.extract_frame_receiver_interfaces(fr)
-
-            # Generate MAC addresses
-            macs = []
-            for i in range(len(addresses)):
-                if self.farm_server_1_ip == addresses[i]:
-                    # Farm Server 1
-                    mac = self.farm_server_1_mac
-                elif self.farm_server_2_ip == addresses[i]:
-                    # Farm Server 2
-                    mac = self.farm_server_2_mac
-                else:
-                    self.flag_error(f"Farm Mode IP {addresses[i]} not in Farm Mode config")
-                macs.append(mac)
-
-            if self.triggering_mode == "none":
-                if self.parent.operating_mode == "NXCT":
-                    ips1, ips2, macs1, macs2, ports1, ports2 = \
-                        self.nxct_untriggering_farm_mode_config(addresses, macs, ports)
-                else:
-                    ips1, ips2, macs1, macs2, ports1, ports2 = \
-                        self.epac_untriggering_farm_mode_config(addresses, macs, ports)
-            else:
-                if self.parent.operating_mode == "NXCT":
-                    ips1, ips2, macs1, macs2, ports1, ports2 = \
-                        self.nxct_triggering_farm_mode_config(addresses, macs, ports, self.triggering_frames)
-                else:
-                    ips1, ips2, macs1, macs2, ports1, ports2 = \
-                        self.epac_triggering_farm_mode_config(addresses, macs, ports, self.triggering_frames)
-
-            lut_entries = len(ips1)
-            self.farm_mode_targets = lut_entries * 2
-
-            self.data_lane1.set_lut_mode_ip(ips1)
-            self.data_lane2.set_lut_mode_ip(ips2)
-            self.data_lane1.set_lut_mode_mac(macs1)
-            self.data_lane2.set_lut_mode_mac(macs2)
-            self.data_lane1.set_lut_mode_port(ports1)
-            self.data_lane2.set_lut_mode_port(ports2)
-
-            address = HEX_REGISTERS.HEXITEC_2X6_NOF_LUT_MODE_ENTRIES['addr']
-            Hex2x6CtrlRdma.udp_rdma_write(address=address, data=lut_entries, burst_len=1)
-            self.data_lane1.set_lut_mode()
-            self.data_lane2.set_lut_mode()
-            Hex2x6CtrlRdma.__del__()
-
             if self.connect_only_once:
                 self.connect()
                 # Power up the VSRs
@@ -661,16 +518,16 @@ class HexitecFem():
             self.vsr_list = []
             self.vsr_list.append(
                 VsrModule(self.x10g_rdma, slot=1, init_time=0, addr_mapping=self.vsr_addr_mapping))
-            self.vsr_list.append(
-                VsrModule(self.x10g_rdma, slot=2, init_time=0, addr_mapping=self.vsr_addr_mapping))
-            self.vsr_list.append(
-                VsrModule(self.x10g_rdma, slot=3, init_time=0, addr_mapping=self.vsr_addr_mapping))
-            self.vsr_list.append(
-                VsrModule(self.x10g_rdma, slot=4, init_time=0, addr_mapping=self.vsr_addr_mapping))
-            self.vsr_list.append(
-                VsrModule(self.x10g_rdma, slot=5, init_time=0, addr_mapping=self.vsr_addr_mapping))
-            self.vsr_list.append(
-                VsrModule(self.x10g_rdma, slot=6, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            # self.vsr_list.append(
+            #     VsrModule(self.x10g_rdma, slot=2, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            # self.vsr_list.append(
+            #     VsrModule(self.x10g_rdma, slot=3, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            # self.vsr_list.append(
+            #     VsrModule(self.x10g_rdma, slot=4, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            # self.vsr_list.append(
+            #     VsrModule(self.x10g_rdma, slot=5, init_time=0, addr_mapping=self.vsr_addr_mapping))
+            # self.vsr_list.append(
+            #     VsrModule(self.x10g_rdma, slot=6, init_time=0, addr_mapping=self.vsr_addr_mapping))
         except socket_error as e:
             raise socket_error("Failed to setup Control connection: %s" % e)
         return
@@ -826,7 +683,7 @@ class HexitecFem():
             self.hardware_connected = True
             # Configure control, data lines unless already configured
             # - Insist Control interface configured on every connect
-            if self.parent.cold_start:
+            if False:   # self.parent.cold_start:
                 # Configure Control, Camera interfaces
                 self.configure_camera_interfaces()
                 self.parent.cold_start = True
@@ -879,7 +736,7 @@ class HexitecFem():
                 error = "{}".format(hv_statuses)
                 self.flag_error(message, error)
                 return
-            powering_delay = 10
+            powering_delay = 1  # 0
             logging.debug("VSRs enabled; Waiting {} seconds".format(powering_delay))
             self._set_status_message("Waiting {} seconds (VSRs booting)".format(powering_delay))
             IOLoop.instance().call_later(powering_delay, self.cam_connect_completed)
@@ -898,22 +755,8 @@ class HexitecFem():
             self.hardware_busy = True
             self.parent.software_state = "Initialising"
             # Seup Farm Mode (again), then initialise
-            if (self.parent.operating_mode == "EPAC") and self.triggering_mode == "triggered":
-                # EPAC triggered mode, firmware to handle dummy trigger prior to data arriving
-                success = self.broadcast_VSRs.enable_module()
-                vsr_statuses = self.broadcast_VSRs._get_status(hv=False, all_vsrs=True)
-                logging.debug("Power Status: {}".format(vsr_statuses))
-                if not success:
-                    logging.debug("Power Status: {}".format(vsr_statuses))
-                    message = "Not all VSR(s) enabled"
-                    error = "{}".format(vsr_statuses)
-                    self.flag_error(message, error)
-                    return
-                powering_delay = 10
-                self._set_status_message("Waiting {} seconds (VSRs booting, after re-enabling)".format(powering_delay))
-                IOLoop.instance().call_later(powering_delay, self.setup_data_lane_1)
-            else:
-                self.setup_data_lane_1()
+            # self.setup_data_lane_1()
+            self.initialise_system()
         except Exception as e:
             error = "Camera initialisation failed"
             self.flag_error(error, str(e))
@@ -1013,57 +856,15 @@ class HexitecFem():
 
             logging.debug("Enable data")
             self.data_en(enable=True)
-            # EPAC triggered mode? Firmware to handle dummy trigger
-            if (self.parent.operating_mode == "EPAC") and self.triggering_mode == "triggered":
-                self.set_bit(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL, "HEXITEC_ACQ_TRIGGER_INIT")
-                self.reset_bit(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL, "HEXITEC_ACQ_TRIGGER_INIT")
-                IOLoop.instance().call_later(0.2, self.acquire_data_await_dummy_trigger_processed)
-            else:
-                # Untriggered mode, don't need handle dummy trigger
-                IOLoop.instance().call_later(0.2, self.acquire_data_ready)
-        except Exception as e:
-            error = "Failed to start acquire_data_prep"
-            self.flag_error(error, str(e))
-            self.hardware_busy = False
-            self.parent.daq.in_progress = False
-            raise ParameterTreeError(error) from None
+            time.sleep(0.2)
 
-    def acquire_data_await_dummy_trigger_processed(self):
-        """Wait until dummy trigger has been processed, before starting data acquisition."""
-        try:
-            # Check whether dummy trigger has been processed
-            status = \
-                self.x10g_rdma.udp_rdma_read(
-                    address=HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL['addr'],
-                    burst_len=1)[0]
-            trigger_processed = rdma.decode_field(HEX_REGISTERS.HEXITEC_2X6_HEXITEC_CTRL,
-                                                  "HEXITEC_ACQ_FALSE_TRIGGER_DONE", status)
-            # Register bit set (0x1) when dummy trigger processed, cleared otherwise
-            if (trigger_processed & 1) == 1:
-                # Dummy trigger processed, start acquisition
-                logging.debug("Dummy trigger processed, starting acquisition")
-                self.acquire_data_ready()
-            else:
-                # Not yet processed
-                IOLoop.instance().call_later(0.1, self.acquire_data_await_dummy_trigger_processed)
-        except socket_error as e:
-            self.flag_error("Awaiting dummy trigger processing Error", str(e))
-            self.hardware_connected = False
-            self.hardware_busy = False
- 
-    def acquire_data_ready(self):
-        """Acquisition can begin when data enable deasserted."""
-        try:
-            # Acquisition starts here
-            self.parent.software_state = "Acquiring"
-            self._set_status_message("Acquiring data..")
             # Stop data flow (free acquisition mode), reset setting if number of frames mode
             logging.debug("Disable data")
             self.data_en(enable=False)
 
             IOLoop.instance().call_later(0.1, self.check_acquire_finished)
         except Exception as e:
-            error = "Failed to start acquire_data_ready"
+            error = "Failed to start acquire_data"
             self.flag_error(error, str(e))
             self.hardware_busy = False
             self.parent.daq.in_progress = False
@@ -1083,7 +884,7 @@ class HexitecFem():
                         address=HEX_REGISTERS.HEXITEC_2X6_HEADER_STATUS['addr'],
                         burst_len=1)[0]
                 # 0 during data transmission, 65536 when completed
-                self.all_data_sent = (status & 65536)
+                # self.all_data_sent = (status & 65536)
                 if self.all_data_sent == 0:
                     IOLoop.instance().call_later(0.1, self.check_acquire_finished)
                     return

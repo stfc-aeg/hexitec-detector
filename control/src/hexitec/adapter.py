@@ -429,8 +429,9 @@ class Hexitec():
 
         # Any leak detector error?
         try:
-            response = self.get_proxy_adapter_data("proxy")
-            self.leak_fault, self.leak_warning = self.parse_leak_detector_response(response)
+            # response = self.get_proxy_adapter_data("proxy")
+            # self.leak_fault, self.leak_warning = self.parse_leak_detector_response(response)
+            self.leak_fault, self.leak_warning = False, False
 
             # If leak detector fault, display in GUI (overrides any fem faults)
             if self.leak_fault:
