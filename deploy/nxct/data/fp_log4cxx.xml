@@ -20,17 +20,6 @@
   </layout>
  </appender>
  
-<!-- 
-<appender name="syslog" class="org.apache.log4j.net.SyslogAppender">
-  <param name="Facility" value="LOCAL1"/>
-  <param name="SyslogHost" value="localhost:5140"/>
-  <param name="Threshold" value="INFO"/>
-  <layout class="org.apache.log4j.PatternLayout">
-    <param name="ConversionPattern"  value="%d{HH:mm:ss,SSS} %-16c %-5p - %m%n"/>
-  </layout>
-</appender>
- -->
- 
  <!-- all of the loggers inherit settings from the root -->
  <root>
   <priority value="all" />
