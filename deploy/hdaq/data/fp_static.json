@@ -1,0 +1,235 @@
+[
+    {
+	"fr_setup": {
+            "fr_ready_cnxn":"tcp://127.0.0.1:5101",
+            "fr_release_cnxn":"tcp://127.0.0.1:5102"
+	},
+	"meta_endpoint":"tcp://*:5008"
+    },
+    {
+        "plugin": {
+            "load": {
+                "index": "reorder",
+                "name": "HexitecReorderPlugin",
+                "library": "/hxt_sw/install/lib/libHexitecReorderPlugin.so"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "load": {
+                "index": "threshold",
+                "name": "HexitecThresholdPlugin",
+                "library": "/hxt_sw/install/lib/libHexitecThresholdPlugin.so"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "load": {
+                "index": "summed_image",
+                "name": "HexitecSummedImagePlugin",
+                "library": "/hxt_sw/install/lib/libHexitecSummedImagePlugin.so"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "load": {
+                "index": "stacked",
+                "name": "HexitecStackedPlugin",
+                "library": "/hxt_sw/install/lib/libHexitecStackedPlugin.so"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "load": {
+                "index": "histogram",
+                "name": "HexitecHistogramPlugin",
+                "library": "/hxt_sw/install/lib/libHexitecHistogramPlugin.so"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "load": {
+                "index": "hdf",
+                "name": "FileWriterPlugin",
+                "library": "/hxt_sw/install/lib/libHdf5Plugin.so"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "connect": {
+                "index": "reorder",
+                "connection": "frame_receiver"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "connect": {
+                "index": "threshold",
+                "connection": "reorder"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "connect": {
+                "index": "summed_image",
+                "connection": "threshold"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "connect": {
+                "index": "stacked",
+                "connection": "summed_image"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "connect": {
+                "index": "histogram",
+                "connection": "stacked"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "connect": {
+                "index": "hdf",
+                "connection": "histogram"
+            }
+        }
+    },
+    {
+        "reorder": {
+            "sensors_layout": "2x6"
+        }
+    },
+    {
+        "threshold": {
+            "threshold_file": "/hxt_sw/install/config/data/threshold1.txt",
+            "threshold_value": 100,
+            "threshold_mode": "value",
+            "sensors_layout": "2x6"
+        }
+    },
+    {
+        "summed_image": {
+            "threshold_lower": 0,
+            "threshold_upper": 5400,
+            "sensors_layout": "2x6"
+        }
+    },
+    {
+        "stacked": {
+            "sensors_layout": "2x6"
+        }
+    },
+    {
+        "histogram": {
+            "selected_dataset": "stacked_frames",
+            "bin_start": 0,
+            "bin_end": 8000,
+            "bin_width": 10,
+            "max_frames_received": 0,
+            "pass_processed": true,
+            "pass_raw": true,
+            "sensors_layout": "2x6"
+        }
+    },
+    {
+        "hdf":
+        {
+            "master": "raw_frames",
+            "dataset":
+            {
+                "stacked_frames":
+                {
+                    "datatype": "float",
+                    "dims": [160, 480],
+                    "chunks": [1, 160, 480],
+                    "compression": "none",
+                    "blosc_compressor": 1,
+                    "blosc_shuffle": 0,
+                    "blosc_level": 4
+                },
+                "processed_frames":
+                {
+                    "datatype": "float",
+                    "dims": [160, 480],
+                    "chunks": [1, 160, 480],
+                    "compression": "none",
+                    "blosc_compressor": 1,
+                    "blosc_shuffle": 0,
+                    "blosc_level": 4
+                },
+                "raw_frames":
+                {
+                    "datatype": "uint16",
+                    "dims": [160, 480],
+                    "chunks": [1, 160, 480],
+                    "compression": "none",
+                    "blosc_compressor": 1,
+                    "blosc_shuffle": 0,
+                    "blosc_level": 4
+                },
+                "summed_images":
+                {
+                    "datatype": "uint32",
+                    "dims": [160, 480],
+                    "chunks": [1, 160, 480],
+                    "compression": "none",
+                    "blosc_compressor": 1,
+                    "blosc_shuffle": 0,
+                    "blosc_level": 4
+                },
+                "spectra_bins":
+                {
+                    "datatype": "float",
+                    "dims": [800],
+                    "chunks": [1, 800],
+                    "compression": "none",
+                    "blosc_compressor": 1,
+                    "blosc_shuffle": 0,
+                    "blosc_level": 4
+                },
+                "pixel_spectra":
+                {
+                    "datatype": "float",
+                    "dims": [160, 480, 800], "chunks": [1, 160, 480, 800],
+                    "compression": "none",
+                    "blosc_compressor": 1,
+                    "blosc_shuffle": 0,
+                    "blosc_level": 4
+                },
+                "summed_spectra":
+                {
+                    "datatype": "uint64",
+                    "dims": [800],
+                    "chunks": [1, 800],
+                    "compression": "none",
+                    "blosc_compressor": 1,
+                    "blosc_shuffle": 0,
+                    "blosc_level": 4
+                }
+            }
+        }
+    },
+    {
+        "hdf":
+        {
+            "file":
+            {
+                "path": "/data/hexitec/"
+            }
+        }
+    }
+]

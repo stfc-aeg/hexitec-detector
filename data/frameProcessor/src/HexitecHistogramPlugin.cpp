@@ -344,7 +344,7 @@ namespace FrameProcessor
   {
     if (frames_processed_ > 0)
     {
-      LOG4CXX_DEBUG_LEVEL(2, logger_, " EoA; Pushing histograms");
+      LOG4CXX_DEBUG_LEVEL(2, logger_, "EoA; Pushing histograms");
       pass_pixel_spectra_ = true;
       write_histograms_to_disk();
       pass_pixel_spectra_ = false;
@@ -436,7 +436,7 @@ namespace FrameProcessor
       }
       else
       {
-        LOG4CXX_DEBUG_LEVEL(2, logger_, "Did not select NXCT histogramming, pushing " << dataset);
+        LOG4CXX_DEBUG_LEVEL(3, logger_, "NXCT mode, not histogramming " << dataset);
         if (pass_processed_)
           this->push(frame);
         else

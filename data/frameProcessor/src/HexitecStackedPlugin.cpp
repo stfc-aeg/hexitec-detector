@@ -227,7 +227,7 @@ namespace FrameProcessor
   {
     for (rapidjson::SizeType i = 0; i < triggers_received_.Size(); i++) {
         if (triggers_received_[i].IsInt() && triggers_received_[i].GetInt() == frame) {
-            LOG4CXX_DEBUG_LEVEL(3, logger_, "INFO: Trigger: " << frame << " (at index " << i 
+            LOG4CXX_DEBUG_LEVEL(3, logger_, "Trigger: " << frame << " (at index " << i 
               << ") already seen. Don't create new TriggerObject.");
             return false;
         }
@@ -245,7 +245,7 @@ namespace FrameProcessor
   {
     for (rapidjson::SizeType i = 0; i < triggers_processed_.Size(); i++) {
         if (triggers_processed_[i].IsInt() && triggers_processed_[i].GetInt() == frame) {
-            LOG4CXX_DEBUG_LEVEL(3, logger_, "INFO: Trigger: " << frame << " (at index " << i
+            LOG4CXX_DEBUG_LEVEL(3, logger_, "Trigger: " << frame << " (at index " << i
               << ") already processed. Don't process.");
             return true;
         }
@@ -262,7 +262,7 @@ namespace FrameProcessor
    */
   bool HexitecStackedPlugin::frame_already_received(TriggerObject* trigger_object, int frame_number)
   {
-    LOG4CXX_DEBUG_LEVEL(2, logger_, "Checking if trigger " << trigger_object->trigger_number
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Checking if trigger " << trigger_object->trigger_number
       << " frame " << frame_number << " already received.");
     for (const auto& received_frame : trigger_object->frames_received)
     {
@@ -299,7 +299,7 @@ namespace FrameProcessor
    */
   TriggerObject* HexitecStackedPlugin::get_trigger_object(int trigger_number)
   {
-    LOG4CXX_DEBUG_LEVEL(2, logger_, "Retrieving TriggerObject for trigger number: " << trigger_number);
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Retrieving TriggerObject for trigger number: " << trigger_number);
     for (auto& trigger_object : trigger_objects_)
     {
       if (trigger_object.trigger_number == trigger_number)
@@ -318,7 +318,7 @@ namespace FrameProcessor
    */
   bool HexitecStackedPlugin::erase_trigger_object(int trigger_number)
   {
-    LOG4CXX_DEBUG_LEVEL(2, logger_, "Finding TriggerObject of trigger " << trigger_number << " to erase");
+    LOG4CXX_DEBUG_LEVEL(3, logger_, "Finding TriggerObject of trigger " << trigger_number << " to erase");
     auto trigger_to_erase = std::remove_if(trigger_objects_.begin(), trigger_objects_.end(),
       [trigger_number](const TriggerObject& obj) { return obj.trigger_number == trigger_number; });
 
@@ -372,7 +372,7 @@ namespace FrameProcessor
         // First frame of the trigger?
         if (first_frame_of_trigger(trigger_number))
         {
-          LOG4CXX_DEBUG_LEVEL(2, logger_, "INFO: NEW First frame (" << frame_number << ") of trigger "
+          LOG4CXX_DEBUG_LEVEL(3, logger_, "New First frame (" << frame_number << ") of trigger "
             << trigger_number);
           current_trigger = new TriggerObject();
           current_trigger->trigger_number = trigger_number;
@@ -385,7 +385,7 @@ namespace FrameProcessor
         }
         else
         {
-          LOG4CXX_DEBUG_LEVEL(2, logger_, "INFO: NOT first frame (" << frame_number << ") of trigger "
+          LOG4CXX_DEBUG_LEVEL(3, logger_, "Not first frame (" << frame_number << ") of trigger "
             << trigger_number);
           current_trigger = get_trigger_object(trigger_number);
           if (current_trigger == nullptr)
@@ -417,7 +417,7 @@ namespace FrameProcessor
         // Final frame of current trigger?
         if (get_number_of_frames_received(current_trigger) == frames_per_trigger_)
         {
-          LOG4CXX_DEBUG_LEVEL(2, logger_, "INFO: Trigger " << trigger_number << " all frames ("
+          LOG4CXX_DEBUG_LEVEL(3, logger_, "Trigger " << trigger_number << " all frames ("
             << frames_per_trigger_ << ") received, pushing stacked frame.");
           this->push(current_trigger->stacked_frame_);
           // Remove current_trigger from trigger_objects_ vector
