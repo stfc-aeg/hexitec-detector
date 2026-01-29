@@ -24,7 +24,6 @@ namespace FrameProcessor
   const std::string HexitecHistogramPlugin::CONFIG_PASS_RAW           = "pass_raw";
   const std::string HexitecHistogramPlugin::CONFIG_RANK_INDEX         = "rank_index";
   const std::string HexitecHistogramPlugin::CONFIG_RANK_OFFSET        = "rank_offset";
-  const std::string HexitecHistogramPlugin::CONFIG_FRAMES_PER_TRIGGER = "frames_per_trigger";
   const std::string HexitecHistogramPlugin::CONFIG_SELECTED_DATASET   = "selected_dataset";
 
   /**
@@ -37,7 +36,6 @@ namespace FrameProcessor
       histogram_index_(0),
       rank_index_(0),
       rank_offset_(2),  // Default rank offset for Hexitec
-      frames_per_trigger_(3),
       selected_dataset_("processed_frames"),
       pass_processed_(true),
       pass_raw_(true),
@@ -195,7 +193,6 @@ namespace FrameProcessor
    * - reset_histograms_    <=> reset_histograms
    * - rank_index_          <=> rank_index
    * - rank_offset_         <=> rank_offset
-   * - frames_per_trigger_  <=> frames_per_trigger
    * - pass_processed_      <=> pass_processed
    * - pass_raw_            <=> pass_raw
    *
@@ -259,12 +256,6 @@ namespace FrameProcessor
       LOG4CXX_DEBUG_LEVEL(2, logger_, "Rank offset set to " << rank_offset_);
     }
 
-    if (config.has_param(HexitecHistogramPlugin::CONFIG_FRAMES_PER_TRIGGER))
-    {
-      frames_per_trigger_ = config.get_param<int>(HexitecHistogramPlugin::CONFIG_FRAMES_PER_TRIGGER);
-      LOG4CXX_DEBUG_LEVEL(2, logger_, "Frames per trigger set to " << frames_per_trigger_);
-    }
-
     if (config.has_param(HexitecHistogramPlugin::CONFIG_SELECTED_DATASET))
     {
       selected_dataset_ =
@@ -299,7 +290,6 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_PASS_RAW, pass_raw_);
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_RANK_INDEX, rank_index_);
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_RANK_OFFSET, rank_offset_);
-    reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_FRAMES_PER_TRIGGER, frames_per_trigger_);
     reply.set_param(base_str + HexitecHistogramPlugin::CONFIG_SELECTED_DATASET, selected_dataset_);
   }
 
@@ -324,7 +314,6 @@ namespace FrameProcessor
     status.set_param(get_name() + "/pass_raw", pass_raw_);
     status.set_param(get_name() + "/rank_index", rank_index_);
     status.set_param(get_name() + "/rank_offset", rank_offset_);
-    status.set_param(get_name() + "/frames_per_trigger", frames_per_trigger_);
     status.set_param(get_name() + "/selected_dataset", selected_dataset_);
   }
 

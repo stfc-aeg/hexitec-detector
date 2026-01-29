@@ -1284,19 +1284,9 @@ class HexitecDAQ():
         self.transmit_adapter_request("fp", command, str(self.number_odin_instances), error_message)
 
         triggering_frames = self.parent.fem.triggering_frames
-        # Set frames per trigger in histogram plugin
-        command = "config/histogram/frames_per_trigger"
-        error_message = "Setting Histogram plugin's frames/trigger"
-        self.transmit_adapter_request("fp", command, str(triggering_frames), error_message)
-
         # Set frames per trigger in stacked plugin
         command = "config/stacked/frames_per_trigger"
         error_message = "Setting Stacked plugin's frames/trigger"
-        self.transmit_adapter_request("fp", command, str(triggering_frames), error_message)
-
-        # Set frames per trigger in summed_image plugin
-        command = "config/summed_image/frames_per_trigger/"
-        error_message = "Setting Summed Image plugin's frames/trigger"
         self.transmit_adapter_request("fp", command, str(triggering_frames), error_message)
 
         # Set frames per trigger in reorder plugin

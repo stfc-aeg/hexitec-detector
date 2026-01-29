@@ -228,7 +228,7 @@ namespace FrameProcessor
       processed_meta.set_data_type(raw_float);
       processed_meta.set_frame_number(hdr_ptr->frame_number);
 
-      // For processed_frames dataset, reuse existing meta data as only dataset name will differ
+      // For processed_frames dataset, reuse existing meta data as only dataset name, data type will differ
 
       // Set the dataset name
       processed_meta.set_dataset_name("processed_frames");

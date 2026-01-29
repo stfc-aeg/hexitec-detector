@@ -60,7 +60,6 @@ namespace FrameProcessor
       static const std::string CONFIG_RESET_IMAGE;
       static const std::string CONFIG_RANK_INDEX;
       static const std::string CONFIG_RANK_OFFSET;
-      static const std::string CONFIG_FRAMES_PER_TRIGGER;
 
       std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
       std::string sensors_layout_str_;

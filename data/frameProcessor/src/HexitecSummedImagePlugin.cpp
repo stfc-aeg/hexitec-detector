@@ -19,7 +19,6 @@ namespace FrameProcessor
   const std::string HexitecSummedImagePlugin::CONFIG_RESET_IMAGE      = "reset_image";
   const std::string HexitecSummedImagePlugin::CONFIG_RANK_INDEX       = "rank_index";
   const std::string HexitecSummedImagePlugin::CONFIG_RANK_OFFSET      = "rank_offset";
-  const std::string HexitecSummedImagePlugin::CONFIG_FRAMES_PER_TRIGGER  = "frames_per_trigger";
 
   /**
    * The constructor sets up logging used within the class.
@@ -27,7 +26,6 @@ namespace FrameProcessor
   HexitecSummedImagePlugin::HexitecSummedImagePlugin() :
       rank_index_(0),
       rank_offset_(2),  // Default rank offset for Hexitec
-      frames_per_trigger_(3),
       processed_frame_number_(0),
       frames_processed_(0)
   {
@@ -98,7 +96,6 @@ namespace FrameProcessor
    * - threshold_upper_     <=> threshold_upper
    * - image_frequency_     <=> image_frequency
    * - reset_image_         <=> reset_image
-   * - frames_per_trigger_  <=> frames_per_trigger
    * - rank_index_          <=> rank_index
    * - rank_offset_         <=> rank_offset
    *
@@ -112,12 +109,6 @@ namespace FrameProcessor
       sensors_layout_str_ =
         config.get_param<std::string>(HexitecSummedImagePlugin::CONFIG_SENSORS_LAYOUT);
       parse_sensors_layout_map(sensors_layout_str_);
-    }
-
-    if (config.has_param(HexitecSummedImagePlugin::CONFIG_FRAMES_PER_TRIGGER))
-    {
-      frames_per_trigger_ = config.get_param<int>(HexitecSummedImagePlugin::CONFIG_FRAMES_PER_TRIGGER);
-      LOG4CXX_DEBUG_LEVEL(2, logger_, "Frames per trigger set to " << frames_per_trigger_);
     }
 
     if (config.has_param(HexitecSummedImagePlugin::CONFIG_RANK_INDEX))
@@ -176,7 +167,6 @@ namespace FrameProcessor
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_RESET_IMAGE, reset_image_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_RANK_INDEX, rank_index_);
     reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_RANK_OFFSET, rank_offset_);
-    reply.set_param(base_str + HexitecSummedImagePlugin::CONFIG_FRAMES_PER_TRIGGER, frames_per_trigger_);
   }
 
   /**
@@ -196,7 +186,6 @@ namespace FrameProcessor
     status.set_param(get_name() + "/reset_image", reset_image_);
     status.set_param(get_name() + "/rank_index", rank_index_);
     status.set_param(get_name() + "/rank_offset", rank_offset_);
-    status.set_param(get_name() + "/frames_per_trigger", frames_per_trigger_);
   }
 
   /**

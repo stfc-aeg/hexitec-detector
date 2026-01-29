@@ -79,8 +79,6 @@ namespace FrameProcessor
       static const std::string CONFIG_RANK_INDEX;
       /** Configuration constant for rank offset **/
       static const std::string CONFIG_RANK_OFFSET;
-      /** Configuration constant for frames per trigger */
-      static const std::string CONFIG_FRAMES_PER_TRIGGER;
       /** Configuration constant for selected dataset */
       static const std::string CONFIG_SELECTED_DATASET;
 
