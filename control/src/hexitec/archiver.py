@@ -360,7 +360,7 @@ class Archiver():
                 if len(output_line) > 0:
                     self.parse_rsync_output(output_line)
         except Exception as e:
-            logging.error(f"rsync error, subprocess returned: {e.returncode}")
+            logging.error(f"rsync error, subprocess returned: {e}")
         rc = self.proc.returncode
         # Delete subprocess handle after file(s) transfered
         del self.proc
@@ -467,6 +467,7 @@ class Archiver():
         dataset_names = []
         ps_dset = None
         si_dset = None
+        ss_dset = None
         # MUST access .shape and .dtype to avoid later issues, ie
         # .shape -> RuntimeError: Unable to synchronously get dataspace (identifier is not of specified type)
         # .dtype -> ValueError: Invalid dataset identifier (identifier is not of specified type)

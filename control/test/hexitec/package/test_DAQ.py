@@ -217,12 +217,41 @@ class DAQTestFixture(object):
         self.daq.initialize(self.adapters)
 
 
+class DAQTestFixtureEPAC(object):
+    """Set up DAQ test fixture configured for EPAC."""
+
+    def __init__(self):
+        """Initialise object."""
+        cwd = os.getcwd()
+        base_path_index = cwd.rfind("control")  # i.e. /path/to/hexitec-detector
+        repo_path = cwd[:base_path_index - 1]
+        self.data_config_path = repo_path + "/data/config/"
+        self.control_config_path = cwd + "/config/"
+        self.options = {
+            "control_config": f"{self.control_config_path}",
+            "data_config": f"{self.data_config_path}",
+            "fem":
+                """
+                farm_mode = /some/config.json
+                """
+        }
+        self.file_dir = "/fake/directory/"
+        self.file_name = "fake_file.txt"
+
+        with patch("hexitec.HexitecDAQ.ParameterTree"):
+            self.adapter = HexitecAdapter(**self.options)
+            self.detector = self.adapter.hexitec  # shortcut, makes assert lines shorter
+            self.detector.operating_mode = "EPAC"
+
+            self.daq = HexitecDAQ(self.detector, self.file_dir, self.file_name)
+
 class TestDAQ(unittest.TestCase):
     """Unit tests for DAQ class."""
 
     def setUp(self):
         """Set up test fixture for each unit test."""
         self.test_daq = DAQTestFixture()
+        self.test_daq_epac = DAQTestFixtureEPAC()
 
     def test_init(self):
         """Test initialisation (part 1)."""
@@ -234,6 +263,19 @@ class TestDAQ(unittest.TestCase):
         assert daq.file_name == self.test_daq.file_name
         assert daq.in_progress is False
         assert daq.is_initialised is False
+
+    def test_init_epac(self):
+        """Test initialisation for EPAC mode."""
+        with patch("hexitec.HexitecDAQ.ParameterTree"):
+            pa = self.test_daq_epac.adapter.hexitec
+            daq = HexitecDAQ(parent=pa, save_file_dir="/fake/directory/",
+                             save_file_name="fake_file.txt")
+        assert daq.file_dir == self.test_daq_epac.file_dir
+        assert daq.file_name == self.test_daq_epac.file_name
+        assert daq.in_progress is False
+        assert daq.is_initialised is False
+        assert daq.selected_dataset == "stacked_frames"
+        assert daq.stacked_plugin_selected is True
 
     def test_initialize(self):
         """Test initialisation (part 2)."""

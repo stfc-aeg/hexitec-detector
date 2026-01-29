@@ -200,3 +200,18 @@ class TestAdapter(unittest.TestCase):
         txt_files = ['fr_hexitec_config_0.json']
         rc = self.test_adapter.adp.get_fr_config_files()
         assert rc == txt_files
+
+    def test_get_config_files(self):
+        """Test function retrieves config files correctly."""
+        mock_files = ['hexitec_fr.json', 'hexitec_fp.json', 'other_file.txt', 'hexitec_config.json']
+        with patch('os.listdir', return_value=mock_files):
+            with patch('os.path.expanduser', side_effect=lambda x: x):
+                self.test_adapter.adp.get_config_files()
+                assert self.test_adapter.adp.txt_files == ['hexitec_fr.json', 'hexitec_fp.json', 'hexitec_config.json']
+
+    def test_get_fp_config_files_multiple(self):
+        """Test function returns multiple fp config files."""
+        self.test_adapter.adp.txt_files = ['fp_hexitec_config_0.json', 'fp_hexitec_config_1.json', 'fr_hexitec_config_0.json']
+        self.test_adapter.adp.get_config_files = Mock()
+        rc = self.test_adapter.adp.get_fp_config_files()
+        assert rc == ['fp_hexitec_config_0.json', 'fp_hexitec_config_1.json']
