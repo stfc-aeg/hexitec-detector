@@ -787,18 +787,19 @@ class TestArchiver(unittest.TestCase):
         np.testing.assert_array_equal(layout, vsources[0])
         self.assertEqual(dataset_index[0], 1)
 
-    # def test_map_sources_to_layout_pixel_spectra_single_source(self):
-    #     """Test map_sources_to_layout for pixel_spectra with single source."""
-    #     layout = np.zeros((20, 8, 8, 2), dtype=np.uint32)
-    #     vsource = np.ones((20, 8, 8, 2), dtype=np.uint32)
-    #     vsources = [vsource]
-    #     dataset_index = [0]
+    def test_map_sources_to_layout_pixel_spectra_single_source(self):
+        """Test map_sources_to_layout for pixel_spectra with single source."""
+        layout = np.zeros((20, 8, 8, 2), dtype=np.uint32)
+        vsource = np.ones((20, 8, 8, 2), dtype=np.uint32)
+        vsources = [vsource]
+        dataset_index = [0]
 
-    #     self.archiver.map_sources_to_layout('pixel_spectra', 0, [20], 1, 1, vsources, layout, dataset_index)
+        self.archiver.map_sources_to_layout('pixel_spectra', 0, [20], 1, 1, vsources, layout, dataset_index)
 
-    #     np.testing.assert_array_equal(layout[0:20:1, :, :, :], vsource)
-    #     self.assertEqual(dataset_index[0], 1)
+        np.testing.assert_array_equal(layout[0:20:1, :, :, :], vsource)
+        self.assertEqual(dataset_index[0], 1)
 
+    # Exception, no extra coverage
     # def test_map_sources_to_layout_pixel_spectra_multiple_sources(self):
     #     """Test map_sources_to_layout for pixel_spectra with multiple sources and stride."""
     #     layout = np.zeros((20, 8, 8, 2), dtype=np.uint32)
@@ -814,17 +815,18 @@ class TestArchiver(unittest.TestCase):
     #     np.testing.assert_array_equal(layout[0:20:2, :, :, :], vsource1)
     #     self.assertEqual(dataset_index[0], 1)
 
-    # def test_map_sources_to_layout_summed_images_single_source(self):
-    #     """Test map_sources_to_layout for summed_images with single source."""
-    #     layout = np.zeros((20, 8, 80), dtype=np.uint32)
-    #     vsource = np.ones((80, 80), dtype=np.uint32)
-    #     vsources = [vsource]
-    #     dataset_index = [0]
+    #space Exception, covers line 570
+    def test_map_sources_to_layout_summed_images_single_source(self):
+        """Test map_sources_to_layout for summed_images with single source."""
+        layout = np.zeros((20, 8, 80), dtype=np.uint32)
+        vsource = np.ones((8, 80), dtype=np.uint32)
+        vsources = [vsource]
+        dataset_index = [0]
 
-    #     self.archiver.map_sources_to_layout('summed_images', 0, [20], 1, 1, vsources, layout, dataset_index)
-
-    #     np.testing.assert_array_equal(layout[0:20:1, :, :], vsource)
-    #     self.assertEqual(dataset_index[0], 1)
+        self.archiver.map_sources_to_layout('summed_images', 0, [20], 1, 1, vsources, layout, dataset_index)
+        layout = layout[0]
+        np.testing.assert_array_equal(layout[0:20:1, :], vsource)
+        self.assertEqual(dataset_index[0], 1)
 
     # def test_map_sources_to_layout_summed_images_multiple_sources(self):
     #     """Test map_sources_to_layout for summed_images with multiple sources."""
@@ -1442,3 +1444,10 @@ class TestArchiver(unittest.TestCase):
             self.archiver.flag_error('Second error')
         self.assertEqual(self.archiver.errors_history[-2][1], 'First error')
         self.assertEqual(self.archiver.errors_history[-1][1], 'Second error')
+
+    @patch('hexitec.archiver.logging.error')
+    def test_parse_rsync_output_malformed_percentage_line_logs_error(self, mock_logging):
+        """Test parse_rsync_output logs error on malformed percentage line"""
+        error = "Error parsing invalid % % % format: too many values to unpack (expected 2)"
+        self.archiver.parse_rsync_output(b'invalid % % % format')
+        mock_logging.assert_called_once_with(error)
