@@ -217,12 +217,41 @@ class DAQTestFixture(object):
         self.daq.initialize(self.adapters)
 
 
+class DAQTestFixtureEPAC(object):
+    """Set up DAQ test fixture configured for EPAC."""
+
+    def __init__(self):
+        """Initialise object."""
+        cwd = os.getcwd()
+        base_path_index = cwd.rfind("control")  # i.e. /path/to/hexitec-detector
+        repo_path = cwd[:base_path_index - 1]
+        self.data_config_path = repo_path + "/data/config/"
+        self.control_config_path = cwd + "/config/"
+        self.options = {
+            "control_config": f"{self.control_config_path}",
+            "data_config": f"{self.data_config_path}",
+            "fem":
+                """
+                farm_mode = /some/config.json
+                """
+        }
+        self.file_dir = "/fake/directory/"
+        self.file_name = "fake_file.txt"
+
+        with patch("hexitec.HexitecDAQ.ParameterTree"):
+            self.adapter = HexitecAdapter(**self.options)
+            self.detector = self.adapter.hexitec  # shortcut, makes assert lines shorter
+            self.detector.operating_mode = "EPAC"
+
+            self.daq = HexitecDAQ(self.detector, self.file_dir, self.file_name)
+
 class TestDAQ(unittest.TestCase):
     """Unit tests for DAQ class."""
 
     def setUp(self):
         """Set up test fixture for each unit test."""
         self.test_daq = DAQTestFixture()
+        self.test_daq_epac = DAQTestFixtureEPAC()
 
     def test_init(self):
         """Test initialisation (part 1)."""
@@ -234,6 +263,19 @@ class TestDAQ(unittest.TestCase):
         assert daq.file_name == self.test_daq.file_name
         assert daq.in_progress is False
         assert daq.is_initialised is False
+
+    def test_init_epac(self):
+        """Test initialisation for EPAC mode."""
+        with patch("hexitec.HexitecDAQ.ParameterTree"):
+            pa = self.test_daq_epac.adapter.hexitec
+            daq = HexitecDAQ(parent=pa, save_file_dir="/fake/directory/",
+                             save_file_name="fake_file.txt")
+        assert daq.file_dir == self.test_daq_epac.file_dir
+        assert daq.file_name == self.test_daq_epac.file_name
+        assert daq.in_progress is False
+        assert daq.is_initialised is False
+        assert daq.selected_dataset == "stacked_frames"
+        assert daq.stacked_plugin_selected is True
 
     def test_initialize(self):
         """Test initialisation (part 2)."""
@@ -1308,104 +1350,6 @@ class TestDAQ(unittest.TestCase):
         assert exc_info.type is ParameterTreeError
         assert exc_info.value.args[0] == error
 
-    # TODO Replace this with 2nd and 3rd tests funcs below..?
-    # def test_commit_configuration(self):
-    #     """Test function handles committing configuration ok."""
-    #     config_dict = \
-    #         {'diagnostics': {'daq_start_time': 0, 'daq_stop_time': 0, 'fem_not_busy': 0},
-    #          'receiver':
-    #             {'connected': True, 'configured': True, 'config_file': 'fr_hexitec_config.json'},
-    #          'processor':
-    #             {'connected': True, 'configured': False, 'config_file': 'file.json'},
-    #          'file_info':
-    #             {'enabled': False, 'file_name': 'default_file', 'file_dir': '/tmp/'},
-    #          'status': {'in_progress': False, 'daq_ready': False},
-    #          'config':
-    #             {'addition':
-    #                 {'enable': False, 'pixel_grid_size': 3},
-    #              'calibration':
-    #                 {'enable': False, 'gradients_filename': '', 'intercepts_filename': ''},
-    #              'discrimination':
-    #                 {'enable': False, 'pixel_grid_size': 3},
-    #              'histogram':
-    #                 {'bin_end': 800, 'bin_start': 0, 'bin_width': 10.0, 'max_frames_received': 10,
-    #                  'pass_processed': False, 'pass_raw': True},
-    #              'lvframes':
-    #                 {'dataset_name': 'raw_frames', 'frame_frequency': 0,
-    #                  'live_view_socket_addr': 'tcp://127.0.0.1:5020', 'per_second': 2},
-    #              'lvspectra':
-    #                 {'dataset_name': 'summed_spectra', 'frame_frequency': 0,
-    #                  'live_view_socket_addr': 'tcp://127.0.0.1:5021', 'per_second': 1},
-    #              'threshold':
-    #                 {'threshold_filename': '', 'threshold_mode': 'value', 'threshold_value': 10},
-    #              'summed_image':
-    #                 {'threshold_lower': 120, 'threshold_upper': 4800}},
-    #              'sensors_layout': '2x6'}
-
-    #     patched_function = "hexitec.GenerateConfigFiles.GenerateConfigFiles.generate_config_files"
-    #     with patch("hexitec.HexitecDAQ.IOLoop") as mock_loop, patch(patched_function) as mock_gcf:
-
-    #         self.test_daq.daq.param_tree.get = Mock(return_value=config_dict)
-    #         self.test_daq.daq.pass_raw = True
-    #         self.test_daq.daq.pass_processed = True
-    #         store_config = "/tmp/_tmp_store1.json"
-    #         execute_config = "/tmp/_tmp_execute.json"
-    #         store_string = {"index": "_tmp_store1.json", "value": []}
-    #         execute_string = {"index": "_tmp_store1.json"}
-    #         mock_gcf.return_value = (store_config, execute_config, store_string, execute_string)
-    #         self.test_daq.daq.commit_configuration()
-
-    #         # self.test_daq.fake_fp.put.assert_has_calls([
-    #         #     # TODO:  REPLACE ANY WITH ApiAdapterRequest
-    #         #     call("config/hdf/delete_datasets/", ANY),
-    #         #     call("config/config_file/", ANY)
-    #         # ])
-
-    #         instance = mock_loop.instance()
-    #         instance.call_later.assert_called_with(0.4, self.test_daq.daq.submit_configuration)
-
-    # @patch('hexitec.HexitecDAQ.ApiAdapterRequest')
-    # @patch('hexitec.HexitecDAQ.GenerateConfigFiles')
-    # @patch('hexitec.HexitecDAQ.IOLoop.instance')
-    # def test_commit_configuration(self, mock_ioloop_instance, mock_generate_config_files,
-    #                               mock_api_request):
-    #     mock_ioloop_instance.return_value = MagicMock()
-    #     mock_generate_config_files.return_value.generate_config_files.return_value = \
-    #         ("store_config", "execute_config", "store_string", "execute_string")
-    #     mock_generate_config_files.return_value.generate_pixel_spectra_params.return_value = \
-    #         "ps_params"
-
-    #     self.test_daq.daq.param_tree = MagicMock()
-    #     self.test_daq.daq.param_tree.get.return_value = {}
-    #     self.test_daq.daq.adapters = {"fp": MagicMock(), "live_histogram": MagicMock()}
-    #     self.test_daq.daq.number_odin_instances = 1
-    #     self.test_daq.daq.number_histograms = 10
-    #     self.test_daq.daq.compression_type = "gzip"
-    #     self.test_daq.daq.odin_path = "/odin"
-    #     self.test_daq.daq.pass_processed = False
-    #     self.test_daq.daq.pass_raw = False
-
-    #     self.test_daq.daq.commit_configuration()
-
-    #     self.test_daq.daq.adapters["fp"].put.assert_any_call("config/hdf/delete_datasets",
-    #                                                          mock_api_request.return_value)
-    #     self.test_daq.daq.adapters["fp"].put.assert_any_call("config/plugin",
-    #                                                          mock_api_request.return_value)
-    #     self.test_daq.daq.adapters["fp"].put.assert_any_call("config/store/0",
-    #                                                          mock_api_request.return_value)
-    #     self.test_daq.daq.adapters["fp"].put.assert_any_call("config/execute/0",
-    #                                                          mock_api_request.return_value)
-    #     self.test_daq.daq.adapters["fp"].put.assert_any_call("config/hdf/dataset/spectra_bins",
-    #                                                          mock_api_request.return_value)
-    #     self.test_daq.daq.adapters["fp"].put.assert_any_call("config/hdf/dataset/pixel_spectra",
-    #                                                          mock_api_request.return_value)
-    #     self.test_daq.daq.adapters["fp"].put.assert_any_call("config/hdf/dataset/summed_spectra",
-    #                                                          mock_api_request.return_value)
-    #     mock_ioloop_instance.return_value.call_later.assert_called_once_with(0.4,
-    #         self.test_daq.daq.submit_configuration)
-
-    # This and next unit test covers: 1074-1168
-    # Covers: 1100-1101
     @patch('hexitec.HexitecDAQ.GenerateConfigFiles')
     @patch('hexitec.HexitecDAQ.IOLoop.instance')
     def test_commit_configuration_with_pass_processed(self, mock_ioloop_instance,
@@ -1432,7 +1376,6 @@ class TestDAQ(unittest.TestCase):
         self.assertEqual(self.test_daq.daq.master_dataset, "processed_frames")
         self.assertIn("processed_frames", self.test_daq.daq.extra_datasets)
 
-    # Covers: 1103-1104
     @patch('hexitec.HexitecDAQ.GenerateConfigFiles')
     @patch('hexitec.HexitecDAQ.IOLoop.instance')
     def test_commit_configuration_with_pass_raw(self, mock_ioloop_instance,
@@ -1458,7 +1401,6 @@ class TestDAQ(unittest.TestCase):
         self.assertEqual(self.test_daq.daq.master_dataset, "raw_frames")
         self.assertIn("raw_frames", self.test_daq.daq.extra_datasets)
 
-    # Covers: 1125-1127
     @patch('hexitec.HexitecDAQ.GenerateConfigFiles')
     @patch('hexitec.HexitecDAQ.IOLoop.instance')
     def test_commit_configuration_handles_gcf_throws_exception(self, mock_ioloop_instance,
@@ -1482,28 +1424,8 @@ class TestDAQ(unittest.TestCase):
 
         self.test_daq.daq.commit_configuration()
 
-#       # error = Exception("Err")
-#         self.test_daq.daq.parent.fem.flag_error.assert_called_with(error)
-# E           Expected: mock(Exception('Err'))
-# E             Actual: mock(Exception('Err'))
-
     def test_submit_configuration_hdf_branch(self):
         """Test function handles sample parameter tree ok."""
-        # TODO: Unable to return unique values for each call to
-        # ...parameter_tree.tree['config'].get()
-        # config_dict = \
-        #     {
-        #         'addition': {'enable': False, 'pixel_grid_size': 3},
-        #         'calibration': {'enable': False, 'gradients_filename': '',
-        #                         'intercepts_filename': ''},
-        #         'discrimination': {'enable': False, 'pixel_grid_size': 3},
-        #         'histogram': {'bin_end': 8000, 'bin_start': 0, 'bin_width': 10.0,
-        #                       'max_frames_received': 10,
-        #                       'pass_processed': False, 'pass_raw': True},
-        #         'threshold': {'threshold_filename': '', 'threshold_mode': 'value',
-        #                       'threshold_value': 100}
-        #     }
-
         # Mock using single entry parameter tree (i.e. dictionary)
         config_dict = \
             {'addition': {'enable': False}}
@@ -1515,18 +1437,12 @@ class TestDAQ(unittest.TestCase):
 
             self.test_daq.daq.pass_raw = True
             self.test_daq.daq.pass_processed = True
-            # command_spectra = "config/hdf/dataset/" + "spectra_bins"
-            # command_pixel = "config/hdf/dataset/" + "pixel_spectra"
-            # command_summed = "config/hdf/dataset/" + "summed_spectra"
 
             self.test_daq.daq.submit_configuration()
 
             self.test_daq.fake_fp.put.assert_has_calls([
                 # TODO: REPLACE ANY WITH ApiAdapterRequest
                 call("config/addition/enable", ANY),
-                # call(command_spectra, ANY),
-                # call(command_pixel, ANY),
-                # call(command_summed, ANY)
             ])
 
     def test_submit_configuration_histogram_branch(self):

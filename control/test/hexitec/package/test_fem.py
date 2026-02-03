@@ -501,16 +501,6 @@ class TestFem(unittest.TestCase):
         assert self.test_fem.fem.server_ctrl_mac == mac
         assert self.test_fem.fem.farm_mode_targets == 2
 
-    # # TODO Cannot set farm_target parameters independently from e_i_p function..
-    # def test_verify_farm_mode_parameters_handles_exception(self):
-    #     """Test that Farm mode parameters handles mismatched configuration."""
-    #     self.test_fem.fem.extract_interface_parameters = Mock(return_value = (1, 2))
-    #     self.test_fem.fem.farm_target_ip == ["10.0.0.0 10.0.0.1"]	# 2 IPs
-    #     self.test_fem.fem.farm_target_mac == ["00:01:02:03:04:05"]	# 1 MAC address
-    #     self.test_fem.fem.farm_target_port == [1, 2, 3]	 # 3 ports
-    #     with pytest.raises(HexitecFemError) as exc_info:
-    #         self.test_fem.fem.verify_farm_mode_parameters("lo")
-
     def test_extract_interface_parameter_handles_exception(self):
         """Test that function handles Exception."""
         with pytest.raises(HexitecFemError) as exc_info:
@@ -613,6 +603,24 @@ class TestFem(unittest.TestCase):
         assert lut1 == mac_lut1
         assert lut2 == mac_lut2
 
+    @patch('hexitec_vsr.VsrModule')
+    def test_initialise_hardware_epac_triggered(self, mocked_vsr_module):
+        """Test initialise_hardware for EPAC triggered mode when VSR enabling fails."""
+        with patch("hexitec.HexitecFem.IOLoop") as mock_loop:
+            self.test_fem.fem.hardware_connected = True
+            self.test_fem.fem.hardware_busy = False
+            self.test_fem.fem.check_hardware_ready = Mock()
+            self.test_fem.fem.broadcast_VSRs = mocked_vsr_module
+            self.test_fem.fem.broadcast_VSRs.enable_module = Mock(return_value=True)
+            self.test_fem.fem.broadcast_VSRs._get_status = Mock()
+            self.test_fem.fem.parent.operating_mode = "EPAC"
+            self.test_fem.fem.triggering_mode = "triggered"
+            # self.test_fem.fem.flag_error = Mock()
+
+            self.test_fem.fem.initialise_hardware()
+            i = mock_loop.instance()
+            i.call_later.assert_called_with(10, self.test_fem.fem.setup_data_lane_1)
+
     def test_initialise_hardware_fails_if_not_connected(self):
         """Test function fails when no connection established."""
         with pytest.raises(ParameterTreeError) as exc_info:
@@ -646,6 +654,24 @@ class TestFem(unittest.TestCase):
         error = "Can't initialise hardware, Hardware busy"
         assert exc_info.value.args[0] == error
         assert exc_info.type is ParameterTreeError
+
+    @patch('hexitec_vsr.VsrModule')
+    def test_initialise_hardware_epac_triggered_vsr_enable_fails(self, mocked_vsr_module):
+        """Test initialise_hardware for EPAC triggered mode when VSR enabling fails."""
+        self.test_fem.fem.hardware_connected = True
+        self.test_fem.fem.hardware_busy = False
+        self.test_fem.fem.check_hardware_ready = Mock()
+        self.test_fem.fem.broadcast_VSRs = mocked_vsr_module
+        self.test_fem.fem.broadcast_VSRs.enable_module = Mock(return_value=False)
+        self.test_fem.fem.broadcast_VSRs._get_status = Mock(return_value="hello?")
+        self.test_fem.fem.parent.operating_mode = "EPAC"
+        self.test_fem.fem.triggering_mode = "triggered"
+        self.test_fem.fem.flag_error = Mock()
+
+        self.test_fem.fem.initialise_hardware()
+        self.test_fem.fem.flag_error.assert_called_once()
+        call_args = self.test_fem.fem.flag_error.call_args
+        assert "Not all VSR(s) enabled" in call_args[0]
 
     def test_power_up_modules(self):
         """Test function works."""
@@ -918,19 +944,22 @@ class TestFem(unittest.TestCase):
             self.test_fem.fem.acquire_data_await_dummy_trigger_processed()
             self.test_fem.fem.acquire_data_ready.assert_called()
 
-    # # TODO or acquire_data_ready() is called  but no socket error raised !!!!!
-    # def test_acquire_data_await_dummy_trigger_processed_handles_socket_error(self):
-    #     """Test function handles firmware processed dummy trigger."""
-    #     self.test_fem.fem.acquire_data_ready = Mock()
-    #     self.test_fem.fem.acquire_data_ready.side_effect = socket_error()
-    #     self.test_fem.fem.flag_error = Mock()
+    @patch('hexitec_vsr.VsrModule')
+    def test_acquire_data_await_dummy_trigger_processed_handles_socket_error(self, mocked_vsr_module):
+        """Test function handles firmware processed dummy trigger."""
+        # Suppress 7 pytest.PytestUnraisableExceptionWarning from vsr.hv_disable() call:
+        mocked_vsr_module.hv_disable = Mock()
+        self.test_fem.fem.broadcast_VSRs = mocked_vsr_module
+        self.test_fem.fem.vsr_list = [mocked_vsr_module]
+        with patch("hexitec.HexitecFem.RdmaUDP"):
+            self.test_fem.fem.flag_error = Mock()
 
-    #     error = "Awaiting dummy trigger processing Error"
-    #     self.test_fem.fem.x10g_rdma.udp_rdma_read = Mock()
-    #     self.test_fem.fem.x10g_rdma.udp_rdma_read.return_value = [8]
-    #     self.test_fem.fem.acquire_data_ready = Mock()
-    #     self.test_fem.fem.acquire_data_await_dummy_trigger_processed()
-    #     self.test_fem.fem.flag_error.assert_called_with(error, "")
+            error = "Awaiting dummy trigger processing Error"
+            self.test_fem.fem.x10g_rdma.udp_rdma_read = Mock()
+            self.test_fem.fem.x10g_rdma.udp_rdma_read.side_effect = socket_error()
+            self.test_fem.fem.acquire_data_ready = Mock()
+            self.test_fem.fem.acquire_data_await_dummy_trigger_processed()
+            self.test_fem.fem.flag_error.assert_called_with(error, "")
 
     def test_acquire_data_await_dummy_trigger_processed_ongoing(self):
         """Test function handles firmware not yet processed dummy trigger."""
