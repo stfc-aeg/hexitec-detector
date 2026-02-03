@@ -148,9 +148,11 @@
         }
     },
     {
+        "frames": 2147483648,
         "hdf":
         {
             "master": "raw_frames",
+            "frames": 9,
             "dataset":
             {
                 "stacked_frames":
@@ -206,7 +208,8 @@
                 "pixel_spectra":
                 {
                     "datatype": "float",
-                    "dims": [160, 480, 800], "chunks": [1, 160, 480, 800],
+                    "dims": [160, 480, 800],
+                    "chunks": [1, 160, 480, 800],
                     "compression": "none",
                     "blosc_compressor": 1,
                     "blosc_shuffle": 0,
@@ -226,15 +229,12 @@
         }
     },
     {
-        "frames": 9
-    },
-    {
         "hdf":
         {
             "file":
             {
                 "path": "/tmp/",
-                "name": "00_simulated_data"
+                "name": "01_simulated_data"
             },
             "write": true
         }
