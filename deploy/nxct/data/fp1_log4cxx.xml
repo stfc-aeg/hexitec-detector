@@ -6,13 +6,12 @@
   <param name="Target" value="System.out" />
   <param name="Threshold" value="ERROR"/>
   <layout class="org.apache.log4j.PatternLayout">
-   <!-- <param name="ConversionPattern" value="%d{HH:mm:ss,SSS} %-14c %-5p (%F:%L) - %m%n"/> -->
-   <param name="ConversionPattern" value="%d{HH:mm:ss,SSS}  %-14c %-5p - %m%n" />
+   <param name="ConversionPattern" value="%d{HH:mm:ss,SSS}  %-27c %-5p - %m%n"/>
   </layout>
  </appender>
 
  <appender name="FrameProcessorAppender" class="org.apache.log4j.FileAppender">
-  <param name="file" value="/tmp/frameProcessor.log" />
+  <param name="file" value="/tmp/frameProcessor1.log" />
   <param name="append" value="false" />
   <param name="Threshold" value="ERROR"/>
   <layout class="org.apache.log4j.PatternLayout">
@@ -24,7 +23,6 @@
  <root>
   <priority value="all" />
   <appender-ref ref="ApplicationConsoleAppender" />
-  <!--   <appender-ref ref="syslog" /> -->
  </root>
 
  <!-- The frame processor application logger hierachy -->
