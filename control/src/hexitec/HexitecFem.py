@@ -452,15 +452,15 @@ class HexitecFem():
             # Generate MAC addresses
             macs = []
             for i in range(len(addresses)):
-                if self.farm_server_1_ip == addresses[i]:
-                    # Farm Server 1
-                    mac = self.farm_server_1_mac
-                elif self.farm_server_2_ip == addresses[i]:
-                    # Farm Server 2
-                    mac = self.farm_server_2_mac
-                else:
-                    self.flag_error(f"Farm Mode IP {addresses[i]} not in Farm Mode config")
-                macs.append(mac)
+                for target_ip in self.farm_target_ip:
+                    if target_ip == addresses[i]:
+                        mac = self.farm_target_mac[i]
+                        macs.append(mac)
+                        break
+            if len(macs) != len(addresses):
+                e = f"Farm Mode: IP/MAC mismatch: {len(addresses)} IPs but {len(macs)} MACs"
+                self.flag_error(e)
+                raise HexitecFemError(e)
 
             if self.triggering_mode == "none":
                 if self.parent.operating_mode == "NXCT":
@@ -625,12 +625,17 @@ class HexitecFem():
 
     def extract_frame_receiver_interfaces(self, frame_receivers):
         """Extract frame receiver addresses and ports from the frame receivers list."""
+        # Extract IP address from rx_address entries, unless EPAC operating mode,
+        #  then extract from rx_address_list entries
+        rx_address = "rx_address"
+        if self.parent.operating_mode == "EPAC":
+            rx_address = "rx_address_list"
         addresses = []
         ports = []
         for instance in frame_receivers:
             if instance is None:
                 continue
-            addresses = self.extract_entries_from_string(instance.get("rx_address_list", None), addresses)
+            addresses = self.extract_entries_from_string(instance.get(rx_address, None), addresses)
             ports = self.extract_entries_from_string(instance.get("rx_ports", None), ports)
         # Convert ports from list of strings, to list of integers
         ports = list(map(int, ports))
