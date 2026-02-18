@@ -247,7 +247,7 @@ class Archiver():
             try:
                 server, file = full_path.split(":")
             except ValueError:
-                logging.error(f"Unexpected Queue item: {full_path}")
+                self.flag_error(f"Unexpected Queue item: {full_path}")
                 self.queue.task_done()
                 continue
 
@@ -340,7 +340,7 @@ class Archiver():
             # print(f" -> size={size}, percent={percentage}, rate={datarate}, remain={remaining}")
             # return size, percentage, datarate, remaining
         except ValueError as e:
-            logging.error(f"Error parsing {string_object}: {e}")
+            self.flag_error(f"Error parsing {string_object}: {e}")
 
     def execute_rsync_command(self, cmd):
         """Execute rsync command through subprocess."""
@@ -360,7 +360,7 @@ class Archiver():
                 if len(output_line) > 0:
                     self.parse_rsync_output(output_line)
         except Exception as e:
-            logging.error(f"rsync error, subprocess returned: {e}")
+            self.flag_error(f"rsync error, subprocess returned: {e}")
         rc = self.proc.returncode
         # Delete subprocess handle after file(s) transfered
         del self.proc
@@ -385,7 +385,7 @@ class Archiver():
             logging.debug(f"Received server {server} file {file}. Queue is {self.q_size} file(s)")
         except ValueError:
             error = f"Cannot parse '{full_path}', syntax should be 'server:/path/to.h5'"
-            logging.error(error)
+            self.flag_error(error)
             raise ValueError(error)
 
     def map_virtual_datasets(self, filename):
@@ -403,7 +403,7 @@ class Archiver():
         num_sources = len(source_files)
         logging.debug(f"VDS found {num_sources} file(s), namely: {source_files}")
         if num_sources == 0:
-            logging.error("Received meta data but no files containing real data")
+            self.flag_error("Received meta data but no files containing real data")
             return -1
         dest_file = f'{filename}'
         # Extract metadata from first source file
@@ -414,19 +414,19 @@ class Archiver():
 
         # Determine 'pixel_spectra' dimensions
         if ps_dset is None:
-            logging.error("Couldn't find 'pixel_spectra' dataset in first data file")
+            self.flag_error("Couldn't find 'pixel_spectra' dataset in first data file")
             return -1
         pixel_spectra_summed = np.zeros((ps_dset.shape[1], ps_dset.shape[2], ps_dset.shape[3]), dtype=ps_dset.dtype)
 
         # Determine 'summed_images' dimensions
         if si_dset is None:
-            logging.error("Couldn't find 'summed_images' dataset in first data file")
+            self.flag_error("Couldn't find 'summed_images' dataset in first data file")
             return -1
         summed_images_summed = np.zeros((si_dset.shape[1], si_dset.shape[2]), dtype=si_dset.dtype)
 
         # Determine 'summed_spectra' dimensions
         if ss_dset is None:
-            logging.error("Couldn't find 'summed_spectra' dataset in first data file")
+            self.flag_error("Couldn't find 'summed_spectra' dataset in first data file")
             return -1
         summed_spectra_summed = np.zeros((ss_dset.shape[1]), dtype=ss_dset.dtype)
 
@@ -443,7 +443,7 @@ class Archiver():
                 index += 1
                 layout = self.build_virtual_layout(dataset, inshape, index, num_frames, dtype)
             except IndexError as e:
-                logging.error(f"Couldn't create virtual layout for dataset '{dataset}': {e}")
+                self.flag_error(f"Couldn't create virtual layout for dataset '{dataset}': {e}")
                 return -2
             # Map sources into layout
             try:
@@ -454,10 +454,10 @@ class Archiver():
                                             pixel_spectra_summed, summed_images_summed,
                                             summed_spectra_summed)
             except ValueError as e:
-                logging.error(f"Couldn't map virtual dataset ({dataset}) into {dest_file}: {e}")
+                self.flag_error(f"Couldn't map virtual dataset ({dataset}) into {dest_file}: {e}")
                 return -3
             except BlockingIOError as e:
-                logging.error(f"File {dest_file} is locked, couldn't write VDS: {e}")
+                self.flag_error(f"File {dest_file} is locked, couldn't write VDS: {e}")
                 return -4
         logging.debug(f"VDS finished mapping virtual datasets into file {dest_file}")
         return 0
@@ -491,7 +491,7 @@ class Archiver():
                         _ = ss_dset.shape  # Leave
                         _ = ss_dset.dtype    # Leave
         except OSError as e:
-            logging.error(f"Error opening data file {source_file}: {e}")
+            self.flag_error(f"Error opening data file {source_file}: {e}")
             return -1
         return dataset_names, ps_dset, si_dset, ss_dset, num_datasets
 
@@ -670,7 +670,7 @@ class Archiver():
             with h5py.File(source) as file:     # Go through each file
                 if num_datasets != len(file.keys()):
                     e = f"Expected {num_datasets} but {source} has {len(file.keys())} datasets"
-                    logging.error(e)
+                    self.flag_error(e)
                     return -2
 
                 index = 0
