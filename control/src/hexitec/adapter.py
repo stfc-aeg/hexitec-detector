@@ -300,6 +300,7 @@ class Hexitec():
                 "elog": (lambda: self.elog, self.set_elog),
                 "fem_health": (lambda: self.fem_health, None),
                 "number_odin_instances": (lambda: self.number_odin_instances, self.set_number_odin_instances),
+                "operating_mode": (lambda: self.operating_mode, None),
                 "leak": {
                     "fault": (lambda: bool(self.leak_fault), None),
                     "warning": (lambda: bool(self.leak_warning), None),
