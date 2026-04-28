@@ -1,8 +1,8 @@
 # Project name
 project(HEXITEC)
 
-# Require CMake version >=2.8
-cmake_minimum_required(VERSION 2.8)
+# Require CMake version >=2.8.12
+cmake_minimum_required(VERSION 2.8.12)
 
 # Set output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -28,6 +28,12 @@ set(TEST_DIR ${HEXITEC_SOURCE_DIR}/test)
 # directories of additional CMake modules (ie. MacroOutOfSourceBuild.cmake):
 set(CMAKE_MODULE_PATH ${HEXITEC_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
+# If the odin-data root installation directory has been specified add the cmake path to allow
+# installed cmake finders to be used
+if (DEFINED ODINDATA_ROOT_DIR)
+        set(CMAKE_MODULE_PATH ${ODINDATA_ROOT_DIR}/cmake ${CMAKE_MODULE_PATH})
+endif()
+
 # Allow macOS shared (dynamic) libraries to link with undefined symbols
 if (APPLE)
 	message("Allowing undefined symbols in macOS shared library linking")
@@ -38,9 +44,24 @@ endif(APPLE)
 find_package( Boost 1.41.0
 	      REQUIRED
 	      COMPONENTS program_options system filesystem unit_test_framework date_time thread)
-find_package(Log4CXX 0.10.0 REQUIRED)
-find_package(ZeroMQ 3.2.4 REQUIRED)
-find_package(OdinData REQUIRED)
+find_package(LOG4CXX 0.10.0 REQUIRED)
+find_package(ZEROMQ 3.2.4 REQUIRED)
+find_package(ODINDATA REQUIRED)
+find_package(Kafka)
+find_package(Flatbuffers)
+
+
+# Check if Boost version has placeholders and set definition accordingly
+message("\nChecking Boost version placeholder support")
+if (NOT DEFINED Boost_VERSION_STRING)
+  set(Boost_VERSION_STRING "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
+endif ()
+if ((Boost_VERSION_STRING EQUAL 1.60.0) OR (Boost_VERSION_STRING GREATER 1.60.0))
+  message(STATUS "Boost version ${Boost_VERSION_STRING} has placeholders")
+  ADD_DEFINITIONS(-DBOOST_HAS_PLACEHOLDERS)
+else ()
+  message(STATUS "Boost version ${Boost_VERSION_STRING} does not have placeholders")
+endif ()
 
 message("Determining hexitec-detector version")
 include(GetGitRevisionDescription)

@@ -23,3 +23,15 @@ install(TARGETS HexitecHistogramPlugin LIBRARY DESTINATION lib)
 install(TARGETS HexitecCalibrationPlugin LIBRARY DESTINATION lib)
 install(TARGETS HexitecSummedImagePlugin LIBRARY DESTINATION lib)
 install(TARGETS HexitecStackedPlugin LIBRARY DESTINATION lib)
+
+if ((${KAFKA_FOUND}) AND (${FLATBUFFERS_FOUND}))
+	message("Found Kafka and flatbuffers, building HexitecKafkaPvaPlugin")
+    include_directories(${KAFKA_INCLUDE_DIR} ${FLATBUFFERS_INCLUDE_DIR}
+        ${FRAMEPROCESSOR_DIR}/include/pva )
+    # Add library for HexitecKafkaPvaPlugin plugin
+    add_library(HexitecKafkaPvaPlugin SHARED HexitecKafkaPvaPlugin.cpp
+        pva/PvaFrameBufferBuilder.cpp
+    )
+    target_link_libraries(HexitecKafkaPvaPlugin ${KAFKA_LIBRARIES} ${FLATBUFFERS_LIBRARIES})
+    install(TARGETS HexitecKafkaPvaPlugin DESTINATION lib)
+endif()
