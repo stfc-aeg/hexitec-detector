@@ -1,10 +1,24 @@
+/*
+* PvaFrameBufferBuilder.cpp - implementation of the PvaFrameBufferBuilder class for building PVData
+* flatbuffers from HEXITEC frames
+*
+*  Created on: 20 Apr 2026
+*      Author: Tim Nicholls, STFC Detector Systems Software Group
+*/
 #include "PvaFrameBufferBuilder.h"
 #include "HexitecDefinitions.h"
 
 namespace FrameProcessor {
 
+    /**
+     * Build a PvaFrameBuffer containing a PVData flatbuffer for the specified frame.
+     *
+     * \param[in] frame - Shared pointer to the Frame object to build the buffer from
+     * \return Pointer to the built PvaFrameBuffer, or nullptr if an error occurred
+     */
     PvaFrameBuffer* PvaFrameBufferBuilder::build_buffer(boost::shared_ptr<Frame> frame)
     {
+        // Resolve frame metadata and parameters needed for building the PVData flatbuffer
         const FrameMetaData meta_data = frame->get_meta_data();
         uint64_t frame_num = meta_data.get_frame_number();
         std::size_t frame_size = frame->get_image_size();
@@ -18,12 +32,7 @@ namespace FrameProcessor {
 
             frame_start_time_sec = meta_data.get_parameter<time_t>(Hexitec::FRAME_START_SEC_PARAM);
             frame_start_time_nsec = meta_data.get_parameter<time_t>(Hexitec::FRAME_START_NSEC_PARAM);
-            LOG4CXX_DEBUG(logger_, "Frame " << frame_num << " dataset " << frame_dataset
-                << " has start time " << frame_start_time_sec
-                << "s and " << frame_start_time_nsec << "ns");
         } else {
-            LOG4CXX_DEBUG(logger_, "Frame " << frame_num << " dataset " << frame_dataset
-                << " does not have start time parameters");
             auto now = std::chrono::system_clock::now();
             frame_start_time_sec = std::chrono::duration_cast<std::chrono::seconds>(
                 now.time_since_epoch()).count();

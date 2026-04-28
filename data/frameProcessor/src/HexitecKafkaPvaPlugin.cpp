@@ -1,8 +1,11 @@
 /*
- * HexitecKafkaPvaPlugin.cpp
+ * HexitecKafkaPvaPlugin.cpp - plugin for sending HEXITEC frames to Kafka using the EPAC PVA frame
+ * format.
  *
- *  Created on: 25 Mar 2019
- *      Author: Emilio Perez
+ * Based on the existing odin-data KafkaProducerPlugin.
+ *
+ *  Created on: 16 Apr 2026
+ *      Author: Tim Nicholls
  */
 #include <cstring>
 #include <cstdlib>
@@ -18,7 +21,7 @@
 namespace FrameProcessor {
 
   /**
-   * Callback function used to report status of a delivered message.
+   * Callback function used to report status of a delivered message and handle buffer cleanup.
    *
    * This function is only used internally.
    *
@@ -40,6 +43,7 @@ namespace FrameProcessor {
     LOG4CXX_DEBUG(Logger::getLogger("FP.KafkaProducer"),
       "Message callback for frame " << buffer->frame_number_);
 
+    // Resolve the plugin instance and call the appropriate callback method depending on the message status
     HexitecKafkaPvaPlugin *kafka_producer_plugin = static_cast<HexitecKafkaPvaPlugin *>(buffer->plugin_);
     if (kafka_message->err) {
       kafka_producer_plugin->on_message_error(
@@ -49,6 +53,7 @@ namespace FrameProcessor {
       kafka_producer_plugin->on_message_ack();
     }
 
+    // Delete the message buffer now the message has been processed
     delete buffer;
   }
 

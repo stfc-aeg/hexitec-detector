@@ -1,8 +1,8 @@
 /*
- * HexitecKafkaPvaPlugin.h
+ * HexitecKafkaPvaPlugin.h - header file for the HexitecKafkaPvaPlugin class
  *
- *  Created on: 25 Mar 2019
- *      Author: Emilio Perez
+ *  Created on: 16 Apr 2026
+ *      Author: Tim Nicholls, STFC Detector Systems Software Group
  */
 #ifndef HEXITECKAFKAPVAPLUGIN_H
 #define HEXITECKAFKAPVAPLUGIN_H
@@ -40,11 +40,9 @@ using namespace log4cxx::helpers;
 namespace FrameProcessor {
 
   /**
-   * HexitecKafkaPvaPlugin integrates Odin with Kafka.
-   *
-   * It creates and send messages that contains frame data and metadata
-   * to one or more Kafka servers.
-   *
+   * HexitecKafkaPvaPlugin - sends HEXITEC frames from the odin-data FrameProcessor pipleline to
+   * Kafka servers using the EPAC PVA data format.
+   *   *
    * Plugin parameters:
    *  servers: Kafka broker list using format IP:PORT[,IP2:PORT2,...]
    *           Once this is set, the plugin starts delivering to the specified server/s.
