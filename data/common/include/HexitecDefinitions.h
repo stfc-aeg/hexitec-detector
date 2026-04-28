@@ -49,6 +49,9 @@ namespace Hexitec {
 
   static const int32_t default_frame_number = -1;
 
+  static const std::string FRAME_START_SEC_PARAM = "frame_start_sec";
+  static const std::string FRAME_START_NSEC_PARAM = "frame_start_nsec";
+
   typedef struct
   {
     uint32_t frame_number;

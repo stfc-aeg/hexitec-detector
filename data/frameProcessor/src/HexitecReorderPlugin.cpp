@@ -201,6 +201,10 @@ namespace FrameProcessor
     {
       sec_array_.PushBack(hdr_ptr->frame_start_time.tv_sec, sec_allocator_);
       nano_array_.PushBack(hdr_ptr->frame_start_time.tv_nsec, nano_allocator_);
+
+      LOG4CXX_DEBUG(logger_, "Frame " << frame->get_frame_number() << " per trigger" << frames_per_trigger_ <<
+        " start time sec: " << hdr_ptr->frame_start_time.tv_sec <<
+        ", nsec: " << hdr_ptr->frame_start_time.tv_nsec);
     }
 
     // Determine the size of the output reordered image
@@ -227,6 +231,8 @@ namespace FrameProcessor
       processed_meta.set_compression_type(no_compression);
       processed_meta.set_data_type(raw_float);
       processed_meta.set_frame_number(hdr_ptr->frame_number);
+      processed_meta.set_parameter(Hexitec::FRAME_START_SEC_PARAM, hdr_ptr->frame_start_time.tv_sec);
+      processed_meta.set_parameter(Hexitec::FRAME_START_NSEC_PARAM, hdr_ptr->frame_start_time.tv_nsec);
 
       // For processed_frames dataset, reuse existing meta data as only dataset name will differ
 
@@ -257,6 +263,9 @@ namespace FrameProcessor
       raw_meta.set_compression_type(no_compression);
       raw_meta.set_data_type(raw_16bit);
       raw_meta.set_frame_number(hdr_ptr->frame_number);
+      raw_meta.set_parameter("frame_start_time_sec", hdr_ptr->frame_start_time.tv_sec);
+      raw_meta.set_parameter("frame_start_time_nsec", hdr_ptr->frame_start_time.tv_nsec);
+
       const std::size_t raw_image_size = image_width_ * image_height_ * sizeof(unsigned short);
       // Set the dataset name
       raw_meta.set_dataset_name("raw_frames");
