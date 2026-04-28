@@ -10,6 +10,7 @@ using namespace log4cxx::helpers;
 
 #include <boost/shared_ptr.hpp>
 #include <boost/property_tree/ptree.hpp>
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
 #include <map>
