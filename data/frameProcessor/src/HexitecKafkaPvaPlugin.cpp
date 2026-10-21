@@ -5,7 +5,7 @@
  * Based on the existing odin-data KafkaProducerPlugin.
  *
  *  Created on: 16 Apr 2026
- *      Author: Tim Nicholls
+ *      Author: Tim Nicholls, STFC Detector Systems Software Group
  */
 #include <cstring>
 #include <cstdlib>
