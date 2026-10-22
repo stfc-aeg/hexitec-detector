@@ -38,9 +38,28 @@ endif(APPLE)
 find_package( Boost 1.41.0
 	      REQUIRED
 	      COMPONENTS program_options system filesystem unit_test_framework date_time thread)
-find_package(Log4CXX 0.10.0 REQUIRED)
-find_package(ZeroMQ 3.2.4 REQUIRED)
-find_package(OdinData REQUIRED)
+find_package(LOG4CXX 0.10.0 REQUIRED)
+find_package(ZEROMQ 3.2.4 REQUIRED)
+find_package(ODINDATA REQUIRED)
+find_package(HDF5 1.8.14 COMPONENTS C HL)
+
+if (HDF5_FOUND)
+  message(STATUS "HDF5 include files:  " ${HDF5_INCLUDE_DIRS})
+  message(STATUS "HDF5 libs:           " ${HDF5_LIBRARIES} ${HDF5_HL_LIBRARIES})
+  message(STATUS "HDF5 defs:           " ${HDF5_DEFINITIONS})
+ENDIF(HDF5_FOUND)
+
+# Check if Boost version has placeholders and set definition accordingly
+message("\nChecking Boost version placeholder support")
+if (NOT DEFINED Boost_VERSION_STRING)
+  set(Boost_VERSION_STRING "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
+endif ()
+if ((Boost_VERSION_STRING EQUAL 1.60.0) OR (Boost_VERSION_STRING GREATER 1.60.0))
+  message(STATUS "Boost version ${Boost_VERSION_STRING} has placeholders")
+  ADD_DEFINITIONS(-DBOOST_HAS_PLACEHOLDERS)
+else ()
+  message(STATUS "Boost version ${Boost_VERSION_STRING} does not have placeholders")
+endif ()
 
 message("Determining hexitec-detector version")
 include(GetGitRevisionDescription)

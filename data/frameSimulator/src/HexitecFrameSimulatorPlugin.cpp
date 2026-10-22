@@ -7,7 +7,7 @@
 #include <time.h>
 #include <iostream>
 #include <algorithm>
-#include <boost/lexical_cast.hpp>
+#include <hdf5.h>
 
 #include "version.h"
 
@@ -27,8 +27,8 @@ namespace FrameSimulator {
         total_bytes = 0;
         current_frame_num = -1;
         // Set sensors_config_, image_width_, image_height_, image_pixels_
-        sensors_layout_str_ = Hexitec::default_sensors_layout_map;
-        parse_sensors_layout_map(sensors_layout_str_);
+        sensor_layout_str_ = Hexitec::default_sensors_layout_map;
+        parse_sensor_layout_map(sensor_layout_str_);
         extended_packet_header_ = true;
         if (extended_packet_header_)
             packet_header_size_ = sizeof(Hexitec::PacketExtendedHeader);
@@ -37,57 +37,122 @@ namespace FrameSimulator {
     }
 
     void HexitecFrameSimulatorPlugin::populate_options(po::options_description& config) {
-        
+
         FrameSimulatorPluginUDP::populate_options(config);
 
         opt_image_pattern_json.add_option_to(config);
-        opt_sensors_layout.add_option_to(config);
+        opt_hdf_file_path.add_option_to(config);
+        opt_hdf_dataset.add_option_to(config);
+        opt_hdf_frames.add_option_to(config);
+        opt_sensor_layout.add_option_to(config);
     }
 
     bool HexitecFrameSimulatorPlugin::setup(const po::variables_map& vm) {
         LOG4CXX_DEBUG(logger_, "Setting Up Hexitec Frame Simulator Plugin");
 
-        // Extract optional argument for this plugin
-        boost::optional<std::string> detector_sensors_layout;
+        // Extract sensor layout optional argument for this plugin
+        boost::optional<std::string> detector_sensor_layout;
 
-        opt_sensors_layout.get_val(vm, detector_sensors_layout);
-        if (detector_sensors_layout)
+        opt_sensor_layout.get_val(vm, detector_sensor_layout);
+        if (detector_sensor_layout)
         {
-            sensors_layout_str_ = detector_sensors_layout.get();
-            int parsed_sensors = parse_sensors_layout_map(sensors_layout_str_);
+            sensor_layout_str_ = detector_sensor_layout.get();
+            int parsed_sensors = parse_sensor_layout_map(sensor_layout_str_);
             if (parsed_sensors > 0)
             {
-                LOG4CXX_TRACE(logger_, "Parsed sensors_layout: " << sensors_layout_str_ << " into " 
+                LOG4CXX_DEBUG(logger_, "Sensor layout is: " << sensor_layout_str_ << " : "
                                         << image_height_ << " by " << image_width_ << " pixels");
             }
             else
             {
-                LOG4CXX_ERROR(logger_, "Couldn't parse sensors from string: \"" << sensors_layout_str_ << "\"");
+                LOG4CXX_ERROR(logger_, "Couldn't parse sensor layout from string: \"" << sensor_layout_str_ << "\"");
                 return false;
             }
         }
         else
         {
-            LOG4CXX_WARN(logger_, "No sensors_layout argument, defaulting to 80 x 80 pixels");
+            LOG4CXX_WARN(logger_, "No sensor_layout argument, defaulting to 80 x 80 pixels");
             // Set sensors_config_, image_width_, image_height_, image_pixels_
-            parse_sensors_layout_map("1x1");
+            parse_sensor_layout_map("1x1");
         }
 
-        //Extract Optional arguments for this plugin
+        //Extract image pattern JSON and HDF file arguments for this plugin
         boost::optional<std::string> image_pattern_json;
+        boost::optional<std::string> hdf_file_path;
 
         opt_image_pattern_json.get_val(vm, image_pattern_json);
-        if(image_pattern_json) {
+        opt_hdf_file_path.get_val(vm, hdf_file_path);
+
+        if (image_pattern_json && hdf_file_path)
+        {
+            LOG4CXX_ERROR(logger_, "Cannot specify both image pattern JSON and HDF file path");
+            return false;
+        }
+        else if(image_pattern_json)
+        {
             image_pattern_json_path_ = image_pattern_json.get();
+            LOG4CXX_INFO(logger_, "Using image pattern from file: " << image_pattern_json_path_);
+
+            if (!load_image_pattern_json(image_pattern_json_path_))
+            {
+                LOG4CXX_ERROR(logger_, "Failed to load image pattern JSON file: " << image_pattern_json_path_);
+                return false;
+            }
+
+        }
+        else if(hdf_file_path)
+        {
+            hdf_file_path_ = hdf_file_path.get();
+            LOG4CXX_INFO(logger_, "Using HDF file: " << hdf_file_path_);
+
+            boost::optional<std::string> hdf_dataset;
+            opt_hdf_dataset.get_val(vm, hdf_dataset);
+            if (hdf_dataset)
+            {
+                hdf_dataset_ = hdf_dataset.get();
+                LOG4CXX_INFO(logger_, "Using HDF dataset: " << hdf_dataset_);
+            }
+            else
+            {
+                LOG4CXX_INFO(logger_, "No HDF dataset specified, defaulting to: " << FrameSimulator::default_hdf_dataset);
+                hdf_dataset_ = FrameSimulator::default_hdf_dataset;
+            }
+
+            boost::optional<unsigned int> hdf_frames;
+            opt_hdf_frames.get_val(vm, hdf_frames);
+            if (hdf_frames)
+            {
+                LOG4CXX_INFO(logger_, "Reading maximum of " << hdf_frames.get() << " frames from HDF file");
+                hdf_frames_ = hdf_frames.get();
+            }
+            else
+            {
+                LOG4CXX_INFO(logger_, "Reading all frames from HDF file");
+                hdf_frames_ = 0;
+            }
+
+            if (!load_hdf_file(hdf_file_path_, hdf_dataset_, hdf_frames_))
+            {
+                LOG4CXX_ERROR(logger_, "Failed to load HDF file: " << hdf_file_path_ << " with dataset: " << hdf_dataset_);
+                return false;
+            }
+        }
+        else
+        {
+            LOG4CXX_ERROR(logger_, "No image pattern JSON or HDF file path specified");
+            return false;
         }
 
-        LOG4CXX_DEBUG(logger_, "Using Image Pattern from file: " << image_pattern_json_path_);
+        return FrameSimulatorPluginUDP::setup(vm);
+    }
 
-        // Actually read out the data from the image file
+    bool HexitecFrameSimulatorPlugin::load_image_pattern_json(const std::string& image_pattern_json_path)
+    {
+
+        // Read the image pattern data from the JSON file
         boost::property_tree::ptree img_tree;
-        boost::property_tree::json_parser::read_json(image_pattern_json_path_, img_tree);
+        boost::property_tree::json_parser::read_json(image_pattern_json_path, img_tree);
 
-        num_pixels_ = image_width_ * image_height_;
         pixel_data_ = new uint16_t[num_pixels_];
         int x = 0;
         try
@@ -107,17 +172,131 @@ namespace FrameSimulator {
         catch (std::exception& e)
         {
             LOG4CXX_WARN(logger_, "Set to use " << image_width_ << " by " << image_height_ << " pixels but file contains >" << num_pixels_ << "!");
-            LOG4CXX_ERROR(logger_, "Image Pattern file size must match dimensions set by sensors_layout (" << sensors_layout_str_ << ")");
+            LOG4CXX_ERROR(logger_, "Image pattern file size must match dimensions set by sensor_layout (" << sensor_layout_str_ << ")");
             return false;
         }
         // Check the correct number of values read from file
         if (x < num_pixels_)
         {
-            LOG4CXX_ERROR(logger_, "Requires " << num_pixels_ << " pixels but Image Pattern file contains only " << x);
+            LOG4CXX_ERROR(logger_, "Requires " << num_pixels_ << " pixels but image pattern file contains only " << x);
             return false;
         }
 
-        return FrameSimulatorPluginUDP::setup(vm);
+        // Only one frame is loaded from the image pattern JSON file
+        frames_loaded_ = 1;
+
+        return true;
+    }
+
+    bool HexitecFrameSimulatorPlugin::load_hdf_file(
+        const std::string& hdf_file_path, const std::string& hdf_dataset, unsigned int hdf_frames)
+    {
+        // Open the HDF5 file
+        hid_t file_id = H5Fopen(hdf_file_path.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+        if (file_id < 0)
+        {
+            LOG4CXX_ERROR(logger_, "Failed to open HDF5 file: " << hdf_file_path);
+            return false;
+        }
+
+        // Open the dataset
+        hid_t dataset_id = H5Dopen(file_id, hdf_dataset.c_str(), H5P_DEFAULT);
+        if (dataset_id < 0)
+        {
+            LOG4CXX_ERROR(logger_, "Failed to open dataset: " << hdf_dataset << " in HDF5 file: " << hdf_file_path);
+            H5Fclose(file_id);
+            return false;
+        }
+
+        // Get the dataspace and dimensions
+        hid_t dataspace_id = H5Dget_space(dataset_id);
+        int ndims = H5Sget_simple_extent_ndims(dataspace_id);
+        if (ndims != 3)
+        {
+            LOG4CXX_ERROR(logger_, "Dataset must be 3-dimensional (frames, height, width)");
+            H5Sclose(dataspace_id);
+            H5Dclose(dataset_id);
+            H5Fclose(file_id);
+            return false;
+        }
+
+        hsize_t dims[3];
+        H5Sget_simple_extent_dims(dataspace_id, dims, NULL);
+        unsigned int ds_frames = static_cast<unsigned int>(dims[0]);
+        unsigned int ds_height = static_cast<unsigned int>(dims[1]);
+        unsigned int ds_width = static_cast<unsigned int>(dims[2]);
+
+        LOG4CXX_DEBUG(logger_, "Dataset dimensions: " << ds_frames << " frames, " << ds_height << " height, " << ds_width << " width");
+
+        if (ds_height != image_height_ || ds_width != image_width_)
+        {
+            LOG4CXX_ERROR(logger_, "Dataset dimensions (" << ds_height << "x" << ds_width << ") do not match expected dimensions (" << image_height_ << "x" << image_width_ << ")");
+            H5Sclose(dataspace_id);
+            H5Dclose(dataset_id);
+            H5Fclose(file_id);
+            return false;
+        }
+
+        unsigned int num_frames = ds_frames;
+        if (hdf_frames > 0)
+        {
+            num_frames = std::min(ds_frames, hdf_frames);
+        }
+        LOG4CXX_INFO(logger_, "Reading " << num_frames << " frames from HDF5 dataset: " << hdf_dataset);
+
+        // Allocate memory for pixel data
+        pixel_data_ = new uint16_t[num_pixels_ * num_frames];
+
+        // Select num_frames frames from the dataset with a hyperslab
+        hsize_t start[3] = {0, 0, 0};
+        hsize_t count[3] = {num_frames, ds_height, ds_width};
+        if (H5Sselect_hyperslab(dataspace_id, H5S_SELECT_SET, start, nullptr, count, nullptr) < 0)
+        {
+            LOG4CXX_ERROR(logger_, "Failed to select hyperslab for dataset: " << hdf_dataset);
+            delete[] pixel_data_;
+            pixel_data_ = nullptr;
+            H5Sclose(dataspace_id);
+            H5Dclose(dataset_id);
+            H5Fclose(file_id);
+            return false;
+        }
+
+        // Create a memory dataspace for the selected frames
+        hsize_t mem_dims[3] = {num_frames, ds_height, ds_width};
+        hid_t memspace_id = H5Screate_simple(3, mem_dims, nullptr);
+        if (memspace_id < 0)
+        {
+            LOG4CXX_ERROR(logger_, "Failed to create memory dataspace for dataset: " << hdf_dataset);
+            delete[] pixel_data_;
+            pixel_data_ = nullptr;
+            H5Sclose(dataspace_id);
+            H5Dclose(dataset_id);
+            H5Fclose(file_id);
+            return false;
+        }
+
+        // Read num_frames frames of data from the dataset into pixel_data_
+        herr_t status = H5Dread(dataset_id, H5T_NATIVE_UINT16, memspace_id, dataspace_id, H5P_DEFAULT, pixel_data_);
+        if (status < 0)
+        {
+            LOG4CXX_ERROR(logger_, "Failed to read dataset: " << hdf_dataset << " from HDF5 file: " << hdf_file_path);
+            delete[] pixel_data_;
+            pixel_data_ = nullptr;
+            H5Sclose(dataspace_id);
+            H5Dclose(dataset_id);
+            H5Fclose(file_id);
+            return false;
+        }
+
+        // Set the number of frames loaded
+        frames_loaded_ = num_frames;
+
+        // Clean up
+        H5Sclose(dataspace_id);
+        H5Dclose(dataset_id);
+        H5Fclose(file_id);
+
+        return true;
     }
 
     /** Extracts the frames from the pcap data file buffer
@@ -223,15 +402,16 @@ namespace FrameSimulator {
 
         // Allocate buffer for packet data including header
         u_char* head_packet_data = new u_char[Hexitec::primary_packet_size + packet_header_size_];
-        
+
         // Loop over specified number of frames to generate packet and frame data
         for (int frame = 0; frame < num_frames; frame++) {
-            
-            u_char* data_ptr = reinterpret_cast<u_char*>(pixel_data_);
+
+            std::size_t frame_offset = (frame % frames_loaded_) * image_bytes;
+            u_char* data_ptr = reinterpret_cast<u_char*>(pixel_data_) + frame_offset;
 
             uint32_t packet_number = 0;
             uint32_t packet_flags = 0;
-            for (int i=0; i < (Hexitec::num_primary_packets[sensors_config_]-1); i++)
+            for (int i=0; i < (Hexitec::num_primary_packets[sensor_config_]-1); i++)
             {
                 // Setup Head Packet Header
                 if (extended_packet_header_)
@@ -261,7 +441,7 @@ namespace FrameSimulator {
                     head_packet_header->frame_number = frame;
                     head_packet_header->packet_number_flags = packet_flags;
                 }
-                
+
                 // Copy data into packet
                 memcpy((head_packet_data + packet_header_size_), data_ptr, Hexitec::primary_packet_size);
 
@@ -275,7 +455,7 @@ namespace FrameSimulator {
             // Repeat for the Tail Packet Header and Data
             if (extended_packet_header_)
             {
-                Hexitec::PacketExtendedHeader* tail_packet_header = 
+                Hexitec::PacketExtendedHeader* tail_packet_header =
                     reinterpret_cast<Hexitec::PacketExtendedHeader*>(head_packet_data);
                 packet_flags = Hexitec::end_of_frame_mask;
                 tail_packet_header->frame_number = frame;
@@ -284,7 +464,7 @@ namespace FrameSimulator {
             }
             else
             {
-                Hexitec::PacketHeader* tail_packet_header = 
+                Hexitec::PacketHeader* tail_packet_header =
                     reinterpret_cast<Hexitec::PacketHeader*>(head_packet_data);
                 packet_flags =
                     (packet_number & Hexitec::packet_number_mask) | Hexitec::end_of_frame_mask;
@@ -293,10 +473,10 @@ namespace FrameSimulator {
             }
 
             // Copy data into Head Packet
-            memcpy((head_packet_data + packet_header_size_), data_ptr, Hexitec::tail_packet_size[sensors_config_]);
+            memcpy((head_packet_data + packet_header_size_), data_ptr, Hexitec::tail_packet_size[sensor_config_]);
 
             // Pass head packet to Frame Extraction
-            this->extract_frames(head_packet_data, Hexitec::tail_packet_size[sensors_config_] + packet_header_size_);
+            this->extract_frames(head_packet_data, Hexitec::tail_packet_size[sensor_config_] + packet_header_size_);
         }
 
         delete [] head_packet_data;
@@ -304,18 +484,18 @@ namespace FrameSimulator {
     }
 
     /** Parse the number of sensors map configuration string.
-     * 
+     *
      * This method parses a configuration string containing number of sensors mapping information,
      * which is expected to be of the format "NxM" e.g, 2x2. The map is saved in a member
      * variable.
-     * 
-     * \param[in] sensors_layout_str - string of number of sensors configured
+     *
+     * \param[in] sensor_layout_str - string of number of sensors configured
      * \return number of valid map entries parsed from string
      */
-    std::size_t HexitecFrameSimulatorPlugin::parse_sensors_layout_map(const std::string sensors_layout_str)
+    std::size_t HexitecFrameSimulatorPlugin::parse_sensor_layout_map(const std::string sensor_layout_str)
     {
         // Clear the current map
-        sensors_layout_.clear();
+        sensor_layout_.clear();
 
         // Define entry and port:idx delimiters
         const std::string entry_delimiter("x");
@@ -324,7 +504,7 @@ namespace FrameSimulator {
         std::vector<std::string> map_entries;
 
         // Split into entries
-        boost::split(map_entries, sensors_layout_str, boost::is_any_of(entry_delimiter));
+        boost::split(map_entries, sensor_layout_str, boost::is_any_of(entry_delimiter));
 
         // If a valid entry is found, save into the map
         if (map_entries.size() == 2)
@@ -334,40 +514,41 @@ namespace FrameSimulator {
 
             if ((sensor_rows > 0) && (sensor_columns > 0))
             {
-                sensors_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
-                image_width_ = sensors_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
-                image_height_ = sensors_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+                sensor_layout_[0] = Hexitec::HexitecSensorLayoutMapEntry(sensor_rows, sensor_columns);
+                image_width_ = sensor_layout_[0].sensor_columns_ * Hexitec::pixel_columns_per_sensor;
+                image_height_ = sensor_layout_[0].sensor_rows_ * Hexitec::pixel_rows_per_sensor;
+                num_pixels_ = image_width_ * image_height_;
                 // Successfully parsed, update sensors_config too
-                set_sensors_config(sensors_layout_[0].sensor_rows_, sensors_layout_[0].sensor_columns_);
+                set_sensor_config(sensor_layout_[0].sensor_rows_, sensor_layout_[0].sensor_columns_);
             }
             else
             {
-                LOG4CXX_ERROR(logger_, "Couldn't parse sensors_layout argument");
+                LOG4CXX_ERROR(logger_, "Couldn't parse sensor_layout argument");
             }
         }
 
         // Return the number of valid entries parsed
-        return sensors_layout_.size();
+        return sensor_layout_.size();
     }
 
     /** Match the number of sensors to a corresponding SensorConfigNumber.
-     * 
+     *
      * This method compares the number of sensors against the known detector configurations.
      * Assuming it's a valid selection, the matching Hexitec::SensorConfigNumber value is
      * assigned to the sensors_config_ member variable.
-     * 
+     *
      * \param[in] sensor_rows - number of sensors in the vertical plane
      * \param[in] sensor_columns - number of sensors in the horizontal plane
      * \return whether elections matches a known configuration
      */
-    bool HexitecFrameSimulatorPlugin::set_sensors_config(int sensor_rows, int sensor_columns) {
+    bool HexitecFrameSimulatorPlugin::set_sensor_config(int sensor_rows, int sensor_columns) {
 
         bool parseOK = false;
-        
+
         if ((sensor_rows == 1) && (sensor_columns == 1))
         {
             // Single sensor, i.e. 1x1
-            sensors_config_ = Hexitec::sensorConfigOne;
+            sensor_config_ = Hexitec::sensorConfigOne;
             parseOK = true;
         }
         if (sensor_rows == 2)
@@ -375,13 +556,13 @@ namespace FrameSimulator {
             if (sensor_columns == 2)
             {
                 // 2x2
-                sensors_config_ = Hexitec::sensorConfigTwo;
+                sensor_config_ = Hexitec::sensorConfigTwo;
                 parseOK = true;
             }
             else if (sensor_columns == 6)
             {
                 // 2x6
-                sensors_config_ = Hexitec::sensorConfigThree;
+                sensor_config_ = Hexitec::sensorConfigThree;
                 parseOK = true;
             }
         }

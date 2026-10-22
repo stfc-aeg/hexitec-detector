@@ -10,6 +10,7 @@ using namespace log4cxx::helpers;
 
 #include <boost/shared_ptr.hpp>
 #include <boost/property_tree/ptree.hpp>
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
 #include <map>
@@ -65,19 +66,29 @@ namespace FrameSimulator {
         int current_frame_num;
         uint16_t* pixel_data_;
         int num_pixels_;
+        unsigned int frames_loaded_;
 
         std::string image_pattern_json_path_;
+        std::string hdf_file_path_;
+        std::string hdf_dataset_;
+        unsigned int hdf_frames_;
 
-        std::size_t parse_sensors_layout_map(const std::string sensors_layout_str);
-        HexitecSensorLayoutMap sensors_layout_;
-        std::string sensors_layout_str_;
+        bool load_image_pattern_json(const std::string& image_pattern_json_path);
+        bool load_hdf_file(
+            const std::string& hdf_file_path, const std::string& hdf_dataset,
+            unsigned int hdf_frames=0
+        );
+
+        std::size_t parse_sensor_layout_map(const std::string sensor_layout_str);
+        HexitecSensorLayoutMap sensor_layout_;
+        std::string sensor_layout_str_;
         int image_width_;
         int image_height_;
 
-        // sensors_config_ map number of sensors to frame and packet structures,
+        // sensor_config_ map number of sensors to frame and packet structures,
         // see HexitecDefinitions.h for more details
-        bool set_sensors_config(int sensor_rows, int sensor_columns);
-        Hexitec::SensorConfigNumber sensors_config_;
+        bool set_sensor_config(int sensor_rows, int sensor_columns);
+        Hexitec::SensorConfigNumber sensor_config_;
         void extract_normal_header(const u_char *data);
         void extract_extended_header(const u_char *data);
         bool extended_packet_header_;
